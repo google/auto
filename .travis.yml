@@ -1,0 +1,10 @@
+language: java
+install: mvn install clean --fail-never --quiet -DskipTests=true -Dinvoker.skip=true
+script: mvn verify
+
+notifications:
+  email: false
+
+branches:
+  except:
+    - gh-pages
