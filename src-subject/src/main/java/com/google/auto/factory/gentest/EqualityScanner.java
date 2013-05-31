@@ -86,7 +86,7 @@ import com.sun.source.util.SimpleTreeVisitor;
  * versions of Java.
  */
 final class EqualityScanner extends SimpleTreeVisitor<Void, Tree> {
-    private final TestVerb testVerb;
+  private final TestVerb testVerb;
 
   EqualityScanner(FailureStrategy failureStrategy) {
     this.testVerb = new TestVerb(failureStrategy);
