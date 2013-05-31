@@ -22,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.AnnotationValueVisitor;
@@ -52,8 +53,6 @@ final class CodeGen {
     }
     return (PackageElement) type;
   }
-
-
 
   /** Returns a fully qualified class name to complement {@code type}. */
   public static String adapterName(TypeElement typeElement, String suffix) {

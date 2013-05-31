@@ -16,12 +16,15 @@
  */
 package com.google.autofactory;
 
+import static com.google.autofactory.ProcessorUtils.error;
+import static com.google.autofactory.ProcessorUtils.getInjectedClass;
+import static com.google.autofactory.ProcessorUtils.getTypesWithAnnotatedMembers;
 
-import com.google.autofactory.ProcessorUtils.InjectedClass;
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -36,10 +39,7 @@ import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 
-import static com.google.autofactory.ProcessorUtils.error;
-import static com.google.autofactory.ProcessorUtils.getInjectedClass;
-import static com.google.autofactory.ProcessorUtils.getTypesWithAnnotatedMembers;
-
+import com.google.autofactory.ProcessorUtils.InjectedClass;
 
 /**
  * Generates an implementation of {@link com.google.autofactory.internal.Binding} that injects the

@@ -15,16 +15,9 @@
  */
 package com.google.autofactory;
 
-import static java.lang.annotation.ElementType.CONSTRUCTOR;
-import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.ElementType.PARAMETER;
 
 import java.lang.annotation.Target;
 
-/**
- */
-@Target({TYPE, CONSTRUCTOR})
-public @interface AutoFactory {
-  String named() default "Factory";
-  Class<?>[] implmenting() default {};
-  Class<?> extending() default Object.class;
-}
+@Target(PARAMETER)
+public @interface Provided {}

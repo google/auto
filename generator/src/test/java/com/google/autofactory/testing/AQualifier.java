@@ -13,18 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory;
+package com.google.autofactory.testing;
 
-import static java.lang.annotation.ElementType.CONSTRUCTOR;
-import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+
+import javax.inject.Qualifier;
 
 /**
+ * @author Gregory Kick
  */
-@Target({TYPE, CONSTRUCTOR})
-public @interface AutoFactory {
-  String named() default "Factory";
-  Class<?>[] implmenting() default {};
-  Class<?> extending() default Object.class;
-}
+@Documented
+@Qualifier
+@Retention(RUNTIME)
+@interface AQualifier {}

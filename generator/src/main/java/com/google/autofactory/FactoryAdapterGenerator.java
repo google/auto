@@ -16,13 +16,16 @@
  */
 package com.google.autofactory;
 
-import com.google.autofactory.ProcessorUtils.InjectedClass;
-import com.squareup.java.JavaWriter;
+import static com.google.autofactory.CodeGen.strippedTypeName;
+import static java.lang.reflect.Modifier.FINAL;
+import static java.lang.reflect.Modifier.PUBLIC;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.inject.Inject;
 import javax.lang.model.element.Element;
@@ -31,11 +34,8 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 
-import static com.google.autofactory.CodeGen.strippedTypeName;
-import static java.lang.reflect.Modifier.FINAL;
-import static java.lang.reflect.Modifier.PUBLIC;
-
-
+import com.google.autofactory.ProcessorUtils.InjectedClass;
+import com.squareup.java.JavaWriter;
 
 /**
  * A class that generates a Factory implementation for a given class.

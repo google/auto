@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory;
+package com.google.autofactory.testing;
 
-import static java.lang.annotation.ElementType.CONSTRUCTOR;
-import static java.lang.annotation.ElementType.TYPE;
-
-import java.lang.annotation.Target;
+import com.google.autofactory.AutoFactory;
+import com.google.autofactory.Provided;
 
 /**
+ * @author Gregory Kick
  */
-@Target({TYPE, CONSTRUCTOR})
-public @interface AutoFactory {
-  String named() default "Factory";
-  Class<?>[] implmenting() default {};
-  Class<?> extending() default Object.class;
+@AutoFactory
+@SuppressWarnings("unused")
+final class SimpleClassMixedDeps {
+  private final String providedDepA;
+  private final String depB;
+
+  SimpleClassMixedDeps(@Provided @AQualifier String providedDepA, String depB) {
+    this.providedDepA = providedDepA;
+    this.depB = depB;
+  }
 }
