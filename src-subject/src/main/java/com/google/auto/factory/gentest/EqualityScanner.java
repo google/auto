@@ -19,10 +19,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Iterator;
 
+import javax.annotation.Nullable;
+
 import org.truth0.FailureStrategy;
 import org.truth0.TestVerb;
 
-import com.sun.istack.internal.Nullable;
 import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.ArrayTypeTree;
@@ -65,7 +66,6 @@ import com.sun.source.tree.SynchronizedTree;
 import com.sun.source.tree.ThrowTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.Tree.Kind;
-import com.sun.source.tree.TreeVisitor;
 import com.sun.source.tree.TryTree;
 import com.sun.source.tree.TypeCastTree;
 import com.sun.source.tree.TypeParameterTree;
@@ -73,14 +73,19 @@ import com.sun.source.tree.UnaryTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.tree.WildcardTree;
+import com.sun.source.util.SimpleTreeVisitor;
 
 /**
- * A {@link TreeVisitor} that traverses a {@link Tree} in parallel with its argument to check that
- * the trees are the same.
- * 
+ * A visitor that traverses a {@link Tree} in parallel with its argument to check that the trees are
+ * the same.
+ *
  * @author Gregory Kick
  */
-final class EqualityScanner implements TreeVisitor<Void, Tree> {
+/*
+ * This should really just implement TreeVisitor this insulates against API changes in different
+ * versions of Java.
+ */
+final class EqualityScanner extends SimpleTreeVisitor<Void, Tree> {
     private final TestVerb testVerb;
 
   EqualityScanner(FailureStrategy failureStrategy) {

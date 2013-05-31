@@ -38,7 +38,7 @@ import com.sun.tools.javac.api.JavacTool;
 /**
  * A <a href="https://github.com/truth0/truth">Truth</a> {@link Subject} that evaluates Java source
  * {@linkplain File files} and compares them for equality based on the AST.
- * 
+ *
  * @author Gregory Kick
  */
 public final class JavaSourceSubject extends Subject<JavaSourceSubject, File> {
