@@ -35,6 +35,7 @@
     <module>examples</module>
     <module>generator</module>
     <module>integration</module>
+    <module>src-subject</module>
   </modules>
 
   <properties>
