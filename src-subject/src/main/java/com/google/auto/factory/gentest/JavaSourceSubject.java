@@ -35,6 +35,12 @@ import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
 import com.sun.tools.javac.api.JavacTool;
 
+/**
+ * A <a href="https://github.com/truth0/truth">Truth</a> {@link Subject} that evaluates Java source
+ * {@linkplain File files} and compares them for equality based on the AST.
+ * 
+ * @author Gregory Kick
+ */
 public final class JavaSourceSubject extends Subject<JavaSourceSubject, File> {
   private final JavacTool compiler;
   private final StandardJavaFileManager fileManager;
@@ -59,6 +65,8 @@ public final class JavaSourceSubject extends Subject<JavaSourceSubject, File> {
       checkState(compilationUnits.size() == 2);
       compilationUnits.get(0).accept(new EqualityScanner(failureStrategy),
           compilationUnits.get(1));
+      System.out.println(compilationUnits.get(0));
+      System.out.println(compilationUnits.get(1));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

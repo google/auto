@@ -20,6 +20,12 @@ import java.io.File;
 import org.truth0.FailureStrategy;
 import org.truth0.subjects.SubjectFactory;
 
+/**
+ * A <a href="https://github.com/truth0/truth">Truth</a> {@link SubjectFactory} for creating
+ * {@link JavaSourceSubject} instances.
+ * 
+ * @author Gregory Kick
+ */
 public class JavaSourceSubjectFactory extends SubjectFactory<JavaSourceSubject, File> {
   public static final JavaSourceSubjectFactory JAVA_SOURCE = new JavaSourceSubjectFactory();
 

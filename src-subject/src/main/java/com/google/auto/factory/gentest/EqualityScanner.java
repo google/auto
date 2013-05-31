@@ -74,10 +74,16 @@ import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.tree.WildcardTree;
 
-public class EqualityScanner implements TreeVisitor<Void, Tree> {
+/**
+ * A {@link TreeVisitor} that traverses a {@link Tree} in parallel with its argument to check that
+ * the trees are the same.
+ * 
+ * @author Gregory Kick
+ */
+final class EqualityScanner implements TreeVisitor<Void, Tree> {
     private final TestVerb testVerb;
 
-  public EqualityScanner(FailureStrategy failureStrategy) {
+  EqualityScanner(FailureStrategy failureStrategy) {
     this.testVerb = new TestVerb(failureStrategy);
   }
 
