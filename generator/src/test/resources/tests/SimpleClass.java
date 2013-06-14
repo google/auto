@@ -1,4 +1,4 @@
-package com.google.autofactory.testing;
+package tests;
 
 import com.google.autofactory.AutoFactory;
 

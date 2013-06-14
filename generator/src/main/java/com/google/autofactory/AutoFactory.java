@@ -22,9 +22,9 @@ import java.lang.annotation.Target;
 
 /**
  */
-@Target({TYPE, CONSTRUCTOR})
+@Target({ TYPE, CONSTRUCTOR })
 public @interface AutoFactory {
-  String named() default "Factory";
-  Class<?>[] implmenting() default {};
+  String named() default "%s.%sFactory";
+  Class<?>[] implementing() default { };
   Class<?> extending() default Object.class;
 }

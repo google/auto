@@ -13,20 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory;
+package tests;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.autofactory.AutoFactory;
 
 /**
- * Annotates a constructor parameter or a field to indicate that this type is a
- * factory-managed type that should be created by means of an auto-generated factory.
+ * @author Gregory Kick
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.PARAMETER, ElementType.FIELD })
-@Deprecated
-public @interface Param {
+@AutoFactory
+@SuppressWarnings("unused")
+final class SimpleClassPassedDeps {
+  private final String depA;
+  private final String depB;
 
+  SimpleClassPassedDeps(String depA, String depB) {
+    this.depA = depA;
+    this.depB = depB;
+  }
 }

@@ -1,0 +1,105 @@
+package com.google.autofactory;
+
+import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.JAVA_SOURCE;
+import static com.google.common.base.Charsets.UTF_8;
+import static javax.tools.StandardLocation.SOURCE_OUTPUT;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Set;
+
+import javax.tools.JavaCompiler;
+import javax.tools.JavaCompiler.CompilationTask;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
+
+import org.junit.Before;
+import org.junit.ComparisonFailure;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.truth0.Truth;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.io.Files;
+import com.google.common.io.Resources;
+
+public class AutoFactoryProcessorTest {
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
+  private JavaCompiler compiler;
+  private StandardJavaFileManager fileManager;
+
+  private File inputSources;
+  private File expectedSources;
+  private File outputSources;
+
+  @Before public void createCompiler() throws IOException {
+    this.compiler = ToolProvider.getSystemJavaCompiler();
+    this.fileManager = compiler.getStandardFileManager(null /* default diagnostic listener */,
+        Locale.getDefault(), UTF_8);
+    this.inputSources = folder.newFolder();
+    this.outputSources = folder.newFolder();
+    fileManager.setLocation(SOURCE_OUTPUT, ImmutableSet.of(outputSources));
+  }
+
+  private CompilationTask createCompilationTask(Set<File> sources) {
+    return compiler.getTask(null, fileManager,
+        null /* default diagnostic listener */,
+        ImmutableList.of("-processor", "com.google.autofactory.AutoFactoryProcessor"),
+        null,
+        fileManager.getJavaFileObjectsFromFiles(sources));
+  }
+
+  private File copyFromResource(String resourcePath, File destination)
+      throws IOException {
+    File sourceFile = new File(destination, resourcePath);
+    Files.createParentDirs(sourceFile);
+    Resources.asByteSource(Resources.getResource(resourcePath))
+        .copyTo(Files.asByteSink(sourceFile));
+    return sourceFile;
+  }
+
+  private void assertOutput(String path) throws IOException {
+    File expectedOutput = copyFromResource(path, expectedSources);
+    File actual = new File(outputSources, path);
+    assertTrue("file does not exist. files: " + Arrays.toString(outputSources.listFiles()),
+        actual.exists());
+    try {
+      Truth.ASSERT.about(JAVA_SOURCE).that(expectedOutput)
+          .isEquivalentTo(actual);
+    } catch (AssertionError e) {
+      throw new ComparisonFailure("", Files.toString(expectedOutput, UTF_8),
+          Files.toString(actual, UTF_8));
+    } catch (RuntimeException e) {
+      throw new ComparisonFailure("", Files.toString(expectedOutput, UTF_8),
+          Files.toString(actual, UTF_8));
+    }
+  }
+
+  @Test public void simpleClass() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClass.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/SimpleClassFactory.java");
+  }
+
+  @Test public void simpleClassMixedDeps() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClassMixedDeps.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/SimpleClassMixedDepsFactory.java");
+  }
+
+  @Test public void simpleClassImplementingFactory() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClassImplementing.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/SimpleClassImplementingFactory.java");
+  }
+}

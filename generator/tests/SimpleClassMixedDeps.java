@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory.testing;
+package tests;
 
 import com.google.autofactory.AutoFactory;
 import com.google.autofactory.Provided;
@@ -23,13 +23,12 @@ import com.google.autofactory.Provided;
  */
 @AutoFactory
 @SuppressWarnings("unused")
-final class SimpleClassProvidedDeps {
+final class SimpleClassMixedDeps {
   private final String providedDepA;
-  private final String providedDepB;
+  private final String depB;
 
-  SimpleClassProvidedDeps(@Provided @AQualifier String providedDepA,
-      @Provided @BQualifier String providedDepB) {
+  SimpleClassMixedDeps(@Provided @AQualifier String providedDepA, String depB) {
     this.providedDepA = providedDepA;
-    this.providedDepB = providedDepB;
+    this.depB = depB;
   }
 }

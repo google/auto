@@ -13,21 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory.testing;
+package tests;
 
 import com.google.autofactory.AutoFactory;
+import com.google.autofactory.Provided;
 
 /**
  * @author Gregory Kick
  */
 @AutoFactory
 @SuppressWarnings("unused")
-final class SimpleClassPassedDeps {
-  private final String depA;
+final class SimpleClassMixedDeps {
+  private final String providedDepA;
   private final String depB;
 
-  SimpleClassPassedDeps(String depA, String depB) {
-    this.depA = depA;
+  SimpleClassMixedDeps(@Provided @AQualifier String providedDepA, String depB) {
+    this.providedDepA = providedDepA;
     this.depB = depB;
   }
 }
