@@ -16,7 +16,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 
 final class Elements2 {
-  private Elements2() {}
+  private Elements2() { }
 
   static ImmutableSet<ExecutableElement> getConstructors(TypeElement type) {
     checkNotNull(type);
@@ -24,7 +24,7 @@ final class Elements2 {
     ImmutableSet.Builder<ExecutableElement> constructors = ImmutableSet.builder();
     for (Element element : type.getEnclosedElements()) {
       constructors.addAll(element.accept(
-          new ElementKindVisitor6<Optional<ExecutableElement>, Void> () {
+          new ElementKindVisitor6<Optional<ExecutableElement>, Void>() {
             @Override
             protected Optional<ExecutableElement> defaultAction(Element e, Void p) {
               return Optional.absent();

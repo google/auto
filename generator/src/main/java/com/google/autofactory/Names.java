@@ -2,7 +2,7 @@ package com.google.autofactory;
 
 
 final class Names {
-  private Names() {}
+  private Names() { }
 
   static CharSequence getSimpleName(CharSequence fullyQualifiedName) {
     int lastDot = lastIndexOf(fullyQualifiedName, '.');
