@@ -133,6 +133,7 @@ final class FactoryDescriptorGenerator {
         .build();
   }
 
+  @SuppressWarnings("unused")
   private void generateDescriptorForFactoryMethodDeclaration(final ExecutableElement e,
       Optional<TypeElement> referenceType) {
     String returnType = e.getReturnType().toString();

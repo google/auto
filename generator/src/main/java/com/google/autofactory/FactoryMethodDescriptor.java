@@ -14,6 +14,7 @@ final class FactoryMethodDescriptor {
   private final String factoryName;
   private final String name;
   private final String returnType;
+  private final boolean override;
   private final ImmutableSet<Parameter> passedParameters;
   private final ImmutableSet<Parameter> providedParameters;
   private final ImmutableSet<Parameter> creationParameters;
@@ -22,6 +23,7 @@ final class FactoryMethodDescriptor {
     this.factoryName = builder.factoryName.get();
     this.name = builder.name.get();
     this.returnType = builder.returnType.get();
+    this.override = builder.override;
     this.passedParameters = ImmutableSet.copyOf(builder.passedParameters);
     this.providedParameters = ImmutableSet.copyOf(builder.providedParameters);
     this.creationParameters = ImmutableSet.copyOf(builder.creationParameters);
@@ -38,6 +40,10 @@ final class FactoryMethodDescriptor {
 
   String returnType() {
     return returnType;
+  }
+
+  public boolean override() {
+    return override;
   }
 
   ImmutableSet<Parameter> passedParameters() {
@@ -67,6 +73,7 @@ final class FactoryMethodDescriptor {
     private Optional<String> factoryName = Optional.absent();
     private Optional<String> name = Optional.absent();
     private Optional<String> returnType = Optional.absent();
+    private boolean override = false;
     private final Set<Parameter> passedParameters = Sets.newLinkedHashSet();
     private final Set<Parameter> providedParameters = Sets.newLinkedHashSet();
     private final Set<Parameter> creationParameters = Sets.newLinkedHashSet();
@@ -83,6 +90,11 @@ final class FactoryMethodDescriptor {
 
     Builder returnType(String returnType) {
       this.returnType = Optional.of(returnType);
+      return this;
+    }
+
+    Builder override() {
+      this.override = true;
       return this;
     }
 

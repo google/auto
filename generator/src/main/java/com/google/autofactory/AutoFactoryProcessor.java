@@ -34,7 +34,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
-      System.out.println(descriptors);
       ImmutableListMultimap<String, FactoryMethodDescriptor> indexedMethods =
           Multimaps.index(descriptors, new Function<FactoryMethodDescriptor, String>() {
             @Override public String apply(FactoryMethodDescriptor descriptor) {
