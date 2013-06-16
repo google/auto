@@ -38,7 +38,7 @@ final class FactoryDescriptorGenerator {
   }
 
   ImmutableSet<FactoryMethodDescriptor> generateDescriptor(Element element) {
-    final AutoFactoryDeclaration annotation = AutoFactoryDeclaration.fromAnnotationMirror(
+    final AutoFactoryDeclaration declaration = AutoFactoryDeclaration.fromAnnotationMirror(
         elements, Mirrors.getAnnotationMirror(element, AutoFactory.class).get());
     return element.accept(new ElementKindVisitor6<ImmutableSet<FactoryMethodDescriptor>, Void>() {
       @Override
@@ -54,10 +54,9 @@ final class FactoryDescriptorGenerator {
           // applied to the type to be created
           ImmutableSet<ExecutableElement> constructors = Elements2.getConstructors(type);
           if (constructors.isEmpty()) {
-            return ImmutableSet.of(new FactoryMethodDescriptor.Builder()
-                .factoryName(String.format(annotation.namePattern(),
-                    Names.getPackage(type.getQualifiedName()),
-                    Names.getSimpleName(type.getQualifiedName())))
+            return ImmutableSet.of(new FactoryMethodDescriptor.Builder(declaration)
+                .factoryName(declaration.getFactoryName(
+                    elements.getPackageOf(type).getQualifiedName(), type.getSimpleName()))
                 .name("create")
                 .returnType(type.getQualifiedName().toString())
                 .passedParameters(ImmutableSet.<Parameter>of())
@@ -68,7 +67,7 @@ final class FactoryDescriptorGenerator {
             return FluentIterable.from(constructors)
                 .transform(new Function<ExecutableElement, FactoryMethodDescriptor>() {
                   @Override public FactoryMethodDescriptor apply(ExecutableElement constructor) {
-                    return generateDescriptorForConstructor(annotation, constructor);
+                    return generateDescriptorForConstructor(declaration, constructor);
                   }
                 })
                 .toSet();
@@ -92,11 +91,12 @@ final class FactoryDescriptorGenerator {
     }, null);
   }
 
-  FactoryMethodDescriptor generateDescriptorForConstructor(AutoFactoryDeclaration annotation,
+  FactoryMethodDescriptor generateDescriptorForConstructor(AutoFactoryDeclaration declaration,
       ExecutableElement constructor) {
     checkNotNull(constructor);
     checkArgument(constructor.getKind() == ElementKind.CONSTRUCTOR);
-    Name returnType = constructor.getEnclosingElement().accept(
+    Element classElement = constructor.getEnclosingElement();
+    Name returnType = classElement.accept(
         new ElementKindVisitor6<Name, Void>() {
           @Override
           protected Name defaultAction(Element e, Void p) {
@@ -121,10 +121,9 @@ final class FactoryDescriptorGenerator {
             }));
     ImmutableSet<Parameter> providedParameters = Parameter.forParameterList(parameterMap.get(true));
     ImmutableSet<Parameter> passedParameters = Parameter.forParameterList(parameterMap.get(false));
-    return new FactoryMethodDescriptor.Builder()
-        .factoryName(String.format(annotation.namePattern(),
-            Names.getPackage(returnType),
-            Names.getSimpleName(returnType)))
+    return new FactoryMethodDescriptor.Builder(declaration)
+        .factoryName(declaration.getFactoryName(
+            elements.getPackageOf(constructor).getQualifiedName(), classElement.getSimpleName()))
         .name("create")
         .returnType(returnType.toString())
         .providedParameters(providedParameters)

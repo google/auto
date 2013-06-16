@@ -16,6 +16,7 @@ import javax.tools.Diagnostic.Kind;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 
 public final class AutoFactoryProcessor extends AbstractProcessor {
@@ -42,9 +43,20 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
           });
       for (Entry<String, Collection<FactoryMethodDescriptor>> entry
           : indexedMethods.asMap().entrySet()) {
+        ImmutableSet.Builder<String> extending = ImmutableSet.builder();
+        ImmutableSet.Builder<String> implementing = ImmutableSet.builder();
+        for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
+          extending.add(methodDescriptor.declaration().extendingQualifiedName());
+          implementing.addAll(methodDescriptor.declaration().implementingQualifiedNames());
+        }
         try {
+
           factoryWriter.writeFactory(
-              new FactoryDescriptor(entry.getKey(), ImmutableSet.copyOf(entry.getValue())),
+              new FactoryDescriptor(
+                  entry.getKey(),
+                  Iterables.getOnlyElement(extending.build()),
+                  implementing.build(),
+                  ImmutableSet.copyOf(entry.getValue())),
               element);
         } catch (IOException e) {
           messager.printMessage(Kind.ERROR, "failed", element);

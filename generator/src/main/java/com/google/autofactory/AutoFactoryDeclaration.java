@@ -9,6 +9,7 @@ import java.util.Map;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.Name;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -27,6 +28,10 @@ final class AutoFactoryDeclaration {
     this.namePattern = namePattern;
     this.extendingQualifiedName = extendingQualifiedName;
     this.implementingQualifiedNames = implementingQualifiedNames;
+  }
+
+  String getFactoryName(Name packageName, Name targetType) {
+    return String.format(namePattern, packageName, targetType);
   }
 
   String namePattern() {

@@ -19,6 +19,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.squareup.java.JavaWriter;
 
 final class FactoryWriter {
@@ -34,7 +35,8 @@ final class FactoryWriter {
       throws IOException {
     JavaFileObject sourceFile = filer.createSourceFile(descriptor.name(), originatingElement);
     JavaWriter writer = new JavaWriter(sourceFile.openWriter());
-    writer.emitPackage(Names.getPackage(descriptor.name()).toString())
+    String packageName = Names.getPackage(descriptor.name()).toString();
+    writer.emitPackage(packageName)
         .emitImports("javax.annotation.Generated");
 
     writer.emitImports("javax.inject.Inject");
@@ -42,25 +44,26 @@ final class FactoryWriter {
       writer.emitImports("javax.inject.Provider");
     }
 
-//    for (String implementingClass : descriptor.implementing()) {
-//      String packageName = getPackage(implementingClass);
-//      if (!"java.lang".equals(packageName) && !descriptor.packageName().equals(packageName)) {
-//        writer.emitImports(implementingClass);
-//      }
-//    }
+    for (String implementingType : descriptor.implementingTypes()) {
+      String implementingPackageName = Names.getPackage(implementingType).toString();
+      if (!"java.lang".equals(implementingPackageName)
+          && !packageName.equals(implementingPackageName)) {
+        writer.emitImports(implementingType);
+      }
+    }
 
-//    String[] implementedClasses = FluentIterable.from(descriptor.implementing())
-//        .transform(new Function<String, String>() {
-//          @Override public String apply(String implemetingClass) {
-//            return getType(implemetingClass);
-//          }
-//        })
-//        .toSortedSet(Ordering.natural())
-//        .toArray(new String[] {});
+    String[] implementedClasses = FluentIterable.from(descriptor.implementingTypes())
+        .transform(new Function<String, String>() {
+          @Override public String apply(String implemetingClass) {
+            return Names.getSimpleName(implemetingClass).toString();
+          }
+        })
+        .toSortedSet(Ordering.natural())
+        .toArray(new String[0]);
 
     String factoryName = Names.getSimpleName(descriptor.name()).toString();
     writer.emitAnnotation(Generated.class, ImmutableMap.of("value", "\"auto-factory\""))
-        .beginType(factoryName, "class", Modifier.FINAL, null);
+        .beginType(factoryName, "class", Modifier.FINAL, null, implementedClasses);
 
     ImmutableList.Builder<String> constructorTokens = ImmutableList.builder();
     for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {
@@ -95,7 +98,7 @@ final class FactoryWriter {
                       : descriptor.providerNames().get(parameter.asKey()) + ".get()";
                 }
               });
-      writer.emitStatement("return new %s(%s)", methodDescriptor.returnType(),
+      writer.emitStatement("return new %s(%s)", writer.compressType(methodDescriptor.returnType()),
           argumentJoiner.join(creationParameterNames));
       writer.endMethod();
     }

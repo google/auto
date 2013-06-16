@@ -1,5 +1,6 @@
 package com.google.autofactory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
@@ -11,6 +12,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 final class FactoryMethodDescriptor {
+  private final AutoFactoryDeclaration declaration;
   private final String factoryName;
   private final String name;
   private final String returnType;
@@ -20,6 +22,7 @@ final class FactoryMethodDescriptor {
   private final ImmutableSet<Parameter> creationParameters;
 
   private FactoryMethodDescriptor(Builder builder) {
+    this.declaration = builder.declaration;
     this.factoryName = builder.factoryName.get();
     this.name = builder.name.get();
     this.returnType = builder.returnType.get();
@@ -28,6 +31,10 @@ final class FactoryMethodDescriptor {
     this.providedParameters = ImmutableSet.copyOf(builder.providedParameters);
     this.creationParameters = ImmutableSet.copyOf(builder.creationParameters);
     checkState(creationParameters.equals(Sets.union(passedParameters, providedParameters)));
+  }
+
+  AutoFactoryDeclaration declaration() {
+    return declaration;
   }
 
   String factoryName() {
@@ -70,6 +77,7 @@ final class FactoryMethodDescriptor {
   }
 
   static final class Builder {
+    private final AutoFactoryDeclaration declaration;
     private Optional<String> factoryName = Optional.absent();
     private Optional<String> name = Optional.absent();
     private Optional<String> returnType = Optional.absent();
@@ -77,6 +85,10 @@ final class FactoryMethodDescriptor {
     private final Set<Parameter> passedParameters = Sets.newLinkedHashSet();
     private final Set<Parameter> providedParameters = Sets.newLinkedHashSet();
     private final Set<Parameter> creationParameters = Sets.newLinkedHashSet();
+
+    Builder(AutoFactoryDeclaration declaration) {
+      this.declaration = checkNotNull(declaration);
+    }
 
     Builder factoryName(String factoryName) {
       this.factoryName = Optional.of(factoryName);
