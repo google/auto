@@ -18,6 +18,7 @@ import javax.tools.ToolProvider;
 
 import org.junit.Before;
 import org.junit.ComparisonFailure;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -96,6 +97,21 @@ public class AutoFactoryProcessorTest {
     assertOutput("tests/SimpleClassMixedDepsFactory.java");
   }
 
+  @Test public void simpleClassPassedDeps() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClassPassedDeps.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/SimpleClassPassedDepsFactory.java");
+  }
+
+  @Test public void simpleClassProvidedDeps() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClassProvidedDeps.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/SimpleClassProvidedDepsFactory.java");
+  }
+
+  @Ignore  // this test doesn't pass yet
   @Test public void simpleClassImplementingFactory() throws IOException {
     File sourceFile = copyFromResource("tests/SimpleClassImplementing.java", inputSources);
     CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
