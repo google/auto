@@ -90,6 +90,13 @@ public class AutoFactoryProcessorTest {
     assertOutput("tests/SimpleClassFactory.java");
   }
 
+  @Test public void simpleClassCustomName() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClassCustomName.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/CustomNamedFactory.java");
+  }
+
   @Test public void simpleClassMixedDeps() throws IOException {
     File sourceFile = copyFromResource("tests/SimpleClassMixedDeps.java", inputSources);
     CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
