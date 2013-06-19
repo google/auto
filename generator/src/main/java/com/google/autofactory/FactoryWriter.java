@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2013 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.google.autofactory;
 
 import java.io.IOException;
@@ -35,7 +50,7 @@ final class FactoryWriter {
       throws IOException {
     JavaFileObject sourceFile = filer.createSourceFile(descriptor.name(), originatingElement);
     JavaWriter writer = new JavaWriter(sourceFile.openWriter());
-    String packageName = Names.getPackage(descriptor.name()).toString();
+    String packageName = getPackage(descriptor.name()).toString();
     writer.emitPackage(packageName)
         .emitImports("javax.annotation.Generated");
 
@@ -45,7 +60,7 @@ final class FactoryWriter {
     }
 
     for (String implementingType : descriptor.implementingTypes()) {
-      String implementingPackageName = Names.getPackage(implementingType).toString();
+      String implementingPackageName = getPackage(implementingType).toString();
       if (!"java.lang".equals(implementingPackageName)
           && !packageName.equals(implementingPackageName)) {
         writer.emitImports(implementingType);
@@ -55,15 +70,16 @@ final class FactoryWriter {
     String[] implementedClasses = FluentIterable.from(descriptor.implementingTypes())
         .transform(new Function<String, String>() {
           @Override public String apply(String implemetingClass) {
-            return Names.getSimpleName(implemetingClass).toString();
+            return getSimpleName(implemetingClass).toString();
           }
         })
         .toSortedSet(Ordering.natural())
         .toArray(new String[0]);
 
-    String factoryName = Names.getSimpleName(descriptor.name()).toString();
-    writer.emitAnnotation(Generated.class, ImmutableMap.of("value", "\"auto-factory\""))
-        .beginType(factoryName, "class", Modifier.FINAL, null, implementedClasses);
+    String factoryName = getSimpleName(descriptor.name()).toString();
+    writer.emitAnnotation(Generated.class,
+        ImmutableMap.of("value", "\"" + AutoFactoryProcessor.class.getName() + "\""))
+            .beginType(factoryName, "class", Modifier.FINAL, null, implementedClasses);
 
     ImmutableList.Builder<String> constructorTokens = ImmutableList.builder();
     for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {
@@ -115,5 +131,24 @@ final class FactoryWriter {
       parameterTokens.add(parameter.name());
     }
     return parameterTokens.toArray(new String[0]);
+  }
+
+  private static CharSequence getSimpleName(CharSequence fullyQualifiedName) {
+    int lastDot = lastIndexOf(fullyQualifiedName, '.');
+    return fullyQualifiedName.subSequence(lastDot + 1, fullyQualifiedName.length());
+  }
+
+  private static CharSequence getPackage(CharSequence fullyQualifiedName) {
+    int lastDot = lastIndexOf(fullyQualifiedName, '.');
+    return fullyQualifiedName.subSequence(0, lastDot);
+  }
+
+  private static int lastIndexOf(CharSequence charSequence, char c) {
+    for (int i = charSequence.length() - 1; i >= 0; i--) {
+      if (charSequence.charAt(i) == c) {
+        return i;
+      }
+    }
+    return -1;
   }
 }

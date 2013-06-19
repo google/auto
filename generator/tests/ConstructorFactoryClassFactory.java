@@ -16,22 +16,25 @@
 package tests;
 
 import javax.annotation.Generated;
-import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated(value = "com.google.autofactory.AutoFactoryProcessor")
-final class SimpleClassProvidedDepsFactory {
-  private final Provider<String> providedDepAProvider;
-  private final Provider<String> providedDepBProvider;
+@Generated("com.google.autofactory.AutoFactoryProcessor")
+final class ConstructorFactoryClassFactory {
+  private final Provider<Object> objProvider;
   
-  @Inject SimpleClassMixedDepsFactory(
-      @AQualifier Provider<String> providedDepAProvider,
-      @BQualifier Provider<String> providedDepBProvider) {
-    this.providedDepAProvider = providedDepAProvider;
-    this.providedDepBProvider = providedDepBProvider;
+  ConstructorFactoryClass create() {
+    return new ConstructorFactoryClass();
   }
   
-  SimpleClassProvidedDeps create() {
-    return new SimpleClassProvidedDeps(providedDepAProvider.get(), providedDepBProvider.get());
+  ConstructorFactoryClass create(int i) {
+    return new ConstructorFactoryClass(i);
+  }
+  
+  ConstructorFactoryClass create(char c) {
+    return new ConstructorFactoryClass(objProvider.get(), c);
+  }
+
+  ConstructorFactoryClass create(byte b) {
+    return new ConstructorFactoryClass(objProvider.get(), b);
   }
 }

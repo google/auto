@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2013 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.google.autofactory;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -11,6 +26,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 
+/**
+ * A value object representing a factory to be generated.
+ *
+ * @author Gregory Kick
+ */
 final class FactoryDescriptor {
   private static final CharMatcher identifierMatcher = new CharMatcher() {
     @Override
@@ -31,14 +51,14 @@ final class FactoryDescriptor {
     this.extendingType = checkNotNull(extendingType);
     this.implementingTypes = checkNotNull(implementingTypes);
     this.methodDescriptors = checkNotNull(methodDescriptors);
-    ImmutableSetMultimap.Builder<Key, String> builder = ImmutableSetMultimap.builder();
+    ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
-        builder.putAll(parameter.asKey(), parameter.name());
+        providerNamesBuilder.putAll(parameter.asKey(), parameter.name());
       }
     }
     ImmutableMap.Builder<Key, String> providersBuilder = ImmutableMap.builder();
-    for (Entry<Key, Collection<String>> entry : builder.build().asMap().entrySet()) {
+    for (Entry<Key, Collection<String>> entry : providerNamesBuilder.build().asMap().entrySet()) {
       Key key = entry.getKey();
       switch (entry.getValue().size()) {
         case 0:
