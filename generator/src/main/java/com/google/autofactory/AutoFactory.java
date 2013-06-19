@@ -19,7 +19,6 @@ import static java.lang.annotation.ElementType.CONSTRUCTOR;
 import static java.lang.annotation.ElementType.TYPE;
 
 import java.lang.annotation.Target;
-import java.util.Formatter;
 
 /**
  * An annotation to be applied to elements for which a factory should be automatically generated.
@@ -30,8 +29,8 @@ import java.util.Formatter;
 public @interface AutoFactory {
   /**
    * The pattern for the fully qualified name of the factory implementation. The pattern syntax is
-   * that of {@link Formatter}. There are two arguments passed to the pattern: the package and the
-   * simple name of the type enclosing the target of the annotation.
+   * that of {@link java.util.Formatter}. There are two arguments passed to the pattern: the package
+   * and the simple name of the type enclosing the target of the annotation.
    */
   String named() default "%s.%sFactory";
 
