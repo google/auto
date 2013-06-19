@@ -15,15 +15,32 @@
  */
 package com.google.autofactory;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import static java.lang.annotation.ElementType.CONSTRUCTOR;
+import static java.lang.annotation.ElementType.TYPE;
+
 import java.lang.annotation.Target;
 
 /**
- * Annotates an interface to indicate that it should be used as the basis for a
- * Dagger managed factory which creates the instances returned from its methods.
+ * An annotation to be applied to elements for which a factory should be automatically generated.
+ *
+ * @author Gregory Kick
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface AutoFactory { }
+@Target({ TYPE, CONSTRUCTOR })
+public @interface AutoFactory {
+  /**
+   * The pattern for the fully qualified name of the factory implementation. The pattern syntax is
+   * that of {@link java.util.Formatter}. There are two arguments passed to the pattern: the package
+   * and the simple name of the type enclosing the target of the annotation.
+   */
+  String named() default "%s.%sFactory";
+
+  /**
+   * A list of interfaces that the generated factory is required to implement.
+   */
+  Class<?>[] implementing() default { };
+
+  /**
+   * The type that the generated factory is require to extend.
+   */
+  Class<?> extending() default Object.class;
+}

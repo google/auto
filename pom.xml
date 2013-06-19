@@ -32,7 +32,6 @@
   <url>https://github.com/google/autofactory</url>
 
   <modules>
-    <module>examples</module>
     <module>generator</module>
     <module>integration</module>
     <module>src-subject</module>

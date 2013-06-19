@@ -26,11 +26,13 @@ import java.util.Locale;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
+import org.junit.ComparisonFailure;
 import org.truth0.FailureStrategy;
 import org.truth0.subjects.Subject;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.Files;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
 import com.sun.tools.javac.api.JavacTool;
@@ -63,10 +65,13 @@ public final class JavaSourceSubject extends Subject<JavaSourceSubject, File> {
       ImmutableList<CompilationUnitTree> compilationUnits =
           ImmutableList.copyOf(task.parse());
       checkState(compilationUnits.size() == 2);
-      compilationUnits.get(0).accept(new EqualityScanner(failureStrategy),
-          compilationUnits.get(1));
-      System.out.println(compilationUnits.get(0));
-      System.out.println(compilationUnits.get(1));
+      try {
+        compilationUnits.get(0).accept(new EqualityScanner(failureStrategy),
+            compilationUnits.get(1));
+      } catch (AssertionError e) {
+        throw new ComparisonFailure("",
+            Files.toString(getSubject(), UTF_8), Files.toString(other, UTF_8));
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
