@@ -16,25 +16,14 @@
 package tests;
 
 import javax.annotation.Generated;
-import javax.inject.Provider;
 
-@Generated("com.google.autofactory.AutoFactoryProcessor")
-final class ConstructorFactoryClassFactory {
-  private final Provider<Object> objProvider;
-  
-  ConstructorFactoryClass create() {
-    return new ConstructorFactoryClass();
-  }
-  
-  ConstructorFactoryClass create(int i) {
-    return new ConstructorFactoryClass(i);
-  }
-  
-  ConstructorFactoryClass create(char c) {
-    return new ConstructorFactoryClass(objProvider.get(), c);
-  }
+import com.google.autofactory.AutoFactory;
+import com.google.autofactory.Provided;
 
-  ConstructorFactoryClass create(byte b) {
-    return new ConstructorFactoryClass(objProvider.get(), b);
-  }
+final class ConstructorAnnotated {
+  @AutoFactory ConstructorAnnotated() {}
+  ConstructorAnnotated(Object obj) {}
+  @AutoFactory ConstructorAnnotated(String s) {}
+  @AutoFactory ConstructorAnnotated(@Provided Object obj, int i) {}
+  @AutoFactory ConstructorAnnotated(@Provided Object obj, char c) {}
 }
