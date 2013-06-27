@@ -57,7 +57,7 @@
       <artifactId>tools</artifactId>
       <version>1.6.0</version>
       <scope>system</scope>
-      <systemPath>${java.home}/../lib/tools.jar</systemPath>
+      <systemPath>${toolsjar}</systemPath>
     </dependency>
 
     <dependency>
