@@ -24,7 +24,6 @@ import java.util.Map.Entry;
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
-import javax.lang.model.element.Element;
 import javax.tools.JavaFileObject;
 
 import com.google.common.base.Function;
@@ -46,9 +45,9 @@ final class FactoryWriter {
 
   private static final Joiner argumentJoiner = Joiner.on(", ");
 
-  void writeFactory(final FactoryDescriptor descriptor, Element originatingElement)
+  void writeFactory(final FactoryDescriptor descriptor)
       throws IOException {
-    JavaFileObject sourceFile = filer.createSourceFile(descriptor.name(), originatingElement);
+    JavaFileObject sourceFile = filer.createSourceFile(descriptor.name());
     JavaWriter writer = new JavaWriter(sourceFile.openWriter());
     String packageName = getPackage(descriptor.name()).toString();
     writer.emitPackage(packageName)

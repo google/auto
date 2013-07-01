@@ -20,18 +20,26 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(value = "com.google.autofactory.AutoFactoryProcessor")
-final class SimpleClassProvidedDepsFactory {
-  private final Provider<String> providedDepAProvider;
-  private final Provider<String> providedDepBProvider;
+final class ConstructorAnnotatedFactory {
+  private final Provider<Object> objProvider;
   
-  @Inject SimpleClassMixedDepsFactory(
-      @AQualifier Provider<String> providedDepAProvider,
-      @BQualifier Provider<String> providedDepBProvider) {
-    this.providedDepAProvider = providedDepAProvider;
-    this.providedDepBProvider = providedDepBProvider;
+  @Inject ConstructorAnnotatedFactory(Provider<Object> objProvider) {
+    this.objProvider = objProvider;
   }
   
-  SimpleClassProvidedDeps create() {
-    return new SimpleClassProvidedDeps(providedDepAProvider.get(), providedDepBProvider.get());
+  ConstructorAnnotated create() {
+    return new ConstructorAnnotated();
+  }
+  
+  ConstructorAnnotated create(String s) {
+    return new ConstructorAnnotated(s);
+  }
+  
+  ConstructorAnnotated create(int i) {
+    return new ConstructorAnnotated(objProvider.get(), i);
+  }
+  
+  ConstructorAnnotated create(char c) {
+    return new ConstructorAnnotated(objProvider.get(), c);
   }
 }

@@ -60,6 +60,7 @@ public class AutoFactoryProcessorTest {
     this.fileManager = compiler.getStandardFileManager(null /* default diagnostic listener */,
         Locale.getDefault(), UTF_8);
     this.inputSources = folder.newFolder();
+    this.expectedSources = folder.newFolder();
     this.outputSources = folder.newFolder();
     fileManager.setLocation(SOURCE_OUTPUT, ImmutableSet.of(outputSources));
   }
@@ -131,6 +132,13 @@ public class AutoFactoryProcessorTest {
     CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
     assertTrue("compilation failed", task.call());
     assertOutput("tests/SimpleClassProvidedDepsFactory.java");
+  }
+
+  @Test public void constructorAnnotated() throws IOException {
+    File sourceFile = copyFromResource("tests/ConstructorAnnotated.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/ConstructorAnnotatedFactory.java");
   }
 
   @Ignore  // this test doesn't pass yet

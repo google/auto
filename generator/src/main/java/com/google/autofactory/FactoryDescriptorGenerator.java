@@ -97,8 +97,7 @@ final class FactoryDescriptorGenerator {
       @Override
       public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(ExecutableElement e,
           Void p) {
-        // applied to a constructor
-        return super.visitExecutableAsConstructor(e, p);
+        return ImmutableSet.of(generateDescriptorForConstructor(declaration, e));
       }
     }, null);
   }
