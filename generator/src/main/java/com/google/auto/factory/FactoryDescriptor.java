@@ -24,6 +24,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 
 /**
@@ -41,18 +42,21 @@ final class FactoryDescriptor {
 
   private final String name;
   private final String extendingType;
-  private final ImmutableSet<String> implementingTypes;
+  private final ImmutableSortedSet<String> implementingTypes;
   private final boolean publicType;
   private final ImmutableSet<FactoryMethodDescriptor> methodDescriptors;
+  private final ImmutableSet<ImplemetationMethodDescriptor> implementationMethodDescriptors;
   private final ImmutableMap<Key, String> providerNames;
 
   FactoryDescriptor(String name, String extendingType, ImmutableSet<String> implementingTypes,
-      boolean publicType, ImmutableSet<FactoryMethodDescriptor> methodDescriptors) {
+      boolean publicType, ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
+      ImmutableSet<ImplemetationMethodDescriptor> implementationMethodDescriptors) {
     this.name = checkNotNull(name);
     this.extendingType = checkNotNull(extendingType);
-    this.implementingTypes = checkNotNull(implementingTypes);
+    this.implementingTypes = ImmutableSortedSet.copyOf(implementingTypes);
     this.publicType = publicType;
     this.methodDescriptors = checkNotNull(methodDescriptors);
+    this.implementationMethodDescriptors = checkNotNull(implementationMethodDescriptors);
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
@@ -85,7 +89,7 @@ final class FactoryDescriptor {
     return extendingType;
   }
 
-  ImmutableSet<String> implementingTypes() {
+  ImmutableSortedSet<String> implementingTypes() {
     return implementingTypes;
   }
 
@@ -95,6 +99,10 @@ final class FactoryDescriptor {
 
   ImmutableSet<FactoryMethodDescriptor> methodDescriptors() {
     return methodDescriptors;
+  }
+
+  ImmutableSet<ImplemetationMethodDescriptor> implementationMethodDescriptors() {
+    return implementationMethodDescriptors;
   }
 
   ImmutableMap<Key, String> providerNames() {

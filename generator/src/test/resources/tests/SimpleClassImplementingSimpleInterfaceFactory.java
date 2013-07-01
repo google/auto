@@ -16,12 +16,18 @@
 package tests;
 
 import javax.annotation.Generated;
+import javax.inject.Inject;
+import tests.SimpleClassImplementingSimpleInterface.SimpleInterface;
 
-import com.google.common.base.Supplier;
+@Generated(value = "com.google.autofactory.AutoFactoryProcessor")
+final class SimpleClassImplementingSimpleInterfaceFactory implements SimpleInterface {
+  @Inject SimpleClassImplementingSimpleInterfaceFactory() {}
+  
+  SimpleClassImplementingSimpleInterface create() {
+    return new SimpleClassImplementingSimpleInterface();
+  }
 
-@Generated("com.google.auto.factory.AutoFactoryProcessor")
-final class SimpleClassImplementingFactory implements Supplier<SimpleClassImplementing> {
-  @Override public SimpleClassImplementing get() {
-    return new SimpleClassImplementing();
+  @Override public SimpleClassImplementingSimpleInterface newInstance() {
+    return create();
   }
 }

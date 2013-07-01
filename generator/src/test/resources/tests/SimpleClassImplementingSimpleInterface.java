@@ -15,8 +15,12 @@
  */
 package tests;
 
-import com.google.auto.factory.AutoFactory;
-import com.google.common.base.Supplier;
+import com.google.autofactory.AutoFactory;
+import tests.SimpleClassImplementingSimpleInterface.SimpleInterface;
 
-@AutoFactory(implementing = Supplier.class)
-public class SimpleClassImplementing {}
+@AutoFactory(implementing = SimpleInterface.class)
+final class SimpleClassImplementingSimpleInterface {
+  interface SimpleInterface {
+    SimpleClassImplementingSimpleInterface newInstance();
+  }
+}
