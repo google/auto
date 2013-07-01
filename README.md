@@ -96,5 +96,5 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
-[java] https://en.wikipedia.org/wiki/Java_(programming_language)
+[java]: https://en.wikipedia.org/wiki/Java_(programming_language)
 
