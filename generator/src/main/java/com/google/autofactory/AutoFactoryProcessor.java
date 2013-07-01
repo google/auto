@@ -52,34 +52,36 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     FactoryDescriptorGenerator factoryDescriptorGenerator =
         new FactoryDescriptorGenerator(messager, elements);
     FactoryWriter factoryWriter = new FactoryWriter(processingEnv.getFiler());
+    ImmutableListMultimap.Builder<String, FactoryMethodDescriptor> indexedMethods =
+        ImmutableListMultimap.builder();
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
-      ImmutableListMultimap<String, FactoryMethodDescriptor> indexedMethods =
+      indexedMethods.putAll(
           Multimaps.index(descriptors, new Function<FactoryMethodDescriptor, String>() {
             @Override public String apply(FactoryMethodDescriptor descriptor) {
               return descriptor.factoryName();
             }
-          });
-      for (Entry<String, Collection<FactoryMethodDescriptor>> entry
-          : indexedMethods.asMap().entrySet()) {
-        ImmutableSet.Builder<String> extending = ImmutableSet.builder();
-        ImmutableSet.Builder<String> implementing = ImmutableSet.builder();
-        for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
-          extending.add(methodDescriptor.declaration().extendingQualifiedName());
-          implementing.addAll(methodDescriptor.declaration().implementingQualifiedNames());
-        }
-        try {
-          factoryWriter.writeFactory(
-              new FactoryDescriptor(
-                  entry.getKey(),
-                  Iterables.getOnlyElement(extending.build()),
-                  implementing.build(),
-                  ImmutableSet.copyOf(entry.getValue())),
-              element);
-        } catch (IOException e) {
-          messager.printMessage(Kind.ERROR, "failed", element);
-        }
+          }));
+    }
+
+    for (Entry<String, Collection<FactoryMethodDescriptor>> entry
+        : indexedMethods.build().asMap().entrySet()) {
+      ImmutableSet.Builder<String> extending = ImmutableSet.builder();
+      ImmutableSet.Builder<String> implementing = ImmutableSet.builder();
+      for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
+        extending.add(methodDescriptor.declaration().extendingQualifiedName());
+        implementing.addAll(methodDescriptor.declaration().implementingQualifiedNames());
+      }
+      try {
+        factoryWriter.writeFactory(
+            new FactoryDescriptor(
+                entry.getKey(),
+                Iterables.getOnlyElement(extending.build()),
+                implementing.build(),
+                ImmutableSet.copyOf(entry.getValue())));
+      } catch (IOException e) {
+        messager.printMessage(Kind.ERROR, "failed");
       }
     }
 
