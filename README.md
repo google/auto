@@ -3,7 +3,7 @@ AutoFactory
 
 A source code generator for JSR-330-compatible factories.
 
-What is this?
+AutoWhat‽
 -------------
 
 [Java][java] is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
@@ -40,16 +40,16 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(value = "com.google.autofactory.AutoFactoryProcessor")
-final class SimpleClassMixedDepsFactory {
+final class SomeClassFactory {
   private final Provider<String> providedDepAProvider;
   
-  @Inject SimpleClassMixedDepsFactory(
+  @Inject SomeClassFactory(
       @AQualifier Provider<String> providedDepAProvider) {
     this.providedDepAProvider = providedDepAProvider;
   }
   
-  SimpleClassMixedDeps create(String depB) {
-    return new SimpleClassMixedDeps(providedDepAProvider.get(), depB);
+  SomeClass create(String depB) {
+    return new SomeClass(providedDepAProvider.get(), depB);
   }
 }
 ```
