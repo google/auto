@@ -6,7 +6,7 @@ A source code generator for JSR-330-compatible factories.
 What is this?
 -------------
 
-[Java](https://en.wikipedia.org/wiki/Java_(programming_language)) is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern).  They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
+[Java][java] is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern).  They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
 AutoFactory generates factories that can be used on their own or with [JSR-330](http://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](http://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation.
 
@@ -96,5 +96,5 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
-
+[java] https://en.wikipedia.org/wiki/Java_(programming_language)
 
