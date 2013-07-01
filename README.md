@@ -6,9 +6,9 @@ A source code generator for JSR-330-compatible factories.
 What is this?
 -------------
 
-[Java][java] is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern).  They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
+[Java][java] is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
-AutoFactory generates factories that can be used on their own or with [JSR-330](http://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](http://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation.
+AutoFactory generates factories that can be used on their own or with [JSR-330](http://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](http://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation. Any combination of parameters can either be passed through factory methods or provided to the factory at construction time. They can implement interfaces or extend abstract classes. They're what you would have written, but without the bugs.
 
 Save time.  Save code.  Save sanity.
 
@@ -28,7 +28,7 @@ final class SomeClass {
     this.depB = depB;
   }
 
-  …
+  // …
 }
 ```
 
