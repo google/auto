@@ -69,9 +69,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         : indexedMethods.build().asMap().entrySet()) {
       ImmutableSet.Builder<String> extending = ImmutableSet.builder();
       ImmutableSet.Builder<String> implementing = ImmutableSet.builder();
+      boolean publicType = false;
       for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
         extending.add(methodDescriptor.declaration().extendingQualifiedName());
         implementing.addAll(methodDescriptor.declaration().implementingQualifiedNames());
+        publicType |= methodDescriptor.publicMethod();
       }
       try {
         factoryWriter.writeFactory(
@@ -79,6 +81,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                 entry.getKey(),
                 Iterables.getOnlyElement(extending.build()),
                 implementing.build(),
+                publicType,
                 ImmutableSet.copyOf(entry.getValue())));
       } catch (IOException e) {
         messager.printMessage(Kind.ERROR, "failed");

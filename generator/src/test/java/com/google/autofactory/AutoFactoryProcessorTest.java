@@ -106,6 +106,13 @@ public class AutoFactoryProcessorTest {
     assertOutput("tests/SimpleClassFactory.java");
   }
 
+  @Test public void publicClass() throws IOException {
+    File sourceFile = copyFromResource("tests/PublicClass.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/PublicClassFactory.java");
+  }
+
   @Test public void simpleClassCustomName() throws IOException {
     File sourceFile = copyFromResource("tests/SimpleClassCustomName.java", inputSources);
     CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
