@@ -15,6 +15,8 @@
  */
 package com.google.autofactory;
 
+import static java.lang.reflect.Modifier.PUBLIC;
+
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
@@ -77,8 +79,9 @@ final class FactoryWriter {
 
     String factoryName = getSimpleName(descriptor.name()).toString();
     writer.emitAnnotation(Generated.class,
-        ImmutableMap.of("value", "\"" + AutoFactoryProcessor.class.getName() + "\""))
-            .beginType(factoryName, "class", Modifier.FINAL, null, implementedClasses);
+        ImmutableMap.of("value", "\"" + AutoFactoryProcessor.class.getName() + "\""));
+    writer.beginType(factoryName, "class", Modifier.FINAL | (descriptor.publicType() ? PUBLIC : 0),
+        null, implementedClasses);
 
     ImmutableList.Builder<String> constructorTokens = ImmutableList.builder();
     for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {
@@ -93,7 +96,8 @@ final class FactoryWriter {
 
 
     writer.emitAnnotation("Inject");
-    writer.beginMethod(null, factoryName, 0, constructorTokens.build().toArray(new String[0]));
+    writer.beginMethod(null, factoryName, descriptor.publicType() ? PUBLIC : 0,
+        constructorTokens.build().toArray(new String[0]));
 
     for (String providerName : descriptor.providerNames().values()) {
       writer.emitStatement("this.%1$s = %1$s", providerName);
@@ -102,7 +106,8 @@ final class FactoryWriter {
     writer.endMethod();
 
     for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
-      writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(), 0,
+      writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),
+          methodDescriptor.publicMethod() ? PUBLIC : 0,
           parameterTokens(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.creationParameters())

@@ -42,14 +42,16 @@ final class FactoryDescriptor {
   private final String name;
   private final String extendingType;
   private final ImmutableSet<String> implementingTypes;
+  private final boolean publicType;
   private final ImmutableSet<FactoryMethodDescriptor> methodDescriptors;
   private final ImmutableMap<Key, String> providerNames;
 
   FactoryDescriptor(String name, String extendingType, ImmutableSet<String> implementingTypes,
-      ImmutableSet<FactoryMethodDescriptor> methodDescriptors) {
+      boolean publicType, ImmutableSet<FactoryMethodDescriptor> methodDescriptors) {
     this.name = checkNotNull(name);
     this.extendingType = checkNotNull(extendingType);
     this.implementingTypes = checkNotNull(implementingTypes);
+    this.publicType = publicType;
     this.methodDescriptors = checkNotNull(methodDescriptors);
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
@@ -85,6 +87,10 @@ final class FactoryDescriptor {
 
   ImmutableSet<String> implementingTypes() {
     return implementingTypes;
+  }
+
+  boolean publicType() {
+    return publicType;
   }
 
   ImmutableSet<FactoryMethodDescriptor> methodDescriptors() {
