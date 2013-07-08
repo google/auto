@@ -18,6 +18,7 @@ package com.google.autofactory;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import javax.annotation.processing.Messager;
@@ -137,6 +138,7 @@ final class FactoryDescriptorGenerator {
             elements.getPackageOf(constructor).getQualifiedName(), classElement.getSimpleName()))
         .name("create")
         .returnType(returnType.toString())
+        .publicMethod(constructor.getEnclosingElement().getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters()))
@@ -187,6 +189,7 @@ final class FactoryDescriptorGenerator {
             elements.getPackageOf(type).getQualifiedName(), type.getSimpleName()))
         .name("create")
         .returnType(type.getQualifiedName().toString())
+        .publicMethod(type.getModifiers().contains(PUBLIC))
         .passedParameters(ImmutableSet.<Parameter>of())
         .creationParameters(ImmutableSet.<Parameter>of())
         .providedParameters(ImmutableSet.<Parameter>of())
