@@ -24,7 +24,7 @@ import javax.lang.model.element.Modifier;
 import com.google.common.base.Predicate;
 
 final class ElementPredicates {
-  private ElementPredicates() {}
+  private ElementPredicates() { }
 
   static Predicate<Element> byModifiers(final Modifier first, final Modifier... rest) {
     return new Predicate<Element>() {
