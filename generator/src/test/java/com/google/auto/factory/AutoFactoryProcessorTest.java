@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory;
+package com.google.auto.factory;
 
 import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.JAVA_SOURCE;
 import static com.google.common.base.Charsets.UTF_8;
@@ -68,7 +68,7 @@ public class AutoFactoryProcessorTest {
   private CompilationTask createCompilationTask(Set<File> sources) {
     return compiler.getTask(null, fileManager,
         null /* default diagnostic listener */,
-        ImmutableList.of("-processor", "com.google.autofactory.AutoFactoryProcessor"),
+        ImmutableList.of("-processor", "com.google.auto.factory.AutoFactoryProcessor"),
         null,
         fileManager.getJavaFileObjectsFromFiles(sources));
   }

@@ -17,8 +17,8 @@ package tests;
 
 import javax.annotation.Generated;
 
-import com.google.autofactory.AutoFactory;
-import com.google.autofactory.Provided;
+import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
 
 final class ConstructorAnnotated {
   @AutoFactory ConstructorAnnotated() {}

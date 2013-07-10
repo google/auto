@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory;
+package com.google.auto.factory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static javax.tools.Diagnostic.Kind.ERROR;
