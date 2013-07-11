@@ -19,7 +19,7 @@ import javax.annotation.Generated;
 
 import com.google.common.base.Supplier;
 
-@Generated("com.google.autofactory.AutoFactoryProcessor")
+@Generated("com.google.auto.factory.AutoFactoryProcessor")
 final class SimpleClassImplementingFactory implements Supplier<SimpleClassImplementing> {
   @Override public SimpleClassImplementing get() {
     return new SimpleClassImplementing();

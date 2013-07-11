@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.autofactory;
+package com.google.auto.factory;
 
 import java.io.IOException;
 import java.util.Collection;
