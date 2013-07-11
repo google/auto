@@ -15,7 +15,7 @@
  */
 package tests;
 
-import com.google.autofactory.AutoFactory;
+import com.google.auto.factory.AutoFactory;
 import tests.SimpleClassImplementingSimpleInterface.SimpleInterface;
 
 @AutoFactory(implementing = SimpleInterface.class)

@@ -15,7 +15,7 @@ package tests;
 
 import java.util.RandomAccess;
 
-import com.google.autofactory.AutoFactory;
+import com.google.auto.factory.AutoFactory;
 
 @AutoFactory(implementing = RandomAccess.class)
 class SimpleClassImplementingMarker {
