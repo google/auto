@@ -34,7 +34,6 @@ import javax.tools.ToolProvider;
 
 import org.junit.Before;
 import org.junit.ComparisonFailure;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -148,11 +147,26 @@ public class AutoFactoryProcessorTest {
     assertOutput("tests/ConstructorAnnotatedFactory.java");
   }
 
-  @Ignore  // this test doesn't pass yet
-  @Test public void simpleClassImplementingFactory() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClassImplementing.java", inputSources);
+  @Test public void simpleClassImplementingMarker() throws IOException {
+    File sourceFile = copyFromResource("tests/SimpleClassImplementingMarker.java", inputSources);
     CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
     assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassImplementingFactory.java");
+    assertOutput("tests/SimpleClassImplementingMarkerFactory.java");
+  }
+
+  @Test public void simpleClassImplementingSimpleInterface() throws IOException {
+    File sourceFile =
+        copyFromResource("tests/SimpleClassImplementingSimpleInterface.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/SimpleClassImplementingSimpleInterfaceFactory.java");
+  }
+
+  @Test public void mixedDepsImplementingInterfaces() throws IOException {
+    File sourceFile =
+        copyFromResource("tests/MixedDepsImplementingInterfaces.java", inputSources);
+    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
+    assertTrue("compilation failed", task.call());
+    assertOutput("tests/MixedDepsImplementingInterfacesFactory.java");
   }
 }

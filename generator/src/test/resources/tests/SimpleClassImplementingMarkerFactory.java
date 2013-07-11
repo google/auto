@@ -15,8 +15,15 @@
  */
 package tests;
 
-import com.google.auto.factory.AutoFactory;
-import com.google.common.base.Supplier;
+import javax.annotation.Generated;
+import javax.inject.Inject;
+import java.util.RandomAccess;
 
-@AutoFactory(implementing = Supplier.class)
-public class SimpleClassImplementing {}
+@Generated(value = "com.google.auto.factory.AutoFactoryProcessor")
+final class SimpleClassImplementingMarkerFactory implements RandomAccess {
+  @Inject SimpleClassImplementingMarkerFactory() {}
+  
+  SimpleClassImplementingMarker create() {
+    return new SimpleClassImplementingMarker();
+  }
+}
