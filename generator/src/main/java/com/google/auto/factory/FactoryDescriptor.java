@@ -48,12 +48,12 @@ final class FactoryDescriptor {
   private final ImmutableSet<ImplemetationMethodDescriptor> implementationMethodDescriptors;
   private final ImmutableMap<Key, String> providerNames;
 
-  FactoryDescriptor(String name, String extendingType, ImmutableSet<String> implementingTypes,
+  FactoryDescriptor(String name, String extendingType, ImmutableSortedSet<String> implementingTypes,
       boolean publicType, ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
       ImmutableSet<ImplemetationMethodDescriptor> implementationMethodDescriptors) {
     this.name = checkNotNull(name);
     this.extendingType = checkNotNull(extendingType);
-    this.implementingTypes = ImmutableSortedSet.copyOf(implementingTypes);
+    this.implementingTypes = checkNotNull(implementingTypes);
     this.publicType = publicType;
     this.methodDescriptors = checkNotNull(methodDescriptors);
     this.implementationMethodDescriptors = checkNotNull(implementationMethodDescriptors);

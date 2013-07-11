@@ -36,6 +36,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 
@@ -91,7 +92,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     for (Entry<String, Collection<FactoryMethodDescriptor>> entry
         : indexedMethods.build().asMap().entrySet()) {
       ImmutableSet.Builder<String> extending = ImmutableSet.builder();
-      ImmutableSet.Builder<String> implementing = ImmutableSet.builder();
+      ImmutableSortedSet.Builder<String> implementing = ImmutableSortedSet.naturalOrder();
       boolean publicType = false;
       for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
         extending.add(methodDescriptor.declaration().extendingQualifiedName());
