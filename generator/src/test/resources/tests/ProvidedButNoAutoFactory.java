@@ -15,7 +15,7 @@
  */
 package tests;
 
-import com.google.autofactory.Provided;
+import com.google.auto.factory.Provided;
 
 final class ProvidedButNoAutoFactory {
   ProvidedButNoAutoFactory(Object a, @Provided Object b) {}

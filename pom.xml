@@ -23,7 +23,7 @@
     <version>7</version>
   </parent>
 
-  <groupId>com.google.autofactory</groupId>
+  <groupId>com.google.auto.factory</groupId>
   <artifactId>autofactory-parent</artifactId>
   <packaging>pom</packaging>
   <version>1.0-SNAPSHOT</version>

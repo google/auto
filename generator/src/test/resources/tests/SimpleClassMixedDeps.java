@@ -15,8 +15,8 @@
  */
 package tests;
 
-import com.google.autofactory.AutoFactory;
-import com.google.autofactory.Provided;
+import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
 
 /**
  * @author Gregory Kick
