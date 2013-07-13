@@ -23,6 +23,7 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 
 import javax.annotation.processing.Messager;
 import javax.inject.Inject;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -59,8 +60,9 @@ final class FactoryDescriptorGenerator {
   }
 
   ImmutableSet<FactoryMethodDescriptor> generateDescriptor(Element element) {
+    final AnnotationMirror mirror = Mirrors.getAnnotationMirror(element, AutoFactory.class).get();
     final AutoFactoryDeclaration declaration = AutoFactoryDeclaration.fromAnnotationMirror(
-        elements, Mirrors.getAnnotationMirror(element, AutoFactory.class).get());
+        elements, mirror);
     return element.accept(new ElementKindVisitor6<ImmutableSet<FactoryMethodDescriptor>, Void>() {
       @Override
       protected ImmutableSet<FactoryMethodDescriptor> defaultAction(Element e, Void p) {
@@ -71,6 +73,9 @@ final class FactoryDescriptorGenerator {
       public ImmutableSet<FactoryMethodDescriptor> visitTypeAsClass(TypeElement type, Void p) {
         if (type.getModifiers().contains(ABSTRACT)) {
           // applied to an abstract factory
+          messager.printMessage(ERROR,
+              "Auto-factory doesn't support being applied to abstract classes.", type, mirror);
+          return ImmutableSet.of();
         } else {
           // applied to the type to be created
           ImmutableSet<ExecutableElement> constructors = Elements2.getConstructors(type);
@@ -86,18 +91,20 @@ final class FactoryDescriptorGenerator {
                 .toSet();
           }
         }
-        return ImmutableSet.of();
       }
 
       @Override
-      public ImmutableSet<FactoryMethodDescriptor> visitTypeAsInterface(TypeElement e, Void p) {
+      public ImmutableSet<FactoryMethodDescriptor> visitTypeAsInterface(TypeElement type, Void p) {
         // applied to the factory interface
-        return super.visitTypeAsInterface(e, p);
+        messager.printMessage(ERROR,
+            "Auto-factory doesn't support being applied to interfaces.", type, mirror);
+        return ImmutableSet.of();
       }
 
       @Override
       public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(ExecutableElement e,
           Void p) {
+        // applied to a constructor of a type to be created
         return ImmutableSet.of(generateDescriptorForConstructor(declaration, e));
       }
     }, null);
