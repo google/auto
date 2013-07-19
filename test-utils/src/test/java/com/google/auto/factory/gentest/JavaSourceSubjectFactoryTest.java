@@ -15,72 +15,114 @@
  */
 package com.google.auto.factory.gentest;
 
-import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.JAVA_SOURCE;
-import static org.junit.Assert.assertTrue;
+import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.javaSources;
+import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.javaSourcesProcessedWith;
 import static org.truth0.Truth.ASSERT;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
+import java.util.Arrays;
+import java.util.Set;
 
-import org.junit.Before;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.TypeElement;
+import javax.tools.JavaFileObject;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import com.google.common.io.Files;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
 /**
  * Tests {@link JavaSourceSubjectFactory}.
- * 
+ *
  * @author Gregory Kick
  */
 @RunWith(JUnit4.class)
 public class JavaSourceSubjectFactoryTest {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
-  
-  private File reference;
-  
-  @Before public void createReferenceFile() throws IOException {
-    reference = folder.newFile("HelloWorld.java");
-    Resources.asByteSource(Resources.getResource("HelloWorld.java"))
-        .copyTo(Files.asByteSink(reference));
-  }
-  
+
   @Test
-  public void equivalent() throws IOException {
-    File v2 = folder.newFile("HelloWorld-v2.java");
-    Resources.asByteSource(Resources.getResource("HelloWorld-v2.java"))
-        .copyTo(Files.asByteSink(v2));
-    ASSERT.about(JAVA_SOURCE).that(reference).isEquivalentTo(v2);
-  }
-  
-  @Test
-  public void throwsForBrokenSource() throws IOException {
-    File broken = folder.newFile("HelloWorld-broken.java");
-    Resources.asByteSource(Resources.getResource("HelloWorld-broken.java"))
-        .copyTo(Files.asByteSink(broken));
-    boolean threw = true;
-    try {
-      ASSERT.about(JAVA_SOURCE).that(reference).isEquivalentTo(broken);
-      threw = false;
-    } catch (AssertionError expected) {}
-    assertTrue(threw);
+  public void compilesWithoutError() {
+    ASSERT.about(javaSources())
+        .that(Arrays.asList(JavaFileObjects.forResource(Resources.getResource("HelloWorld.java"))))
+        .compiles();
   }
 
   @Test
-  public void throwsForInequivalent() throws IOException {
-    File different = folder.newFile("HelloWorld-different.java");
-    Resources.asByteSource(Resources.getResource("HelloWorld-broken.java"))
-        .copyTo(Files.asByteSink(different));
-    boolean threw = true;
+  public void compilesWithoutError_throws() {
     try {
-      ASSERT.about(JAVA_SOURCE).that(reference).isEquivalentTo(different);
-      threw = false;
+      ASSERT.about(javaSources())
+          .that(Arrays.asList(JavaFileObjects.forResource("HelloWorld-broken.java")))
+          .compiles();
+      throw new RuntimeException();
+    } catch (AssertionError expected) {
+      // TODO(gak): verify the message
+    }
+  }
+
+  @Test
+  public void failsToCompile_throws() {
+    try {
+      ASSERT.about(javaSources())
+          .that(Arrays.asList(JavaFileObjects.forResource(Resources.getResource("HelloWorld.java"))))
+          .failsToCompile();
+      throw new RuntimeException();
     } catch (AssertionError expected) {}
-    assertTrue(threw);
+  }
+
+  @Test
+  public void failsToCompile() {
+    ASSERT.about(javaSources())
+        .that(Arrays.asList(JavaFileObjects.forResource("HelloWorld-broken.java")))
+        .failsToCompile();
+  }
+
+  @Test
+  public void generates() throws IOException {
+    ASSERT.about(javaSourcesProcessedWith(new GeneratingProcessor()))
+        .that(Arrays.asList(JavaFileObjects.forResource("HelloWorld.java")))
+        .generatesSources(JavaFileObjects.forSourceString(GeneratingProcessor.GENERATED_CLASS_NAME,
+            GeneratingProcessor.GENERATED_SOURCE));
+  }
+
+  private static final class GeneratingProcessor extends AbstractProcessor {
+    static final String GENERATED_CLASS_NAME = "Blah";
+    static final String GENERATED_SOURCE = "final class Blah {}";
+
+    @Override
+    public synchronized void init(ProcessingEnvironment processingEnv) {
+      try {
+        JavaFileObject sourceFile = processingEnv.getFiler().createSourceFile(GENERATED_CLASS_NAME);
+        Writer writer = sourceFile.openWriter();
+        writer.write(GENERATED_SOURCE);
+        writer.close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+      return false;
+    }
+
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+      return ImmutableSet.of("*");
+    }
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
   }
 }

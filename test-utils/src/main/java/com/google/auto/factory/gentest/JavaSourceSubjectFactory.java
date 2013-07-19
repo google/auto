@@ -15,10 +15,14 @@
  */
 package com.google.auto.factory.gentest;
 
-import java.io.File;
+import javax.annotation.processing.Processor;
+import javax.tools.JavaFileObject;
 
 import org.truth0.FailureStrategy;
 import org.truth0.subjects.SubjectFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 /**
  * A <a href="https://github.com/truth0/truth">Truth</a> {@link SubjectFactory} for creating
@@ -26,11 +30,26 @@ import org.truth0.subjects.SubjectFactory;
  *
  * @author Gregory Kick
  */
-public class JavaSourceSubjectFactory extends SubjectFactory<JavaSourceSubject, File> {
-  public static final JavaSourceSubjectFactory JAVA_SOURCE = new JavaSourceSubjectFactory();
+public class JavaSourceSubjectFactory
+    extends SubjectFactory<JavaSourceSubject, Iterable<? extends JavaFileObject>> {
+  public static JavaSourceSubjectFactory javaSources() {
+    return new JavaSourceSubjectFactory(ImmutableList.<Processor>of());
+  }
+
+  public static JavaSourceSubjectFactory javaSourcesProcessedWith(Processor first,
+      Processor... rest) {
+    return new JavaSourceSubjectFactory(ImmutableList.copyOf(Lists.asList(first, rest)));
+  }
+
+  private final ImmutableList<Processor> processors;
+
+  private JavaSourceSubjectFactory(ImmutableList<Processor> processors) {
+    this.processors = processors;
+  }
 
   @Override
-  public JavaSourceSubject getSubject(FailureStrategy failureStrategy, File subject) {
-    return new JavaSourceSubject(failureStrategy, subject);
+  public JavaSourceSubject getSubject(FailureStrategy failureStrategy,
+      Iterable<? extends JavaFileObject> subject) {
+    return new JavaSourceSubject(failureStrategy, subject, processors);
   }
 }

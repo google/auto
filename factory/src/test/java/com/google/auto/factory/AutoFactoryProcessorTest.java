@@ -15,160 +15,88 @@
  */
 package com.google.auto.factory;
 
-import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.JAVA_SOURCE;
-import static com.google.common.base.Charsets.UTF_8;
-import static javax.tools.StandardLocation.SOURCE_OUTPUT;
-import static org.junit.Assert.assertTrue;
+import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.javaSourcesProcessedWith;
 import static org.truth0.Truth.ASSERT;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Set;
 
-import javax.tools.JavaCompiler;
-import javax.tools.JavaCompiler.CompilationTask;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-
-import org.junit.Before;
-import org.junit.ComparisonFailure;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
-import com.google.common.collect.ImmutableList;
+import com.google.auto.factory.gentest.JavaFileObjects;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
-import com.google.common.io.Resources;
 
+/**
+ * Functional tests for the {@link AutoFactoryProcessor}.
+ */
 public class AutoFactoryProcessorTest {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private JavaCompiler compiler;
-  private StandardJavaFileManager fileManager;
-
-  private File inputSources;
-  private File expectedSources;
-  private File outputSources;
-
-  @Before public void createCompiler() throws IOException {
-    this.compiler = ToolProvider.getSystemJavaCompiler();
-    this.fileManager = compiler.getStandardFileManager(null /* default diagnostic listener */,
-        Locale.getDefault(), UTF_8);
-    this.inputSources = folder.newFolder();
-    this.expectedSources = folder.newFolder();
-    this.outputSources = folder.newFolder();
-    fileManager.setLocation(SOURCE_OUTPUT, ImmutableSet.of(outputSources));
-  }
-
-  private CompilationTask createCompilationTask(Set<File> sources) {
-    CompilationTask task = compiler.getTask(null, fileManager,
-        null /* default diagnostic listener */,
-        ImmutableList.of("-source", "1.6"),
-        null,
-        fileManager.getJavaFileObjectsFromFiles(sources));
-    task.setProcessors(ImmutableSet.of(new AutoFactoryProcessor()));
-    return task;
-  }
-
-  private File copyFromResource(String resourcePath, File destination)
-      throws IOException {
-    File sourceFile = new File(destination, resourcePath);
-    Files.createParentDirs(sourceFile);
-    Resources.asByteSource(Resources.getResource(resourcePath))
-        .copyTo(Files.asByteSink(sourceFile));
-    return sourceFile;
-  }
-
-  private void assertOutput(String path) throws IOException {
-    File expectedOutput = copyFromResource(path, expectedSources);
-    File actual = new File(outputSources, path);
-    assertTrue("file does not exist. files: " + Arrays.toString(outputSources.listFiles()),
-        actual.exists());
-    try {
-      ASSERT.about(JAVA_SOURCE).that(expectedOutput)
-          .isEquivalentTo(actual);
-    } catch (AssertionError e) {
-      throw new ComparisonFailure("", Files.toString(expectedOutput, UTF_8),
-          Files.toString(actual, UTF_8));
-    } catch (RuntimeException e) {
-      throw new ComparisonFailure("", Files.toString(expectedOutput, UTF_8),
-          Files.toString(actual, UTF_8));
-    }
-  }
-
   @Test public void simpleClass() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClass.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/SimpleClass.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassFactory.java"));
   }
 
   @Test public void publicClass() throws IOException {
-    File sourceFile = copyFromResource("tests/PublicClass.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/PublicClassFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/PublicClass.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/PublicClassFactory.java"));
   }
 
   @Test public void simpleClassCustomName() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClassCustomName.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/CustomNamedFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/SimpleClassCustomName.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/CustomNamedFactory.java"));
   }
 
   @Test public void simpleClassMixedDeps() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClassMixedDeps.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassMixedDepsFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(
+            JavaFileObjects.forResource("tests/SimpleClassMixedDeps.java"),
+            JavaFileObjects.forResource("tests/AQualifier.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassMixedDepsFactory.java"));
   }
 
   @Test public void simpleClassPassedDeps() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClassPassedDeps.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassPassedDepsFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/SimpleClassPassedDeps.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassPassedDepsFactory.java"));
   }
 
   @Test public void simpleClassProvidedDeps() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClassProvidedDeps.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassProvidedDepsFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(
+            JavaFileObjects.forResource("tests/AQualifier.java"),
+            JavaFileObjects.forResource("tests/BQualifier.java"),
+            JavaFileObjects.forResource("tests/SimpleClassProvidedDeps.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassProvidedDepsFactory.java"));
   }
 
   @Test public void constructorAnnotated() throws IOException {
-    File sourceFile = copyFromResource("tests/ConstructorAnnotated.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/ConstructorAnnotatedFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/ConstructorAnnotated.java")))
+        .generatesSources(JavaFileObjects.forResource("tests/ConstructorAnnotatedFactory.java"));
   }
 
   @Test public void simpleClassImplementingMarker() throws IOException {
-    File sourceFile = copyFromResource("tests/SimpleClassImplementingMarker.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassImplementingMarkerFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource(
+            "tests/SimpleClassImplementingMarker.java")))
+        .generatesSources(JavaFileObjects.forResource(
+            "tests/SimpleClassImplementingMarkerFactory.java"));
   }
 
   @Test public void simpleClassImplementingSimpleInterface() throws IOException {
-    File sourceFile =
-        copyFromResource("tests/SimpleClassImplementingSimpleInterface.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/SimpleClassImplementingSimpleInterfaceFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource(
+            "tests/SimpleClassImplementingSimpleInterface.java")))
+        .generatesSources(JavaFileObjects.forResource(
+            "tests/SimpleClassImplementingSimpleInterfaceFactory.java"));
   }
 
   @Test public void mixedDepsImplementingInterfaces() throws IOException {
-    File sourceFile =
-        copyFromResource("tests/MixedDepsImplementingInterfaces.java", inputSources);
-    CompilationTask task = createCompilationTask(ImmutableSet.of(sourceFile));
-    assertTrue("compilation failed", task.call());
-    assertOutput("tests/MixedDepsImplementingInterfacesFactory.java");
+    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+        .that(ImmutableSet.of(JavaFileObjects.forResource(
+            "tests/MixedDepsImplementingInterfaces.java")))
+        .generatesSources(JavaFileObjects.forResource(
+            "tests/MixedDepsImplementingInterfacesFactory.java"));
   }
 }

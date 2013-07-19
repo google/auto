@@ -136,6 +136,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
-    return RELEASE_6;
+    return SourceVersion.latestSupported();
   }
 }
