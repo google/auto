@@ -23,18 +23,17 @@
     <version>7</version>
   </parent>
 
-  <groupId>com.google.auto.factory</groupId>
-  <artifactId>autofactory-parent</artifactId>
+  <groupId>com.google.auto</groupId>
+  <artifactId>auto-parent</artifactId>
   <packaging>pom</packaging>
   <version>1.0-SNAPSHOT</version>
-  <name>Autofactory (Parent)</name>
-  <description>An automatic factory implementation generator for Java.</description>
-  <url>https://github.com/google/autofactory</url>
+  <name>Auto (Parent)</name>
+  <description>A collection of code generators for Java.</description>
+  <url>https://github.com/google/auto</url>
 
   <modules>
-    <module>generator</module>
-    <module>integration</module>
-    <module>src-subject</module>
+    <module>factory</module>
+    <module>test-utils</module>
   </modules>
 
   <properties>
@@ -43,15 +42,15 @@
   </properties>
 
   <scm>
-    <url>http://github.com/google/autofactory</url>
-    <connection>scm:git:git://github.com/google/autofactory.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/google/autofactory.git</developerConnection>
+    <url>http://github.com/google/auto</url>
+    <connection>scm:git:git://github.com/google/auto.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
     <system>GitHub Issues</system>
-    <url>http://github.com/google/autofactory/issues</url>
+    <url>http://github.com/google/auto/issues</url>
   </issueManagement>
 
   <licenses>
@@ -71,6 +70,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>

@@ -15,6 +15,8 @@
  */
 package com.google.auto.factory;
 
+import static javax.lang.model.SourceVersion.RELEASE_6;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,6 +27,7 @@ import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -129,5 +132,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   @Override
   public Set<String> getSupportedAnnotationTypes() {
     return ImmutableSet.of(AutoFactory.class.getName(), Provided.class.getName());
+  }
+
+  @Override
+  public SourceVersion getSupportedSourceVersion() {
+    return RELEASE_6;
   }
 }
