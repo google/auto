@@ -1,83 +1,21 @@
-AutoFactory
+Auto
 ======
 
-A source code generator for JSR-330-compatible factories.
+A collection of source code generators for [Java][java].
 
-AutoWhat‽
--------------
+Auto‽
+-----
 
-[Java][java] is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
+[Java][java] is full of code that is mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
-AutoFactory generates factories that can be used on their own or with [JSR-330](http://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](http://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation. Any combination of parameters can either be passed through factory methods or provided to the factory at construction time. They can implement interfaces or extend abstract classes. They're what you would have written, but without the bugs.
+The Auto subprojects are a collection of code generators that automate those types of tasks. They create you would have written, but without the bugs.
 
 Save time.  Save code.  Save sanity.
 
-Example
--------
+Subprojects
+-----------
 
-Say you have:
-
-```java
-@AutoFactory
-final class SomeClass {
-  private final String providedDepA;
-  private final String depB;
-
-  SomeClass(@Provided @AQualifier String providedDepA, String depB) {
-    this.providedDepA = providedDepA;
-    this.depB = depB;
-  }
-
-  // …
-}
-```
-
-AutoFactory will generate:
-
-```java
-import javax.annotation.Generated;
-import javax.inject.Inject;
-import javax.inject.Provider;
-
-@Generated(value = "com.google.autofactory.AutoFactoryProcessor")
-final class SomeClassFactory {
-  private final Provider<String> providedDepAProvider;
-  
-  @Inject SomeClassFactory(
-      @AQualifier Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = providedDepAProvider;
-  }
-  
-  SomeClass create(String depB) {
-    return new SomeClass(providedDepAProvider.get(), depB);
-  }
-}
-```
-
-Download
---------
-
-In order to activate code generation you will need to
-include `autofactory-${autofactory.version}.jar` in your build at 
-compile time.
-
-In a Maven project, one would include the `autofactory-generator` 
-artifact as an "optional" dependency:
-
-```xml
-<dependencies>
-  <dependency>
-    <groupId>com.google.autofactory</groupId>
-    <artifactId>autofactory-generator</artifactId>
-    <version>${autofactory.version}</version>
-    <optional>true</optional>
-  </dependency>
-</dependencies>
-```
-
-You can also find downloadable .jars on the [GitHub download page](http://github.com/google/autofactory/downloads).
-
-
+  * [Auto-Factory](https://github.com/google/auto/tree/master/auto-factory) - JSR-330-compatible factories
 
 License
 -------
