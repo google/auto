@@ -21,9 +21,7 @@ import java.util.Iterator;
 
 import javax.annotation.Nullable;
 
-import org.truth0.FailureStrategy;
-import org.truth0.TestVerb;
-
+import com.google.common.base.Optional;
 import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.ArrayTypeTree;
@@ -85,430 +83,424 @@ import com.sun.source.util.SimpleTreeVisitor;
  * This should really just implement TreeVisitor this insulates against API changes in different
  * versions of Java.
  */
-final class EqualityScanner extends SimpleTreeVisitor<Void, Tree> {
-  private final TestVerb testVerb;
-
-  EqualityScanner(FailureStrategy failureStrategy) {
-    this.testVerb = new TestVerb(failureStrategy);
-  }
-
-  private <T extends Tree> T checkTypeAndCast(T reference, Tree tree) {
+final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
+  private <T extends Tree> Optional<T> checkTypeAndCast(T reference, Tree tree) {
     Kind referenceKind = checkNotNull(reference).getKind();
     Kind treeKind = checkNotNull(tree).getKind();
-    testVerb.that(referenceKind).is(treeKind);
-    @SuppressWarnings("unchecked")
-    T treeAsReferenceType = (T) tree;
-    return treeAsReferenceType;
-  }
-
-  private void scan(@Nullable Tree reference, @Nullable Tree tree) {
-    if (reference == null) {
-      testVerb.that(tree).isNull();
+    if (referenceKind == treeKind) {
+      @SuppressWarnings("unchecked") // checked by Kind
+      T treeAsReferenceType = (T) tree;
+      return Optional.of(treeAsReferenceType);
     } else {
-      reference.accept(this, tree);
+      return Optional.absent();
     }
   }
 
-  private void parallelScan(Iterable<? extends Tree> reference,
+  private boolean scan(@Nullable Tree reference, @Nullable Tree tree) {
+    return (reference == null) ? (tree == null) : reference.accept(this, tree);
+  }
+
+  private boolean parallelScan(Iterable<? extends Tree> reference,
       Iterable<? extends Tree> trees) {
     Iterator<? extends Tree> referenceIterator = reference.iterator();
     Iterator<? extends Tree> treesIterator = trees.iterator();
     while (referenceIterator.hasNext() && treesIterator.hasNext()) {
-      referenceIterator.next().accept(this, treesIterator.next());
+      if (!referenceIterator.next().accept(this, treesIterator.next())) {
+        return false;
+      }
     }
-    testVerb.that(referenceIterator.hasNext()).is(treesIterator.hasNext());
+    return (referenceIterator.hasNext() == treesIterator.hasNext());
   }
 
   @Override
-  public Void visitAnnotation(AnnotationTree reference, Tree tree) {
-    AnnotationTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getAnnotationType(), other.getAnnotationType());
-    parallelScan(reference.getArguments(), other.getArguments());
-    return null;
+  public Boolean visitAnnotation(AnnotationTree reference, Tree tree) {
+    Optional<AnnotationTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getAnnotationType(), other.get().getAnnotationType())
+        && parallelScan(reference.getArguments(), other.get().getArguments());
   }
 
   @Override
-  public Void visitMethodInvocation(MethodInvocationTree reference, Tree tree) {
-    MethodInvocationTree other = checkTypeAndCast(reference, tree);
-    parallelScan(reference.getTypeArguments(), other.getTypeArguments());
-    scan(reference.getMethodSelect(), other.getMethodSelect());
-    parallelScan(reference.getArguments(), other.getArguments());
-    return null;
+  public Boolean visitMethodInvocation(MethodInvocationTree reference, Tree tree) {
+    Optional<MethodInvocationTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && parallelScan(reference.getTypeArguments(), other.get().getTypeArguments())
+        && scan(reference.getMethodSelect(), other.get().getMethodSelect())
+        && parallelScan(reference.getArguments(), other.get().getArguments());
   }
 
   @Override
-  public Void visitAssert(AssertTree reference, Tree tree) {
-    AssertTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getCondition(), other.getCondition());
-    scan(reference.getDetail(), other.getDetail());
-    return null;
+  public Boolean visitAssert(AssertTree reference, Tree tree) {
+    Optional<AssertTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getCondition(), other.get().getCondition())
+        && scan(reference.getDetail(), other.get().getDetail());
   }
 
   @Override
-  public Void visitAssignment(AssignmentTree reference, Tree tree) {
-    AssignmentTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getVariable(), other.getVariable());
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitAssignment(AssignmentTree reference, Tree tree) {
+    Optional<AssignmentTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getVariable(), other.get().getVariable())
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitCompoundAssignment(CompoundAssignmentTree reference, Tree tree) {
-    CompoundAssignmentTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getVariable(), other.getVariable());
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitCompoundAssignment(CompoundAssignmentTree reference, Tree tree) {
+    Optional<CompoundAssignmentTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getVariable(), other.get().getVariable())
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitBinary(BinaryTree reference, Tree tree) {
-    BinaryTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getLeftOperand(), other.getLeftOperand());
-    scan(reference.getRightOperand(), other.getRightOperand());
-    return null;
+  public Boolean visitBinary(BinaryTree reference, Tree tree) {
+    Optional<BinaryTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getLeftOperand(), other.get().getLeftOperand())
+        && scan(reference.getRightOperand(), other.get().getRightOperand());
   }
 
   @Override
-  public Void visitBlock(BlockTree reference, Tree tree) {
-    BlockTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.isStatic()).is(other.isStatic());
-    parallelScan(reference.getStatements(), other.getStatements());
-    return null;
+  public Boolean visitBlock(BlockTree reference, Tree tree) {
+    Optional<BlockTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && (reference.isStatic() == other.get().isStatic())
+        && parallelScan(reference.getStatements(), other.get().getStatements());
   }
 
   @Override
-  public Void visitBreak(BreakTree reference, Tree tree) {
-    BreakTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getLabel()).isEqualTo(other.getLabel());
-    return null;
+  public Boolean visitBreak(BreakTree reference, Tree tree) {
+    Optional<BreakTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent() && reference.getLabel().contentEquals(other.get().getLabel());
   }
 
   @Override
-  public Void visitCase(CaseTree reference, Tree tree) {
-    CaseTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    parallelScan(reference.getStatements(), other.getStatements());
-    return null;
+  public Boolean visitCase(CaseTree reference, Tree tree) {
+    Optional<CaseTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression())
+        && parallelScan(reference.getStatements(), other.get().getStatements());
   }
 
   @Override
-  public Void visitCatch(CatchTree reference, Tree tree) {
-    CatchTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getParameter(), other.getParameter());
-    scan(reference.getBlock(), other.getBlock());
-    return null;
+  public Boolean visitCatch(CatchTree reference, Tree tree) {
+    Optional<CatchTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getParameter(), other.get().getParameter())
+        && scan(reference.getBlock(), other.get().getBlock());
   }
 
   @Override
-  public Void visitClass(ClassTree reference, Tree tree) {
-    ClassTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getModifiers(), other.getModifiers());
-    testVerb.that(reference.getSimpleName()).isEqualTo(other.getSimpleName());
-    parallelScan(reference.getTypeParameters(), other.getTypeParameters());
-    scan(reference.getExtendsClause(), other.getExtendsClause());
-    parallelScan(reference.getImplementsClause(), other.getImplementsClause());
-    parallelScan(reference.getMembers(), other.getMembers());
-    return null;
+  public Boolean visitClass(ClassTree reference, Tree tree) {
+    Optional<ClassTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getModifiers(), other.get().getModifiers())
+        && reference.getSimpleName().contentEquals(other.get().getSimpleName())
+        && parallelScan(reference.getTypeParameters(), other.get().getTypeParameters())
+        && scan(reference.getExtendsClause(), other.get().getExtendsClause())
+        && parallelScan(reference.getImplementsClause(), other.get().getImplementsClause())
+        && parallelScan(reference.getMembers(), other.get().getMembers());
   }
 
   @Override
-  public Void visitConditionalExpression(ConditionalExpressionTree reference, Tree tree) {
-    ConditionalExpressionTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getCondition(), other.getCondition());
-    scan(reference.getTrueExpression(), other.getTrueExpression());
-    scan(reference.getFalseExpression(), other.getFalseExpression());
-    return null;
+  public Boolean visitConditionalExpression(ConditionalExpressionTree reference, Tree tree) {
+    Optional<ConditionalExpressionTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getCondition(), other.get().getCondition())
+        && scan(reference.getTrueExpression(), other.get().getTrueExpression())
+        && scan(reference.getFalseExpression(), other.get().getFalseExpression());
   }
 
   @Override
-  public Void visitContinue(ContinueTree reference, Tree tree) {
-    ContinueTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getLabel()).isEqualTo(other.getLabel());
-    return null;
+  public Boolean visitContinue(ContinueTree reference, Tree tree) {
+    Optional<ContinueTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && reference.getLabel().contentEquals(other.get().getLabel());
   }
 
   @Override
-  public Void visitDoWhileLoop(DoWhileLoopTree reference, Tree tree) {
-    DoWhileLoopTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getCondition(), other.getCondition());
-    scan(reference.getStatement(), other.getStatement());
-    return null;
+  public Boolean visitDoWhileLoop(DoWhileLoopTree reference, Tree tree) {
+    Optional<DoWhileLoopTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getCondition(), other.get().getCondition())
+        && scan(reference.getStatement(), other.get().getStatement());
   }
 
   @Override
-  public Void visitErroneous(ErroneousTree reference, Tree tree) {
-    ErroneousTree other = checkTypeAndCast(reference, tree);
-    parallelScan(reference.getErrorTrees(), other.getErrorTrees());
-    return null;
+  public Boolean visitErroneous(ErroneousTree reference, Tree tree) {
+    Optional<ErroneousTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && parallelScan(reference.getErrorTrees(), other.get().getErrorTrees());
   }
 
   @Override
-  public Void visitExpressionStatement(ExpressionStatementTree reference, Tree tree) {
-    ExpressionStatementTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitExpressionStatement(ExpressionStatementTree reference, Tree tree) {
+    Optional<ExpressionStatementTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitEnhancedForLoop(EnhancedForLoopTree reference, Tree tree) {
-    EnhancedForLoopTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getVariable(), other.getVariable());
-    scan(reference.getExpression(), other.getExpression());
-    scan(reference.getStatement(), other.getStatement());
-    return null;
+  public Boolean visitEnhancedForLoop(EnhancedForLoopTree reference, Tree tree) {
+    Optional<EnhancedForLoopTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getVariable(), other.get().getVariable())
+        && scan(reference.getExpression(), other.get().getExpression())
+        && scan(reference.getStatement(), other.get().getStatement());
   }
 
   @Override
-  public Void visitForLoop(ForLoopTree reference, Tree tree) {
-    ForLoopTree other = checkTypeAndCast(reference, tree);
-    parallelScan(reference.getInitializer(), other.getInitializer());
-    scan(reference.getCondition(), other.getCondition());
-    parallelScan(reference.getUpdate(), other.getUpdate());
-    scan(reference.getStatement(), other.getStatement());
-    return null;
+  public Boolean visitForLoop(ForLoopTree reference, Tree tree) {
+    Optional<ForLoopTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && parallelScan(reference.getInitializer(), other.get().getInitializer())
+        && scan(reference.getCondition(), other.get().getCondition())
+        && parallelScan(reference.getUpdate(), other.get().getUpdate())
+        && scan(reference.getStatement(), other.get().getStatement());
+
   }
 
   @Override
-  public Void visitIdentifier(IdentifierTree reference, Tree tree) {
-    IdentifierTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getName()).isEqualTo(other.getName());
-    return null;
+  public Boolean visitIdentifier(IdentifierTree reference, Tree tree) {
+    Optional<IdentifierTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && reference.getName().contentEquals(other.get().getName());
   }
 
   @Override
-  public Void visitIf(IfTree reference, Tree tree) {
-    IfTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getCondition(), other.getCondition());
-    scan(reference.getThenStatement(), other.getThenStatement());
-    scan(reference.getElseStatement(), other.getElseStatement());
-    return null;
+  public Boolean visitIf(IfTree reference, Tree tree) {
+    Optional<IfTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getCondition(), other.get().getCondition())
+        && scan(reference.getThenStatement(), other.get().getThenStatement())
+        && scan(reference.getElseStatement(), other.get().getElseStatement());
   }
 
   @Override
-  public Void visitImport(ImportTree reference, Tree tree) {
-    ImportTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.isStatic()).is(other.isStatic());
-    scan(reference.getQualifiedIdentifier(), other.getQualifiedIdentifier());
-    return null;
+  public Boolean visitImport(ImportTree reference, Tree tree) {
+    Optional<ImportTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && (reference.isStatic() == other.get().isStatic())
+        && scan(reference.getQualifiedIdentifier(), other.get().getQualifiedIdentifier());
   }
 
   @Override
-  public Void visitArrayAccess(ArrayAccessTree reference, Tree tree) {
-    ArrayAccessTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    scan(reference.getIndex(), other.getIndex());
-    return null;
+  public Boolean visitArrayAccess(ArrayAccessTree reference, Tree tree) {
+    Optional<ArrayAccessTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression())
+        && scan(reference.getIndex(), other.get().getIndex());
   }
 
   @Override
-  public Void visitLabeledStatement(LabeledStatementTree reference, Tree tree) {
-    LabeledStatementTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getLabel()).isEqualTo(other.getLabel());
-    scan(reference.getStatement(), other.getStatement());
-    return null;
+  public Boolean visitLabeledStatement(LabeledStatementTree reference, Tree tree) {
+    Optional<LabeledStatementTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && reference.getLabel().contentEquals(other.get().getLabel())
+        && scan(reference.getStatement(), other.get().getStatement());
   }
 
   @Override
-  public Void visitLiteral(LiteralTree reference, Tree tree) {
-    LiteralTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getValue()).isEqualTo(other.getValue());
-    return null;
+  public Boolean visitLiteral(LiteralTree reference, Tree tree) {
+    Optional<LiteralTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && reference.getValue().equals(other.get().getValue());
   }
 
   @Override
-  public Void visitMethod(MethodTree reference, Tree tree) {
-    MethodTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getModifiers(), other.getModifiers());
-    testVerb.that(reference.getName()).isEqualTo(other.getName());
-    scan(reference.getReturnType(), other.getReturnType());
-    parallelScan(reference.getTypeParameters(), other.getTypeParameters());
-    parallelScan(reference.getParameters(), other.getParameters());
-    parallelScan(reference.getThrows(), other.getThrows());
-    scan(reference.getBody(), other.getBody());
-    scan(reference.getDefaultValue(), other.getDefaultValue());
-    return null;
+  public Boolean visitMethod(MethodTree reference, Tree tree) {
+    Optional<MethodTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getModifiers(), other.get().getModifiers())
+        && reference.getName().contentEquals(other.get().getName())
+        && scan(reference.getReturnType(), other.get().getReturnType())
+        && parallelScan(reference.getTypeParameters(), other.get().getTypeParameters())
+        && parallelScan(reference.getParameters(), other.get().getParameters())
+        && parallelScan(reference.getThrows(), other.get().getThrows())
+        && scan(reference.getBody(), other.get().getBody())
+        && scan(reference.getDefaultValue(), other.get().getDefaultValue());
   }
 
   @Override
-  public Void visitModifiers(ModifiersTree reference, Tree tree) {
-    ModifiersTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getFlags()).isEqualTo(other.getFlags());
-    parallelScan(reference.getAnnotations(), other.getAnnotations());
-    return null;
+  public Boolean visitModifiers(ModifiersTree reference, Tree tree) {
+    Optional<ModifiersTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && reference.getFlags().equals(other.get().getFlags())
+        && parallelScan(reference.getAnnotations(), other.get().getAnnotations());
   }
 
   @Override
-  public Void visitNewArray(NewArrayTree reference, Tree tree) {
-    NewArrayTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getType(), other.getType());
-    parallelScan(reference.getDimensions(), other.getDimensions());
-    parallelScan(reference.getInitializers(), other.getInitializers());
-    return null;
+  public Boolean visitNewArray(NewArrayTree reference, Tree tree) {
+    Optional<NewArrayTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getType(), other.get().getType())
+        && parallelScan(reference.getDimensions(), other.get().getDimensions())
+        && parallelScan(reference.getInitializers(), other.get().getInitializers());
   }
 
   @Override
-  public Void visitNewClass(NewClassTree reference, Tree tree) {
-    NewClassTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getEnclosingExpression(), other.getEnclosingExpression());
-    parallelScan(reference.getTypeArguments(), other.getTypeArguments());
-    scan(reference.getIdentifier(), other.getIdentifier());
-    parallelScan(reference.getArguments(), other.getArguments());
-    scan(reference.getClassBody(), other.getClassBody());
-    return null;
+  public Boolean visitNewClass(NewClassTree reference, Tree tree) {
+    Optional<NewClassTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getEnclosingExpression(), other.get().getEnclosingExpression())
+        && parallelScan(reference.getTypeArguments(), other.get().getTypeArguments())
+        && scan(reference.getIdentifier(), other.get().getIdentifier())
+        && parallelScan(reference.getArguments(), other.get().getArguments())
+        && scan(reference.getClassBody(), other.get().getClassBody());
   }
 
   @Override
-  public Void visitParenthesized(ParenthesizedTree reference, Tree tree) {
-    ParenthesizedTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitParenthesized(ParenthesizedTree reference, Tree tree) {
+    Optional<ParenthesizedTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitReturn(ReturnTree reference, Tree tree) {
-    ReturnTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitReturn(ReturnTree reference, Tree tree) {
+    Optional<ReturnTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitMemberSelect(MemberSelectTree reference, Tree tree) {
-    MemberSelectTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    testVerb.that(reference.getIdentifier()).isEqualTo(other.getIdentifier());
-    return null;
+  public Boolean visitMemberSelect(MemberSelectTree reference, Tree tree) {
+    Optional<MemberSelectTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression())
+        && reference.getIdentifier().contentEquals(other.get().getIdentifier());
   }
 
   @Override
-  public Void visitEmptyStatement(EmptyStatementTree reference, Tree tree) {
-    checkTypeAndCast(reference, tree);
-    return null;
+  public Boolean visitEmptyStatement(EmptyStatementTree reference, Tree tree) {
+    return checkTypeAndCast(reference, tree).isPresent();
   }
 
   @Override
-  public Void visitSwitch(SwitchTree reference, Tree tree) {
-    SwitchTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    parallelScan(reference.getCases(), other.getCases());
-    return null;
+  public Boolean visitSwitch(SwitchTree reference, Tree tree) {
+    Optional<SwitchTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression())
+        && parallelScan(reference.getCases(), other.get().getCases());
   }
 
   @Override
-  public Void visitSynchronized(SynchronizedTree reference, Tree tree) {
-    SynchronizedTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    scan(reference.getBlock(), other.getBlock());
-    return null;
+  public Boolean visitSynchronized(SynchronizedTree reference, Tree tree) {
+    Optional<SynchronizedTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression())
+        && scan(reference.getBlock(), other.get().getBlock());
   }
 
   @Override
-  public Void visitThrow(ThrowTree reference, Tree tree) {
-    ThrowTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitThrow(ThrowTree reference, Tree tree) {
+    Optional<ThrowTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitCompilationUnit(CompilationUnitTree reference, Tree tree) {
-    CompilationUnitTree other = checkTypeAndCast(reference, tree);
-    parallelScan(reference.getPackageAnnotations(), other.getPackageAnnotations());
-    scan(reference.getPackageName(), other.getPackageName());
-    parallelScan(reference.getImports(), other.getImports());
-    parallelScan(reference.getTypeDecls(), other.getTypeDecls());
+  public Boolean visitCompilationUnit(CompilationUnitTree reference, Tree tree) {
+    Optional<CompilationUnitTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && parallelScan(reference.getPackageAnnotations(), other.get().getPackageAnnotations())
+        && scan(reference.getPackageName(), other.get().getPackageName())
+        && parallelScan(reference.getImports(), other.get().getImports())
+        && parallelScan(reference.getTypeDecls(), other.get().getTypeDecls());
     // specifically don't check the JavaFileObject.  Those are supposed to be different.
     // LineMap is irrelevant
-    return null;
   }
 
   @Override
-  public Void visitTry(TryTree reference, Tree tree) {
-    TryTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getBlock(), other.getBlock());
-    parallelScan(reference.getCatches(), other.getCatches());
-    scan(reference.getFinallyBlock(), other.getFinallyBlock());
-    return null;
+  public Boolean visitTry(TryTree reference, Tree tree) {
+    Optional<TryTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getBlock(), other.get().getBlock())
+        && parallelScan(reference.getCatches(), other.get().getCatches())
+        && scan(reference.getFinallyBlock(), other.get().getFinallyBlock());
   }
 
   @Override
-  public Void visitParameterizedType(ParameterizedTypeTree reference, Tree tree) {
-    ParameterizedTypeTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getType(), other.getType());
-    parallelScan(reference.getTypeArguments(), other.getTypeArguments());
-    return null;
+  public Boolean visitParameterizedType(ParameterizedTypeTree reference, Tree tree) {
+    Optional<ParameterizedTypeTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getType(), other.get().getType())
+        && parallelScan(reference.getTypeArguments(), other.get().getTypeArguments());
   }
 
   @Override
-  public Void visitArrayType(ArrayTypeTree reference, Tree tree) {
-    ArrayTypeTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getType(), other.getType());
-    return null;
+  public Boolean visitArrayType(ArrayTypeTree reference, Tree tree) {
+    Optional<ArrayTypeTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getType(), other.get().getType());
   }
 
   @Override
-  public Void visitTypeCast(TypeCastTree reference, Tree tree) {
-    TypeCastTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getType(), other.getType());
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitTypeCast(TypeCastTree reference, Tree tree) {
+    Optional<TypeCastTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getType(), other.get().getType())
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitPrimitiveType(PrimitiveTypeTree reference, Tree tree) {
-    PrimitiveTypeTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getPrimitiveTypeKind()).is(other.getPrimitiveTypeKind());
-    return null;
+  public Boolean visitPrimitiveType(PrimitiveTypeTree reference, Tree tree) {
+    Optional<PrimitiveTypeTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && (reference.getPrimitiveTypeKind() == other.get().getPrimitiveTypeKind());
   }
 
   @Override
-  public Void visitTypeParameter(TypeParameterTree reference, Tree tree) {
-    TypeParameterTree other = checkTypeAndCast(reference, tree);
-    testVerb.that(reference.getName()).isEqualTo(other.getName());
-    parallelScan(reference.getBounds(), other.getBounds());
-    return null;
+  public Boolean visitTypeParameter(TypeParameterTree reference, Tree tree) {
+    Optional<TypeParameterTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && reference.getName().contentEquals(other.get().getName())
+        && parallelScan(reference.getBounds(), other.get().getBounds());
   }
 
   @Override
-  public Void visitInstanceOf(InstanceOfTree reference, Tree tree) {
-    InstanceOfTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    scan(reference.getType(), other.getType());
-    return null;
+  public Boolean visitInstanceOf(InstanceOfTree reference, Tree tree) {
+    Optional<InstanceOfTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression())
+        && scan(reference.getType(), other.get().getType());
   }
 
   @Override
-  public Void visitUnary(UnaryTree reference, Tree tree) {
-    UnaryTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getExpression(), other.getExpression());
-    return null;
+  public Boolean visitUnary(UnaryTree reference, Tree tree) {
+    Optional<UnaryTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getExpression(), other.get().getExpression());
   }
 
   @Override
-  public Void visitVariable(VariableTree reference, Tree tree) {
-    VariableTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getModifiers(), other.getModifiers());
-    testVerb.that(reference.getName()).is(other.getName());
-    scan(reference.getType(), other.getType());
-    scan(reference.getInitializer(), other.getInitializer());
-    return null;
+  public Boolean visitVariable(VariableTree reference, Tree tree) {
+    Optional<VariableTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getModifiers(), other.get().getModifiers())
+        && reference.getName().contentEquals(other.get().getName())
+        && scan(reference.getType(), other.get().getType())
+        && scan(reference.getInitializer(), other.get().getInitializer());
   }
 
   @Override
-  public Void visitWhileLoop(WhileLoopTree reference, Tree tree) {
-    WhileLoopTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getCondition(), other.getCondition());
-    scan(reference.getStatement(), other.getStatement());
-    return null;
+  public Boolean visitWhileLoop(WhileLoopTree reference, Tree tree) {
+    Optional<WhileLoopTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getCondition(), other.get().getCondition())
+        && scan(reference.getStatement(), other.get().getStatement());
   }
 
   @Override
-  public Void visitWildcard(WildcardTree reference, Tree tree) {
-    WildcardTree other = checkTypeAndCast(reference, tree);
-    scan(reference.getBound(), other.getBound());
-    return null;
+  public Boolean visitWildcard(WildcardTree reference, Tree tree) {
+    Optional<WildcardTree> other = checkTypeAndCast(reference, tree);
+    return other.isPresent()
+        && scan(reference.getBound(), other.get().getBound());
   }
 
   @Override
-  public Void visitOther(Tree reference, Tree tree) {
+  public Boolean visitOther(Tree reference, Tree tree) {
     throw new UnsupportedOperationException("cannot compare unknown trees");
   }
 }
