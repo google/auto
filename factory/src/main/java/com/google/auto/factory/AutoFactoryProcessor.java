@@ -15,8 +15,6 @@
  */
 package com.google.auto.factory;
 
-import static javax.lang.model.SourceVersion.RELEASE_6;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;

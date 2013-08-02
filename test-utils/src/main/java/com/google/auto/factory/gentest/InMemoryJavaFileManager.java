@@ -64,7 +64,8 @@ final class InMemoryJavaFileManager extends ForwardingJavaFileManager<JavaFileMa
   public FileObject getFileForInput(Location location, String packageName,
       String relativeName) throws IOException {
     if (location.isOutputLocation()) {
-      return inMemoryFileObjects.getIfPresent(uriForFileObject(location, packageName, relativeName));
+      return inMemoryFileObjects.getIfPresent(
+          uriForFileObject(location, packageName, relativeName));
     } else {
       return super.getFileForInput(location, packageName, relativeName);
     }
