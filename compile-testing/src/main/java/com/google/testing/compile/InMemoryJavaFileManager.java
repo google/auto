@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory.gentest;
+package com.google.testing.compile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;

@@ -56,8 +56,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.auto</groupId>
-      <artifactId>auto-test-utils</artifactId>
+      <groupId>com.google.testing.compile</groupId>
+      <artifactId>compile-testing</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>

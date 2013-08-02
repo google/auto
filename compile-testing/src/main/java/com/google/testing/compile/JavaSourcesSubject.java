@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory.gentest;
+package com.google.testing.compile;
 
 import static com.google.common.base.Charsets.UTF_8;
 import static javax.tools.Diagnostic.Kind.ERROR;
