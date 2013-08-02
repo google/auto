@@ -88,7 +88,7 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Kind referenceKind = checkNotNull(reference).getKind();
     Kind treeKind = checkNotNull(tree).getKind();
     if (referenceKind == treeKind) {
-      @SuppressWarnings("unchecked")
+      @SuppressWarnings("unchecked") // checked by Kind
       T treeAsReferenceType = (T) tree;
       return Optional.of(treeAsReferenceType);
     } else {
@@ -151,7 +151,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getVariable(), other.get().getVariable())
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -160,7 +159,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getLeftOperand(), other.get().getLeftOperand())
         && scan(reference.getRightOperand(), other.get().getRightOperand());
-
   }
 
   @Override
@@ -169,14 +167,12 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && (reference.isStatic() == other.get().isStatic())
         && parallelScan(reference.getStatements(), other.get().getStatements());
-
   }
 
   @Override
   public Boolean visitBreak(BreakTree reference, Tree tree) {
     Optional<BreakTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent() && reference.getLabel().contentEquals(other.get().getLabel());
-
   }
 
   @Override
@@ -185,7 +181,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression())
         && parallelScan(reference.getStatements(), other.get().getStatements());
-
   }
 
   @Override
@@ -194,7 +189,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getParameter(), other.get().getParameter())
         && scan(reference.getBlock(), other.get().getBlock());
-
   }
 
   @Override
@@ -207,7 +201,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getExtendsClause(), other.get().getExtendsClause())
         && parallelScan(reference.getImplementsClause(), other.get().getImplementsClause())
         && parallelScan(reference.getMembers(), other.get().getMembers());
-
   }
 
   @Override
@@ -217,7 +210,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getCondition(), other.get().getCondition())
         && scan(reference.getTrueExpression(), other.get().getTrueExpression())
         && scan(reference.getFalseExpression(), other.get().getFalseExpression());
-
   }
 
   @Override
@@ -225,7 +217,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ContinueTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && reference.getLabel().contentEquals(other.get().getLabel());
-
   }
 
   @Override
@@ -234,7 +225,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getCondition(), other.get().getCondition())
         && scan(reference.getStatement(), other.get().getStatement());
-
   }
 
   @Override
@@ -242,7 +232,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ErroneousTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && parallelScan(reference.getErrorTrees(), other.get().getErrorTrees());
-
   }
 
   @Override
@@ -250,7 +239,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ExpressionStatementTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -260,7 +248,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getVariable(), other.get().getVariable())
         && scan(reference.getExpression(), other.get().getExpression())
         && scan(reference.getStatement(), other.get().getStatement());
-
   }
 
   @Override
@@ -279,7 +266,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<IdentifierTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && reference.getName().contentEquals(other.get().getName());
-
   }
 
   @Override
@@ -289,7 +275,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getCondition(), other.get().getCondition())
         && scan(reference.getThenStatement(), other.get().getThenStatement())
         && scan(reference.getElseStatement(), other.get().getElseStatement());
-
   }
 
   @Override
@@ -298,7 +283,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && (reference.isStatic() == other.get().isStatic())
         && scan(reference.getQualifiedIdentifier(), other.get().getQualifiedIdentifier());
-
   }
 
   @Override
@@ -307,7 +291,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression())
         && scan(reference.getIndex(), other.get().getIndex());
-
   }
 
   @Override
@@ -316,7 +299,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && reference.getLabel().contentEquals(other.get().getLabel())
         && scan(reference.getStatement(), other.get().getStatement());
-
   }
 
   @Override
@@ -324,7 +306,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<LiteralTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && reference.getValue().equals(other.get().getValue());
-
   }
 
   @Override
@@ -339,7 +320,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && parallelScan(reference.getThrows(), other.get().getThrows())
         && scan(reference.getBody(), other.get().getBody())
         && scan(reference.getDefaultValue(), other.get().getDefaultValue());
-
   }
 
   @Override
@@ -348,7 +328,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && reference.getFlags().equals(other.get().getFlags())
         && parallelScan(reference.getAnnotations(), other.get().getAnnotations());
-
   }
 
   @Override
@@ -358,7 +337,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getType(), other.get().getType())
         && parallelScan(reference.getDimensions(), other.get().getDimensions())
         && parallelScan(reference.getInitializers(), other.get().getInitializers());
-
   }
 
   @Override
@@ -370,7 +348,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getIdentifier(), other.get().getIdentifier())
         && parallelScan(reference.getArguments(), other.get().getArguments())
         && scan(reference.getClassBody(), other.get().getClassBody());
-
   }
 
   @Override
@@ -378,7 +355,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ParenthesizedTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -386,7 +362,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ReturnTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -395,13 +370,11 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression())
         && reference.getIdentifier().contentEquals(other.get().getIdentifier());
-
   }
 
   @Override
   public Boolean visitEmptyStatement(EmptyStatementTree reference, Tree tree) {
     return checkTypeAndCast(reference, tree).isPresent();
-
   }
 
   @Override
@@ -410,7 +383,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression())
         && parallelScan(reference.getCases(), other.get().getCases());
-
   }
 
   @Override
@@ -419,7 +391,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression())
         && scan(reference.getBlock(), other.get().getBlock());
-
   }
 
   @Override
@@ -427,7 +398,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ThrowTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -449,7 +419,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && scan(reference.getBlock(), other.get().getBlock())
         && parallelScan(reference.getCatches(), other.get().getCatches())
         && scan(reference.getFinallyBlock(), other.get().getFinallyBlock());
-
   }
 
   @Override
@@ -458,7 +427,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getType(), other.get().getType())
         && parallelScan(reference.getTypeArguments(), other.get().getTypeArguments());
-
   }
 
   @Override
@@ -466,7 +434,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<ArrayTypeTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getType(), other.get().getType());
-
   }
 
   @Override
@@ -475,7 +442,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getType(), other.get().getType())
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -483,7 +449,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<PrimitiveTypeTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && (reference.getPrimitiveTypeKind() == other.get().getPrimitiveTypeKind());
-
   }
 
   @Override
@@ -492,7 +457,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && reference.getName().contentEquals(other.get().getName())
         && parallelScan(reference.getBounds(), other.get().getBounds());
-
   }
 
   @Override
@@ -501,7 +465,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression())
         && scan(reference.getType(), other.get().getType());
-
   }
 
   @Override
@@ -509,7 +472,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<UnaryTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getExpression(), other.get().getExpression());
-
   }
 
   @Override
@@ -520,7 +482,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
         && reference.getName().contentEquals(other.get().getName())
         && scan(reference.getType(), other.get().getType())
         && scan(reference.getInitializer(), other.get().getInitializer());
-
   }
 
   @Override
@@ -529,7 +490,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     return other.isPresent()
         && scan(reference.getCondition(), other.get().getCondition())
         && scan(reference.getStatement(), other.get().getStatement());
-
   }
 
   @Override
@@ -537,7 +497,6 @@ final class EqualityScanner extends SimpleTreeVisitor<Boolean, Tree> {
     Optional<WildcardTree> other = checkTypeAndCast(reference, tree);
     return other.isPresent()
         && scan(reference.getBound(), other.get().getBound());
-
   }
 
   @Override

@@ -52,11 +52,11 @@ import com.sun.tools.javac.api.JavacTool;
  *
  * @author Gregory Kick
  */
-public final class JavaSourceSubject
-    extends Subject<JavaSourceSubject, Iterable<? extends JavaFileObject>> {
+public final class JavaSourcesSubject
+    extends Subject<JavaSourcesSubject, Iterable<? extends JavaFileObject>> {
   private final ImmutableList<Processor> processors;
 
-  public JavaSourceSubject(FailureStrategy failureStrategy,
+  public JavaSourcesSubject(FailureStrategy failureStrategy,
       Iterable<? extends JavaFileObject> subject,
       ImmutableList<Processor> processors) {
     super(failureStrategy, subject);

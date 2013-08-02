@@ -26,30 +26,30 @@ import com.google.common.collect.Lists;
 
 /**
  * A <a href="https://github.com/truth0/truth">Truth</a> {@link SubjectFactory} for creating
- * {@link JavaSourceSubject} instances.
+ * {@link JavaSourcesSubject} instances.
  *
  * @author Gregory Kick
  */
-public class JavaSourceSubjectFactory
-    extends SubjectFactory<JavaSourceSubject, Iterable<? extends JavaFileObject>> {
-  public static JavaSourceSubjectFactory javaSources() {
-    return new JavaSourceSubjectFactory(ImmutableList.<Processor>of());
+public class JavaSourcesSubjectFactory
+    extends SubjectFactory<JavaSourcesSubject, Iterable<? extends JavaFileObject>> {
+  public static JavaSourcesSubjectFactory javaSources() {
+    return new JavaSourcesSubjectFactory(ImmutableList.<Processor>of());
   }
 
-  public static JavaSourceSubjectFactory javaSourcesProcessedWith(Processor first,
+  public static JavaSourcesSubjectFactory javaSourcesProcessedWith(Processor first,
       Processor... rest) {
-    return new JavaSourceSubjectFactory(ImmutableList.copyOf(Lists.asList(first, rest)));
+    return new JavaSourcesSubjectFactory(ImmutableList.copyOf(Lists.asList(first, rest)));
   }
 
   private final ImmutableList<Processor> processors;
 
-  private JavaSourceSubjectFactory(ImmutableList<Processor> processors) {
+  private JavaSourcesSubjectFactory(ImmutableList<Processor> processors) {
     this.processors = processors;
   }
 
   @Override
-  public JavaSourceSubject getSubject(FailureStrategy failureStrategy,
+  public JavaSourcesSubject getSubject(FailureStrategy failureStrategy,
       Iterable<? extends JavaFileObject> subject) {
-    return new JavaSourceSubject(failureStrategy, subject, processors);
+    return new JavaSourcesSubject(failureStrategy, subject, processors);
   }
 }

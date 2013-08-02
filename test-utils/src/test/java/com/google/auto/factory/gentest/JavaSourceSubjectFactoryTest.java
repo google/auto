@@ -15,8 +15,8 @@
  */
 package com.google.auto.factory.gentest;
 
-import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.javaSources;
-import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.javaSourcesProcessedWith;
+import static com.google.auto.factory.gentest.JavaSourcesSubjectFactory.javaSources;
+import static com.google.auto.factory.gentest.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
 import static org.truth0.Truth.ASSERT;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
 /**
- * Tests {@link JavaSourceSubjectFactory}.
+ * Tests {@link JavaSourcesSubjectFactory}.
  *
  * @author Gregory Kick
  */

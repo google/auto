@@ -15,7 +15,7 @@
  */
 package com.google.auto.factory;
 
-import static com.google.auto.factory.gentest.JavaSourceSubjectFactory.javaSourcesProcessedWith;
+import static com.google.auto.factory.gentest.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
 import static org.truth0.Truth.ASSERT;
 
 import java.io.IOException;
