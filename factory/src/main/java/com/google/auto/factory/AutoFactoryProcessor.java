@@ -15,8 +15,6 @@
  */
 package com.google.auto.factory;
 
-import static javax.lang.model.SourceVersion.RELEASE_6;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -136,6 +134,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
-    return RELEASE_6;
+    return SourceVersion.latestSupported();
   }
 }
