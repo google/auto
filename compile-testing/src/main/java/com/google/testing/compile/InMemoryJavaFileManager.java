@@ -36,6 +36,7 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardLocation;
 
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -73,6 +74,19 @@ final class InMemoryJavaFileManager extends ForwardingJavaFileManager<JavaFileMa
     return URI.create(
         "mem:///" + location.getName() + '/' + CharMatcher.is('.').replaceFrom(className, '/')
             + kind.extension);
+  }
+
+  @Override
+  public boolean isSameFile(FileObject a, FileObject b) {
+    if (a instanceof InMemoryJavaFileObject) {
+      if (b instanceof InMemoryJavaFileObject) {
+        return ((InMemoryJavaFileObject) a).toUri().equals(((InMemoryJavaFileObject) b).toUri());
+      }
+    }
+    if (b instanceof InMemoryJavaFileObject) {
+      return false;
+    }
+    return super.isSameFile(a, b);
   }
 
   @Override
@@ -131,17 +145,7 @@ final class InMemoryJavaFileManager extends ForwardingJavaFileManager<JavaFileMa
     private Optional<ByteSource> data = Optional.absent();
 
     InMemoryJavaFileObject(URI uri) {
-      super(uri, deduceKind(uri));
-    }
-
-    private static Kind deduceKind(URI uri) {
-      String path = uri.getPath();
-      for (Kind kind : Kind.values()) {
-        if (path.endsWith(kind.extension)) {
-          return kind;
-        }
-      }
-      return Kind.OTHER;
+      super(uri, JavaFileObjects.deduceKind(uri));
     }
 
     @Override
@@ -207,6 +211,14 @@ final class InMemoryJavaFileManager extends ForwardingJavaFileManager<JavaFileMa
       this.data = Optional.absent();
       this.lastModified = 0L;
       return true;
+    }
+
+    @Override
+    public String toString() {
+      return Objects.toStringHelper(this)
+          .add("uri", toUri())
+          .add("kind", kind)
+          .toString();
     }
   }
 }
