@@ -15,15 +15,15 @@
  */
 package com.google.auto.factory;
 
-import static com.google.auto.factory.gentest.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
 import static org.truth0.Truth.ASSERT;
 
 import java.io.IOException;
 
 import org.junit.Test;
 
-import com.google.auto.factory.gentest.JavaFileObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.testing.compile.JavaFileObjects;
 
 /**
  * Functional tests for the {@link AutoFactoryProcessor}.

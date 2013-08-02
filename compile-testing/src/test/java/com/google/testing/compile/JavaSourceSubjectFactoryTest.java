@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory.gentest;
+package com.google.testing.compile;
 
-import static com.google.auto.factory.gentest.JavaSourcesSubjectFactory.javaSources;
-import static com.google.auto.factory.gentest.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
 import static org.truth0.Truth.ASSERT;
 
 import java.io.IOException;
@@ -39,6 +39,8 @@ import org.junit.runners.JUnit4;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
+import com.google.testing.compile.JavaFileObjects;
+import com.google.testing.compile.JavaSourcesSubjectFactory;
 
 /**
  * Tests {@link JavaSourcesSubjectFactory}.

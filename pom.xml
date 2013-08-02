@@ -33,7 +33,7 @@
 
   <modules>
     <module>factory</module>
-    <module>test-utils</module>
+    <module>compile-testing</module>
   </modules>
 
   <properties>
