@@ -65,11 +65,13 @@ public class AutoFactoryProcessorTest {
   }
 
   private CompilationTask createCompilationTask(Set<File> sources) {
-    return compiler.getTask(null, fileManager,
+    CompilationTask task = compiler.getTask(null, fileManager,
         null /* default diagnostic listener */,
-        ImmutableList.of("-processor", "com.google.auto.factory.AutoFactoryProcessor"),
+        ImmutableList.of("-source", "1.6"),
         null,
         fileManager.getJavaFileObjectsFromFiles(sources));
+    task.setProcessors(ImmutableSet.of(new AutoFactoryProcessor()));
+    return task;
   }
 
   private File copyFromResource(String resourcePath, File destination)
