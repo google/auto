@@ -8,10 +8,12 @@
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>auto-test-utils</artifactId>
+  <groupId>com.google.testing.compile</groupId>
+  <artifactId>compile-testing</artifactId>
   <packaging>jar</packaging>
 
-  <name>Auto Test Utilities</name>
+  <name>Compile Testing</name>
+  <description>Utilities for testing compilation.</description>
 
   <dependencies>
     <dependency>
