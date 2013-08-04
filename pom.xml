@@ -133,5 +133,5 @@
             <toolsjar>${java.home}/../Classes/classes.jar</toolsjar>
         </properties>
     </profile>
-</profiles>
+  </profiles>
 </project>
