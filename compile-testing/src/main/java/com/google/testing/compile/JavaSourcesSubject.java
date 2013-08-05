@@ -22,13 +22,13 @@ import static javax.tools.JavaFileObject.Kind.SOURCE;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 import javax.annotation.processing.Processor;
 import javax.tools.Diagnostic;
-import javax.tools.Diagnostic.Kind;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
@@ -42,6 +42,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
+import com.google.common.io.ByteStreams;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
 import com.sun.tools.javac.api.JavacTool;
@@ -66,7 +67,7 @@ public final class JavaSourcesSubject
   private void checkEqualCompilationUnits(Iterable<? extends CompilationUnitTree> expected,
       Iterable<? extends CompilationUnitTree> actual) {
     EqualityScanner scanner = new EqualityScanner();
-    ArrayList<CompilationUnitTree> expectedList = Lists.newArrayList(expected);
+    List<CompilationUnitTree> expectedList = Lists.newArrayList(expected);
     for (CompilationUnitTree compilationUnit : actual) {
       Iterator<? extends CompilationUnitTree> expectedIterator = expectedList.iterator();
       boolean found = false;
@@ -117,6 +118,41 @@ public final class JavaSourcesSubject
     return result.diagnosticsByKind;
   }
 
+  public ImmutableListMultimap<Diagnostic.Kind, Diagnostic<? extends JavaFileObject>>
+      generatesFiles(JavaFileObject first, JavaFileObject... rest) {
+    CompilationResult result = compile(getSubject());
+    if (result.successful()) {
+      List<JavaFileObject> expectedList = Lists.newArrayList(Lists.asList(first, rest));
+      Iterator<JavaFileObject> expectedIterator = expectedList.iterator();
+      while (expectedIterator.hasNext()) {
+        if (wasGenerated(result, expectedIterator.next())) {
+          expectedIterator.remove();
+        }
+      }
+      if (!expectedList.isEmpty()) {
+        failureStrategy.fail("Failed to find some files: " + expectedList);
+      }
+    } else {
+      failureStrategy.fail("Failed with some errors: " + result.output);
+    }
+    return result.diagnosticsByKind;
+  }
+
+  private boolean wasGenerated(CompilationResult result, JavaFileObject expected) {
+    for (JavaFileObject generated : result.generatedFilesByKind.get(expected.getKind())) {
+      try {
+        if (Arrays.equals(
+            ByteStreams.toByteArray(expected.openInputStream()),
+            ByteStreams.toByteArray(generated.openInputStream()))) {
+          return true;
+        }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return false;
+  }
+
   private CompilationResult compile(Iterable<? extends JavaFileObject> sources) {
     JavacTool compiler = (JavacTool) ToolProvider.getSystemJavaCompiler();
     StringWriter out = new StringWriter();
@@ -149,7 +185,7 @@ public final class JavaSourcesSubject
     try {
       Iterable<? extends CompilationUnitTree> parsedCompilationUnits = task.parse();
       for (Diagnostic<?> diagnostic : diagnosticCollector.getDiagnostics()) {
-        if (Kind.ERROR == diagnostic.getKind()) {
+        if (Diagnostic.Kind.ERROR == diagnostic.getKind()) {
           throw new RuntimeException("error while parsing: " + out);
         }
       }
