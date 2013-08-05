@@ -129,6 +129,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     log(elements.toString());
 
     for (Element e : elements) {
+      // TODO(gak): check for error trees?
       TypeElement providerImplementer = (TypeElement) e;
       AnnotationMirror providerAnnotation = getAnnotationMirror(e, AutoService.class);
       DeclaredType providerInterface = getProviderInterface(providerAnnotation);
@@ -169,7 +170,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
           FileObject existingFile = filer.getResource(StandardLocation.CLASS_OUTPUT, "",
               resourceFile);
           log("Looking for existing resource file at " + existingFile.toUri());
-          Set<String> oldServices = ServicesFile.readServiceFile(existingFile.openInputStream());
+          Set<String> oldServices = ServicesFiles.readServiceFile(existingFile.openInputStream());
           log("Existing service entries: " + oldServices);
           allServices.addAll(oldServices);
         } catch (IOException e) {
@@ -192,7 +193,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
         FileObject fileObject = filer.createResource(StandardLocation.CLASS_OUTPUT, "",
             resourceFile);
         OutputStream out = fileObject.openOutputStream();
-        ServicesFile.writeServiceFile(allServices, out);
+        ServicesFiles.writeServiceFile(allServices, out);
         out.close();
         log("Wrote to: " + fileObject.toUri());
       } catch (IOException e) {
@@ -257,13 +258,14 @@ public class AutoServiceProcessor extends AbstractProcessor {
     // processing time. So, instead, we have to use the mirror to get at the
     // value (much more painful).
 
-    Map<? extends ExecutableElement, ? extends AnnotationValue> values =
+    Map<? extends ExecutableElement, ? extends AnnotationValue> valueIndex =
         providerAnnotation.getElementValues();
-    log("annotation values: " + values);
+    log("annotation values: " + valueIndex);
 
-    AnnotationValue value = values.values().iterator().next();
+    AnnotationValue value = valueIndex.values().iterator().next();
     return (DeclaredType) value.getValue();
   }
+
   private AnnotationMirror getAnnotationMirror(Element e, Class<? extends Annotation> klass) {
     List<? extends AnnotationMirror> annotationMirrors = e.getAnnotationMirrors();
     for (AnnotationMirror mirror : annotationMirrors) {

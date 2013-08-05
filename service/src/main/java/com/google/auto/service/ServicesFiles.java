@@ -33,10 +33,10 @@ import com.google.common.io.Closer;
 /**
  * A helper class for reading and writing Services files.
  */
-final class ServicesFile {
+final class ServicesFiles {
   public static final String SERVICES_PATH = "META-INF/services";
 
-  private ServicesFile() { }
+  private ServicesFiles() { }
 
   /**
    * Returns an absolute path to a service file given the class

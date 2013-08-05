@@ -133,7 +133,6 @@ public final class JavaSourcesSubject
         failureStrategy.fail("Failed to find some files: " + expectedList);
       }
     } else {
-      System.out.println(result.diagnosticsByKind);
       failureStrategy.fail("Failed with some errors: " + result.output);
     }
     return result.diagnosticsByKind;
