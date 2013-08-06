@@ -29,6 +29,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 
 import javax.tools.JavaFileObject;
+import javax.tools.JavaFileObject.Kind;
 import javax.tools.SimpleJavaFileObject;
 
 import com.google.common.base.CharMatcher;
@@ -103,12 +104,27 @@ public final class JavaFileObjects {
     return forResource(Resources.getResource(resourceName));
   }
 
+  static Kind deduceKind(URI uri) {
+    String path = uri.getPath();
+    for (Kind kind : Kind.values()) {
+      if (path.endsWith(kind.extension)) {
+        return kind;
+      }
+    }
+    return Kind.OTHER;
+  }
+
   private static final class ResourceSourceJavaFileObject extends SimpleJavaFileObject {
     final ByteSource resourceByteSource;
 
-    ResourceSourceJavaFileObject(URL resourceUrl) {
-      super(URI.create(resourceUrl.toString()), SOURCE);
+    /** Only to avoid creating the URI twice. */
+    ResourceSourceJavaFileObject(URL resourceUrl, URI resourceUri) {
+      super(resourceUri, deduceKind(resourceUri));
       this.resourceByteSource = Resources.asByteSource(resourceUrl);
+    }
+
+    ResourceSourceJavaFileObject(URL resourceUrl) {
+      this(resourceUrl, URI.create(resourceUrl.toString()));
     }
 
     @Override

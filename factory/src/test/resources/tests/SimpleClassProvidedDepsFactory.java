@@ -24,7 +24,7 @@ final class SimpleClassProvidedDepsFactory {
   private final Provider<String> providedDepAProvider;
   private final Provider<String> providedDepBProvider;
   
-  @Inject SimpleClassMixedDepsFactory(
+  @Inject SimpleClassProvidedDepsFactory(
       @AQualifier Provider<String> providedDepAProvider,
       @BQualifier Provider<String> providedDepBProvider) {
     this.providedDepAProvider = providedDepAProvider;
