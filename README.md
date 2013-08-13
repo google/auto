@@ -15,7 +15,7 @@ Save time.  Save code.  Save sanity.
 Subprojects
 -----------
 
-  * [Auto-Factory](https://github.com/google/auto/tree/master/auto-factory) - JSR-330-compatible factories
+  * [Auto-Factory](https://github.com/google/auto/tree/master/factory) - JSR-330-compatible factories
 
 License
 -------
