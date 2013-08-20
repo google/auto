@@ -15,14 +15,10 @@
  */
 package com.google.testing.compile;
 
-import javax.annotation.processing.Processor;
 import javax.tools.JavaFileObject;
 
 import org.truth0.FailureStrategy;
 import org.truth0.subjects.SubjectFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 /**
  * A <a href="https://github.com/truth0/truth">Truth</a> {@link SubjectFactory} for creating
@@ -30,26 +26,17 @@ import com.google.common.collect.Lists;
  *
  * @author Gregory Kick
  */
-public class JavaSourcesSubjectFactory
+public final class JavaSourcesSubjectFactory
     extends SubjectFactory<JavaSourcesSubject, Iterable<? extends JavaFileObject>> {
   public static JavaSourcesSubjectFactory javaSources() {
-    return new JavaSourcesSubjectFactory(ImmutableList.<Processor>of());
+    return new JavaSourcesSubjectFactory();
   }
 
-  public static JavaSourcesSubjectFactory javaSourcesProcessedWith(Processor first,
-      Processor... rest) {
-    return new JavaSourcesSubjectFactory(ImmutableList.copyOf(Lists.asList(first, rest)));
-  }
-
-  private final ImmutableList<Processor> processors;
-
-  private JavaSourcesSubjectFactory(ImmutableList<Processor> processors) {
-    this.processors = processors;
-  }
+  private JavaSourcesSubjectFactory() {}
 
   @Override
   public JavaSourcesSubject getSubject(FailureStrategy failureStrategy,
       Iterable<? extends JavaFileObject> subject) {
-    return new JavaSourcesSubject(failureStrategy, subject, processors);
+    return new JavaSourcesSubject(failureStrategy, subject);
   }
 }

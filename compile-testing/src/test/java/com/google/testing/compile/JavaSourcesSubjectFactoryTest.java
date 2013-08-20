@@ -15,13 +15,12 @@
  */
 package com.google.testing.compile;
 
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static org.junit.Assert.fail;
 import static org.truth0.Truth.ASSERT;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -31,68 +30,81 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.truth0.FailureStrategy;
+import org.truth0.TestVerb;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
-import com.google.testing.compile.JavaFileObjects;
-import com.google.testing.compile.JavaSourcesSubjectFactory;
 
 /**
- * Tests {@link JavaSourcesSubjectFactory}.
+ * Tests {@link JavaSourcesSubjectFactory} (and {@link JavaSourceSubjectFactory}).
  *
  * @author Gregory Kick
  */
 @RunWith(JUnit4.class)
-public class JavaSourceSubjectFactoryTest {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+public class JavaSourcesSubjectFactoryTest {
+  /** We need a {@link TestVerb} that throws anything <i>except</i> {@link AssertionError}. */
+  private static final TestVerb VERIFY = new TestVerb(new FailureStrategy() {
+    @Override
+    public void fail(String message) {
+      throw new VerificationException(message);
+    }
+  });
 
   @Test
   public void compilesWithoutError() {
-    ASSERT.about(javaSources())
-        .that(Arrays.asList(JavaFileObjects.forResource(Resources.getResource("HelloWorld.java"))))
-        .compiles();
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource(Resources.getResource("HelloWorld.java")))
+        .hasNoErrors();
   }
 
   @Test
   public void compilesWithoutError_throws() {
     try {
-      ASSERT.about(javaSources())
-          .that(Arrays.asList(JavaFileObjects.forResource("HelloWorld-broken.java")))
-          .compiles();
-      throw new RuntimeException();
-    } catch (AssertionError expected) {
+      VERIFY.about(javaSource())
+          .that(JavaFileObjects.forResource("HelloWorld-broken.java"))
+          .hasNoErrors();
+      fail();
+    } catch (VerificationException expected) {
       // TODO(gak): verify the message
     }
   }
 
   @Test
   public void failsToCompile_throws() {
+    JavaFileObject fileObject = JavaFileObjects.forResource("HelloWorld.java");
     try {
-      ASSERT.about(javaSources())
-          .that(Arrays.asList(JavaFileObjects.forResource(Resources.getResource("HelloWorld.java"))))
-          .failsToCompile();
-      throw new RuntimeException();
-    } catch (AssertionError expected) {}
+      VERIFY.about(javaSource())
+          .that(fileObject)
+          .hasError("some error").in(fileObject);
+      fail();
+    } catch (VerificationException expected) {
+      // TODO(gak): verify the message
+    }
   }
 
   @Test
   public void failsToCompile() {
-    ASSERT.about(javaSources())
-        .that(Arrays.asList(JavaFileObjects.forResource("HelloWorld-broken.java")))
-        .failsToCompile();
+    JavaFileObject fileObject = JavaFileObjects.forResource("HelloWorld-broken.java");
+    ASSERT.about(javaSource())
+        .that(fileObject)
+        .hasError("not a statement")
+        .and().hasError("not a statement").in(fileObject)
+        .and().hasError("not a statement").in(fileObject).onLine(23)
+        .and().hasError("not a statement").in(fileObject).onLine(23).atColumn(5);
   }
 
   @Test
   public void generates() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new GeneratingProcessor()))
-        .that(Arrays.asList(JavaFileObjects.forResource("HelloWorld.java")))
-        .generatesSources(JavaFileObjects.forSourceString(GeneratingProcessor.GENERATED_CLASS_NAME,
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("HelloWorld.java"))
+        .processedWith(new GeneratingProcessor())
+        .hasNoErrors()
+        .and().generatesSources(JavaFileObjects.forSourceString(
+            GeneratingProcessor.GENERATED_CLASS_NAME,
             GeneratingProcessor.GENERATED_SOURCE));
   }
 
@@ -125,6 +137,14 @@ public class JavaSourceSubjectFactoryTest {
     @Override
     public SourceVersion getSupportedSourceVersion() {
       return SourceVersion.latestSupported();
+    }
+  }
+
+  private static final class VerificationException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    VerificationException(String message) {
+      super(message);
     }
   }
 }

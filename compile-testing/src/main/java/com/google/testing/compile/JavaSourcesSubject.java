@@ -15,215 +15,319 @@
  */
 package com.google.testing.compile;
 
-import static com.google.common.base.Charsets.UTF_8;
-import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.JavaFileObject.Kind.SOURCE;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.processing.Processor;
 import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
+import javax.tools.Diagnostic.Kind;
+import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
-import javax.tools.ToolProvider;
 
 import org.truth0.FailureStrategy;
 import org.truth0.subjects.Subject;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
 import com.google.common.io.ByteStreams;
 import com.sun.source.tree.CompilationUnitTree;
-import com.sun.source.util.JavacTask;
-import com.sun.tools.javac.api.JavacTool;
 
 /**
- * A <a href="https://github.com/truth0/truth">Truth</a> {@link Subject} that evaluates Java source
- * {@linkplain File files} and compares them for equality based on the AST.
+ * A <a href="https://github.com/truth0/truth">Truth</a> {@link Subject} that evaluates the result
+ * of a {@code javac} compilation.
  *
  * @author Gregory Kick
  */
 public final class JavaSourcesSubject
     extends Subject<JavaSourcesSubject, Iterable<? extends JavaFileObject>> {
-  private final ImmutableList<Processor> processors;
-
-  public JavaSourcesSubject(FailureStrategy failureStrategy,
-      Iterable<? extends JavaFileObject> subject,
-      ImmutableList<Processor> processors) {
+  JavaSourcesSubject(FailureStrategy failureStrategy, Iterable<? extends JavaFileObject> subject) {
     super(failureStrategy, subject);
-    this.processors = processors;
   }
 
-  private void checkEqualCompilationUnits(Iterable<? extends CompilationUnitTree> expected,
-      Iterable<? extends CompilationUnitTree> actual) {
-    EqualityScanner scanner = new EqualityScanner();
-    List<CompilationUnitTree> expectedList = Lists.newArrayList(expected);
-    for (CompilationUnitTree compilationUnit : actual) {
-      Iterator<? extends CompilationUnitTree> expectedIterator = expectedList.iterator();
-      boolean found = false;
-      while (!found && expectedIterator.hasNext()) {
-        boolean scannerResult =
-            scanner.visitCompilationUnit(expectedIterator.next(), compilationUnit);
-        if (scannerResult) {
-          found = true;
-          expectedIterator.remove();
-        }
+  public interface ChainingClause<T> {
+    T and();
+  }
+
+  public interface FileClause extends ChainingClause<UnuccessfulCompilationClause> {
+    LineClause in(JavaFileObject file);
+  }
+
+  public interface LineClause extends ChainingClause<UnuccessfulCompilationClause> {
+    ColumnClause onLine(long lineNumber);
+  }
+
+  public interface ColumnClause extends ChainingClause<UnuccessfulCompilationClause> {
+    ChainingClause<UnuccessfulCompilationClause> atColumn(long columnNumber);
+  }
+
+  public interface GeneratedPredicateClause {
+    SuccessfulCompilationClause generatesSources(JavaFileObject first, JavaFileObject... rest);
+    SuccessfulCompilationClause generatesFiles(JavaFileObject first, JavaFileObject... rest);
+  }
+
+  public interface SuccessfulCompilationClause extends ChainingClause<GeneratedPredicateClause> {}
+
+  public interface UnuccessfulCompilationClause {
+    FileClause hasError(String message);
+  }
+
+  @CheckReturnValue
+  public CompilationClause processedWith(Processor first, Processor... rest) {
+    return new CompilationClause(Lists.asList(first, rest));
+  }
+
+  private CompilationClause newCompilationClause(Iterable<? extends Processor> processors) {
+    return new CompilationClause(processors);
+  }
+
+  public final class CompilationClause {
+    private final ImmutableSet<Processor> processors;
+
+    private CompilationClause() {
+      this(ImmutableSet.<Processor>of());
+    }
+
+    private CompilationClause(Iterable<? extends Processor> processors) {
+      this.processors = ImmutableSet.copyOf(processors);
+    }
+
+    public SuccessfulCompilationClause hasNoErrors() {
+      Compilation.Result result = Compilation.compile(processors, getSubject());
+      ImmutableList<Diagnostic<? extends JavaFileObject>> errors =
+          result.diagnosticsByKind.get(Kind.ERROR);
+      if (!errors.isEmpty()) {
+        StringBuilder message = new StringBuilder("Compilation produced the following errors:\n");
+        Joiner.on("\n").appendTo(message, errors);
+        failureStrategy.fail(message.toString());
       }
-      if (!found) {
-        failureStrategy.fail("Oh noes!");
-      }
+      return new SuccessfulCompilationBuilder(result);
     }
-    if (!expectedList.isEmpty()) {
-      failureStrategy.fail("still have some expecteds " + expectedList);
-    }
-  }
 
-  public ImmutableListMultimap<Diagnostic.Kind, Diagnostic<? extends JavaFileObject>>
-      failsToCompile() {
-    CompilationResult result = compile(getSubject());
-    if (result.successful()) {
-      failureStrategy.fail("This should have failed!");
-    }
-    return result.diagnosticsByKind;
-  }
-
-  public ImmutableListMultimap<Diagnostic.Kind, Diagnostic<? extends JavaFileObject>> compiles() {
-    CompilationResult result = compile(getSubject());
-    if (!result.successful()) {
-      failureStrategy.fail("Failed with some errors :(");
-    }
-    return result.diagnosticsByKind;
-  }
-
-  public ImmutableListMultimap<Diagnostic.Kind, Diagnostic<? extends JavaFileObject>>
-      generatesSources(JavaFileObject first, JavaFileObject... rest) {
-    CompilationResult result = compile(getSubject());
-    if (result.successful()) {
-      checkEqualCompilationUnits(
-          parse(Lists.asList(first, rest)),
-          parse(result.generatedSources()));
-    } else {
-      failureStrategy.fail("Failed with some errors: " + result.output);
-    }
-    return result.diagnosticsByKind;
-  }
-
-  public ImmutableListMultimap<Diagnostic.Kind, Diagnostic<? extends JavaFileObject>>
-      generatesFiles(JavaFileObject first, JavaFileObject... rest) {
-    CompilationResult result = compile(getSubject());
-    if (result.successful()) {
-      List<JavaFileObject> expectedList = Lists.newArrayList(Lists.asList(first, rest));
-      Iterator<JavaFileObject> expectedIterator = expectedList.iterator();
-      while (expectedIterator.hasNext()) {
-        if (wasGenerated(result, expectedIterator.next())) {
-          expectedIterator.remove();
-        }
-      }
-      if (!expectedList.isEmpty()) {
-        failureStrategy.fail("Failed to find some files: " + expectedList);
-      }
-    } else {
-      failureStrategy.fail("Failed with some errors: " + result.output);
-    }
-    return result.diagnosticsByKind;
-  }
-
-  private boolean wasGenerated(CompilationResult result, JavaFileObject expected) {
-    for (JavaFileObject generated : result.generatedFilesByKind.get(expected.getKind())) {
-      try {
-        if (Arrays.equals(
-            ByteStreams.toByteArray(expected.openInputStream()),
-            ByteStreams.toByteArray(generated.openInputStream()))) {
-          return true;
-        }
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    return false;
-  }
-
-  private CompilationResult compile(Iterable<? extends JavaFileObject> sources) {
-    JavacTool compiler = (JavacTool) ToolProvider.getSystemJavaCompiler();
-    StringWriter out = new StringWriter();
-    DiagnosticCollector<JavaFileObject> diagnosticCollector =
-        new DiagnosticCollector<JavaFileObject>();
-    InMemoryJavaFileManager fileManager = new InMemoryJavaFileManager(
-        compiler.getStandardFileManager(diagnosticCollector, Locale.getDefault(), UTF_8));
-    JavacTask task = compiler.getTask(out, fileManager, diagnosticCollector,
-        ImmutableSet.<String>of(),
-        ImmutableSet.<String>of(),
-        sources);
-    task.setProcessors(processors);
-    task.call();
-    return new CompilationResult(out.toString(), diagnosticCollector.getDiagnostics(),
-        fileManager.getOutputFiles());
-  }
-
-  private static Iterable<? extends CompilationUnitTree> parse(
-      Iterable<? extends JavaFileObject> sources) {
-    JavacTool compiler = (JavacTool) ToolProvider.getSystemJavaCompiler();
-    StringWriter out = new StringWriter();
-    DiagnosticCollector<JavaFileObject> diagnosticCollector =
-        new DiagnosticCollector<JavaFileObject>();
-    InMemoryJavaFileManager fileManager = new InMemoryJavaFileManager(
-        compiler.getStandardFileManager(diagnosticCollector, Locale.getDefault(), UTF_8));
-    JavacTask task = compiler.getTask(out, fileManager, diagnosticCollector,
-        ImmutableSet.<String>of(),
-        ImmutableSet.<String>of(),
-        sources);
-    try {
-      Iterable<? extends CompilationUnitTree> parsedCompilationUnits = task.parse();
-      for (Diagnostic<?> diagnostic : diagnosticCollector.getDiagnostics()) {
-        if (Diagnostic.Kind.ERROR == diagnostic.getKind()) {
-          throw new RuntimeException("error while parsing: " + out);
-        }
-      }
-      return parsedCompilationUnits;
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    public FileClause hasError(String message) {
+      Compilation.Result result = Compilation.compile(processors, getSubject());
+      return new UnsuccessfulCompilationBuilder(result).hasError(message);
     }
   }
 
-  private static final class CompilationResult {
-    final String output;
-    final ImmutableListMultimap<Diagnostic.Kind, Diagnostic<? extends JavaFileObject>>
-        diagnosticsByKind;
-    final ImmutableListMultimap<JavaFileObject.Kind, JavaFileObject> generatedFilesByKind;
+  public SuccessfulCompilationClause hasNoErrors() {
+    return new CompilationClause().hasNoErrors();
+  }
 
-    CompilationResult(String output, Iterable<Diagnostic<? extends JavaFileObject>> diagnostics,
-        Iterable<JavaFileObject> generatedFiles) {
-      this.output = output;
-      this.diagnosticsByKind = Multimaps.index(diagnostics,
-          new Function<Diagnostic<?>, Diagnostic.Kind>() {
-            @Override public Diagnostic.Kind apply(Diagnostic<?> input) {
-              return input.getKind();
+  public FileClause hasError(String message) {
+    return new CompilationClause().hasError(message);
+  }
+
+  private final class UnsuccessfulCompilationBuilder implements UnuccessfulCompilationClause {
+    private final Compilation.Result result;
+
+    UnsuccessfulCompilationBuilder(Compilation.Result result) {
+      this.result = result;
+    }
+
+    @Override
+    public FileClause hasError(final String message) {
+      FluentIterable<Diagnostic<? extends JavaFileObject>> diagnostics =
+          FluentIterable.from(result.diagnosticsByKind.get(Kind.ERROR));
+      final FluentIterable<Diagnostic<? extends JavaFileObject>> diagnosticsWithMessage =
+          diagnostics.filter(new Predicate<Diagnostic<?>>() {
+            @Override
+            public boolean apply(Diagnostic<?> input) {
+              return message.equals(input.getMessage(null));
             }
           });
-      this.generatedFilesByKind = Multimaps.index(generatedFiles,
-          new Function<JavaFileObject, JavaFileObject.Kind>() {
-            @Override public JavaFileObject.Kind apply(JavaFileObject input) {
-              return input.getKind();
+      if (diagnosticsWithMessage.isEmpty()) {
+        failureStrategy.fail(String.format(
+            "Expected an error with message \"%s\", but only found %s", message,
+            diagnostics.transform(
+              new Function<Diagnostic<?>, String>() {
+                @Override public String apply(Diagnostic<?> input) {
+                  return "\"" + input.getMessage(null) + "\"";
+                }
+              })));
+      }
+      return new FileClause() {
+        @Override
+        public UnuccessfulCompilationClause and() {
+          return UnsuccessfulCompilationBuilder.this;
+        }
+
+        @Override
+        public LineClause in(final JavaFileObject file) {
+          FluentIterable<Diagnostic<? extends JavaFileObject>> diagnosticsInFile =
+              diagnosticsWithMessage.filter(new Predicate<Diagnostic<? extends FileObject>>() {
+                @Override
+                public boolean apply(Diagnostic<? extends FileObject> input) {
+                  return file.toUri().getPath().equals(input.getSource().toUri().getPath());
+                }
+              });
+          if (diagnosticsInFile.isEmpty()) {
+            failureStrategy.fail(String.format(
+                "Expeceted an error in %s, but only found errors in ", file.getName(),
+                diagnosticsWithMessage.transform(
+                    new Function<Diagnostic<? extends FileObject>, String>() {
+                      @Override public String apply(Diagnostic<? extends FileObject> input) {
+                        return input.getSource().getName();
+                      }
+                    })));
+          }
+          return new LineClause() {
+            @Override public UnuccessfulCompilationClause and() {
+              return UnsuccessfulCompilationBuilder.this;
             }
-          });
+
+            @Override public ColumnClause onLine(final long lineNumber) {
+              final FluentIterable<Diagnostic<? extends JavaFileObject>> diagnosticsOnLine =
+                  diagnosticsWithMessage.filter(new Predicate<Diagnostic<?>>() {
+                    @Override
+                    public boolean apply(Diagnostic<?> input) {
+                      return lineNumber == input.getLineNumber();
+                    }
+                  });
+              if (diagnosticsOnLine.isEmpty()) {
+                failureStrategy.fail(String.format(
+                    "Expected an error on line %d, but only found errors on line(s) %s",
+                    lineNumber, diagnosticsOnLine.transform(
+                        new Function<Diagnostic<?>, Long>() {
+                          @Override public Long apply(Diagnostic<?> input) {
+                            return input.getLineNumber();
+                          }
+                        })));
+              }
+              return new ColumnClause() {
+                @Override
+                public UnuccessfulCompilationClause and() {
+                  return UnsuccessfulCompilationBuilder.this;
+                }
+
+                @Override
+                public ChainingClause<UnuccessfulCompilationClause> atColumn(
+                    final long columnNumber) {
+                  FluentIterable<Diagnostic<? extends JavaFileObject>> diagnosticsAtColumn =
+                      diagnosticsOnLine.filter(new Predicate<Diagnostic<?>>() {
+                        @Override
+                        public boolean apply(Diagnostic<?> input) {
+                          return columnNumber == input.getColumnNumber();
+                        }
+                      });
+                  if (diagnosticsAtColumn.isEmpty()) {
+                    failureStrategy.fail(String.format(
+                        "Expected an error at column %d, but only found errors at column(s) %s",
+                        columnNumber, diagnosticsOnLine.transform(
+                            new Function<Diagnostic<?>, Long>() {
+                              @Override public Long apply(Diagnostic<?> input) {
+                                return input.getColumnNumber();
+                              }
+                            })));
+                  }
+                  return new ChainingClause<JavaSourcesSubject.UnuccessfulCompilationClause>() {
+                    @Override public UnuccessfulCompilationClause and() {
+                      return UnsuccessfulCompilationBuilder.this;
+                    }
+                  };
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+  }
+
+  private final class SuccessfulCompilationBuilder implements SuccessfulCompilationClause,
+      GeneratedPredicateClause {
+    private final Compilation.Result result;
+
+    SuccessfulCompilationBuilder(Compilation.Result result) {
+      this.result = result;
     }
 
-    boolean successful() {
-      return diagnosticsByKind.get(ERROR).isEmpty();
+    @Override
+    public GeneratedPredicateClause and() {
+      return this;
     }
 
-    ImmutableList<JavaFileObject> generatedSources() {
-      return generatedFilesByKind.get(SOURCE);
+    @Override
+    public SuccessfulCompilationClause generatesSources(JavaFileObject first,
+        JavaFileObject... rest) {
+      ImmutableList<JavaFileObject> generatedSources =
+          result.generatedFilesByKind.get(JavaFileObject.Kind.SOURCE);
+      Iterable<? extends CompilationUnitTree> actualCompilationUnits =
+          Compilation.parse(generatedSources);
+      final EqualityScanner scanner = new EqualityScanner();
+      for (final CompilationUnitTree expected : Compilation.parse(Lists.asList(first, rest))) {
+        Optional<? extends CompilationUnitTree> found =
+            Iterables.tryFind(actualCompilationUnits, new Predicate<CompilationUnitTree>() {
+              @Override
+              public boolean apply(CompilationUnitTree input) {
+                return scanner.visitCompilationUnit(expected, input);
+              }
+            });
+        if (!found.isPresent()) {
+          failureStrategy.fail("Did not find a source file coresponding to "
+              + expected.getSourceFile().getName());
+        }
+      }
+      return this;
+    }
+
+    @Override
+    public SuccessfulCompilationClause generatesFiles(JavaFileObject first,
+        JavaFileObject... rest) {
+      for (JavaFileObject expected : Lists.asList(first, rest)) {
+        if (!wasGenerated(result, expected)) {
+          failureStrategy.fail("Did not find a generated file corresponding to "
+              + expected.getName());
+        }
+      }
+      return this;
+    }
+
+    boolean wasGenerated(Compilation.Result result, JavaFileObject expected) {
+      for (JavaFileObject generated : result.generatedFilesByKind.get(expected.getKind())) {
+        try {
+          if (Arrays.equals(
+              ByteStreams.toByteArray(expected.openInputStream()),
+              ByteStreams.toByteArray(generated.openInputStream()))) {
+            return true;
+          }
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return false;
+    }
+  }
+
+  public static final class SingleSourceAdapter
+      extends Subject<SingleSourceAdapter, JavaFileObject> {
+    private final JavaSourcesSubject delegate;
+
+    SingleSourceAdapter(FailureStrategy failureStrategy,
+        JavaFileObject subject) {
+      super(failureStrategy, subject);
+      this.delegate =
+          new JavaSourcesSubject(failureStrategy, ImmutableList.of(subject));
+    }
+
+    @CheckReturnValue
+    public CompilationClause processedWith(Processor first, Processor... rest) {
+      return delegate.newCompilationClause(Lists.asList(first, rest));
+    }
+
+    public SuccessfulCompilationClause hasNoErrors() {
+      return delegate.hasNoErrors();
+    }
+
+    public FileClause hasError(String message) {
+      return delegate.hasError(message);
     }
   }
 }
