@@ -310,8 +310,7 @@ public final class JavaSourcesSubject
       extends Subject<SingleSourceAdapter, JavaFileObject> {
     private final JavaSourcesSubject delegate;
 
-    SingleSourceAdapter(FailureStrategy failureStrategy,
-        JavaFileObject subject) {
+    SingleSourceAdapter(FailureStrategy failureStrategy, JavaFileObject subject) {
       super(failureStrategy, subject);
       this.delegate =
           new JavaSourcesSubject(failureStrategy, ImmutableList.of(subject));
