@@ -170,7 +170,7 @@ public final class JavaSourcesSubject
               });
           if (diagnosticsInFile.isEmpty()) {
             failureStrategy.fail(String.format(
-                "Expeceted an error in %s, but only found errors in ", file.getName(),
+                "Expected an error in %s, but only found errors in ", file.getName(),
                 diagnosticsWithMessage.transform(
                     new Function<Diagnostic<? extends FileObject>, String>() {
                       @Override public String apply(Diagnostic<? extends FileObject> input) {
