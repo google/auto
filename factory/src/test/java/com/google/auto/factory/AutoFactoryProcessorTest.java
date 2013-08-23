@@ -15,10 +15,11 @@
  */
 package com.google.auto.factory;
 
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 import static org.truth0.Truth.ASSERT;
 
-import java.io.IOException;
+import javax.tools.JavaFileObject;
 
 import org.junit.Test;
 
@@ -29,74 +30,103 @@ import com.google.testing.compile.JavaFileObjects;
  * Functional tests for the {@link AutoFactoryProcessor}.
  */
 public class AutoFactoryProcessorTest {
-  @Test public void simpleClass() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/SimpleClass.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassFactory.java"));
+  @Test public void simpleClass() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/SimpleClass.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(JavaFileObjects.forResource("tests/SimpleClassFactory.java"));
   }
 
-  @Test public void publicClass() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/PublicClass.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/PublicClassFactory.java"));
+  @Test public void publicClass() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/PublicClass.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(JavaFileObjects.forResource("tests/PublicClassFactory.java"));
   }
 
-  @Test public void simpleClassCustomName() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/SimpleClassCustomName.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/CustomNamedFactory.java"));
+  @Test public void simpleClassCustomName() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/SimpleClassCustomName.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(JavaFileObjects.forResource("tests/CustomNamedFactory.java"));
   }
 
-  @Test public void simpleClassMixedDeps() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+  @Test public void simpleClassMixedDeps() {
+    ASSERT.about(javaSources())
         .that(ImmutableSet.of(
             JavaFileObjects.forResource("tests/SimpleClassMixedDeps.java"),
             JavaFileObjects.forResource("tests/AQualifier.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassMixedDepsFactory.java"));
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(
+            JavaFileObjects.forResource("tests/SimpleClassMixedDepsFactory.java"));
   }
 
-  @Test public void simpleClassPassedDeps() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/SimpleClassPassedDeps.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassPassedDepsFactory.java"));
+  @Test public void simpleClassPassedDeps() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/SimpleClassPassedDeps.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(
+            JavaFileObjects.forResource("tests/SimpleClassPassedDepsFactory.java"));
   }
 
-  @Test public void simpleClassProvidedDeps() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
+  @Test public void simpleClassProvidedDeps() {
+    ASSERT.about(javaSources())
         .that(ImmutableSet.of(
             JavaFileObjects.forResource("tests/AQualifier.java"),
             JavaFileObjects.forResource("tests/BQualifier.java"),
             JavaFileObjects.forResource("tests/SimpleClassProvidedDeps.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/SimpleClassProvidedDepsFactory.java"));
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(
+            JavaFileObjects.forResource("tests/SimpleClassProvidedDepsFactory.java"));
   }
 
-  @Test public void constructorAnnotated() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource("tests/ConstructorAnnotated.java")))
-        .generatesSources(JavaFileObjects.forResource("tests/ConstructorAnnotatedFactory.java"));
+  @Test public void constructorAnnotated() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/ConstructorAnnotated.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(
+            JavaFileObjects.forResource("tests/ConstructorAnnotatedFactory.java"));
   }
 
-  @Test public void simpleClassImplementingMarker() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource(
-            "tests/SimpleClassImplementingMarker.java")))
-        .generatesSources(JavaFileObjects.forResource(
-            "tests/SimpleClassImplementingMarkerFactory.java"));
+  @Test public void simpleClassImplementingMarker() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/SimpleClassImplementingMarker.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(
+            JavaFileObjects.forResource("tests/SimpleClassImplementingMarkerFactory.java"));
   }
 
-  @Test public void simpleClassImplementingSimpleInterface() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource(
-            "tests/SimpleClassImplementingSimpleInterface.java")))
-        .generatesSources(JavaFileObjects.forResource(
+  @Test public void simpleClassImplementingSimpleInterface() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/SimpleClassImplementingSimpleInterface.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(JavaFileObjects.forResource(
             "tests/SimpleClassImplementingSimpleInterfaceFactory.java"));
   }
 
-  @Test public void mixedDepsImplementingInterfaces() throws IOException {
-    ASSERT.about(javaSourcesProcessedWith(new AutoFactoryProcessor()))
-        .that(ImmutableSet.of(JavaFileObjects.forResource(
-            "tests/MixedDepsImplementingInterfaces.java")))
-        .generatesSources(JavaFileObjects.forResource(
-            "tests/MixedDepsImplementingInterfacesFactory.java"));
+  @Test public void mixedDepsImplementingInterfaces() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("tests/MixedDepsImplementingInterfaces.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .hasNoErrors()
+        .and().generatesSources(
+            JavaFileObjects.forResource("tests/MixedDepsImplementingInterfacesFactory.java"));
+  }
+
+  @Test public void failsOnGenericClass() {
+    JavaFileObject file = JavaFileObjects.forResource("tests/GenericClass.java");
+    ASSERT.about(javaSource())
+            .that(file)
+            .processedWith(new AutoFactoryProcessor())
+            .hasError("AutoFactory does not support generic types").in(file).onLine(6).atColumn(14);
   }
 }
