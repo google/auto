@@ -15,7 +15,7 @@
  */
 package com.google.auto.service;
 
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSourcesProcessedWith;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 import static org.truth0.Truth.ASSERT;
 
 import java.util.Arrays;
@@ -33,7 +33,7 @@ import com.google.testing.compile.JavaFileObjects;
 public class AutoServiceProcessorTest {
   @Test
   public void autoService() {
-    ASSERT.about(javaSourcesProcessedWith(new AutoServiceProcessor()))
+    ASSERT.about(javaSources())
         .that(Arrays.asList(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
@@ -41,7 +41,9 @@ public class AutoServiceProcessorTest {
             JavaFileObjects.forResource("test/Enclosing.java"),
             JavaFileObjects.forResource("test/AnotherService.java"),
             JavaFileObjects.forResource("test/AnotherServiceProvider.java")))
-        .generatesFiles(
+        .processedWith(new AutoServiceProcessor())
+        .hasNoErrors()
+        .and().generatesFiles(
             JavaFileObjects.forResource("META-INF/services/test.SomeService"),
             JavaFileObjects.forResource("META-INF/services/test.AnotherService"));
   }

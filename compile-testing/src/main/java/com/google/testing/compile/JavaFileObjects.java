@@ -61,7 +61,7 @@ public final class JavaFileObjects {
     }
 
     static URI createUri(String fullyQualifiedClassName) {
-      return URI.create(CharMatcher.is('.').replaceFrom(fullyQualifiedClassName, '/') + "."
+      return URI.create(CharMatcher.is('.').replaceFrom(fullyQualifiedClassName, '/')
           + SOURCE.extension);
     }
 

@@ -110,7 +110,7 @@ final class FactoryDescriptorGenerator {
     }, null);
   }
 
-  FactoryMethodDescriptor generateDescriptorForConstructor(AutoFactoryDeclaration declaration,
+  FactoryMethodDescriptor generateDescriptorForConstructor(final AutoFactoryDeclaration declaration,
       ExecutableElement constructor) {
     checkNotNull(constructor);
     checkArgument(constructor.getKind() == ElementKind.CONSTRUCTOR);
@@ -125,7 +125,8 @@ final class FactoryDescriptorGenerator {
           @Override
           public Name visitTypeAsClass(TypeElement e, Void p) {
             if (!e.getTypeParameters().isEmpty()) {
-              messager.printMessage(ERROR, "AutoFactory does not support generic types", e);
+              messager.printMessage(ERROR, "AutoFactory does not support generic types", e/*,
+                  declaration.mirror()*/);
             }
             return e.getQualifiedName();
           }

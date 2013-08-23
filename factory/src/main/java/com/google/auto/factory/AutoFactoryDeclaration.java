@@ -39,15 +39,21 @@ import com.google.common.collect.ImmutableSet;
  * @author Gregory Kick
  */
 final class AutoFactoryDeclaration {
+  private final AnnotationMirror mirror;
   private final String namePattern;
   private final String extendingQualifiedName;
   private final ImmutableSet<String> implementingQualifiedNames;
 
-  AutoFactoryDeclaration(String namePattern, String extendingQualifiedName,
+  AutoFactoryDeclaration(AnnotationMirror mirror, String namePattern, String extendingQualifiedName,
       ImmutableSet<String> implementingQualifiedNames) {
+    this.mirror = mirror;
     this.namePattern = namePattern;
     this.extendingQualifiedName = extendingQualifiedName;
     this.implementingQualifiedNames = implementingQualifiedNames;
+  }
+
+  AnnotationMirror mirror() {
+    return mirror;
   }
 
   String getFactoryName(Name packageName, Name targetType) {
@@ -96,7 +102,8 @@ final class AutoFactoryDeclaration {
             return builder.build();
           }
         }, null);
-    return new AutoFactoryDeclaration(named, extendingQualifiedName, implementingQualifiedNames);
+    return new AutoFactoryDeclaration(mirror, named, extendingQualifiedName,
+        implementingQualifiedNames);
   }
 
   private static final class QualifiedNameValueVisitor
