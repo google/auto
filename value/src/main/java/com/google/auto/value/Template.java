@@ -105,8 +105,8 @@ class Template {
         node = parseIteration(template, dollar, varRef, i + 1, closeSquare);
         break;
       default:
-        throw new IllegalArgumentException("Unexpected character after variable name at " +
-            excerpt(template, dollar));
+        throw new IllegalArgumentException(
+            "Unexpected character after variable name at " + excerpt(template, dollar));
     }
     return node;
   }
@@ -121,10 +121,10 @@ class Template {
     Node secondNode;
     if (template.charAt(afterQueryOrBang) == '[') {
       int endFirstPart = matchingCloseSquare(template, afterQueryOrBang);
-      if (template.charAt(endFirstPart + 1) != '[' ||
-          matchingCloseSquare(template, endFirstPart + 1) != stop - 1) {
-        throw new IllegalArgumentException("Could not scan [firstPart][secondPart] at " +
-            excerpt(template, afterQueryOrBang + 1));
+      if (template.charAt(endFirstPart + 1) != '['
+          || matchingCloseSquare(template, endFirstPart + 1) != stop - 1) {
+        throw new IllegalArgumentException(
+            "Could not scan [firstPart][secondPart] at " + excerpt(template, afterQueryOrBang + 1));
       }
       firstNode = parse(template, afterQueryOrBang + 1, endFirstPart);
       secondNode = parse(template, endFirstPart + 2, stop - 1);
@@ -150,8 +150,8 @@ class Template {
     // If firstBar is -1, firstBar + 1 is 0, and secondBar will be before the starting point
     // (including the -1 case).
     if (secondBar < afterColon) {
-      throw new IllegalArgumentException("Expected $[listVar:iterVar|sep|...] at " +
-          excerpt(template, dollar));
+      throw new IllegalArgumentException(
+          "Expected $[listVar:iterVar|sep|...] at " + excerpt(template, dollar));
     }
     String iterationVarName = template.substring(afterColon, firstBar);
     String separator = template.substring(firstBar + 1, secondBar);
@@ -281,8 +281,8 @@ class Template {
       String[] parts = varRef.split("\\.");
       Object value = vars.get(parts[0]);
       if (value == null) {
-        throw new IllegalArgumentException("Reference to undefined var $[" + parts[0] + "] at " +
-            excerpt(template.template, templateIndex));
+        throw new IllegalArgumentException("Reference to undefined var $[" + parts[0] + "] at "
+            + excerpt(template.template, templateIndex));
       }
       for (int i = 1; i < parts.length; i++) {
         String part = parts[i];
@@ -294,8 +294,7 @@ class Template {
           value = method.invoke(value);
         } catch (Exception e) {
           throw new IllegalArgumentException(
-              "Failed to invoke " + value.getClass().getName() + "." + part + "() on " +
-              value, e);
+              "Failed to invoke " + value.getClass().getName() + "." + part + "() on " + value, e);
         }
       }
       return value;
@@ -376,8 +375,8 @@ class Template {
       } else if (x instanceof Iterable<?>) {
         return ((Iterable<?>) x).iterator().hasNext();
       } else {
-        throw new IllegalArgumentException("Don't know how to evaluate the truth of " + x + " at " +
-            excerpt(template.template, templateIndex));
+        throw new IllegalArgumentException("Don't know how to evaluate the truth of " + x + " at "
+            + excerpt(template.template, templateIndex));
       }
     }
   }
@@ -399,14 +398,14 @@ class Template {
     @Override
     void appendTo(StringBuilder sb, Template template, Map<String, ?> vars) {
       if (vars.containsKey(iterationVarName)) {
-        throw new IllegalArgumentException("Iteration variable name " + iterationVarName +
-            " is already defined at " + excerpt(template.template, templateIndex));
+        throw new IllegalArgumentException("Iteration variable name " + iterationVarName
+            + " is already defined at " + excerpt(template.template, templateIndex));
       }
       Map<String, Object> newVars = new HashMap<String, Object>(vars);
       Object iterableValue = getVar(vars, template);
       if (!(iterableValue instanceof Iterable<?>)) {
-        throw new IllegalArgumentException("Value (" + iterableValue + ") is not Iterable at " +
-            excerpt(template.template, templateIndex));
+        throw new IllegalArgumentException("Value (" + iterableValue + ") is not Iterable at "
+            + excerpt(template.template, templateIndex));
       }
       Iterable<?> iterable = (Iterable<?>) iterableValue;
       String sep = "";

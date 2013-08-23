@@ -80,7 +80,10 @@
         <module name="ParenPad"/>
         <module name="TypecastParenPad"/>
         <module name="WhitespaceAfter"/>
-        <module name="WhitespaceAround"/>
+        <module name="WhitespaceAround">
+          <property name="allowEmptyConstructors" value="true"/>
+          <property name="allowEmptyMethods" value="true"/>
+        </module>
 
 
         <!-- Modifier Checks                                    -->
@@ -110,7 +113,7 @@
         <module name="IllegalInstantiation"/>
         <!--<module name="InnerAssignment"/>-->
         <!--module name="MagicNumber"/-->
-        <module name="MissingSwitchDefault"/>
+        <!-- <module name="MissingSwitchDefault"/> -->
         <module name="RedundantThrows"/>
         <module name="SimplifyBooleanExpression"/>
         <module name="SimplifyBooleanReturn"/>
@@ -130,5 +133,11 @@
         <!--module name="FinalParameters"/-->
         <!--module name="TodoComment"/-->
         <module name="UpperEll"/>
+        
+        <!-- Enable suppression later -->
+        <module name="FileContentsHolder"/>
     </module>
+    
+    <!-- Allow suppression via comments -->
+    <module name="SuppressionCommentFilter"/>
 </module>

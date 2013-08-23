@@ -65,8 +65,7 @@ import com.google.auto.service.AutoService;
 public class AutoValueProcessor extends AbstractProcessor {
   private static final boolean SILENT = true;
 
-  public AutoValueProcessor() {
-  }
+  public AutoValueProcessor() {}
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
@@ -89,8 +88,8 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    boolean claimed = (annotations.size() == 1 &&
-        annotations.iterator().next().getQualifiedName().toString().equals(
+    boolean claimed = (annotations.size() == 1
+        && annotations.iterator().next().getQualifiedName().toString().equals(
             AutoValue.class.getName()));
     if (claimed) {
       process(roundEnv);
@@ -177,6 +176,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     "$[props:p||  private final $[p.type] $[p];\n]",
 
     // Constructor
+    // CHECKSTYLE:OFF:OperatorWrap
     "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
     "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
     "      throw new NullPointerException(\"Null $[p]\");",
@@ -184,6 +184,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     "]]" +
     "    this.$[p] = $[p];]",
     "  }",
+    // CHECKSTYLE:ON
 
     // Property getters
     "$[props:p|\n|\n  @Override",
@@ -192,15 +193,18 @@ public class AutoValueProcessor extends AbstractProcessor {
     "  }]",
 
     // toString()
+    // CHECKSTYLE:OFF:OperatorWrap
     "$[genToString?\n  @Override",
     "  public String toString() {",
     "    return \"$[simpleclassname]{\"$[props?\n      + \"]" +
     "$[props:p|\n      + \", |$[p]=\" + $[p]]",
     "      + \"}\";",
     "  }]",
+    // CHECKSTYLE:ON
 
     // equals(Object)
     // TODO(emcmanus): this probably generates a rawtypes warning if there are type parameters.
+    // CHECKSTYLE:OFF:OperatorWrap
     "$[genEquals?\n  @Override",
     "  public boolean equals(Object o) {",
     "    if (o == this) {",
@@ -218,8 +222,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     "    }",
     "    return false;",
     "  }]",
+    // CHECKSTYLE:ON
 
     // hashCode()
+    // CHECKSTYLE:OFF:OperatorWrap
     "$[genHashCode?",
     "  private transient int hashCode;",
     "",
@@ -238,10 +244,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     "    return h;",
     "  }]",
     "}"
+    // CHECKSTYLE:ON
   );
   private static final Template template = Template.compile(TEMPLATE_STRING);
 
   private static final String FACTORY_TEMPLATE_STRING = concatLines(
+      // CHECKSTYLE:OFF:OperatorWrap
       "$[pkg?package $[pkg];\n]",
       "public final class $[factoryimpl] implements $[factory] {",
       "  @Override",
@@ -250,6 +258,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       "    return new $[subclass]$[actualtypes]($[props:p|, |$[p]]);",
       "  }",
       "}"
+      // CHECKSTYLE:ON
   );
   private static final Template factoryTemplate = Template.compile(FACTORY_TEMPLATE_STRING);
 
@@ -349,7 +358,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     eclipseHack().sortMethodsIfSimulatingEclipse(theseMethods);
     for (ExecutableElement method : theseMethods) {
       if (!method.getModifiers().contains(Modifier.PRIVATE)) {
-        for (Iterator<ExecutableElement> methodIter = methods.iterator(); methodIter.hasNext(); ) {
+        for (Iterator<ExecutableElement> methodIter = methods.iterator(); methodIter.hasNext();) {
           ExecutableElement parentMethod = methodIter.next();
           if (elementUtils.overrides(method, parentMethod, type)) {
             methodIter.remove();
@@ -402,12 +411,11 @@ public class AutoValueProcessor extends AbstractProcessor {
         genToString = canGenerate;
       } else if (name.equals("hashCode") && method.getParameters().isEmpty()) {
         genHashCode = canGenerate;
-      } else if (name.equals("equals") && method.getParameters().size() == 1 &&
-          method.getParameters().get(0).asType().toString().equals("java.lang.Object")) {
+      } else if (name.equals("equals") && method.getParameters().size() == 1
+          && method.getParameters().get(0).asType().toString().equals("java.lang.Object")) {
         genEquals = canGenerate;
       } else if (isAbstract) {
-        if (method.getParameters().isEmpty() &&
-            method.getReturnType().getKind() != TypeKind.VOID) {
+        if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
           if (method.getReturnType().getKind() == TypeKind.ARRAY) {
             error("Array-valued properties are not supported in @AutoValue classes: " + name,
                 method);
@@ -450,8 +458,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<?> props = (List<?>) vars.get("props");
     List<? extends VariableElement> factoryParams = factoryMethod.getParameters();
     if (factoryMethod.getParameters().size() != props.size()) {
-      error("Factory method " + factoryMethod.getSimpleName() + " parameters " +
-          factoryMethod.getParameters() + " do not match props " + props, factoryMethod);
+      error("Factory method " + factoryMethod.getSimpleName() + " parameters "
+          + factoryMethod.getParameters() + " do not match props " + props, factoryMethod);
       return false;
     }
     boolean match = true;
@@ -459,8 +467,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       if (!props.get(i).toString().equals(factoryParams.get(i).getSimpleName().toString())) {
         // We don't check that the types match because that turns out not to be trivial if
         // generic type variables are involved, and anyway the compiler will complain later.
-        error("Parameter " + (i+1) + " of factory method " + factoryMethod.getSimpleName() +
-            " does not match the corresponding property getter " + props.get(i), factoryMethod);
+        error("Parameter " + (i + 1) + " of factory method " + factoryMethod.getSimpleName()
+            + " does not match the corresponding property getter " + props.get(i), factoryMethod);
         match = false;
       }
     }

@@ -39,7 +39,7 @@ import java.util.Map;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 final class AbstractMethodExtractor {
-  AbstractMethodExtractor() {}
+  AbstractMethodExtractor() { }
 
   // Here are the details of the matching. We track the current brace depth, and we artificially
   // consider that the whole file is at brace depth 1 inside a pseudo-class whose name is the

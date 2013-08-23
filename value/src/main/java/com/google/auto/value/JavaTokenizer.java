@@ -108,8 +108,7 @@ class JavaTokenizer {
   // must be syntactically correct.
   private void skipNumber() {
     boolean lastWasE = false;
-    while (c == '.' || Character.isLetterOrDigit(c) ||
-        (lastWasE && (c == '+' || c == '-'))) {
+    while (c == '.' || Character.isLetterOrDigit(c) || (lastWasE && (c == '+' || c == '-'))) {
       lastWasE = (c == 'e' || c == 'E');
       next();
     }
