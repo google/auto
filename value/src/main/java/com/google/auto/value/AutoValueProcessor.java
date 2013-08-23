@@ -30,7 +30,6 @@ import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
@@ -50,6 +49,7 @@ import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 import com.google.auto.service.AutoService;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -59,13 +59,17 @@ import com.google.auto.service.AutoService;
  * @author Éamonn McManus
  */
 // I have avoided using any classes from Guava here for fear of future circularity problems.
-@SupportedAnnotationTypes("com.google.common.labs.autovalue.AutoValue")
 @SupportedOptions(EclipseHack.ENABLING_OPTION)
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
   private static final boolean SILENT = true;
 
   public AutoValueProcessor() {}
+
+  @Override
+  public Set<String> getSupportedAnnotationTypes() {
+    return ImmutableSet.of(AutoValue.class.getName());
+  }
 
   @Override
   public SourceVersion getSupportedSourceVersion() {

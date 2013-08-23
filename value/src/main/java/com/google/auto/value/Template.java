@@ -309,7 +309,7 @@ class Template {
       try {
         Method method = c.getMethod(methodName);
         if (Modifier.isPublic(c.getModifiers())
-            || c.getName().startsWith("com.google.common.labs.autovalue")) {
+            || c.getName().startsWith("com.google.auto.value")) {
           // Hack to allow us not to make AutoValueProcessor.Property a public class.
           return method;
         }
