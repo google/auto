@@ -19,7 +19,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import tests.SimpleClassImplementingSimpleInterface.SimpleInterface;
 
-@Generated(value = "com.google.auto.factory.AutoFactoryProcessor")
+@Generated("com.google.auto.factory.AutoFactoryProcessor")
 final class SimpleClassImplementingSimpleInterfaceFactory implements SimpleInterface {
   @Inject SimpleClassImplementingSimpleInterfaceFactory() {}
   
