@@ -32,7 +32,6 @@
   <url>https://github.com/google/auto</url>
 
   <modules>
-    <module>compile-testing</module>
     <module>factory</module>
     <module>service</module>
     <module>value</module>
