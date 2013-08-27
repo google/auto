@@ -15,17 +15,20 @@
  */
 package com.google.auto.factory;
 
-import static java.lang.reflect.Modifier.PUBLIC;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
 
 import java.io.IOException;
-import java.lang.reflect.Modifier;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
+import javax.lang.model.element.Modifier;
 import javax.tools.JavaFileObject;
 
 import com.google.common.base.Function;
@@ -36,7 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.squareup.java.JavaWriter;
+import com.squareup.javawriter.JavaWriter;
 
 final class FactoryWriter {
   private final Filer filer;
@@ -80,15 +83,17 @@ final class FactoryWriter {
     String factoryName = getSimpleName(descriptor.name()).toString();
     writer.emitAnnotation(Generated.class,
         ImmutableMap.of("value", "\"" + AutoFactoryProcessor.class.getName() + "\""));
-    writer.beginType(factoryName, "class", Modifier.FINAL | (descriptor.publicType() ? PUBLIC : 0),
-        null, implementedClasses);
+    EnumSet<Modifier> modifiers = EnumSet.of(FINAL);
+    if (descriptor.publicType()) {
+      modifiers.add(PUBLIC);
+    }
+    writer.beginType(factoryName, "class", modifiers, null, implementedClasses);
 
     ImmutableList.Builder<String> constructorTokens = ImmutableList.builder();
     for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {
       Key key = entry.getKey();
       String providerName = entry.getValue();
-      writer.emitField("Provider<" + key.getType() + ">", providerName,
-          Modifier.PRIVATE | Modifier.FINAL);
+      writer.emitField("Provider<" + key.getType() + ">", providerName, EnumSet.of(PRIVATE, FINAL));
       Optional<String> qualifier = key.getQualifier();
       String qualifierPrefix = qualifier.isPresent() ? "@" + qualifier.get() + " " : "";
       constructorTokens.add(qualifierPrefix + "Provider<" + key.getType() + ">").add(providerName);
@@ -96,7 +101,8 @@ final class FactoryWriter {
 
 
     writer.emitAnnotation("Inject");
-    writer.beginMethod(null, factoryName, descriptor.publicType() ? PUBLIC : 0,
+    writer.beginMethod(null, factoryName,
+        descriptor.publicType() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
         constructorTokens.build().toArray(new String[0]));
 
     for (String providerName : descriptor.providerNames().values()) {
@@ -107,7 +113,7 @@ final class FactoryWriter {
 
     for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
       writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),
-          methodDescriptor.publicMethod() ? PUBLIC : 0,
+          methodDescriptor.publicMethod() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
           parameterTokens(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.creationParameters())
@@ -127,7 +133,7 @@ final class FactoryWriter {
         : descriptor.implementationMethodDescriptors()) {
       writer.emitAnnotation(Override.class);
       writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),
-          methodDescriptor.publicMethod() ? PUBLIC : 0,
+          methodDescriptor.publicMethod() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
           parameterTokens(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.passedParameters())
