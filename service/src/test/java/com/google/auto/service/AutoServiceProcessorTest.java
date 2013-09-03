@@ -42,7 +42,7 @@ public class AutoServiceProcessorTest {
             JavaFileObjects.forResource("test/AnotherService.java"),
             JavaFileObjects.forResource("test/AnotherServiceProvider.java")))
         .processedWith(new AutoServiceProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesFiles(
             JavaFileObjects.forResource("META-INF/services/test.SomeService"),
             JavaFileObjects.forResource("META-INF/services/test.AnotherService"));

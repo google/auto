@@ -33,8 +33,6 @@
   <url>https://github.com/google/auto</url>
 
   <modules>
-    <!-- TODO(gak): move compile-testing to its own project-->
-    <module>compile-testing</module>
     <module>factory</module>
     <module>service</module>
     <module>value</module>
@@ -80,7 +78,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>14.0.1</version>
+        <version>15.0-rc1</version>
       </dependency>
       <dependency>
         <groupId>com.squareup</groupId>
@@ -97,7 +95,7 @@
       <dependency>
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>0.1</version>
         <scope>test</scope>
       </dependency>
       <dependency>
