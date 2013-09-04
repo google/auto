@@ -35,11 +35,8 @@ import java.lang.annotation.Target;
 @Target({ TYPE, CONSTRUCTOR })
 public @interface AutoFactory {
   /**
-   * The pattern for the fully qualified name of the factory implementation. The pattern syntax is
-   * that of {@link java.util.Formatter}. There are two arguments passed to the pattern: the package
-   * and the simple name of the type enclosing the target of the annotation.
    */
-  String named() default "%s.%sFactory";
+  String className() default "";
 
   /**
    * A list of interfaces that the generated factory is required to implement.

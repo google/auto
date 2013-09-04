@@ -31,6 +31,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor6;
 import javax.lang.model.util.SimpleTypeVisitor6;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -40,14 +41,14 @@ import com.google.common.collect.ImmutableSet;
  */
 final class AutoFactoryDeclaration {
   private final AnnotationMirror mirror;
-  private final String namePattern;
+  private final Optional<String> className;
   private final String extendingQualifiedName;
   private final ImmutableSet<String> implementingQualifiedNames;
 
-  AutoFactoryDeclaration(AnnotationMirror mirror, String namePattern, String extendingQualifiedName,
-      ImmutableSet<String> implementingQualifiedNames) {
+  AutoFactoryDeclaration(AnnotationMirror mirror, String className,
+      String extendingQualifiedName, ImmutableSet<String> implementingQualifiedNames) {
     this.mirror = mirror;
-    this.namePattern = namePattern;
+    this.className = className.isEmpty() ? Optional.<String>absent() : Optional.of(className);
     this.extendingQualifiedName = extendingQualifiedName;
     this.implementingQualifiedNames = implementingQualifiedNames;
   }
@@ -57,11 +58,20 @@ final class AutoFactoryDeclaration {
   }
 
   String getFactoryName(Name packageName, Name targetType) {
-    return String.format(namePattern, packageName, targetType);
+    StringBuilder builder = new StringBuilder(packageName);
+    if (packageName.length() > 0) {
+      builder.append('.');
+    }
+    if (className.isPresent()) {
+      builder.append(className.get());
+    } else {
+      builder.append(targetType).append("Factory");
+    }
+    return builder.toString();
   }
 
-  String namePattern() {
-    return namePattern;
+  Optional<String> getClassName() {
+    return className;
   }
 
   String extendingQualifiedName() {
@@ -80,9 +90,8 @@ final class AutoFactoryDeclaration {
         Mirrors.simplifyAnnotationValueMap(elements.getElementValuesWithDefaults(mirror));
     checkState(values.size() == 3);
 
-    AnnotationValue namedValue = checkNotNull(values.get("named"));
     // value is a string, so we can just call toString
-    String named = namedValue.getValue().toString();
+    String className = values.get("className").getValue().toString();
     AnnotationValue extendingValue = checkNotNull(values.get("extending"));
     String extendingQualifiedName = extendingValue.accept(new QualifiedNameValueVisitor(), null);
     AnnotationValue implementingValue = checkNotNull(values.get("implementing"));
@@ -102,7 +111,7 @@ final class AutoFactoryDeclaration {
             return builder.build();
           }
         }, null);
-    return new AutoFactoryDeclaration(mirror, named, extendingQualifiedName,
+    return new AutoFactoryDeclaration(mirror, className, extendingQualifiedName,
         implementingQualifiedNames);
   }
 

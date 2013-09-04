@@ -17,5 +17,5 @@ package tests;
 
 import com.google.auto.factory.AutoFactory;
 
-@AutoFactory(named = "%s.CustomNamedFactory")
+@AutoFactory(className = "CustomNamedFactory")
 final class SimpleClass {}
