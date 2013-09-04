@@ -24,8 +24,10 @@ import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.inject.Inject;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -43,6 +45,8 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 
+import dagger.ObjectGraph;
+
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
  *
@@ -50,18 +54,25 @@ import com.google.common.collect.Multimaps;
  */
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
+  @Inject FactoryDescriptorGenerator factoryDescriptorGenerator;
+  @Inject ProvidedChecker providedChecker;
+  @Inject Messager messager;
+  @Inject Elements elements;
+  @Inject FactoryWriter factoryWriter;
+
+  @Override
+  public synchronized void init(ProcessingEnvironment processingEnv) {
+    super.init(processingEnv);
+    ObjectGraph.create(new ProcessorModule(processingEnv), new AutoFactoryProcessorModule())
+        .inject(this);
+  }
+
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    Messager messager = processingEnv.getMessager();
-    Elements elements = processingEnv.getElementUtils();
-    ProvidedChecker providedChecker = new ProvidedChecker(messager);
     for (Element element : roundEnv.getElementsAnnotatedWith(Provided.class)) {
       providedChecker.checkProvidedParameter(element);
     }
 
-    FactoryDescriptorGenerator factoryDescriptorGenerator =
-        new FactoryDescriptorGenerator(messager, elements);
-    FactoryWriter factoryWriter = new FactoryWriter(processingEnv.getFiler());
     ImmutableListMultimap.Builder<String, FactoryMethodDescriptor> indexedMethods =
         ImmutableListMultimap.builder();
     ImmutableSet.Builder<ImplemetationMethodDescriptor> implemetationMethodDescriptors =
