@@ -34,7 +34,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/SimpleClass.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource("tests/SimpleClassFactory.java"));
   }
 
@@ -42,7 +42,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/PublicClass.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource("tests/PublicClassFactory.java"));
   }
 
@@ -50,7 +50,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/SimpleClassCustomName.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource("tests/CustomNamedFactory.java"));
   }
 
@@ -60,7 +60,7 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource("tests/SimpleClassMixedDeps.java"),
             JavaFileObjects.forResource("tests/AQualifier.java")))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("tests/SimpleClassMixedDepsFactory.java"));
   }
@@ -69,7 +69,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/SimpleClassPassedDeps.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("tests/SimpleClassPassedDepsFactory.java"));
   }
@@ -81,7 +81,7 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource("tests/BQualifier.java"),
             JavaFileObjects.forResource("tests/SimpleClassProvidedDeps.java")))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("tests/SimpleClassProvidedDepsFactory.java"));
   }
@@ -90,7 +90,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/ConstructorAnnotated.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("tests/ConstructorAnnotatedFactory.java"));
   }
@@ -99,7 +99,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/SimpleClassImplementingMarker.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("tests/SimpleClassImplementingMarkerFactory.java"));
   }
@@ -108,7 +108,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/SimpleClassImplementingSimpleInterface.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource(
             "tests/SimpleClassImplementingSimpleInterfaceFactory.java"));
   }
@@ -117,7 +117,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
         .that(JavaFileObjects.forResource("tests/MixedDepsImplementingInterfaces.java"))
         .processedWith(new AutoFactoryProcessor())
-        .hasNoErrors()
+        .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("tests/MixedDepsImplementingInterfacesFactory.java"));
   }
@@ -127,6 +127,8 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSource())
             .that(file)
             .processedWith(new AutoFactoryProcessor())
-            .hasError("AutoFactory does not support generic types").in(file).onLine(6).atColumn(14);
+            .failsToCompile()
+            .withErrorContaining("AutoFactory does not support generic types")
+                .in(file).onLine(6).atColumn(14);
   }
 }
