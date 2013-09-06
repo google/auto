@@ -131,4 +131,35 @@ public class AutoFactoryProcessorTest {
             .withErrorContaining("AutoFactory does not support generic types")
                 .in(file).onLine(6).atColumn(14);
   }
+
+  @Test public void providedButNoAutoFactory() {
+    JavaFileObject file = JavaFileObjects.forResource("tests/ProvidedButNoAutoFactory.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "@Provided may only be applied to constructors requesting an auto-factory")
+                .in(file).onLine(21).atColumn(38);
+  }
+
+  @Test public void providedOnMethodParameter() {
+    JavaFileObject file = JavaFileObjects.forResource("tests/ProvidedOnMethodParameter.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "@Provided may only be applied to constructor parameters")
+                .in(file).onLine(21).atColumn(23);
+  }
+
+  @Test public void invalidCustomName() {
+    JavaFileObject file = JavaFileObjects.forResource("tests/InvalidCustomName.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining("\"SillyFactory!\" is not a valid Java identifier");
+  }
 }

@@ -55,6 +55,7 @@ import dagger.ObjectGraph;
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
   @Inject FactoryDescriptorGenerator factoryDescriptorGenerator;
+  @Inject AutoFactoryChecker autoFactoryChecker;
   @Inject ProvidedChecker providedChecker;
   @Inject Messager messager;
   @Inject Elements elements;
@@ -78,6 +79,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     ImmutableSet.Builder<ImplemetationMethodDescriptor> implemetationMethodDescriptors =
         ImmutableSet.builder();
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
+      autoFactoryChecker.checkAutoFactoryElement(element);
       AutoFactoryDeclaration declaration = AutoFactoryDeclaration.fromAnnotationMirror(
           elements, Mirrors.getAnnotationMirror(element, AutoFactory.class).get());
       for (String implementing : declaration.implementingQualifiedNames()) {
