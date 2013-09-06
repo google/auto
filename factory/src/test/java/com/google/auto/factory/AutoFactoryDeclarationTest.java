@@ -15,12 +15,12 @@
  */
 package com.google.auto.factory;
 
-import static com.google.auto.factory.AutoFactoryChecker.isValidIdentifier;
+import static com.google.auto.factory.AutoFactoryDeclaration.Factory.isValidIdentifier;
 import static org.truth0.Truth.ASSERT;
 
 import org.junit.Test;
 
-public class AutoFactoryCheckerTest {
+public class AutoFactoryDeclarationTest {
   @Test public void identifiers() {
     ASSERT.that(isValidIdentifier("String")).isTrue();
     ASSERT.that(isValidIdentifier("9CantStartWithNumber")).isFalse();

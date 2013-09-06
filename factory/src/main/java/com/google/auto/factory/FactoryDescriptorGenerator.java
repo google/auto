@@ -35,15 +35,11 @@ import javax.lang.model.util.Elements;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.Sets;
 
 /**
  * A service that traverses an element and returns the set of factory methods defined therein.
@@ -53,20 +49,22 @@ import com.google.common.collect.Sets;
 final class FactoryDescriptorGenerator {
   private final Messager messager;
   private final Elements elements;
+  private final AutoFactoryDeclaration.Factory declarationFactory;
 
-  @Inject FactoryDescriptorGenerator(Messager messager, Elements elements) {
+  @Inject FactoryDescriptorGenerator(Messager messager, Elements elements,
+      AutoFactoryDeclaration.Factory declarationFactory) {
     this.messager = messager;
     this.elements = elements;
+    this.declarationFactory = declarationFactory;
   }
 
   ImmutableSet<FactoryMethodDescriptor> generateDescriptor(Element element) {
     final AnnotationMirror mirror = Mirrors.getAnnotationMirror(element, AutoFactory.class).get();
-    final AutoFactoryDeclaration declaration = AutoFactoryDeclaration.fromAnnotationMirror(
-        elements, mirror);
+    final AutoFactoryDeclaration declaration = declarationFactory.createIfValid(element).get();
     return element.accept(new ElementKindVisitor6<ImmutableSet<FactoryMethodDescriptor>, Void>() {
       @Override
       protected ImmutableSet<FactoryMethodDescriptor> defaultAction(Element e, Void p) {
-        return ImmutableSet.of();
+        throw new AssertionError("@AutoFactory applied to an impossible element");
       }
 
       @Override
@@ -125,8 +123,7 @@ final class FactoryDescriptorGenerator {
           @Override
           public Name visitTypeAsClass(TypeElement e, Void p) {
             if (!e.getTypeParameters().isEmpty()) {
-              messager.printMessage(ERROR, "AutoFactory does not support generic types", e/*,
-                  declaration.mirror()*/);
+              messager.printMessage(ERROR, "AutoFactory does not support generic types", e);
             }
             return e.getQualifiedName();
           }
@@ -151,43 +148,6 @@ final class FactoryDescriptorGenerator {
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters()))
         .build();
-  }
-
-  @SuppressWarnings("unused") // not used yet
-  private void generateDescriptorForFactoryMethodDeclaration(final ExecutableElement e,
-      Optional<TypeElement> referenceType) {
-    String returnType = e.getReturnType().toString();
-    ImmutableSet<ExecutableElement> constructors =
-        Elements2.getConstructors(elements.getTypeElement(returnType));
-    ImmutableList<String> passedParameters = FluentIterable.from(e.getParameters())
-        .transform(new Function<VariableElement, String>() {
-          @Override
-          public String apply(VariableElement e) {
-            // TODO(gak): get qualifiers
-            return e.asType().toString();
-          }
-        }).toList();
-    final ImmutableSet<VariableElement> providedParameters;
-    switch (constructors.size()) {
-      case 0:
-        // default constructor
-        if (!passedParameters.isEmpty()) {
-          messager.printMessage(ERROR, "passing parameters, but no params for constructor");
-        }
-        providedParameters = ImmutableSet.of();
-        break;
-      case 1:
-        // the normal case
-        ExecutableElement constructor = Iterables.getOnlyElement(constructors);
-        providedParameters = Sets.difference(
-            ImmutableSet.copyOf(constructor.getParameters()),
-            ImmutableSet.copyOf(passedParameters))
-                .immutableCopy();
-        break;
-      default:
-        messager.printMessage(ERROR, "ambiguous!");
-        break;
-    }
   }
 
   private ImmutableSet<FactoryMethodDescriptor> generateDescriptorForDefaultConstructor(

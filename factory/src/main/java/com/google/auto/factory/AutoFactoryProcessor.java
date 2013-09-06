@@ -38,6 +38,7 @@ import javax.tools.Diagnostic.Kind;
 
 import com.google.auto.service.AutoService;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -55,7 +56,7 @@ import dagger.ObjectGraph;
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
   @Inject FactoryDescriptorGenerator factoryDescriptorGenerator;
-  @Inject AutoFactoryChecker autoFactoryChecker;
+  @Inject AutoFactoryDeclaration.Factory declarationFactory;
   @Inject ProvidedChecker providedChecker;
   @Inject Messager messager;
   @Inject Elements elements;
@@ -79,23 +80,25 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     ImmutableSet.Builder<ImplemetationMethodDescriptor> implemetationMethodDescriptors =
         ImmutableSet.builder();
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
-      autoFactoryChecker.checkAutoFactoryElement(element);
-      AutoFactoryDeclaration declaration = AutoFactoryDeclaration.fromAnnotationMirror(
-          elements, Mirrors.getAnnotationMirror(element, AutoFactory.class).get());
-      for (String implementing : declaration.implementingQualifiedNames()) {
-        TypeElement interfaceType = elements.getTypeElement(implementing);
-        List<ExecutableElement> interfaceMethods =
-            ElementFilter.methodsIn(interfaceType.getEnclosedElements());
-        for (ExecutableElement interfaceMethod : interfaceMethods) {
-          implemetationMethodDescriptors.add(new ImplemetationMethodDescriptor.Builder()
-              .factoryName(interfaceType.getQualifiedName().toString())
-              .name(interfaceMethod.getSimpleName().toString())
-              .returnType(getAnnotatedType(element).getQualifiedName().toString())
-              .publicMethod()
-              .passedParameters(Parameter.forParameterList(interfaceMethod.getParameters()))
-              .build());
+      Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
+      if (declaration.isPresent()) {
+        for (String implementing : declaration.get().implementingQualifiedNames()) {
+          TypeElement interfaceType = elements.getTypeElement(implementing);
+          List<ExecutableElement> interfaceMethods =
+              ElementFilter.methodsIn(interfaceType.getEnclosedElements());
+          for (ExecutableElement interfaceMethod : interfaceMethods) {
+            implemetationMethodDescriptors.add(new ImplemetationMethodDescriptor.Builder()
+                .factoryName(interfaceType.getQualifiedName().toString())
+                .name(interfaceMethod.getSimpleName().toString())
+                .returnType(getAnnotatedType(element).getQualifiedName().toString())
+                .publicMethod()
+                .passedParameters(Parameter.forParameterList(interfaceMethod.getParameters()))
+                .build());
+          }
         }
       }
+
+
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
       indexedMethods.putAll(
