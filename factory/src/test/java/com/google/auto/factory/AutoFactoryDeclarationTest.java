@@ -13,9 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package tests;
+package com.google.auto.factory;
 
-import com.google.auto.factory.AutoFactory;
+import static com.google.auto.factory.AutoFactoryDeclaration.Factory.isValidIdentifier;
+import static org.truth0.Truth.ASSERT;
 
-@AutoFactory(className = "CustomNamedFactory")
-final class SimpleClass {}
+import org.junit.Test;
+
+public class AutoFactoryDeclarationTest {
+  @Test public void identifiers() {
+    ASSERT.that(isValidIdentifier("String")).isTrue();
+    ASSERT.that(isValidIdentifier("9CantStartWithNumber")).isFalse();
+    ASSERT.that(isValidIdentifier("enum")).isFalse();
+    ASSERT.that(isValidIdentifier("goto")).isFalse();
+    ASSERT.that(isValidIdentifier("InvalidCharacter!")).isFalse();
+  }
+}

@@ -15,7 +15,8 @@
  */
 package tests;
 
-import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
 
-@AutoFactory(className = "CustomNamedFactory")
-final class SimpleClass {}
+final class ProvidedOnMethodParameter {
+  void blah(Object a, @Provided Object b) {}
+}
