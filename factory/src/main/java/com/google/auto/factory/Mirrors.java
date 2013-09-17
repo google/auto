@@ -30,7 +30,6 @@ import javax.lang.model.util.SimpleElementVisitor6;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 
 
 final class Mirrors {
@@ -77,32 +76,5 @@ final class Mirrors {
       }
     }
     return Optional.absent();
-  }
-
-  static void appendDeclarationString(StringBuilder builder, AnnotationMirror mirror) {
-    builder.append('@').append(mirror.getAnnotationType());
-    Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues =
-        mirror.getElementValues();
-    switch (elementValues.size()) {
-      case 0:
-        break;
-      case 1:
-        Entry<? extends ExecutableElement, ? extends AnnotationValue> entry =
-        Iterables.getOnlyElement(elementValues.entrySet());
-        if ("value".equals(entry.getKey().getSimpleName())) {
-          builder.append('(');
-          // invoke visitor
-          builder.append(')');
-          break;
-        }
-      default:
-        appendValueMap(builder, elementValues);
-        break;
-    }
-  }
-
-  private static void appendValueMap(StringBuilder builder,
-      Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues) {
-
   }
 }

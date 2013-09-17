@@ -55,7 +55,7 @@ final class ProvidedChecker {
             if (!(annotatedWithAutoFactory(constructor)
                 || annotatedWithAutoFactory(constructor.getEnclosingElement()))) {
               raiseError(providedParameter,
-                  "@%s may only be applied to classes requesting an auto-factory");
+                  "@%s may only be applied to constructors requesting an auto-factory");
             }
             return null;
           }
@@ -67,7 +67,7 @@ final class ProvidedChecker {
 
   private void raiseError(VariableElement providedParameter, String messageFormat) {
     messager.printMessage(ERROR, String.format(messageFormat, Provided.class.getSimpleName()),
-        providedParameter);
+        providedParameter, Mirrors.getAnnotationMirror(providedParameter, Provided.class).get());
   }
 
   private static boolean annotatedWithAutoFactory(Element e) {

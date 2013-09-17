@@ -97,6 +97,7 @@ final class Parameter {
         qualifiers.add(Mirrors.getQualifiedName(annotationType).toString());
       }
     }
+    // TODO(gak): check for only one qualifier rather than using the first
     return new Parameter(FluentIterable.from(qualifiers.build()).first(),
         variable.asType().toString(),
         variable.getSimpleName().toString());
