@@ -27,7 +27,7 @@ import tests.MixedDepsImplementingInterfaces.MarkerB;
 /**
  * @author Gregory Kick
  */
-@Generated("com.google.auto.factory.AutoFactoryProcessor")
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class MixedDepsImplementingInterfacesFactory
     implements FromInt, FromObject, MarkerA, MarkerB {
   private final Provider<String> sProvider;

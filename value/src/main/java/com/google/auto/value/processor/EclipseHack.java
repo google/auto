@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.value;
+package com.google.auto.value.processor;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,7 +43,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
-import com.google.auto.value.AutoValueProcessor.Property;
+import com.google.auto.value.processor.AutoValueProcessor.Property;
 
 /**
  * Works around an Eclipse bug where methods are sorted into alphabetical order before being given

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.service;
+package com.google.auto.service.processor;
 
 import static com.google.common.base.Charsets.UTF_8;
 
