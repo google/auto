@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory;
+package com.google.auto.factory.processor;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
 
@@ -23,19 +26,37 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
-final class ImplemetationMethodDescriptor {
+/**
+ * A value object representing a factory method to be generated.
+ *
+ * @author Gregory Kick
+ */
+final class FactoryMethodDescriptor {
+  private final AutoFactoryDeclaration declaration;
   private final String factoryName;
   private final String name;
   private final String returnType;
   private final boolean publicMethod;
+  private final boolean override;
   private final ImmutableSet<Parameter> passedParameters;
+  private final ImmutableSet<Parameter> providedParameters;
+  private final ImmutableSet<Parameter> creationParameters;
 
-  private ImplemetationMethodDescriptor(Builder builder) {
+  private FactoryMethodDescriptor(Builder builder) {
+    this.declaration = builder.declaration;
     this.factoryName = builder.factoryName.get();
     this.name = builder.name.get();
     this.returnType = builder.returnType.get();
     this.publicMethod = builder.publicMethod;
+    this.override = builder.override;
     this.passedParameters = ImmutableSet.copyOf(builder.passedParameters);
+    this.providedParameters = ImmutableSet.copyOf(builder.providedParameters);
+    this.creationParameters = ImmutableSet.copyOf(builder.creationParameters);
+    checkState(creationParameters.equals(Sets.union(passedParameters, providedParameters)));
+  }
+
+  AutoFactoryDeclaration declaration() {
+    return declaration;
   }
 
   String factoryName() {
@@ -50,12 +71,24 @@ final class ImplemetationMethodDescriptor {
     return returnType;
   }
 
-  boolean publicMethod() {
+  public boolean publicMethod() {
     return publicMethod;
+  }
+
+  public boolean override() {
+    return override;
   }
 
   ImmutableSet<Parameter> passedParameters() {
     return passedParameters;
+  }
+
+  ImmutableSet<Parameter> providedParameters() {
+    return providedParameters;
+  }
+
+  ImmutableSet<Parameter> creationParameters() {
+    return creationParameters;
   }
 
   @Override
@@ -64,17 +97,25 @@ final class ImplemetationMethodDescriptor {
         .add("factoryName", factoryName)
         .add("name", name)
         .add("returnType", returnType)
-        .add("publicMethod", publicMethod)
-        .add("passedParameters", passedParameters)
+        .add("passed", passedParameters)
+        .add("provided", providedParameters)
         .toString();
   }
 
   static final class Builder {
+    private final AutoFactoryDeclaration declaration;
     private Optional<String> factoryName = Optional.absent();
     private Optional<String> name = Optional.absent();
     private Optional<String> returnType = Optional.absent();
     private boolean publicMethod = false;
+    private boolean override = false;
     private final Set<Parameter> passedParameters = Sets.newLinkedHashSet();
+    private final Set<Parameter> providedParameters = Sets.newLinkedHashSet();
+    private final Set<Parameter> creationParameters = Sets.newLinkedHashSet();
+
+    Builder(AutoFactoryDeclaration declaration) {
+      this.declaration = checkNotNull(declaration);
+    }
 
     Builder factoryName(String factoryName) {
       this.factoryName = Optional.of(factoryName);
@@ -100,13 +141,28 @@ final class ImplemetationMethodDescriptor {
       return this;
     }
 
+    Builder override() {
+      this.override = true;
+      return this;
+    }
+
     Builder passedParameters(Iterable<Parameter> passedParameters) {
       Iterables.addAll(this.passedParameters, passedParameters);
       return this;
     }
 
-    ImplemetationMethodDescriptor build() {
-      return new ImplemetationMethodDescriptor(this);
+    Builder providedParameters(Iterable<Parameter> providedParameters) {
+      Iterables.addAll(this.providedParameters, providedParameters);
+      return this;
+    }
+
+    Builder creationParameters(Iterable<Parameter> creationParameters) {
+      Iterables.addAll(this.creationParameters, creationParameters);
+      return this;
+    }
+
+    FactoryMethodDescriptor build() {
+      return new FactoryMethodDescriptor(this);
     }
   }
 }

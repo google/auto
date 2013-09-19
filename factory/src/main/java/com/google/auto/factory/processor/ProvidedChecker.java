@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory;
+package com.google.auto.factory.processor;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -24,6 +24,9 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
+
+import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
 
 final class ProvidedChecker {
   private final Messager messager;

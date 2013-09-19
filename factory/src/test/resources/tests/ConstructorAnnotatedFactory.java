@@ -19,7 +19,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated("com.google.auto.factory.AutoFactoryProcessor")
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class ConstructorAnnotatedFactory {
   private final Provider<Object> objProvider;
   

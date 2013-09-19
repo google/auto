@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.value;
+package com.google.auto.value.processor;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -49,6 +49,7 @@ import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 import com.google.auto.service.AutoService;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 
 /**

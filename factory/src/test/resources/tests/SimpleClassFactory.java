@@ -18,7 +18,7 @@ package tests;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
-@Generated("com.google.auto.factory.AutoFactoryProcessor")
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class SimpleClassFactory {
   @Inject SimpleClassFactory() {}
   
