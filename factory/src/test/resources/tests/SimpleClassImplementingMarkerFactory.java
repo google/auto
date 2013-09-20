@@ -19,7 +19,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import java.util.RandomAccess;
 
-@Generated("com.google.auto.factory.AutoFactoryProcessor")
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class SimpleClassImplementingMarkerFactory implements RandomAccess {
   @Inject SimpleClassImplementingMarkerFactory() {}
   

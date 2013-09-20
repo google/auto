@@ -13,14 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory;
+package com.google.auto.factory.processor;
 
-import dagger.Module;
+import static com.google.auto.factory.processor.AutoFactoryDeclaration.Factory.isValidIdentifier;
+import static org.truth0.Truth.ASSERT;
 
-/**
- * The Dagger module that declares all of the bindings for {@link AutoFactoryProcessor}.
- *
- * @author Gregory Kick
- */
-@Module(addsTo = ProcessorModule.class, injects = AutoFactoryProcessor.class)
-final class AutoFactoryProcessorModule { }
+import org.junit.Test;
+
+public class AutoFactoryDeclarationTest {
+  @Test public void identifiers() {
+    ASSERT.that(isValidIdentifier("String")).isTrue();
+    ASSERT.that(isValidIdentifier("9CantStartWithNumber")).isFalse();
+    ASSERT.that(isValidIdentifier("enum")).isFalse();
+    ASSERT.that(isValidIdentifier("goto")).isFalse();
+    ASSERT.that(isValidIdentifier("InvalidCharacter!")).isFalse();
+  }
+}
