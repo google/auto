@@ -37,6 +37,7 @@ import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableListMultimap;
@@ -62,7 +63,10 @@ final class FactoryDescriptorGenerator {
 
   ImmutableSet<FactoryMethodDescriptor> generateDescriptor(Element element) {
     final AnnotationMirror mirror = Mirrors.getAnnotationMirror(element, AutoFactory.class).get();
-    final AutoFactoryDeclaration declaration = declarationFactory.createIfValid(element).get();
+    final Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
+    if (!declaration.isPresent()) {
+      return ImmutableSet.of();
+    }
     return element.accept(new ElementKindVisitor6<ImmutableSet<FactoryMethodDescriptor>, Void>() {
       @Override
       protected ImmutableSet<FactoryMethodDescriptor> defaultAction(Element e, Void p) {
@@ -80,12 +84,12 @@ final class FactoryDescriptorGenerator {
           // applied to the type to be created
           ImmutableSet<ExecutableElement> constructors = Elements2.getConstructors(type);
           if (constructors.isEmpty()) {
-            return generateDescriptorForDefaultConstructor(declaration, type);
+            return generateDescriptorForDefaultConstructor(declaration.get(), type);
           } else {
             return FluentIterable.from(constructors)
                 .transform(new Function<ExecutableElement, FactoryMethodDescriptor>() {
                   @Override public FactoryMethodDescriptor apply(ExecutableElement constructor) {
-                    return generateDescriptorForConstructor(declaration, constructor);
+                    return generateDescriptorForConstructor(declaration.get(), constructor);
                   }
                 })
                 .toSet();
@@ -105,7 +109,7 @@ final class FactoryDescriptorGenerator {
       public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(ExecutableElement e,
           Void p) {
         // applied to a constructor of a type to be created
-        return ImmutableSet.of(generateDescriptorForConstructor(declaration, e));
+        return ImmutableSet.of(generateDescriptorForConstructor(declaration.get(), e));
       }
     }, null);
   }
