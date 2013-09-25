@@ -129,7 +129,7 @@ public class AutoFactoryProcessorTest {
             .processedWith(new AutoFactoryProcessor())
             .failsToCompile()
             .withErrorContaining("AutoFactory does not support generic types")
-                .in(file).onLine(6).atColumn(14);
+                .in(file).onLine(21).atColumn(14);
   }
 
   @Test public void providedButNoAutoFactory() {
