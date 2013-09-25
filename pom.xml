@@ -106,13 +106,13 @@
       <dependency>
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>
-        <version>0.2</version>
+        <version>0.3</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava-testlib</artifactId>
-        <version>14.0.1</version>
+        <version>15.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
