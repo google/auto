@@ -126,13 +126,13 @@ class EclipseHack {
     private final File file;
 
     EclipseIFile(ProcessingEnvironment processingEnv, TypeElement element) {
-      // The qualified name will look like com.google.common.labs.autovalue.AutoValueTest.Foo
-      // which we transform into javatests/com/google/common/labs/autovalue/AutoValueTest.java .
+      // The qualified name will look like com.google.auto.value.AutoValueTest.Foo
+      // which we transform into javatests/com/google/auto/value/AutoValueTest.java .
       // In the context of the EclipseHackTest, AutoValueTest.java has been declared as a resource,
       // and we are running with a current directory at the root of the output tree for the test,
       // where resources are copied. So we can simply open the filename produced here.
       // The regular expression fixes the results for com...AutoValueTest.Foo, where we don't
-      // want to try to open javatests/com/.../AutoValueTest/Foo.java.
+      // want to try to open test/java/com/.../AutoValueTest/Foo.java.
       String fileName =
           "javatests/"
           + element.getQualifiedName().toString().replace('.', '/')
