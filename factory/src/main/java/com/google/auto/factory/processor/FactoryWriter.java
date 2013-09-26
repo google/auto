@@ -87,7 +87,10 @@ final class FactoryWriter {
     if (descriptor.publicType()) {
       modifiers.add(PUBLIC);
     }
-    writer.beginType(factoryName, "class", modifiers, null, implementedClasses);
+    writer.beginType(factoryName, "class", modifiers,
+        Object.class.getName().equals(descriptor.extendingType())
+            ? null : descriptor.extendingType(),
+        implementedClasses);
 
     ImmutableList.Builder<String> constructorTokens = ImmutableList.builder();
     for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {

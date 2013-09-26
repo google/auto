@@ -160,6 +160,50 @@ public class AutoFactoryProcessorTest {
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
-        .withErrorContaining("\"SillyFactory!\" is not a valid Java identifier");
+        .withErrorContaining("\"SillyFactory!\" is not a valid Java identifier")
+            .in(file).onLine(20);
+  }
+
+  @Test public void factoryExtendingAbstractClass() {
+    ASSERT.about(javaSource())
+        .that(JavaFileObjects.forResource("good/FactoryExtendingAbstractClass.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/FactoryExtendingAbstractClassFactory.java"));
+  }
+
+  @Test public void factoryExtendingInterface() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/InterfaceSupertype.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining("java.lang.Runnable is not a valid supertype for a factory. "
+            + "Supertypes must be non-final classes.")
+                .in(file).onLine(20);
+  }
+
+  @Test public void factoryExtendingEnum() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/EnumSupertype.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "java.util.concurrent.TimeUnit is not a valid supertype for a factory. "
+                + "Supertypes must be non-final classes.")
+                    .in(file).onLine(22);
+  }
+
+  @Test public void factoryExtendingFinalClass() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/FinalSupertype.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining("java.lang.Boolean is not a valid supertype for a factory. "
+            + "Supertypes must be non-final classes.")
+                .in(file).onLine(20);
   }
 }

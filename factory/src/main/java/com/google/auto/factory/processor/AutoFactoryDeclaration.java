@@ -15,13 +15,13 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.Kind.NOTE;
 
-import java.util.List;
 import java.util.Map;
 
 import javax.annotation.processing.Messager;
@@ -30,11 +30,8 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeMirror;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleAnnotationValueVisitor6;
-import javax.lang.model.util.SimpleTypeVisitor6;
 
 import com.google.auto.factory.AutoFactory;
 import com.google.common.base.Optional;
@@ -49,15 +46,15 @@ import com.google.common.collect.ImmutableSet;
 final class AutoFactoryDeclaration {
   private final Element target;
   private final Optional<String> className;
-  private final String extendingQualifiedName;
-  private final ImmutableSet<String> implementingQualifiedNames;
+  private final TypeElement extendingType;
+  private final ImmutableSet<TypeElement> implementingTypes;
 
   private AutoFactoryDeclaration(Element target, Optional<String> className,
-      String extendingQualifiedName, ImmutableSet<String> implementingQualifiedNames) {
+      TypeElement extendingType, ImmutableSet<TypeElement> implementingTypes) {
     this.target = target;
     this.className = className;
-    this.extendingQualifiedName = extendingQualifiedName;
-    this.implementingQualifiedNames = implementingQualifiedNames;
+    this.extendingType = extendingType;
+    this.implementingTypes = implementingTypes;
   }
 
 
@@ -82,37 +79,14 @@ final class AutoFactoryDeclaration {
     return className;
   }
 
-  String extendingQualifiedName() {
-    return extendingQualifiedName;
+  TypeElement extendingType() {
+    return extendingType;
   }
 
-  ImmutableSet<String> implementingQualifiedNames() {
-    return implementingQualifiedNames;
+  ImmutableSet<TypeElement> implementingTypes() {
+    return implementingTypes;
   }
 
-
-  private static final class QualifiedNameValueVisitor
-      extends SimpleAnnotationValueVisitor6<String, Void> {
-    @Override
-    protected String defaultAction(Object o, Void p) {
-      throw new IllegalStateException();
-    }
-
-    @Override
-    public String visitType(TypeMirror t, Void p) {
-      return t.accept(new SimpleTypeVisitor6<String, Void>() {
-        @Override
-        protected String defaultAction(TypeMirror e, Void p) {
-          throw new AssertionError();
-        }
-
-        @Override
-        public String visitDeclared(DeclaredType t, Void p) {
-          return Mirrors.getQualifiedName(t).toString();
-        }
-      }, null);
-    }
-  }
 
   static final class Factory {
     private final Elements elements;
@@ -142,30 +116,35 @@ final class AutoFactoryDeclaration {
         messager.printMessage(ERROR,
             String.format("\"%s\" is not a valid Java identifier", className),
             element, mirror, classNameValue);
+        return Optional.absent();
       }
-      AnnotationValue extendingValue = checkNotNull(values.get("extending"));
-      String extendingQualifiedName = extendingValue.accept(new QualifiedNameValueVisitor(), null);
-      AnnotationValue implementingValue = checkNotNull(values.get("implementing"));
-      ImmutableSet<String> implementingQualifiedNames =
-          implementingValue.accept(new SimpleAnnotationValueVisitor6<ImmutableSet<String>, Void>() {
-            @Override
-            protected ImmutableSet<String> defaultAction(Object o, Void p) {
-              throw new AssertionError();
-            }
 
-            @Override
-            public ImmutableSet<String> visitArray(List<? extends AnnotationValue> vals, Void p) {
-              ImmutableSet.Builder<String> builder = ImmutableSet.builder();
-              for (AnnotationValue annotationValue : vals) {
-                builder.add(annotationValue.accept(new QualifiedNameValueVisitor(), null));
-              }
-              return builder.build();
-            }
-          }, null);
+      AnnotationValue extendingValue = checkNotNull(values.get("extending"));
+      TypeElement extendingType = AnnotationValues.asType(extendingValue);
+      if (extendingType == null) {
+        messager.printMessage(ERROR, "Unable to find the type: "
+            + extendingValue.getValue().toString(),
+                element, mirror, extendingValue);
+        return Optional.absent();
+      } else if (!isValidSupertypeForClass(extendingType)) {
+        messager.printMessage(ERROR,
+            String.format("%s is not a valid supertype for a factory. "
+                + "Supertypes must be non-final classes.",
+                    extendingType.getQualifiedName()),
+            element, mirror, extendingValue);
+        return Optional.absent();
+      }
+
+      AnnotationValue implementingValue = checkNotNull(values.get("implementing"));
+      ImmutableSet.Builder<TypeElement> builder = ImmutableSet.builder();
+      for (AnnotationValue implementingTypeValue : AnnotationValues.asList(implementingValue)) {
+        builder.add(AnnotationValues.asType(implementingTypeValue));
+      }
+      ImmutableSet<TypeElement> implementingTypes = builder.build();
       return Optional.of(new AutoFactoryDeclaration(element,
           className.isEmpty() ? Optional.<String>absent() : Optional.of(className),
-          extendingQualifiedName,
-          implementingQualifiedNames));
+          extendingType,
+          implementingTypes));
     }
 
     /**

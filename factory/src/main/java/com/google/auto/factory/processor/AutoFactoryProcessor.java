@@ -31,6 +31,7 @@ import javax.inject.Inject;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
@@ -84,18 +85,31 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
-        for (String implementing : declaration.get().implementingQualifiedNames()) {
-          TypeElement interfaceType = elements.getTypeElement(implementing);
-          List<ExecutableElement> interfaceMethods =
-              ElementFilter.methodsIn(interfaceType.getEnclosedElements());
-          for (ExecutableElement interfaceMethod : interfaceMethods) {
+        TypeElement extendingType = declaration.get().extendingType();
+        List<ExecutableElement> supertypeMethods =
+            ElementFilter.methodsIn(elements.getAllMembers(extendingType));
+        for (ExecutableElement supertypeMethod : supertypeMethods) {
+          if (supertypeMethod.getModifiers().contains(Modifier.ABSTRACT)) {
             implemetationMethodDescriptors.add(new ImplemetationMethodDescriptor.Builder()
-                .factoryName(interfaceType.getQualifiedName().toString())
-                .name(interfaceMethod.getSimpleName().toString())
+                .name(supertypeMethod.getSimpleName().toString())
                 .returnType(getAnnotatedType(element).getQualifiedName().toString())
                 .publicMethod()
-                .passedParameters(Parameter.forParameterList(interfaceMethod.getParameters()))
+                .passedParameters(Parameter.forParameterList(supertypeMethod.getParameters()))
                 .build());
+          }
+        }
+        for (TypeElement implementingType : declaration.get().implementingTypes()) {
+          List<ExecutableElement> interfaceMethods =
+              ElementFilter.methodsIn(elements.getAllMembers(implementingType));
+          for (ExecutableElement interfaceMethod : interfaceMethods) {
+            if (interfaceMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+              implemetationMethodDescriptors.add(new ImplemetationMethodDescriptor.Builder()
+                  .name(interfaceMethod.getSimpleName().toString())
+                  .returnType(getAnnotatedType(element).getQualifiedName().toString())
+                  .publicMethod()
+                  .passedParameters(Parameter.forParameterList(interfaceMethod.getParameters()))
+                  .build());
+            }
           }
         }
       }
@@ -117,8 +131,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       ImmutableSortedSet.Builder<String> implementing = ImmutableSortedSet.naturalOrder();
       boolean publicType = false;
       for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
-        extending.add(methodDescriptor.declaration().extendingQualifiedName());
-        implementing.addAll(methodDescriptor.declaration().implementingQualifiedNames());
+        extending.add(methodDescriptor.declaration().extendingType().getQualifiedName().toString());
+        for (TypeElement implementingType : methodDescriptor.declaration().implementingTypes()) {
+          implementing.add(implementingType.getQualifiedName().toString());
+        }
         publicType |= methodDescriptor.publicMethod();
       }
       try {
