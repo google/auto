@@ -29,13 +29,18 @@ import javax.inject.Inject;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 
 import com.google.auto.factory.AutoFactory;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -133,6 +138,24 @@ final class AutoFactoryDeclaration {
                     extendingType.getQualifiedName()),
             element, mirror, extendingValue);
         return Optional.absent();
+      }
+      ImmutableList<ExecutableElement> noParameterConstructors =
+          FluentIterable.from(ElementFilter.constructorsIn(extendingType.getEnclosedElements()))
+              .filter(new Predicate<ExecutableElement>() {
+                @Override public boolean apply(ExecutableElement constructor) {
+                  return constructor.getParameters().isEmpty();
+                }
+              })
+              .toList();
+      if (noParameterConstructors.size() == 0) {
+        messager.printMessage(ERROR,
+            String.format("%s is not a valid supertype for a factory. "
+                + "Factory supertypes must have a no-arg constructor.",
+                    extendingType.getQualifiedName()),
+            element, mirror, extendingValue);
+        return Optional.absent();
+      } else if (noParameterConstructors.size() > 1) {
+        throw new IllegalStateException("Multiple constructors with no parameters??");
       }
 
       AnnotationValue implementingValue = checkNotNull(values.get("implementing"));
