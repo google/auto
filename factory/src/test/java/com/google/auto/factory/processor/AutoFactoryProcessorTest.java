@@ -173,6 +173,29 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource("expected/FactoryExtendingAbstractClassFactory.java"));
   }
 
+  @Test public void factoryExtendingAbstractClass_withConstructorParams() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("good/FactoryExtendingAbstractClassWithConstructorParams.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "tests.FactoryExtendingAbstractClassWithConstructorParams.AbstractFactory "
+                + "is not a valid supertype for a factory. "
+                + "Factory supertypes must have a no-arg constructor.")
+                    .in(file).onLine(21);
+  }
+
+  @Test public void factoryExtendingAbstractClass_multipleConstructors() {
+    JavaFileObject file = JavaFileObjects.forResource(
+        "good/FactoryExtendingAbstractClassWithMultipleConstructors.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError();
+  }
+
   @Test public void factoryExtendingInterface() {
     JavaFileObject file = JavaFileObjects.forResource("bad/InterfaceSupertype.java");
     ASSERT.about(javaSource())
