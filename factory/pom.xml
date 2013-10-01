@@ -85,9 +85,13 @@
         <configuration>
           <addTestClassPath>true</addTestClassPath>
           <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+          <filterProperties>
+            <auto.version>${project.version}</auto.version>
+          </filterProperties>
           <pomIncludes>
             <pomInclude>*/pom.xml</pomInclude>
           </pomIncludes>
+          <streamLogs>true</streamLogs>
         </configuration>
         <executions>
           <execution>
