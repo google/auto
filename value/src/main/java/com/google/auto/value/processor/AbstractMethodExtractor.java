@@ -108,7 +108,7 @@ final class AbstractMethodExtractor {
           classStack.removeLast();
         }
       } else if (topLevel) {
-        if (token.equals("class")) {
+        if (token.equals("class") || token.equals("interface")) {
           className = tokenizer.nextToken();
         } else if (token.equals("abstract")) {
           sawAbstract = true;

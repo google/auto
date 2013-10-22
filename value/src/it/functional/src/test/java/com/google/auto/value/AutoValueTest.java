@@ -340,6 +340,24 @@ public class AutoValueTest extends TestCase {
     assertEquals("Doubly{nullableString=null, randomInt=23}", instance.toString());
   }
 
+  static interface NestedInInterface {
+    @AutoValue
+    abstract class Doubly {
+      abstract String string();
+      abstract Map<String, Integer> map();
+      static Doubly create(String string, Map<String, Integer> map) {
+        return new AutoValue_AutoValueTest_NestedInInterface_Doubly(string, map);
+      }
+    }
+  }
+
+  public void testClassNestedInInterface() throws Exception {
+    Map<String, Integer> map = ImmutableMap.of("vingt-et-un", 21);
+    NestedInInterface.Doubly instance = NestedInInterface.Doubly.create("foo", map);
+    assertEquals("foo", instance.string());
+    assertEquals(map, instance.map());
+  }
+
   static class NestedWithFactory {
     @AutoValue
     abstract static class Doubly {
