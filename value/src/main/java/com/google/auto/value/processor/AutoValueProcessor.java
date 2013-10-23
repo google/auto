@@ -173,6 +173,9 @@ public class AutoValueProcessor extends AbstractProcessor {
   private static final String TEMPLATE_STRING = concatLines(
     // Package declaration
     "$[pkg?package $[pkg];\n]",
+    
+    // @Generated annotation
+    "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
 
     // Class declaration
     "final class $[subclass]$[formaltypes] extends $[origclass]$[actualtypes] {",
