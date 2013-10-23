@@ -81,6 +81,7 @@
           <pomIncludes>
             <pomInclude>*/pom.xml</pomInclude>
           </pomIncludes>
+          <streamLogs>true</streamLogs>
         </configuration>
         <executions>
           <execution>

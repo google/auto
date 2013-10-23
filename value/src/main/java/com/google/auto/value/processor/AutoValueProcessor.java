@@ -30,7 +30,6 @@ import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -59,8 +58,6 @@ import com.google.common.collect.ImmutableSet;
  * @see AutoValue
  * @author Éamonn McManus
  */
-// I have avoided using any classes from Guava here for fear of future circularity problems.
-@SupportedOptions(EclipseHack.ENABLING_OPTION)
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
   private static final boolean SILENT = true;
@@ -75,6 +72,11 @@ public class AutoValueProcessor extends AbstractProcessor {
   @Override
   public SourceVersion getSupportedSourceVersion() {
     return SourceVersion.latestSupported();
+  }
+
+  @Override
+  public Set<String> getSupportedOptions() {
+    return ImmutableSet.of(EclipseHack.ENABLING_OPTION);
   }
 
   private void note(String msg) {

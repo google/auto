@@ -37,11 +37,14 @@ import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+import javax.tools.FileObject;
+import javax.tools.StandardLocation;
 
 import com.google.auto.value.processor.AutoValueProcessor.Property;
 
@@ -89,6 +92,7 @@ class EclipseHack {
       this.processingEnv = processingEnv;
     }
 
+    @SuppressWarnings("unused") // accessed via reflection
     public EclipseIFile getEnclosingIFile(Element element) {
       return new EclipseIFile(processingEnv, (TypeElement) element);
     }
@@ -126,33 +130,37 @@ class EclipseHack {
     private final File file;
 
     EclipseIFile(ProcessingEnvironment processingEnv, TypeElement element) {
-      // The qualified name will look like com.google.auto.value.AutoValueTest.Foo
-      // which we transform into javatests/com/google/auto/value/AutoValueTest.java .
-      // In the context of the EclipseHackTest, AutoValueTest.java has been declared as a resource,
-      // and we are running with a current directory at the root of the output tree for the test,
-      // where resources are copied. So we can simply open the filename produced here.
-      // The regular expression fixes the results for com...AutoValueTest.Foo, where we don't
-      // want to try to open test/java/com/.../AutoValueTest/Foo.java.
-      String fileName =
-          "javatests/"
-          + element.getQualifiedName().toString().replace('.', '/')
-              .replaceAll("([A-Z][A-Za-z0-9_]*)/.*", "$1")
-          + ".java";
-      this.file = new File(fileName);
-      if (!file.canRead()) {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-            "Cannot find source code in file " + file, element);
+      Filer filer = processingEnv.getFiler();
+      // walk up the enclosing elements until you find a top-level element
+      Element topLevel;
+      for (topLevel = element;
+          topLevel.getEnclosingElement().getKind() != ElementKind.PACKAGE;
+          topLevel = topLevel.getEnclosingElement()) { }
+      try {
+        FileObject resource = filer.getResource(StandardLocation.SOURCE_PATH,
+            processingEnv.getElementUtils().getPackageOf(element).getQualifiedName(),
+            topLevel.getSimpleName() + ".java");
+        this.file = new File(resource.toUri());
+        if (!file.canRead()) {
+          processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+              "Cannot find source code in file " + file, element);
+        }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
     }
 
+    @SuppressWarnings("unused") // accessed via reflection
     public String getCharset() {
       return Charset.defaultCharset().name();
     }
 
+    @SuppressWarnings("unused") // accessed via reflection
     public InputStream getContents() throws IOException {
       return new FileInputStream(file);
     }
 
+    @SuppressWarnings("unused") // accessed via reflection
     public URI getRawLocationURI() {
       return file.toURI();
     }
