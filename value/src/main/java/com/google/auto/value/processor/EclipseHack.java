@@ -132,10 +132,10 @@ class EclipseHack {
     EclipseIFile(ProcessingEnvironment processingEnv, TypeElement element) {
       Filer filer = processingEnv.getFiler();
       // walk up the enclosing elements until you find a top-level element
-      Element topLevel;
-      for (topLevel = element;
-          topLevel.getEnclosingElement().getKind() != ElementKind.PACKAGE;
-          topLevel = topLevel.getEnclosingElement()) { }
+      Element topLevel = element;
+      while (topLevel.getEnclosingElement().getKind() != ElementKind.PACKAGE) {
+        topLevel = topLevel.getEnclosingElement();
+      }
       try {
         FileObject resource = filer.getResource(StandardLocation.SOURCE_PATH,
             processingEnv.getElementUtils().getPackageOf(element).getQualifiedName(),
