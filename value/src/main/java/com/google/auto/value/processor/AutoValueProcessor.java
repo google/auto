@@ -59,9 +59,8 @@ import com.google.common.collect.ImmutableSet;
  * @see AutoValue
  * @author Éamonn McManus
  */
-// I have avoided using any classes from Guava here for fear of future circularity problems.
-@SupportedOptions(EclipseHack.ENABLING_OPTION)
 @AutoService(Processor.class)
+@SupportedOptions(EclipseHack.ENABLING_OPTION)
 public class AutoValueProcessor extends AbstractProcessor {
   private static final boolean SILENT = true;
 
