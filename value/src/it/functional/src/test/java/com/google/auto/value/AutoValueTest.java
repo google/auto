@@ -661,8 +661,8 @@ public class AutoValueTest extends TestCase {
   }
 
   public void testComplexInheritance() throws Exception {
-    ComplexInheritance fail = ComplexInheritance.create("fred");
-    assertEquals("fred", fail.name());
-    assertEquals(42, fail.answer());
+    ComplexInheritance complex = ComplexInheritance.create("fred");
+    assertEquals("fred", complex.name());
+    assertEquals(42, complex.answer());
   }
 }
