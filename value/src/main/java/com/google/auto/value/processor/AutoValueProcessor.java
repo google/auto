@@ -172,7 +172,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   private static final String TEMPLATE_STRING = concatLines(
     // Package declaration
     "$[pkg?package $[pkg];\n]",
-    
+
     // @Generated annotation
     "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
 
@@ -352,11 +352,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     note("Looking at methods in " + type);
     Types typeUtils = processingEnv.getTypeUtils();
     Elements elementUtils = processingEnv.getElementUtils();
-    if (type.getSuperclass().getKind() != TypeKind.NONE) {
-      localAndInheritedMethods((TypeElement) typeUtils.asElement(type.getSuperclass()), methods);
-    }
     for (TypeMirror superInterface : type.getInterfaces()) {
       localAndInheritedMethods((TypeElement) typeUtils.asElement(superInterface), methods);
+    }
+    if (type.getSuperclass().getKind() != TypeKind.NONE) {
+      // Visit the superclass after superinterfaces so we will always see the implementation of a
+      // method after any interfaces that declared it.
+      localAndInheritedMethods((TypeElement) typeUtils.asElement(type.getSuperclass()), methods);
     }
     // Add each method of this class, and in so doing remove any inherited method it overrides.
     // This algorithm is quadratic in the number of methods but it's hard to see how to improve
@@ -365,18 +367,18 @@ public class AutoValueProcessor extends AbstractProcessor {
     eclipseHack().sortMethodsIfSimulatingEclipse(theseMethods);
     for (ExecutableElement method : theseMethods) {
       if (!method.getModifiers().contains(Modifier.PRIVATE)) {
-        boolean overridden = false;
+        boolean alreadySeen = false;
         for (Iterator<ExecutableElement> methodIter = methods.iterator(); methodIter.hasNext();) {
           ExecutableElement otherMethod = methodIter.next();
           if (elementUtils.overrides(method, otherMethod, type)) {
             methodIter.remove();
-          } else if (elementUtils.overrides(otherMethod, method, type)) {
-            // If we inherit this method on more than one path, we may have already seen the
-            // overriding method.
-            overridden = true;
+          } else if (method.getSimpleName().equals(otherMethod.getSimpleName())
+              && method.getParameters().equals(otherMethod.getParameters())) {
+            // If we inherit this method on more than one path, we don't want to add it twice.
+            alreadySeen = true;
           }
         }
-        if (!overridden) {
+        if (!alreadySeen) {
           methods.add(method);
         }
       }

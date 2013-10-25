@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
+
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
@@ -311,7 +312,11 @@ public class CompilationErrorsTest extends TestCase {
     // when that is enabled.
     Set<Diagnostic.Kind> diagnosticKinds = EnumSet.noneOf(Diagnostic.Kind.class);
     for (Diagnostic<?> diagnostic : diagnosticCollector.getDiagnostics()) {
-      if (diagnostic.getKind() == Diagnostic.Kind.NOTE) {
+      boolean ignore = (diagnostic.getKind() == Diagnostic.Kind.NOTE
+          || (diagnostic.getKind() == Diagnostic.Kind.WARNING
+              && diagnostic.getMessage(null).contains(
+                  "No processor claimed any of these annotations")));
+      if (ignore) {
         System.out.println(diagnostic);
       } else {
         diagnosticKinds.add(diagnostic.getKind());

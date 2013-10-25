@@ -660,9 +660,21 @@ public class AutoValueTest extends TestCase {
     int answer();
   }
 
-  public void testComplexInheritance() throws Exception {
+  public void testComplexInheritance() {
     ComplexInheritance complex = ComplexInheritance.create("fred");
     assertEquals("fred", complex.name());
     assertEquals(42, complex.answer());
+  }
+
+  @AutoValue
+  public static abstract class InheritTwice implements A, B {
+    public static InheritTwice create(int answer) {
+      return new AutoValue_AutoValueTest_InheritTwice(answer);
+    }
+  }
+
+  public void testInheritTwice() {
+    InheritTwice inheritTwice = InheritTwice.create(42);
+    assertEquals(42, inheritTwice.answer());
   }
 }
