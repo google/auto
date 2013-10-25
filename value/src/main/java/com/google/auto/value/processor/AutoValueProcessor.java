@@ -363,13 +363,20 @@ public class AutoValueProcessor extends AbstractProcessor {
     eclipseHack().sortMethodsIfSimulatingEclipse(theseMethods);
     for (ExecutableElement method : theseMethods) {
       if (!method.getModifiers().contains(Modifier.PRIVATE)) {
+        boolean overridden = false;
         for (Iterator<ExecutableElement> methodIter = methods.iterator(); methodIter.hasNext();) {
-          ExecutableElement parentMethod = methodIter.next();
-          if (elementUtils.overrides(method, parentMethod, type)) {
+          ExecutableElement otherMethod = methodIter.next();
+          if (elementUtils.overrides(method, otherMethod, type)) {
             methodIter.remove();
+          } else if (elementUtils.overrides(otherMethod, method, type)) {
+            // If we inherit this method on more than one path, we may have already seen the
+            // overriding method.
+            overridden = true;
           }
         }
-        methods.add(method);
+        if (!overridden) {
+          methods.add(method);
+        }
       }
     }
   }

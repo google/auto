@@ -637,4 +637,32 @@ public class AutoValueTest extends TestCase {
     assertNotSame(ExplicitEquals.class, instance.getClass());
     assertSame(ExplicitEquals.class, equals.getDeclaringClass());
   }
+
+  @AutoValue
+  public static abstract class ComplexInheritance extends AbstractBase implements A, B {
+    public static ComplexInheritance create(String name) {
+      return new AutoValue_AutoValueTest_ComplexInheritance(name);
+    }
+
+    abstract String name();
+  }
+
+  static class AbstractBase implements Base {
+    public int answer() {
+      return 42;
+    }
+  }
+
+  interface A extends Base {}
+  interface B extends Base {}
+
+  interface Base {
+    int answer();
+  }
+
+  public void testComplexInheritance() throws Exception {
+    ComplexInheritance fail = ComplexInheritance.create("fred");
+    assertEquals("fred", fail.name());
+    assertEquals(42, fail.answer());
+  }
 }
