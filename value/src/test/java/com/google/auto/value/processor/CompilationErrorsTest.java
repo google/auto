@@ -316,9 +316,7 @@ public class CompilationErrorsTest extends TestCase {
           || (diagnostic.getKind() == Diagnostic.Kind.WARNING
               && diagnostic.getMessage(null).contains(
                   "No processor claimed any of these annotations")));
-      if (ignore) {
-        System.out.println(diagnostic);
-      } else {
+      if (!ignore) {
         diagnosticKinds.add(diagnostic.getKind());
       }
     }
