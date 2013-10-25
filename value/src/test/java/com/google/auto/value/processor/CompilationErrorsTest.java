@@ -22,6 +22,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -33,7 +38,6 @@ import javax.tools.ToolProvider;
 
 import junit.framework.TestCase;
 
-import com.google.auto.value.processor.AutoValueProcessor;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -280,6 +284,7 @@ public class CompilationErrorsTest extends TestCase {
         "-sourcepath", tmpDir.getPath(),
         "-d", tmpDir.getPath(),
         "-processor", AutoValueProcessor.class.getName(),
+        "-processor", GeneratedCodeAnnotationProcessor.class.getName(),
         "-Xlint");
     javac.getTask(compilerOut, fileManager, diagnosticCollector, options, null, null);
     // This doesn't compile anything but communicates the paths to the JavaFileManager.
@@ -305,6 +310,8 @@ public class CompilationErrorsTest extends TestCase {
     // Compile the classes.
     JavaCompiler.CompilationTask javacTask = javac.getTask(
         compilerOut, fileManager, diagnosticCollector, options, classNames, sourceFiles);
+    javacTask.setProcessors(
+        ImmutableList.of(new AutoValueProcessor(), new GeneratedCodeAnnotationProcessor()));
     boolean compiledOk = javacTask.call();
 
     // Check that there were no compilation errors unless we were expecting there to be.
@@ -325,6 +332,19 @@ public class CompilationErrorsTest extends TestCase {
     assertEquals("Compilation result: " + diagnosticCollector.getDiagnostics(),
         expectedDiagnosticKinds, diagnosticKinds);
     assertEquals(diagnosticKinds.contains(Diagnostic.Kind.ERROR), !compiledOk);
+  }
+
+  @SupportedAnnotationTypes("javax.annotation.Generated")
+  static class GeneratedCodeAnnotationProcessor extends AbstractProcessor {
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+      return true; // Claim this annotation to remove warning.
+    }
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
   }
 
   private static class ClassName {
