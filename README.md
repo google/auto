@@ -8,7 +8,7 @@ Auto‽
 
 [Java][java] is full of code that is mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
-The Auto subprojects are a collection of code generators that automate those types of tasks. They create you would have written, but without the bugs.
+The Auto subprojects are a collection of code generators that automate those types of tasks. They create the code you would have written, but without the bugs.
 
 Save time.  Save code.  Save sanity.
 
