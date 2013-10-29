@@ -22,6 +22,8 @@ import static org.truth0.Truth.ASSERT;
 import javax.tools.JavaFileObject;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
@@ -29,6 +31,7 @@ import com.google.testing.compile.JavaFileObjects;
 /**
  * Functional tests for the {@link AutoFactoryProcessor}.
  */
+@RunWith(JUnit4.class)
 public class AutoFactoryProcessorTest {
   @Test public void simpleClass() {
     ASSERT.about(javaSource())

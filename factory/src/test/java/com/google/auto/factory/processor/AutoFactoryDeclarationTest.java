@@ -19,7 +19,10 @@ import static com.google.auto.factory.processor.AutoFactoryDeclaration.Factory.i
 import static org.truth0.Truth.ASSERT;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
+@RunWith(JUnit4.class)
 public class AutoFactoryDeclarationTest {
   @Test public void identifiers() {
     ASSERT.that(isValidIdentifier("String")).isTrue();
