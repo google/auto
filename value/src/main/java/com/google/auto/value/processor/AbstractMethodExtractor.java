@@ -30,7 +30,9 @@ import java.util.Map;
  *
  * <p>We recognize the text {@code ... class Foo ... { ... } } as a class called Foo, whose
  * definition extends to the matching right brace. Within a class definition, we recognize the text
- * {@code abstract ... bar ( ) } as an abstract method called bar.
+ * {@code abstract ... bar ( ) } as an abstract method called bar. We also recognize {@code ...
+ * interface Foo ... { ... } } so that we can discover {@code @AutoValue} classes that are nested
+ * in an interface.
  *
  * <p>We construct a {@code Map<String, List<String>>} that represents the abstract methods found in
  * each class, in the order they were found. If com.example.Foo contains a nested class Bar, then
