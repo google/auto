@@ -40,7 +40,7 @@
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
-      <scope>provided</scope>
+      <scope>compile</scope> <!-- Must have this where procesor runs -->
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
