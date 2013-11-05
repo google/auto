@@ -153,8 +153,11 @@ public class AutoValueProcessor extends AbstractProcessor {
   private static String classNameOf(TypeElement type) {
     String name = type.getQualifiedName().toString();
     String pkgName = packageNameOf(type);
-    assert name.startsWith(pkgName) && name.charAt(pkgName.length()) == '.';
-    return name.substring(pkgName.length() + 1);
+    if (!pkgName.isEmpty()) {
+      return name.substring(pkgName.length() + 1);
+    } else {
+      return name;
+    }
   }
 
   // This is just because I hate typing    "...\n" +   all the time.
