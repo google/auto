@@ -206,9 +206,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     // CHECKSTYLE:OFF:OperatorWrap
     "$[genToString?\n  @Override",
     "  public String toString() {",
-    "    return \"$[simpleclassname]{\"$[props?\n      + \"]" +
+    "    return \"$[simpleclassname]{\"$[props?\n        + \"]" +
     "$[props:p|\n        + \", |$[p]=\" + $[p]]",
-    "      + \"}\";",
+    "        + \"}\";",
     "  }]",
     // CHECKSTYLE:ON
 
