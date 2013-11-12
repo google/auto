@@ -20,6 +20,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -50,7 +50,6 @@ import javax.tools.JavaFileObject;
 
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -68,7 +67,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(AutoValue.class.getName());
+    return Collections.singleton(AutoValue.class.getName());
   }
 
   @Override
@@ -374,6 +373,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (type.getKind() != ElementKind.CLASS) {
       error("@" + AutoValue.class.getName() + " only applies to classes", type);
     }
+    if (ancestorIsAutoValue(type)) {
+      error("One @AutoValue class may not extend another", type);
+    }
     Map<String, Object> vars = new TreeMap<String, Object>();
     vars.put("pkg", packageNameOf(type));
     vars.put("origclass", classNameOf(type));
@@ -446,6 +448,21 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
+  private boolean ancestorIsAutoValue(TypeElement type) {
+    while (true) {
+      TypeMirror parentMirror = type.getSuperclass();
+      if (parentMirror.getKind() == TypeKind.NONE) {
+        return false;
+      }
+      Types typeUtils = processingEnv.getTypeUtils();
+      TypeElement parentElement = (TypeElement) typeUtils.asElement(parentMirror);
+      if (parentElement.getAnnotation(AutoValue.class) != null) {
+        return true;
+      }
+      type = parentElement;
+    }
+  }
+
   // Why does TypeParameterElement.toString() not return this? Grrr.
   private static String typeParameterString(TypeParameterElement type) {
     String s = type.getSimpleName().toString();
@@ -501,7 +518,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     } else {
       String s = "<";
       String sep = "";
-      for (TypeParameterElement typeParameter : typeParameters) {
+      for (TypeParameterElement unused : typeParameters) {
         s += sep + "?";
         sep = ", ";
       }

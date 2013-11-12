@@ -468,8 +468,17 @@ public class AutoValueTest extends TestCase {
     assertEquals("Bazinga{foo}", instance.toString());
   }
 
+  abstract static class NonAutoExplicitToString {
+    abstract String string();
+
+    @Override
+    public String toString() {
+      return "Bazinga{" + string() + "}";
+    }
+  }
+
   @AutoValue
-  abstract static class InheritedExplicitToString extends ExplicitToString {
+  abstract static class InheritedExplicitToString extends NonAutoExplicitToString {
     static InheritedExplicitToString create(String string) {
       return new AutoValue_AutoValueTest_InheritedExplicitToString(string);
     }
@@ -499,8 +508,15 @@ public class AutoValueTest extends TestCase {
     assertEquals("AbstractToString{string=foo}", instance.toString());
   }
 
+  abstract static class NonAutoAbstractToString {
+    abstract String string();
+
+    @Override
+    public abstract String toString();
+  }
+
   @AutoValue
-  abstract static class SubAbstractToString extends AbstractToString {
+  abstract static class SubAbstractToString extends NonAutoAbstractToString {
     static SubAbstractToString create(String string) {
       return new AutoValue_AutoValueTest_SubAbstractToString(string);
     }

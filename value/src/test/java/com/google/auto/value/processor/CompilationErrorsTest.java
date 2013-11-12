@@ -33,7 +33,6 @@ import javax.tools.ToolProvider;
 
 import junit.framework.TestCase;
 
-import com.google.auto.value.processor.AutoValueProcessor;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -190,6 +189,29 @@ public class CompilationErrorsTest extends TestCase {
         "@AutoValue\n" +
         "public abstract class Baz {\n" +
         "  public abstract int foo(int bar);\n" +
+        "}\n";
+    assertCompilationFails(ImmutableList.of(testSourceCode));
+  }
+
+  public void testExtendAutoValue() throws Exception {
+    String testSourceCode =
+        "package foo.bar;\n" +
+        "import com.google.auto.value.AutoValue;\n" +
+        "public class Outer {\n" +
+        "  @AutoValue\n" +
+        "  static abstract class Parent {\n" +
+        "    static Parent create(int randomProperty) {\n" +
+        "      return new AutoValue_Outer_Parent(randomProperty);\n" +
+        "    }\n" +
+        "    abstract int randomProperty();\n" +
+        "  }\n" +
+        "  @AutoValue\n" +
+        "  static abstract class Child extends Parent {\n" +
+        "    static Child create(int randomProperty) {\n" +
+        "      return new AutoValue_Outer_Child(randomProperty);\n" +
+        "    }\n" +
+        "    abstract int randomProperty();\n" +
+        "  }\n" +
         "}\n";
     assertCompilationFails(ImmutableList.of(testSourceCode));
   }
