@@ -11,11 +11,7 @@ public class NestedValueType {
     abstract Map<Integer, String> numberNames();
 
     public static Nested create(Map<Integer, String> numberNames) {
-      return AutoValues.using(Factory.class).create(numberNames);
-    }
-
-    interface Factory {
-      Nested create(Map<Integer, String> numberNames);
+      return new AutoValue_NestedValueType_Nested(numberNames);
     }
   }
 }

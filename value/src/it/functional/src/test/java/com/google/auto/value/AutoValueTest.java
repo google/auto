@@ -260,27 +260,6 @@ public class AutoValueTest extends TestCase {
     assertEqualsNullIsFalse(instance);
   }
 
-  @AutoValue
-  abstract static class NonPublicSubWithFactory extends NonPublicSuper {
-    abstract String subString();
-    abstract int subInt();
-    static NonPublicSubWithFactory create(Object superObject, String subString, int subInt) {
-      return AutoValues.using(Factory.class).create(superObject, subString, subInt);
-    }
-    interface Factory {
-      NonPublicSubWithFactory create(Object superObject, String subString, int subInt);
-    }
-  }
-
-  public void testNonPublicInheritedGettersWithFactory() throws Exception {
-    NonPublicSubWithFactory instance = NonPublicSubWithFactory.create("blim", "blam", 1729);
-    assertEquals("blim", instance.superObject());
-    assertEquals("blam", instance.subString());
-    assertEquals(1729, instance.subInt());
-    assertEquals(instance, instance);
-    assertEqualsNullIsFalse(instance);
-  }
-
   @SuppressWarnings("ObjectEqualsNull")
   private void assertEqualsNullIsFalse(Object instance) {
     assertFalse(instance.equals(null));
@@ -356,28 +335,6 @@ public class AutoValueTest extends TestCase {
     NestedInInterface.Doubly instance = NestedInInterface.Doubly.create("foo", map);
     assertEquals("foo", instance.string());
     assertEquals(map, instance.map());
-  }
-
-  static class NestedWithFactory {
-    @AutoValue
-    abstract static class Doubly {
-      @Nullable abstract String nullableString();
-      abstract int randomInt();
-      static Doubly create(String nullableString, int randomInt) {
-        return AutoValues.using(Factory.class).create(nullableString, randomInt);
-      }
-
-      interface Factory {
-        Doubly create(String nullableString, int randomInt);
-      }
-    }
-  }
-
-  public void testNestedClassWithFactory() throws Exception {
-    NestedWithFactory.Doubly instance = NestedWithFactory.Doubly.create(null, 23);
-    assertNull(instance.nullableString());
-    assertEquals(23, instance.randomInt());
-    assertEquals("Doubly{nullableString=null, randomInt=23}", instance.toString());
   }
 
   @AutoValue
@@ -490,47 +447,6 @@ public class AutoValueTest extends TestCase {
     assertEquals(instance, instance);
     assertEquals(emptyList, instance.key());
     assertEquals(ImmutableMap.of(emptyList, "23"), instance.map());
-  }
-
-  @AutoValue
-  public abstract static class SimpleFactory {
-    public abstract String publicString();
-    protected abstract int protectedInt();
-    abstract Map<String, Long> packageMap();
-    public static SimpleFactory create(String s, int i, Map<String, Long> m) {
-      return AutoValues.using(Factory.class).create(s, i, m);
-    }
-    interface Factory {
-      SimpleFactory create(String publicString, int protectedInt, Map<String, Long> packageMap);
-    }
-  }
-
-  public void testFactory() throws Exception {
-    SimpleFactory instance =
-        SimpleFactory.create("example", 23, ImmutableMap.of("twenty-three", 23L));
-    assertEquals(instance, instance);
-    assertEquals("example", instance.publicString());
-    assertEquals(23, instance.protectedInt());
-    assertEquals(ImmutableMap.of("twenty-three", 23L), instance.packageMap());
-  }
-
-  @AutoValue
-  abstract static class GenericFactory<K extends Number, V extends K> {
-    abstract K key();
-    abstract Map<K, V> map();
-    static <K extends Number, V extends K> GenericFactory<K, V> create(K key, Map<K, V> map) {
-      return AutoValues.using(Factory.class).create(key, map);
-    }
-    interface Factory {
-      <K extends Number, V extends K> GenericFactory<K, V> create(K key, Map<K, V> map);
-    }
-  }
-
-  public void testGenericFactoryWithSimpleBounds() throws Exception {
-    GenericFactory<Integer, Integer> instance = GenericFactory.create(23, ImmutableMap.of(17, 23));
-    assertEquals(instance, instance);
-    assertEquals(23, (int) instance.key());
-    assertEquals(ImmutableMap.of(17, 23), instance.map());
   }
 
   @AutoValue

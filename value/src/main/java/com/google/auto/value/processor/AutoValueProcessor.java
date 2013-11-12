@@ -127,10 +127,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     return generatedClassName(type, "AutoValue_");
   }
 
-  private String generatedFactoryName(TypeElement type) {
-    return generatedClassName(type, "AutoValueFactory_");
-  }
-
   private static String simpleNameOf(String s) {
     if (s.contains(".")) {
       return s.substring(s.lastIndexOf('.') + 1);
@@ -257,20 +253,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     // CHECKSTYLE:ON
   );
   private static final Template template = Template.compile(TEMPLATE_STRING);
-
-  private static final String FACTORY_TEMPLATE_STRING = concatLines(
-      // CHECKSTYLE:OFF:OperatorWrap
-      "$[pkg?package $[pkg];\n]",
-      "public final class $[factoryimpl] implements $[factory] {",
-      "  @Override",
-      "  public $[formaltypes] $[origclass]$[actualtypes] $[create]($[props:p|, " +
-            "|$[p.type] $[p]]) {",
-      "    return new $[subclass]$[actualtypes]($[props:p|, |$[p]]);",
-      "  }",
-      "}"
-      // CHECKSTYLE:ON
-  );
-  private static final Template factoryTemplate = Template.compile(FACTORY_TEMPLATE_STRING);
 
   static class Property {
     private final ExecutableElement method;
@@ -403,15 +385,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     defineVarsForType(type, vars);
     String text = template.rewrite(vars);
     writeSourceFile(generatedSubclassName(type), text, type);
-
-    TypeElement factoryType = factoryInterfaceFor(type);
-    if (factoryType != null && checkFactory(factoryType, vars)) {
-      defineVarsForFactory(factoryType, vars);
-      String factoryName = generatedFactoryName(type);
-      vars.put("factoryimpl", simpleNameOf(factoryName));
-      String factoryText = factoryTemplate.rewrite(vars);
-      writeSourceFile(factoryName, factoryText, type);
-    }
   }
 
   private void defineVarsForType(TypeElement type, Map<String, Object> vars) {
@@ -454,52 +427,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.put("genToString", genToString);
     vars.put("genEquals", genEquals);
     vars.put("genHashCode", genHashCode);
-  }
-
-  private TypeElement factoryInterfaceFor(TypeElement type) {
-    List<TypeElement> classes = ElementFilter.typesIn(type.getEnclosedElements());
-    for (TypeElement nested : classes) {
-      if (nested.getSimpleName().toString().equals("Factory")) {
-        return nested;
-      }
-    }
-    return null;
-  }
-
-  private boolean checkFactory(TypeElement factoryType, Map<String, Object> vars) {
-    List<ExecutableElement> factoryMethods =
-        ElementFilter.methodsIn(factoryType.getEnclosedElements());
-    if (factoryMethods.size() != 1) {
-      error("Factory interface must have exactly one method", factoryType);
-      return false;
-    }
-    ExecutableElement factoryMethod = factoryMethods.get(0);
-    List<?> props = (List<?>) vars.get("props");
-    List<? extends VariableElement> factoryParams = factoryMethod.getParameters();
-    if (factoryMethod.getParameters().size() != props.size()) {
-      error("Factory method " + factoryMethod.getSimpleName() + " parameters "
-          + factoryMethod.getParameters() + " do not match props " + props, factoryMethod);
-      return false;
-    }
-    boolean match = true;
-    for (int i = 0; i < props.size(); i++) {
-      if (!props.get(i).toString().equals(factoryParams.get(i).getSimpleName().toString())) {
-        // We don't check that the types match because that turns out not to be trivial if
-        // generic type variables are involved, and anyway the compiler will complain later.
-        error("Parameter " + (i + 1) + " of factory method " + factoryMethod.getSimpleName()
-            + " does not match the corresponding property getter " + props.get(i), factoryMethod);
-        match = false;
-      }
-    }
-    return match;
-  }
-
-  private void defineVarsForFactory(TypeElement factoryType, Map<String, Object> vars) {
-    List<ExecutableElement> factoryMethods =
-        ElementFilter.methodsIn(factoryType.getEnclosedElements());
-    ExecutableElement factoryMethod = factoryMethods.get(0);
-    vars.put("factory", factoryType.getQualifiedName());
-    vars.put("create", factoryMethod.getSimpleName());
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {

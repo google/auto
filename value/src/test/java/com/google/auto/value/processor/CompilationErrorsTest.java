@@ -194,63 +194,6 @@ public class CompilationErrorsTest extends TestCase {
     assertCompilationFails(ImmutableList.of(testSourceCode));
   }
 
-  public void testFactoryWithMoreThanOneMethod() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "import com.google.auto.value.AutoValues;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract int foo();\n" +
-        "  public static Baz create(int foo) {\n" +
-        "    return AutoValues.using(Factory.class).create(foo);\n" +
-        "  }\n" +
-        "  interface Factory {\n" +
-        "    public Baz create(int foo);\n" +
-        "    public Baz createAnotherWay(int foo);\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
-  public void testFactoryWithWrongNumberOfParameters() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "import com.google.auto.value.AutoValues;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract int foo();\n" +
-        "  public abstract String bar();\n" +
-        "  public static Baz create(int foo) {\n" +
-        "    return AutoValues.using(Factory.class).create(foo);\n" +
-        "  }\n" +
-        "  interface Factory {\n" +
-        "    public Baz create(int foo);\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
-  public void testFactoryWithWrongNamesForParameters() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "import com.google.auto.value.AutoValues;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract int foo();\n" +
-        "  public abstract String bar();\n" +
-        "  public static Baz create(int foo, String bar) {\n" +
-        "    return AutoValues.using(Factory.class).create(foo, bar);\n" +
-        "  }\n" +
-        "  interface Factory {\n" +
-        "    public Baz create(int foo, String barbarella);\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
   // We compile the test classes by writing the source out to our temporary directory and invoking
   // the compiler on them. An earlier version of this test used an in-memory JavaFileManager, but
   // that is probably overkill, and in any case led to a problem that I gave up trying to fix,

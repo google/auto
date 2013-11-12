@@ -41,24 +41,6 @@ public class PackagelessValueTypeTest extends TestCase {
     assertEquals(expectedHashCode, simple.hashCode());
   }
 
-  public void testPackagelessValueTypeWithFactory() {
-    final String happy = "happy";
-    final int testInt = 23;
-    Map<String, Long> testMap = ImmutableMap.of("happy", 23L);
-    PackagelessValueTypeWithFactory simple =
-        PackagelessValueTypeWithFactory.create(happy, testInt, testMap);
-    assertSame(happy, simple.string());
-    assertEquals(testInt, simple.integer());
-    assertSame(testMap, simple.map());
-    assertEquals("PackagelessValueTypeWithFactory{string=happy, integer=23, map={happy=23}}",
-        simple.toString());
-    int expectedHashCode = 1;
-    expectedHashCode = (expectedHashCode * 1000003) ^ happy.hashCode();
-    expectedHashCode = (expectedHashCode * 1000003) ^ ((Object) testInt).hashCode();
-    expectedHashCode = (expectedHashCode * 1000003) ^ testMap.hashCode();
-    assertEquals(expectedHashCode, simple.hashCode());
-  }
-
   public void testNestedValueType() {
     ImmutableMap<Integer, String> numberNames = ImmutableMap.of(1, "un", 2, "deux");
     PackagelessNestedValueType.Nested nested =
