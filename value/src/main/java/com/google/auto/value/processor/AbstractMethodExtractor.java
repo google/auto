@@ -96,7 +96,8 @@ final class AbstractMethodExtractor {
           if (Character.isJavaIdentifierStart(className.charAt(0))
               && !className.equals("instanceof")) {
             String container = classStack.getLast();
-            classStack.addLast(container + "." + className);
+            // container might be empty in the case of a packageless class
+            classStack.add(container.isEmpty() ? className : container + "." + className);
           }
           className = null;
         }
