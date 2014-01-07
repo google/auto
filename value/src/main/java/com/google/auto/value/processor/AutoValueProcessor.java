@@ -15,6 +15,9 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.service.AutoService;
+import com.google.auto.value.AutoValue;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
@@ -50,9 +53,6 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
-import com.google.auto.service.AutoService;
-import com.google.auto.value.AutoValue;
-
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
  * class.
@@ -83,12 +83,26 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private void error(String msg, Element e) {
-    // Issue a compilation error. This method does not throw an exception, since we want to
-    // continue processing and perhaps report other errors. It is a good idea to introduce a
-    // test case in CompilationErrorsTest for any new call to error(...) to ensure that we continue
-    // correctly after an error.
+  @SuppressWarnings("serial")
+  private static class CompileException extends Exception {}
+
+  /**
+   * Issue a compilation error. This method does not throw an exception, since we want to
+   * continue processing and perhaps report other errors. It is a good idea to introduce a
+   * test case in CompilationErrorsTest for any new call to reportError(...) to ensure that we
+   * continue correctly after an error.
+   */
+  private void reportError(String msg, Element e) {
     processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, msg, e);
+  }
+
+  /**
+   * Issue a compilation error and abandon the processing of this class. This does not prevent
+   * the processing of other classes.
+   */
+  private void abortWithError(String msg, Element e) throws CompileException {
+    reportError(msg, e);
+    throw new CompileException();
   }
 
   @Override
@@ -109,7 +123,11 @@ public class AutoValueProcessor extends AbstractProcessor {
         roundEnv.getElementsAnnotatedWith(AutoValue.class);
     Collection<? extends TypeElement> types = ElementFilter.typesIn(annotatedElements);
     for (TypeElement type : types) {
-      processType(type);
+      try {
+        processType(type);
+      } catch (CompileException e) {
+        // We abandoned this type, but continue with the next.
+      }
     }
   }
 
@@ -170,6 +188,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   // so than sb.append(this).append(that) with ifs and fors scattered around everywhere.
   // See the Template class for an explanation of the various constructs.
   private static final String TEMPLATE_STRING = concatLines(
+    // CHECKSTYLE:OFF:OperatorWrap
     // Package declaration
     "$[pkg?package $[pkg];\n]",
 
@@ -183,7 +202,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     "$[props:p||  private final $[p.type] $[p];\n]",
 
     // Constructor
-    // CHECKSTYLE:OFF:OperatorWrap
     "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
     "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
     "      throw new NullPointerException(\"Null $[p]\");",
@@ -191,7 +209,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     "]]" +
     "    this.$[p] = $[p];]",
     "  }",
-    // CHECKSTYLE:ON
 
     // Property getters
     "$[props:p|\n|\n  @Override",
@@ -200,18 +217,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     "  }]",
 
     // toString()
-    // CHECKSTYLE:OFF:OperatorWrap
-    "$[genToString?\n  @Override",
+    "$[toString?\n  @Override",
     "  public String toString() {",
     "    return \"$[simpleclassname]{\"$[props?\n        + \"]" +
     "$[props:p|\n        + \", |$[p]=\" + $[p]]",
     "        + \"}\";",
     "  }]",
-    // CHECKSTYLE:ON
 
     // equals(Object)
-    // CHECKSTYLE:OFF:OperatorWrap
-    "$[genEquals?\n  @Override",
+    "$[equals?\n  @Override",
     "  public boolean equals(Object o) {",
     "    if (o == this) {",
     "      return true;",
@@ -228,11 +242,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     "    }",
     "    return false;",
     "  }]",
-    // CHECKSTYLE:ON
 
     // hashCode()
-    // CHECKSTYLE:OFF:OperatorWrap
-    "$[genHashCode?",
+    "$[hashCode?",
     "  private transient int hashCode;",
     "",
     "  @Override",
@@ -333,21 +345,30 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private boolean isJavaLangObject(TypeElement type) {
+  private static boolean isJavaLangObject(TypeElement type) {
     return type.getSuperclass().getKind() == TypeKind.NONE && type.getKind() == ElementKind.CLASS;
   }
 
-  private void localAndInheritedMethods(TypeElement type, List<ExecutableElement> methods) {
+  private static boolean isToStringOrEqualsOrHashCode(ExecutableElement method) {
+    String name = method.getSimpleName().toString();
+    return ((name.equals("toString") || name.equals("hashCode"))
+              && method.getParameters().isEmpty())
+        || (name.equals("equals") && method.getParameters().size() == 1
+              && method.getParameters().get(0).asType().toString().equals("java.lang.Object"));
+  }
+
+  private void findLocalAndInheritedMethods(TypeElement type, List<ExecutableElement> methods) {
     note("Looking at methods in " + type);
     Types typeUtils = processingEnv.getTypeUtils();
     Elements elementUtils = processingEnv.getElementUtils();
     for (TypeMirror superInterface : type.getInterfaces()) {
-      localAndInheritedMethods((TypeElement) typeUtils.asElement(superInterface), methods);
+      findLocalAndInheritedMethods((TypeElement) typeUtils.asElement(superInterface), methods);
     }
     if (type.getSuperclass().getKind() != TypeKind.NONE) {
       // Visit the superclass after superinterfaces so we will always see the implementation of a
       // method after any interfaces that declared it.
-      localAndInheritedMethods((TypeElement) typeUtils.asElement(type.getSuperclass()), methods);
+      findLocalAndInheritedMethods(
+          (TypeElement) typeUtils.asElement(type.getSuperclass()), methods);
     }
     // Add each method of this class, and in so doing remove any inherited method it overrides.
     // This algorithm is quadratic in the number of methods but it's hard to see how to improve
@@ -374,12 +395,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private void processType(TypeElement type) {
+  private void processType(TypeElement type) throws CompileException {
     if (type.getKind() != ElementKind.CLASS) {
-      error("@" + AutoValue.class.getName() + " only applies to classes", type);
+      abortWithError("@" + AutoValue.class.getName() + " only applies to classes", type);
     }
     if (ancestorIsAutoValue(type)) {
-      error("One @AutoValue class may not extend another", type);
+      abortWithError("One @AutoValue class may not extend another", type);
     }
     Map<String, Object> vars = new TreeMap<String, Object>();
     vars.put("pkg", packageNameOf(type));
@@ -394,47 +415,64 @@ public class AutoValueProcessor extends AbstractProcessor {
     writeSourceFile(generatedSubclassName(type), text, type);
   }
 
-  private void defineVarsForType(TypeElement type, Map<String, Object> vars) {
+  private void defineVarsForType(TypeElement type, Map<String, Object> vars)
+      throws CompileException {
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    localAndInheritedMethods(type, methods);
+    findLocalAndInheritedMethods(type, methods);
+    vars.putAll(objectMethodsToGenerate(methods));
+    List<ExecutableElement> toImplement = methodsToImplement(methods);
     List<Property> props = new ArrayList<Property>();
-    boolean genToString = true;
-    boolean genEquals = true;
-    boolean genHashCode = true;
-    for (ExecutableElement method : methods) {
-      String name = method.getSimpleName().toString();
-      boolean isAbstract = method.getModifiers().contains(Modifier.ABSTRACT);
-      boolean canGenerate =
-          isAbstract || isJavaLangObject((TypeElement) method.getEnclosingElement());
-      if (name.equals("toString") && method.getParameters().isEmpty()) {
-        genToString = canGenerate;
-      } else if (name.equals("hashCode") && method.getParameters().isEmpty()) {
-        genHashCode = canGenerate;
-      } else if (name.equals("equals") && method.getParameters().size() == 1
-          && method.getParameters().get(0).asType().toString().equals("java.lang.Object")) {
-        genEquals = canGenerate;
-      } else if (isAbstract) {
-        if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
-          if (method.getReturnType().getKind() == TypeKind.ARRAY) {
-            error("Array-valued properties are not supported in @AutoValue classes: " + name,
-                method);
-          }
-          // The preceding ifs mean we won't think that an abstract toString() or hashCode() is a
-          // property getter.
-          props.add(new Property(method));
-        } else {
-          error("@AutoValue classes cannot have abstract methods other than property getters",
-              method);
-        }
-      }
+    for (ExecutableElement method : toImplement) {
+      props.add(new Property(method));
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
     vars.put("props", props);
-    vars.put("genToString", genToString);
-    vars.put("genEquals", genEquals);
-    vars.put("genHashCode", genHashCode);
     vars.put("serialVersionUID", getSerialVersionUID(type));
+  }
+
+  /**
+   * Given a list of all methods defined in or inherited by a class, returns a map with keys
+   * "toString", "equals", "hashCode" and corresponding value true if that method should be
+   * generated.
+   */
+  private static Map<String, Boolean> objectMethodsToGenerate(List<ExecutableElement> methods) {
+    Map<String, Boolean> vars = new TreeMap<String, Boolean>();
+    for (ExecutableElement method : methods) {
+      if (isToStringOrEqualsOrHashCode(method)) {
+        boolean canGenerate = method.getModifiers().contains(Modifier.ABSTRACT)
+            || isJavaLangObject((TypeElement) method.getEnclosingElement());
+        vars.put(method.getSimpleName().toString(), canGenerate);
+      }
+    }
+    assert vars.size() == 3;
+    return vars;
+  }
+
+  private List<ExecutableElement> methodsToImplement(List<ExecutableElement> methods)
+      throws CompileException {
+    List<ExecutableElement> toImplement = new ArrayList<ExecutableElement>();
+    boolean errors = false;
+    for (ExecutableElement method : methods) {
+      if (method.getModifiers().contains(Modifier.ABSTRACT)
+          && !isToStringOrEqualsOrHashCode(method)) {
+        if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
+          if (method.getReturnType().getKind() == TypeKind.ARRAY) {
+            reportError("Array-valued properties are not supported in @AutoValue classes", method);
+            errors = true;
+          }
+          toImplement.add(method);
+        } else {
+          reportError("@AutoValue classes cannot have abstract methods other than property getters",
+              method);
+          errors = true;
+        }
+      }
+    }
+    if (errors) {
+      throw new CompileException();
+    }
+    return toImplement;
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
@@ -485,7 +523,8 @@ public class AutoValueProcessor extends AbstractProcessor {
               && value != null) {
             return value + "L";
           } else {
-            error("serialVersionUID must be a static final long compile-time constant", field);
+            reportError(
+                "serialVersionUID must be a static final long compile-time constant", field);
             break;
           }
         }
