@@ -128,6 +128,9 @@ public class AutoValueProcessor extends AbstractProcessor {
         processType(type);
       } catch (CompileException e) {
         // We abandoned this type, but continue with the next.
+      } catch (RuntimeException e) {
+        // Don't propagate this exception, which will confusingly crash the compiler.
+        reportError("@AutoValue processor threw an exception: " + e, type);
       }
     }
   }

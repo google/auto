@@ -15,12 +15,31 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.io.Files;
+import com.google.common.reflect.Reflection;
+
+import junit.framework.TestCase;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
@@ -31,21 +50,12 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
 
-import junit.framework.TestCase;
-
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.io.Files;
-
-
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
 public class CompilationErrorsTest extends TestCase {
 
   // TODO(emcmanus): add tests for:
-  // - forbidding abstract methods other than getters
   // - superclass in a different package with nonpublic abstract methods (this must fail but
   //   is it clean?)
 
@@ -248,6 +258,40 @@ public class CompilationErrorsTest extends TestCase {
     assertCompilationFails(ImmutableList.of(testSourceCode));
   }
 
+  public void testExceptionBecomesError() throws Exception {
+    // Ensure that if the annotation processor code gets an unexpected exception, it is converted
+    // into a compiler error rather than being propagated. Otherwise the output can be very
+    // confusing to the user who stumbles into a bug that causes an exception, whether in
+    // AutoValueProcessor or javac.
+    // We inject an exception by rigging fileManager to throw when the processor tries to output
+    // the generated class for an otherwise correct @AutoValue class.
+    final AtomicBoolean exceptionWasThrown = new AtomicBoolean();
+    final String message = "I don't understand the question, and I won't respond to it";
+    final StandardJavaFileManager realFileManager = fileManager;
+    InvocationHandler errorInjectionHandler = new InvocationHandler() {
+      @Override
+      public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        if (method.getName().equals("getJavaFileForOutput")) {
+          exceptionWasThrown.set(true);
+          throw new UnsupportedOperationException(message);
+        } else {
+          return method.invoke(realFileManager, args);
+        }
+      }
+    };
+    fileManager = Reflection.newProxy(StandardJavaFileManager.class, errorInjectionHandler);
+    String testSourceCode =
+        "package foo.bar;\n" +
+        "import com.google.auto.value.AutoValue;\n" +
+        "@AutoValue\n" +
+        "public abstract class Empty {\n" +
+        "}\n";
+    assertCompilationResultIs(
+        ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile(message, Pattern.LITERAL)),
+        ImmutableList.of(testSourceCode));
+    assertTrue(exceptionWasThrown.get());
+  }
+
   // We compile the test classes by writing the source out to our temporary directory and invoking
   // the compiler on them. An earlier version of this test used an in-memory JavaFileManager, but
   // that is probably overkill, and in any case led to a problem that I gave up trying to fix,
@@ -258,16 +302,17 @@ public class CompilationErrorsTest extends TestCase {
   // explain what I saw other than as a bug in the JDK and the simplest fix was just to use
   // the standard JavaFileManager.
   private void assertCompilationFails(List<String> testSourceCode) throws IOException {
-    assertCompilationResultIs(EnumSet.of(Diagnostic.Kind.ERROR), testSourceCode);
+    assertCompilationResultIs(ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile("")),
+        testSourceCode);
   }
 
   private void assertCompilationSucceedsWithoutWarning(List<String> testSourceCode)
       throws IOException {
-    assertCompilationResultIs(EnumSet.noneOf(Diagnostic.Kind.class), testSourceCode);
+    assertCompilationResultIs(ImmutableMultimap.<Diagnostic.Kind, Pattern>of(), testSourceCode);
   }
 
   private void assertCompilationResultIs(
-      Set<Diagnostic.Kind> expectedDiagnosticKinds,
+      Multimap<Diagnostic.Kind, Pattern> expectedDiagnostics,
       List<String> testSourceCode) throws IOException {
     assertFalse(testSourceCode.isEmpty());
 
@@ -307,19 +352,24 @@ public class CompilationErrorsTest extends TestCase {
     // Check that there were no compilation errors unless we were expecting there to be.
     // We ignore "notes", typically debugging output from the annotation processor
     // when that is enabled.
-    Set<Diagnostic.Kind> diagnosticKinds = EnumSet.noneOf(Diagnostic.Kind.class);
+    Multimap<Diagnostic.Kind, String> diagnostics = ArrayListMultimap.create();
     for (Diagnostic<?> diagnostic : diagnosticCollector.getDiagnostics()) {
       boolean ignore = (diagnostic.getKind() == Diagnostic.Kind.NOTE
           || (diagnostic.getKind() == Diagnostic.Kind.WARNING
               && diagnostic.getMessage(null).contains(
                   "No processor claimed any of these annotations")));
       if (!ignore) {
-        diagnosticKinds.add(diagnostic.getKind());
+        diagnostics.put(diagnostic.getKind(), diagnostic.getMessage(null));
       }
     }
-    assertEquals("Compilation result: " + diagnosticCollector.getDiagnostics(),
-        expectedDiagnosticKinds, diagnosticKinds);
-    assertEquals(diagnosticKinds.contains(Diagnostic.Kind.ERROR), !compiledOk);
+    assertEquals(diagnostics.containsKey(Diagnostic.Kind.ERROR), !compiledOk);
+    assertEquals("Diagnostic kinds should match: " + diagnostics,
+        expectedDiagnostics.keySet(), diagnostics.keySet());
+    for (Map.Entry<Diagnostic.Kind, Pattern> expectedDiagnostic : expectedDiagnostics.entries()) {
+      Collection<String> actualDiagnostics = diagnostics.get(expectedDiagnostic.getKey());
+      assertTrue("Diagnostics should contain " + expectedDiagnostic + ": " + diagnostics,
+          Iterables.any(actualDiagnostics, Predicates.contains(expectedDiagnostic.getValue())));
+    }
   }
 
   private static class ClassName {
