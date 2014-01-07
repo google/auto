@@ -96,11 +96,12 @@ final class TypeSimplifier {
     }
 
     @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
-      String erasure = typeUtil.erasure(type).toString();
-      if (imports.containsKey(erasure)) {
-        sb.append(imports.get(erasure).spelling);
+      TypeElement typeElement = (TypeElement) typeUtil.asElement(type);
+      String typeString = typeElement.getQualifiedName().toString();
+      if (imports.containsKey(typeString)) {
+        sb.append(imports.get(typeString).spelling);
       } else {
-        sb.append(erasure);
+        sb.append(typeString);
       }
       List<? extends TypeMirror> arguments = type.getTypeArguments();
       if (!arguments.isEmpty()) {
@@ -171,21 +172,22 @@ final class TypeSimplifier {
     Set<String> ambiguous = ambiguousNames(typeUtil, referenced);
     for (TypeMirror type : referenced) {
       TypeElement typeElement = (TypeElement) typeUtil.asElement(type);
+      String fullName = typeElement.getQualifiedName().toString();
       String simpleName = typeElement.getSimpleName().toString();
       String pkg = packageNameOf(typeElement);
       boolean importIt;
       String spelling;
       if (ambiguous.contains(simpleName)) {
         importIt = false;
-        spelling = type.toString();
+        spelling = fullName;
       } else if (pkg.equals(packageName) || pkg.equals("java.lang")) {
         importIt = false;
-        spelling = type.toString().substring(pkg.isEmpty() ? 0 : pkg.length() + 1);
+        spelling = fullName.substring(pkg.isEmpty() ? 0 : pkg.length() + 1);
       } else {
         importIt = true;
         spelling = simpleName;
       }
-      imports.put(type.toString(), new Spelling(spelling, importIt));
+      imports.put(fullName, new Spelling(spelling, importIt));
     }
     return imports;
   }
