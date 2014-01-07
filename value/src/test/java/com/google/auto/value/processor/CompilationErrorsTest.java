@@ -236,6 +236,18 @@ public class CompilationErrorsTest extends TestCase {
     }
   }
 
+  public void testNonExistentSuperclass() throws Exception {
+    // The main purpose of this test is to check that AutoValueProcessor doesn't crash the
+    // compiler in this case.
+    String testSourceCode =
+      "package foo.bar;\n" +
+      "import com.google.auto.value.AutoValue;\n" +
+      "@AutoValue\n" +
+      "public abstract class Existent extends NonExistent {\n" +
+      "}\n";
+    assertCompilationFails(ImmutableList.of(testSourceCode));
+  }
+
   // We compile the test classes by writing the source out to our temporary directory and invoking
   // the compiler on them. An earlier version of this test used an in-memory JavaFileManager, but
   // that is probably overkill, and in any case led to a problem that I gave up trying to fix,

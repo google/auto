@@ -451,6 +451,13 @@ public class AutoValueProcessor extends AbstractProcessor {
    */
   private static Map<String, Boolean> objectMethodsToGenerate(List<ExecutableElement> methods) {
     Map<String, Boolean> vars = new TreeMap<String, Boolean>();
+    // The defaults here only come into play when an ancestor class doesn't exist.
+    // Compilation will fail in that case, but we don't want it to crash the compiler with
+    // an exception before it does. If all ancestors do exist then we will definitely find
+    // definitions of these three methods (perhaps the ones in Object) so we will overwrite these:
+    vars.put("equals", false);
+    vars.put("hashCode", false);
+    vars.put("toString", false);
     for (ExecutableElement method : methods) {
       if (isToStringOrEqualsOrHashCode(method)) {
         boolean canGenerate = method.getModifiers().contains(Modifier.ABSTRACT)
