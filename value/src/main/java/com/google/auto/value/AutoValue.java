@@ -53,9 +53,6 @@ public @interface AutoValue {
    *
    * <p><b>Warning:</b> while using mutable field types is strongly discouraged in general, using
    * this feature makes it <i>especially</i> dangerous.
-   * 
-   * <p><b>Note: the default is actually {@code true}, but this will be changed to {@code false}
-   * on or around January 7, 2014.
    */
-  boolean cacheHashCode() default true;
+  boolean cacheHashCode() default false;
 }

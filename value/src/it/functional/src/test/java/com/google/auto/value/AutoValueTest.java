@@ -650,14 +650,13 @@ public class AutoValueTest extends TestCase {
     assertEquals(cachedHash1, uncachedHash1);
   }
 
-  public void testHashCodeCachedByDefault() {
-    // TODO(emcmanus): make it uncached by default and invert this test's name and behaviour.
+  public void testHashCodeNotCachedByDefault() {
     HashCodeObserver observer = new HashCodeObserver();
     MaybeCachedHashCode maybeCached = MaybeCachedHashCode.create(observer, 17);
     int hash1 = maybeCached.hashCode();
     int hash2 = maybeCached.hashCode();
     assertEquals(hash1, hash2);
-    assertEquals(1, observer.hashCodeCount);
+    assertEquals(2, observer.hashCodeCount);
   }
 
   @AutoValue
