@@ -238,20 +238,20 @@ public class AutoValueProcessor extends AbstractProcessor {
 
       // hashCode()
       "$[hashCode?",
-      "  private transient int hashCode;",
-      "",
+      "$[cacheHashCode?  private transient int hashCode;\n\n]" +
+
       "  @Override",
       "  public int hashCode() {",
-      "    int h = hashCode;",
-      "    if (h == 0) {",
-      "      h = 1;",
+      "$[cacheHashCode?    if (hashCode != 0) {",
+      "      return hashCode;",
+      "    }\n]" +
+      "    int h = 1;",
       "$[props:p||" +
-      "      h *= 1000003;",
+      "    h *= 1000003;",
       "$[p.hashCodeStatements:statement||" +
-      "      $[statement]",
+      "    $[statement]",
       "]]" +
-      "      hashCode = h;",
-      "    }",
+      "$[cacheHashCode?    hashCode = h;\n]" +
       "    return h;",
       "  }]" +
 
@@ -391,7 +391,8 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private void processType(TypeElement type) throws CompileException {
-    if (type.getAnnotation(AutoValue.class) == null) {
+    AutoValue autoValue = type.getAnnotation(AutoValue.class);
+    if (autoValue == null) {
       // This shouldn't happen unless the compilation environment is buggy,
       // but it has happened in the past and can crash the compiler.
       abortWithError("annotation processor for @AutoValue was invoked with a type that "
@@ -411,6 +412,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.put("actualtypes", actualTypeString(type));
     vars.put("wildcardtypes", wildcardTypeString(type));
     vars.put("subclass", simpleNameOf(generatedSubclassName(type)));
+    vars.put("cacheHashCode", autoValue.cacheHashCode());
     defineVarsForType(type, vars);
     String text = template.rewrite(vars);
     writeSourceFile(generatedSubclassName(type), text, type);

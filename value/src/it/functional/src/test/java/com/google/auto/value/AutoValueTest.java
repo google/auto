@@ -591,6 +591,75 @@ public class AutoValueTest extends TestCase {
     assertSame(ExplicitEquals.class, equals.getDeclaringClass());
   }
 
+  static final class HashCodeObserver {
+    int hashCodeCount;
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof HashCodeObserver;
+    }
+
+    @Override
+    public int hashCode() {
+      hashCodeCount++;
+      return 23;
+    }
+  }
+
+  abstract static class ObservedHashCode {
+    abstract HashCodeObserver hashCodeObserver();
+    abstract int randomInt();
+  }
+
+  @AutoValue(cacheHashCode = false)
+  abstract static class UncachedHashCode extends ObservedHashCode {
+    static UncachedHashCode create(HashCodeObserver hashCodeObserver, int randomInt) {
+      return new AutoValue_AutoValueTest_UncachedHashCode(hashCodeObserver, randomInt);
+    }
+  }
+
+  @AutoValue(cacheHashCode = true)
+  abstract static class CachedHashCode extends ObservedHashCode {
+    static CachedHashCode create(HashCodeObserver hashCodeObserver, int randomInt) {
+      return new AutoValue_AutoValueTest_CachedHashCode(hashCodeObserver, randomInt);
+    }
+  }
+
+  @AutoValue
+  abstract static class MaybeCachedHashCode extends ObservedHashCode {
+    static MaybeCachedHashCode create (HashCodeObserver hashCodeObserver, int randomInt) {
+      return new AutoValue_AutoValueTest_MaybeCachedHashCode(hashCodeObserver, randomInt);
+    }
+  }
+
+  public void testCacheHashCode() {
+    HashCodeObserver uncachedObserver = new HashCodeObserver();
+    UncachedHashCode uncached = UncachedHashCode.create(uncachedObserver, 17);
+    int uncachedHash1 = uncached.hashCode();
+    int uncachedHash2 = uncached.hashCode();
+    assertEquals(uncachedHash1, uncachedHash2);
+    assertEquals(2, uncachedObserver.hashCodeCount);
+
+    HashCodeObserver cachedObserver = new HashCodeObserver();
+    CachedHashCode cached = CachedHashCode.create(cachedObserver, 17);
+    int cachedHash1 = cached.hashCode();
+    int cachedHash2 = cached.hashCode();
+    assertEquals(cachedHash1, cachedHash2);
+    assertEquals(1, cachedObserver.hashCodeCount);
+
+    assertEquals(cachedHash1, uncachedHash1);
+  }
+
+  public void testHashCodeCachedByDefault() {
+    // TODO(emcmanus): make it uncached by default and invert this test's name and behaviour.
+    HashCodeObserver observer = new HashCodeObserver();
+    MaybeCachedHashCode maybeCached = MaybeCachedHashCode.create(observer, 17);
+    int hash1 = maybeCached.hashCode();
+    int hash2 = maybeCached.hashCode();
+    assertEquals(hash1, hash2);
+    assertEquals(1, observer.hashCodeCount);
+  }
+
   @AutoValue
   public static abstract class ComplexInheritance extends AbstractBase implements A, B {
     public static ComplexInheritance create(String name) {
