@@ -391,6 +391,12 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private void processType(TypeElement type) throws CompileException {
+    if (type.getAnnotation(AutoValue.class) == null) {
+      // This shouldn't happen unless the compilation environment is buggy,
+      // but it has happened in the past and can crash the compiler.
+      abortWithError("annotation processor for @AutoValue was invoked with a type that "
+          + "does not have that annotation; this is probably a compiler bug", type);
+    }
     if (type.getKind() != ElementKind.CLASS) {
       abortWithError("@" + AutoValue.class.getName() + " only applies to classes", type);
     }
