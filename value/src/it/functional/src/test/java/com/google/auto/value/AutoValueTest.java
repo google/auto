@@ -15,6 +15,7 @@
  */
 package com.google.auto.value;
 
+import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
@@ -92,6 +93,26 @@ public class AutoValueTest extends TestCase {
   public void testSerialize() throws Exception {
     Serialize instance = Serialize.create(23, "23", BigInteger.valueOf(23));
     assertEquals(instance, SerializableTester.reserialize(instance));
+  }
+
+  @AutoValue
+  public abstract static class SerializeWithVersionUID implements Serializable {
+    private static final long serialVersionUID = 4294967297L;
+    public abstract int integer();
+    public abstract String string();
+    public static SerializeWithVersionUID create(int integer, String string) {
+      return new AutoValue_AutoValueTest_SerializeWithVersionUID(integer, string);
+    }
+  }
+
+  public void testSerializeWithVersionUID() throws Exception {
+    SerializeWithVersionUID instance = SerializeWithVersionUID.create(23, "23");
+    assertEquals(instance, SerializableTester.reserialize(instance));
+
+    long serialVersionUID =
+        ObjectStreamClass.lookup(AutoValue_AutoValueTest_SerializeWithVersionUID.class)
+            .getSerialVersionUID();
+    assertEquals(4294967297L, serialVersionUID);
   }
 
   @AutoValue

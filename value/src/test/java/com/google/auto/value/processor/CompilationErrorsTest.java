@@ -216,6 +216,26 @@ public class CompilationErrorsTest extends TestCase {
     assertCompilationFails(ImmutableList.of(testSourceCode));
   }
 
+  public void testBogusSerialVersionUID() throws Exception {
+    String[] mistakes = {
+      "final long serialVersionUID = 1234L", // not static
+      "static long serialVersionUID = 1234L", // not final
+      "static final Long serialVersionUID = 1234L", // not long
+      "static final long serialVersionUID = (Long) 1234L", // not a compile-time constant
+    };
+    for (String mistake : mistakes) {
+      String testSourceCode =
+        "package foo.bar;\n" +
+        "import com.google.auto.value.AutoValue;\n" +
+        "@AutoValue\n" +
+        "public abstract class Baz implements java.io.Serializable {\n" +
+        "  " + mistake + ";\n" +
+        "  public abstract int foo();\n" +
+        "}\n";
+      assertCompilationFails(ImmutableList.of(testSourceCode));
+    }
+  }
+
   // We compile the test classes by writing the source out to our temporary directory and invoking
   // the compiler on them. An earlier version of this test used an in-memory JavaFileManager, but
   // that is probably overkill, and in any case led to a problem that I gave up trying to fix,

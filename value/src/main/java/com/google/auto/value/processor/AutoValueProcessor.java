@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -208,7 +210,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     // CHECKSTYLE:ON
 
     // equals(Object)
-    // TODO(emcmanus): this probably generates a rawtypes warning if there are type parameters.
     // CHECKSTYLE:OFF:OperatorWrap
     "$[genEquals?\n  @Override",
     "  public boolean equals(Object o) {",
@@ -247,7 +248,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     "      hashCode = h;",
     "    }",
     "    return h;",
-    "  }]",
+    "  }]" +
+
+    // serialVersionUID
+    "$[serialVersionUID?\n\n  private static final long serialVersionUID = $[serialVersionUID];]",
+
     "}"
     // CHECKSTYLE:ON
   );
@@ -429,6 +434,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.put("genToString", genToString);
     vars.put("genEquals", genEquals);
     vars.put("genHashCode", genHashCode);
+    vars.put("serialVersionUID", getSerialVersionUID(type));
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
@@ -461,6 +467,31 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
       type = parentElement;
     }
+  }
+
+  // Return a string like "1234L" if type instanceof Serializable and defines
+  // serialVersionUID = 1234L, otherwise "".
+  private String getSerialVersionUID(TypeElement type) {
+    Types typeUtils = processingEnv.getTypeUtils();
+    Elements elementUtils = processingEnv.getElementUtils();
+    TypeMirror serializable = elementUtils.getTypeElement(Serializable.class.getName()).asType();
+    if (typeUtils.isAssignable(type.asType(), serializable)) {
+      List<VariableElement> fields = ElementFilter.fieldsIn(type.getEnclosedElements());
+      for (VariableElement field : fields) {
+        if (field.getSimpleName().toString().equals("serialVersionUID")) {
+          Object value = field.getConstantValue();
+          if (field.getModifiers().containsAll(Arrays.asList(Modifier.STATIC, Modifier.FINAL))
+              && field.asType().getKind() == TypeKind.LONG
+              && value != null) {
+            return value + "L";
+          } else {
+            error("serialVersionUID must be a static final long compile-time constant", field);
+            break;
+          }
+        }
+      }
+    }
+    return "";
   }
 
   // Why does TypeParameterElement.toString() not return this? Grrr.
