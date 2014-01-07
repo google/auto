@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +42,6 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
@@ -137,7 +137,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       type = (TypeElement) type.getEnclosingElement();
       name = type.getSimpleName() + "_" + name;
     }
-    String pkg = packageNameOf(type);
+    String pkg = TypeSimplifier.packageNameOf(type);
     String dot = pkg.isEmpty() ? "" : ".";
     return pkg + dot + prefix + name;
   }
@@ -154,20 +154,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  static String packageNameOf(TypeElement type) {
-    while (true) {
-      Element enclosing = type.getEnclosingElement();
-      if (enclosing instanceof PackageElement) {
-        return ((PackageElement) enclosing).getQualifiedName().toString();
-      }
-      type = (TypeElement) enclosing;
-    }
-  }
-
   // Return the name of the class, including any enclosing classes but not the package.
   private static String classNameOf(TypeElement type) {
     String name = type.getQualifiedName().toString();
-    String pkgName = packageNameOf(type);
+    String pkgName = TypeSimplifier.packageNameOf(type);
     if (!pkgName.isEmpty()) {
       return name.substring(pkgName.length() + 1);
     } else {
@@ -188,93 +178,98 @@ public class AutoValueProcessor extends AbstractProcessor {
   // so than sb.append(this).append(that) with ifs and fors scattered around everywhere.
   // See the Template class for an explanation of the various constructs.
   private static final String TEMPLATE_STRING = concatLines(
-    // CHECKSTYLE:OFF:OperatorWrap
-    // Package declaration
-    "$[pkg?package $[pkg];\n]",
+      // CHECKSTYLE:OFF:OperatorWrap
+      // Package declaration
+      "$[pkg?package $[pkg];\n]",
 
-    // @Generated annotation
-    "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+      // Imports
+      "$[imports:i||import $[i];\n]",
 
-    // Class declaration
-    "final class $[subclass]$[formaltypes] extends $[origclass]$[actualtypes] {",
+      // @Generated annotation
+      "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
 
-    // Fields
-    "$[props:p||  private final $[p.type] $[p];\n]",
+      // Class declaration
+      "final class $[subclass]$[formaltypes] extends $[origclass]$[actualtypes] {",
 
-    // Constructor
-    "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
-    "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
-    "      throw new NullPointerException(\"Null $[p]\");",
-    "    }",
-    "]]" +
-    "    this.$[p] = $[p];]",
-    "  }",
+      // Fields
+      "$[props:p||  private final $[p.type] $[p];\n]",
 
-    // Property getters
-    "$[props:p|\n|\n  @Override",
-    "  $[p.access]$[p.type] $[p]() {",
-    "    return this.$[p];",
-    "  }]",
+      // Constructor
+      "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
+      "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
+      "      throw new NullPointerException(\"Null $[p]\");",
+      "    }",
+      "]]" +
+      "    this.$[p] = $[p];]",
+      "  }",
 
-    // toString()
-    "$[toString?\n  @Override",
-    "  public String toString() {",
-    "    return \"$[simpleclassname]{\"$[props?\n        + \"]" +
-    "$[props:p|\n        + \", |$[p]=\" + $[p]]",
-    "        + \"}\";",
-    "  }]",
+      // Property getters
+      "$[props:p|\n|\n  @Override",
+      "  $[p.access]$[p.type] $[p]() {",
+      "    return this.$[p];",
+      "  }]",
 
-    // equals(Object)
-    "$[equals?\n  @Override",
-    "  public boolean equals(Object o) {",
-    "    if (o == this) {",
-    "      return true;",
-    "    }",
-    "    if (o instanceof $[origclass]) {",
-    "      $[origclass]$[wildcardtypes] that = ($[origclass]$[wildcardtypes]) o;",
-    "      return $[props!true]$[props:p|\n          && |" +
-                "($[p.primitive?" +
-                  "[this.$[p] == that.$[p]()]" +
-                  "[$[p.nullable?" +
-                    "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
-                    "this.$[p].equals(that.$[p]())]])];",
-                                              // Eat your heart out, Lisp
-    "    }",
-    "    return false;",
-    "  }]",
+      // toString()
+      "$[toString?\n  @Override",
+      "  public String toString() {",
+      "    return \"$[simpleclassname]{\"$[props?\n        + \"]" +
+      "$[props:p|\n        + \", |$[p]=\" + $[p]]",
+      "        + \"}\";",
+      "  }]",
 
-    // hashCode()
-    "$[hashCode?",
-    "  private transient int hashCode;",
-    "",
-    "  @Override",
-    "  public int hashCode() {",
-    "    int h = hashCode;",
-    "    if (h == 0) {",
-    "      h = 1;",
-    "$[props:p||" +
-    "      h *= 1000003;",
-    "$[p.hashCodeStatements:statement||" +
-    "      $[statement]",
-    "]]" +
-    "      hashCode = h;",
-    "    }",
-    "    return h;",
-    "  }]" +
+      // equals(Object)
+      "$[equals?\n  @Override",
+      "  public boolean equals(Object o) {",
+      "    if (o == this) {",
+      "      return true;",
+      "    }",
+      "    if (o instanceof $[origclass]) {",
+      "      $[origclass]$[wildcardtypes] that = ($[origclass]$[wildcardtypes]) o;",
+      "      return $[props!true]$[props:p|\n          && |" +
+                  "($[p.primitive?" +
+                    "[this.$[p] == that.$[p]()]" +
+                    "[$[p.nullable?" +
+                      "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
+                      "this.$[p].equals(that.$[p]())]])];",
+                                                // Eat your heart out, Lisp
+      "    }",
+      "    return false;",
+      "  }]",
 
-    // serialVersionUID
-    "$[serialVersionUID?\n\n  private static final long serialVersionUID = $[serialVersionUID];]",
+      // hashCode()
+      "$[hashCode?",
+      "  private transient int hashCode;",
+      "",
+      "  @Override",
+      "  public int hashCode() {",
+      "    int h = hashCode;",
+      "    if (h == 0) {",
+      "      h = 1;",
+      "$[props:p||" +
+      "      h *= 1000003;",
+      "$[p.hashCodeStatements:statement||" +
+      "      $[statement]",
+      "]]" +
+      "      hashCode = h;",
+      "    }",
+      "    return h;",
+      "  }]" +
 
-    "}"
-    // CHECKSTYLE:ON
+      // serialVersionUID
+      "$[serialVersionUID?\n\n  private static final long serialVersionUID = $[serialVersionUID];]",
+
+      "}"
+      // CHECKSTYLE:ON
   );
   private static final Template template = Template.compile(TEMPLATE_STRING);
 
   static class Property {
     private final ExecutableElement method;
+    private final String type;
 
-    Property(ExecutableElement method) {
+    Property(ExecutableElement method, String type) {
       this.method = method;
+      this.type = type;
     }
 
     @Override
@@ -286,8 +281,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       return (TypeElement) method.getEnclosingElement();
     }
 
-    public TypeMirror type() {
-      return method.getReturnType();
+    public String type() {
+      return type;
     }
 
     public boolean primitive() {
@@ -403,7 +398,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       abortWithError("One @AutoValue class may not extend another", type);
     }
     Map<String, Object> vars = new TreeMap<String, Object>();
-    vars.put("pkg", packageNameOf(type));
+    vars.put("pkg", TypeSimplifier.packageNameOf(type));
     vars.put("origclass", classNameOf(type));
     vars.put("simpleclassname", simpleNameOf(classNameOf(type)));
     vars.put("formaltypes", formalTypeString(type));
@@ -421,14 +416,26 @@ public class AutoValueProcessor extends AbstractProcessor {
     findLocalAndInheritedMethods(type, methods);
     vars.putAll(objectMethodsToGenerate(methods));
     List<ExecutableElement> toImplement = methodsToImplement(methods);
+    Set<TypeMirror> types = returnTypesOf(toImplement);
+    String pkg = TypeSimplifier.packageNameOf(type);
+    TypeSimplifier typeSimplifier = new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types);
+    vars.put("imports", typeSimplifier.typesToImport());
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
-      props.add(new Property(method));
+      props.add(new Property(method, typeSimplifier.simplify(method.getReturnType())));
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
     vars.put("props", props);
     vars.put("serialVersionUID", getSerialVersionUID(type));
+  }
+
+  private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {
+    HashSet<TypeMirror> returnTypes = new HashSet<TypeMirror>();
+    for (ExecutableElement method : methods) {
+      returnTypes.add(method.getReturnType());
+    }
+    return returnTypes;
   }
 
   /**

@@ -15,6 +15,13 @@
  */
 package com.google.auto.value;
 
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.testing.EqualsTester;
+import com.google.common.testing.SerializableTester;
+
+import junit.framework.TestCase;
+
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -24,13 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
-
-import junit.framework.TestCase;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.testing.EqualsTester;
-import com.google.common.testing.SerializableTester;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

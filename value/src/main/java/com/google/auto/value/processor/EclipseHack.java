@@ -283,17 +283,15 @@ class EclipseHack {
     private final TypeElement type;
     private final Callable<Reader> readerProvider;
 
-  /**
-   * Constructs an object that scans the source code of the given type and returns the names of all
-   * abstract methods directly declared in the type (not in nested types). The type itself may be
-   * nested inside another class. Returns an empty list if the order could not be determined.
-   *
-   * @oaran packageName The name of the package in which the type (class) appears.
-   * @param className The fully-qualified name of the class, such as {@code com.example.Foo} or
-   *     {@code com.example.Foo.Bar}.
-   * @param readerProvider A Callable that returns a Reader that will read the source of the whole
-   *     file in which the class is declared.
-   */
+    /**
+     * Constructs an object that scans the source code of the given type and returns the names of
+     * all abstract methods directly declared in the type (not in nested types). The type itself may
+     * be nested inside another class. Returns an empty list if the order could not be determined.
+     *
+     * @param type The type whose source is being scanned.
+     * @param readerProvider A Callable that returns a Reader that will read the source of the whole
+     *     file in which the class is declared.
+     */
     SourcePropertyOrderer(TypeElement type, Callable<Reader> readerProvider) {
       this.type = type;
       this.readerProvider = readerProvider;
@@ -307,7 +305,7 @@ class EclipseHack {
         return Collections.emptyList();
       }
       try {
-        String packageName = AutoValueProcessor.packageNameOf(type);
+        String packageName = TypeSimplifier.packageNameOf(type);
         String className = type.getQualifiedName().toString();
         AbstractMethodExtractor extractor = new AbstractMethodExtractor();
         JavaTokenizer tokenizer = new JavaTokenizer(sourceReader);
