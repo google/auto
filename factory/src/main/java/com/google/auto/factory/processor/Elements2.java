@@ -24,7 +24,12 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Types;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -52,5 +57,27 @@ final class Elements2 {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Given an executable element in a supertype, returns its ExecutableType when it is viewed as a
+   * member of a subtype.
+   */
+  static ExecutableType getExecutableElementAsMemberOf(
+      Types types, ExecutableElement executableElement, TypeElement subTypeElement) {
+    checkNotNull(types);
+    checkNotNull(executableElement);
+    checkNotNull(subTypeElement);
+    TypeMirror subTypeMirror = subTypeElement.asType();
+    if (!subTypeMirror.getKind().equals(TypeKind.DECLARED)) {
+      throw new IllegalStateException(
+          "Expected subTypeElement.asType() to return a class/interface type.");
+    }
+    TypeMirror subExecutableTypeMirror = types.asMemberOf(
+        (DeclaredType) subTypeMirror, executableElement);
+    if (!subExecutableTypeMirror.getKind().equals(TypeKind.EXECUTABLE)) {
+      throw new IllegalStateException("Expected subExecutableTypeMirror to be an executable type.");
+    }
+    return (ExecutableType) subExecutableTypeMirror;
   }
 }

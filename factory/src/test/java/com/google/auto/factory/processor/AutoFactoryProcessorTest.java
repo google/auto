@@ -232,4 +232,15 @@ public class AutoFactoryProcessorTest {
             + "Supertypes must be non-final classes.")
                 .in(file).onLine(20);
   }
+
+  @Test public void factoryImplementingGenericInterfaceExtension() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("good/FactoryImplementingGenericInterfaceExtension.java");
+    ASSERT.about(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(JavaFileObjects.forResource(
+            "expected/FactoryImplementingGenericInterfaceExtension.java"));
+  }
 }

@@ -25,11 +25,13 @@ import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 final class Parameter {
@@ -89,7 +91,7 @@ final class Parameter {
     return builder.toString();
   }
 
-  static Parameter forVariableElement(VariableElement variable) {
+  static Parameter forVariableElement(VariableElement variable, TypeMirror type) {
     ImmutableSet.Builder<String> qualifiers = ImmutableSet.builder();
     for (AnnotationMirror annotationMirror : variable.getAnnotationMirrors()) {
       DeclaredType annotationType = annotationMirror.getAnnotationType();
@@ -99,20 +101,30 @@ final class Parameter {
     }
     // TODO(gak): check for only one qualifier rather than using the first
     return new Parameter(FluentIterable.from(qualifiers.build()).first(),
-        variable.asType().toString(),
+        type.toString(),
         variable.getSimpleName().toString());
   }
 
-  static ImmutableSet<Parameter> forParameterList(List<? extends VariableElement> variables) {
+  static ImmutableSet<Parameter> forParameterList(
+      List<? extends VariableElement> variables, List<? extends TypeMirror> variableTypes) {
+    checkArgument(variables.size() == variableTypes.size());
     ImmutableSet.Builder<Parameter> builder = ImmutableSet.builder();
     Set<String> names = Sets.newHashSetWithExpectedSize(variables.size());
-    for (VariableElement variable : variables) {
-      Parameter parameter = forVariableElement(variable);
+    for (int i = 0; i < variables.size(); i++) {
+      Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i));
       checkArgument(names.add(parameter.name));
       builder.add(parameter);
     }
     ImmutableSet<Parameter> parameters = builder.build();
     checkArgument(variables.size() == parameters.size());
     return parameters;
+  }
+
+  static ImmutableSet<Parameter> forParameterList(List<? extends VariableElement> variables) {
+    List<TypeMirror> variableTypes = Lists.newArrayListWithExpectedSize(variables.size());
+    for (VariableElement var : variables) {
+      variableTypes.add(var.asType());
+    }
+    return forParameterList(variables, variableTypes);
   }
 }

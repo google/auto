@@ -33,8 +33,10 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 
 import com.google.auto.factory.AutoFactory;
@@ -42,6 +44,7 @@ import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -63,6 +66,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   @Inject ProvidedChecker providedChecker;
   @Inject Messager messager;
   @Inject Elements elements;
+  @Inject Types types;
   @Inject FactoryWriter factoryWriter;
 
   @Override
@@ -74,6 +78,16 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    try {
+      doProcess(annotations, roundEnv);
+    } catch (Throwable e) {
+      messager.printMessage(Kind.ERROR, "Failed to process @AutoFactory annotations:\n" +
+          Throwables.getStackTraceAsString(e));
+    }
+    return false;
+  }
+
+  private void doProcess(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     for (Element element : roundEnv.getElementsAnnotatedWith(Provided.class)) {
       providedChecker.checkProvidedParameter(element);
     }
@@ -90,11 +104,14 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
             ElementFilter.methodsIn(elements.getAllMembers(extendingType));
         for (ExecutableElement supertypeMethod : supertypeMethods) {
           if (supertypeMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+            ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
+                types, supertypeMethod, extendingType);
             implemetationMethodDescriptors.add(new ImplemetationMethodDescriptor.Builder()
                 .name(supertypeMethod.getSimpleName().toString())
                 .returnType(getAnnotatedType(element).getQualifiedName().toString())
                 .publicMethod()
-                .passedParameters(Parameter.forParameterList(supertypeMethod.getParameters()))
+                .passedParameters(Parameter.forParameterList(
+                    supertypeMethod.getParameters(), methodType.getParameterTypes()))
                 .build());
           }
         }
@@ -103,11 +120,14 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               ElementFilter.methodsIn(elements.getAllMembers(implementingType));
           for (ExecutableElement interfaceMethod : interfaceMethods) {
             if (interfaceMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+              ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
+                  types, interfaceMethod, implementingType);
               implemetationMethodDescriptors.add(new ImplemetationMethodDescriptor.Builder()
                   .name(interfaceMethod.getSimpleName().toString())
                   .returnType(getAnnotatedType(element).getQualifiedName().toString())
                   .publicMethod()
-                  .passedParameters(Parameter.forParameterList(interfaceMethod.getParameters()))
+                  .passedParameters(Parameter.forParameterList(
+                      interfaceMethod.getParameters(), methodType.getParameterTypes()))
                   .build());
             }
           }
@@ -151,8 +171,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         messager.printMessage(Kind.ERROR, "failed");
       }
     }
-
-    return false;
   }
 
   private TypeElement getAnnotatedType(Element element) {
