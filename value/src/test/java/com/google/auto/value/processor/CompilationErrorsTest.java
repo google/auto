@@ -110,14 +110,14 @@ public class CompilationErrorsTest extends TestCase {
     assertFalse(compiled);
   }
 
-  public void testNoPrimitiveArrays() throws Exception {
+  public void testNoMultidimensionalPrimitiveArrays() throws Exception {
     String testSourceCode =
         "package foo.bar;\n" +
         "import com.google.auto.value.AutoValue;\n" +
         "@AutoValue\n" +
         "public abstract class Baz {\n" +
-        "  public abstract int[] ints();\n" +
-        "  public static Baz create(int[] ints) {\n" +
+        "  public abstract int[][] ints();\n" +
+        "  public static Baz create(int[][] ints) {\n" +
         "    return new AutoValue_Baz(ints);\n" +
         "  }\n" +
         "}\n";

@@ -27,6 +27,7 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -589,6 +590,89 @@ public class AutoValueTest extends TestCase {
     Method equals = instance.getClass().getMethod("equals", Object.class);
     assertNotSame(ExplicitEquals.class, instance.getClass());
     assertSame(ExplicitEquals.class, equals.getDeclaringClass());
+  }
+
+  @AutoValue
+  abstract static class PrimitiveArrays {
+    abstract boolean[] booleans();
+    @Nullable abstract int[] ints();
+
+    static PrimitiveArrays create(boolean[] booleans, int[] ints) {
+      // Real code would likely clone these parameters, but here we want to check that the
+      // generated constructor rejects a null value for booleans.
+      return new AutoValue_AutoValueTest_PrimitiveArrays(booleans, ints);
+    }
+  }
+
+  public void testPrimitiveArrays() {
+    PrimitiveArrays object0 = PrimitiveArrays.create(new boolean[0], new int[0]);
+    boolean[] booleans = {false, true, true, false};
+    int[] ints = {6, 28, 496, 8128, 33550336};
+    PrimitiveArrays object1 = PrimitiveArrays.create(booleans.clone(), ints.clone());
+    PrimitiveArrays object2 = PrimitiveArrays.create(booleans.clone(), ints.clone());
+    new EqualsTester()
+        .addEqualityGroup(object1, object2)
+        .addEqualityGroup(object0)
+        .testEquals();
+    // EqualsTester also exercises hashCode(). We clone the arrays above to ensure that using the
+    // default Object.hashCode() will fail.
+
+    String expectedString = "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
+        + "ints=" + Arrays.toString(ints) + "}";
+    assertEquals(expectedString, object1.toString());
+
+    // Check that getters clone the arrays so callers can't change them.
+    object1.ints()[0]++;
+    assertTrue(Arrays.equals(ints, object1.ints()));
+  }
+
+  public void testNullablePrimitiveArrays() {
+    PrimitiveArrays object0 = PrimitiveArrays.create(new boolean[0], null);
+    boolean[] booleans = {false, true, true, false};
+    PrimitiveArrays object1 = PrimitiveArrays.create(booleans.clone(), null);
+    PrimitiveArrays object2 = PrimitiveArrays.create(booleans.clone(), null);
+    new EqualsTester()
+        .addEqualityGroup(object1, object2)
+        .addEqualityGroup(object0)
+        .testEquals();
+
+    String expectedString = "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
+        + "ints=null}";
+    assertEquals(expectedString, object1.toString());
+
+    object1.booleans()[0] ^= true;
+    assertTrue(Arrays.equals(booleans, object1.booleans()));
+  }
+
+  public void testNotNullablePrimitiveArrays() {
+    try {
+      PrimitiveArrays.create(null, new int[0]);
+      fail("Construction with null value for non-@Nullable array should have failed");
+    } catch (NullPointerException e) {
+      assertTrue(e.getMessage().contains("booleans"));
+    }
+  }
+
+  // If users are mad enough to define their own Arrays class and have some properties of that
+  // class and others of primitive array type, then we can't import java.util.Arrays.
+  // This is unlikely.
+  @AutoValue
+  abstract static class AmbiguousArrays {
+    static class Arrays {}
+
+    abstract Arrays arrays();
+    abstract int[] ints();
+
+    static AmbiguousArrays create(Arrays arrays, int[] ints) {
+      return new AutoValue_AutoValueTest_AmbiguousArrays(arrays, ints);
+    }
+  }
+
+  public void testAmbiguousArrays() {
+    // If this test compiles at all then we presumably don't have the import problem above.
+    AmbiguousArrays object1 = AmbiguousArrays.create(new AmbiguousArrays.Arrays(), new int[0]);
+    assertNotNull(object1.arrays());
+    assertEquals(0, object1.ints().length);
   }
 
   static final class HashCodeObserver {

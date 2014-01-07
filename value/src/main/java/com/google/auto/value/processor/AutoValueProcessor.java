@@ -45,6 +45,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -206,14 +207,15 @@ public class AutoValueProcessor extends AbstractProcessor {
       // Property getters
       "$[props:p|\n|\n  @Override",
       "  $[p.access]$[p.type] $[p]() {",
-      "    return this.$[p];",
+      "    return $[p.array?[$[p.nullable?$[p] == null ? null : ]$[p].clone()][$[p]]];",
       "  }]",
 
       // toString()
       "$[toString?\n  @Override",
       "  public String toString() {",
       "    return \"$[simpleclassname]{\"$[props?\n        + \"]" +
-      "$[props:p|\n        + \", |$[p]=\" + $[p]]",
+      "$[props:p|\n        + \", |" +
+                "$[p]=\" + $[p.array?[$[Arrays].toString($[p])][$[p]]]]",
       "        + \"}\";",
       "  }]",
 
@@ -228,9 +230,14 @@ public class AutoValueProcessor extends AbstractProcessor {
       "      return $[props!true]$[props:p|\n          && |" +
                   "($[p.primitive?" +
                     "[this.$[p] == that.$[p]()]" +
-                    "[$[p.nullable?" +
-                      "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
-                      "this.$[p].equals(that.$[p]())]])];",
+                    "[$[p.array?" +
+                     "[$[Arrays].equals(" +
+                           "this.$[p],",
+         "                  (that instanceof $[subclass]) ",
+         "                      ? (($[subclass]) that).$[p] : that.$[p]())]" +
+                     "[$[p.nullable?" +
+                       "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
+                       "this.$[p].equals(that.$[p]())]]]])];",
                                                 // Eat your heart out, Lisp
       "    }",
       "    return false;",
@@ -248,9 +255,11 @@ public class AutoValueProcessor extends AbstractProcessor {
       "    int h = 1;",
       "$[props:p||" +
       "    h *= 1000003;",
-      "$[p.hashCodeStatements:statement||" +
-      "    $[statement]",
-      "]]" +
+      "$[p.array?" +
+       "[    h ^= $[Arrays].hashCode($[p]);\n]" +
+       "[$[p.hashCodeStatements:statement||" +
+        "    $[statement]",
+      "]]]]" +
       "$[cacheHashCode?    hashCode = h;\n]" +
       "    return h;",
       "  }]" +
@@ -287,6 +296,10 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     public boolean primitive() {
       return method.getReturnType().getKind().isPrimitive();
+    }
+
+    public boolean array() {
+      return method.getReturnType().getKind() == TypeKind.ARRAY;
     }
 
     public boolean nullable() {
@@ -424,7 +437,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     findLocalAndInheritedMethods(type, methods);
     vars.putAll(objectMethodsToGenerate(methods));
     List<ExecutableElement> toImplement = methodsToImplement(methods);
-    Set<TypeMirror> types = returnTypesOf(toImplement);
+    Set<TypeMirror> types = new HashSet<TypeMirror>();
+    types.addAll(returnTypesOf(toImplement));
+    TypeMirror javaUtilArrays =
+        processingEnv.getElementUtils().getTypeElement(Arrays.class.getName()).asType();
+    if (containsArrayType(types)) {
+      // If there are array properties then we will be referencing java.util.Arrays.
+      // Arrange to import it unless that would introduce ambiguity.
+      types.add(javaUtilArrays);
+    }
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types);
     vars.put("imports", typeSimplifier.typesToImport());
@@ -432,6 +453,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     for (ExecutableElement method : toImplement) {
       props.add(new Property(method, typeSimplifier.simplify(method.getReturnType())));
     }
+    vars.put("Arrays", typeSimplifier.simplify(javaUtilArrays));
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
     vars.put("props", props);
@@ -444,6 +466,15 @@ public class AutoValueProcessor extends AbstractProcessor {
       returnTypes.add(method.getReturnType());
     }
     return returnTypes;
+  }
+
+  private static boolean containsArrayType(Set<TypeMirror> types) {
+    for (TypeMirror type : types) {
+      if (type.getKind() == TypeKind.ARRAY) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -479,8 +510,9 @@ public class AutoValueProcessor extends AbstractProcessor {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
           && !isToStringOrEqualsOrHashCode(method)) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
-          if (method.getReturnType().getKind() == TypeKind.ARRAY) {
-            reportError("Array-valued properties are not supported in @AutoValue classes", method);
+          if (isReferenceArrayType(method.getReturnType())) {
+            reportError("An @AutoValue class cannot define an array-valued property unless it is "
+                + "a primitive array", method);
             errors = true;
           }
           toImplement.add(method);
@@ -495,6 +527,11 @@ public class AutoValueProcessor extends AbstractProcessor {
       throw new CompileException();
     }
     return toImplement;
+  }
+
+  private static boolean isReferenceArrayType(TypeMirror type) {
+    return type.getKind() == TypeKind.ARRAY
+        && !((ArrayType) type).getComponentType().getKind().isPrimitive();
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
