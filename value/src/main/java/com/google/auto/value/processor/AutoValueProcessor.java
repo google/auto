@@ -230,18 +230,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       "    }",
       "    if (o instanceof $[origclass]) {",
       "      $[origclass]$[wildcardtypes] that = ($[origclass]$[wildcardtypes]) o;",
-      "      return $[props!true]$[props:p|\n          && |" +
-                  "($[p.primitive?" +
-                    "[this.$[p] == that.$[p]()]" +
-                    "[$[p.array?" +
-                     "[$[Arrays].equals(" +
-                           "this.$[p],",
-         "                  (that instanceof $[subclass]) ",
-         "                      ? (($[subclass]) that).$[p] : that.$[p]())]" +
-                     "[$[p.nullable?" +
-                       "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
-                       "this.$[p].equals(that.$[p]())]]]])];",
-                                                // Eat your heart out, Lisp
+      "      return $[props!true]" +
+                   "$[props:p|\n          && |($[p.equalsThatExpression])];",
       "    }",
       "    return false;",
       "  }]",
@@ -306,6 +296,55 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     public boolean nullable() {
       return method.getAnnotation(Nullable.class) != null;
+    }
+
+    private static final Template PRIMITIVE_EQUALS_TEMPLATE =
+        Template.compile("this.$[p] == that.$[p]()");
+    private static final Template ARRAY_EQUALS_TEMPLATE =
+        Template.compile("$[Arrays].equals(this.$[p], "
+            + "(that instanceof $[subclass]) ? (($[subclass]) that).$[p] : that.$[p]())");
+    private static final Template FLOAT_EQUALS_TEMPLATE = Template.compile(
+        "Float.floatToIntBits(this.$[p]) == Float.floatToIntBits(that.$[p]())");
+    private static final Template DOUBLE_EQUALS_TEMPLATE = Template.compile(
+        "Double.doubleToLongBits(this.$[p]) == Double.doubleToLongBits(that.$[p]())");
+    private static final Template OBJECT_EQUALS_TEMPLATE = Template.compile(
+        "$[p.nullable?" +
+          "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
+          "this.$[p].equals(that.$[p]())");
+
+    /**
+     * A string representing an expression that compares this property with the same property
+     * in another variable called "that" whose type is the class marked {@code @AutoValue}.
+     */
+    public String equalsThatExpression() {
+      // If the templating language had a case statement we wouldn't need this function, but the
+      // language is unreadable enough as it is.
+      Template template;
+      switch (method.getReturnType().getKind()) {
+        case BYTE:
+        case SHORT:
+        case CHAR:
+        case INT:
+        case LONG:
+        case BOOLEAN:
+          template = PRIMITIVE_EQUALS_TEMPLATE;
+          break;
+        case FLOAT:
+          template = FLOAT_EQUALS_TEMPLATE;
+          break;
+        case DOUBLE:
+          template = DOUBLE_EQUALS_TEMPLATE;
+          break;
+        case ARRAY:
+          template = ARRAY_EQUALS_TEMPLATE;
+          break;
+        default:
+          template = OBJECT_EQUALS_TEMPLATE;
+          break;
+      }
+      Map<String, Object> newVars = new TreeMap<String, Object>(vars);
+      newVars.put("p", this);
+      return template.rewrite(newVars);
     }
 
     /**

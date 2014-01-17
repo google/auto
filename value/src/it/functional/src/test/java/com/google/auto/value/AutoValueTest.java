@@ -229,6 +229,23 @@ public class AutoValueTest extends TestCase {
     assertEquals(singlePropertyHash(doubleValue), doubleProperty.hashCode());
   }
 
+  public void testFloatingEquality() {
+    FloatProperty floatZero = FloatProperty.create(0.0f);
+    FloatProperty floatMinusZero = FloatProperty.create(-0.0f);
+    FloatProperty floatNaN = FloatProperty.create(Float.NaN);
+    DoubleProperty doubleZero = DoubleProperty.create(0.0);
+    DoubleProperty doubleMinusZero = DoubleProperty.create(-0.0);
+    DoubleProperty doubleNaN = DoubleProperty.create(Double.NaN);
+    new EqualsTester()
+        .addEqualityGroup(floatZero)
+        .addEqualityGroup(floatMinusZero)
+        .addEqualityGroup(floatNaN)
+        .addEqualityGroup(doubleZero)
+        .addEqualityGroup(doubleMinusZero)
+        .addEqualityGroup(doubleNaN)
+        .testEquals();
+  }
+
   private static int singlePropertyHash(Object property) {
     return 1000003 ^ property.hashCode();
   }
