@@ -15,7 +15,9 @@ Save time.  Save code.  Save sanity.
 Subprojects
 -----------
 
-  * [Auto-Factory](https://github.com/google/auto/tree/master/factory) - JSR-330-compatible factories
+  * [AutoFactory](https://github.com/google/auto/tree/master/factory) - JSR-330-compatible factories
+  * [AutoService](https://github.com/google/auto/tree/master/service) - Automatically generated provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
+  * [AutoValue](https://github.com/google/auto/tree/master/value) - Java [value objects](http://en.wikipedia.org/wiki/Value_object) from minimal code.
 
 License
 -------
