@@ -26,9 +26,9 @@
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <name>Auto-Value</name>
+  <name>AutoValue</name>
   <description>
-    The Auto-Value code generator.
+    Immutable value-type code generation for Java 1.6+.
   </description>
 
   <dependencies>
