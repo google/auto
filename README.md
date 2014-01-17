@@ -19,7 +19,7 @@ Subprojects
     
     Latest version: Unreleased
   
-  * [AutoService](https://github.com/google/auto/tree/master/service) - Automatically generated provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
+  * [AutoService](https://github.com/google/auto/tree/master/service) - Provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
     
     Latest version: Unreleased
 
