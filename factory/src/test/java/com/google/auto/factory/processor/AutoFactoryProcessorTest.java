@@ -61,7 +61,7 @@ public class AutoFactoryProcessorTest {
     ASSERT.about(javaSources())
         .that(ImmutableSet.of(
             JavaFileObjects.forResource("good/SimpleClassMixedDeps.java"),
-            JavaFileObjects.forResource("aux/AQualifier.java")))
+            JavaFileObjects.forResource("support/AQualifier.java")))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
         .and().generatesSources(
@@ -80,8 +80,8 @@ public class AutoFactoryProcessorTest {
   @Test public void simpleClassProvidedDeps() {
     ASSERT.about(javaSources())
         .that(ImmutableSet.of(
-            JavaFileObjects.forResource("aux/AQualifier.java"),
-            JavaFileObjects.forResource("aux/BQualifier.java"),
+            JavaFileObjects.forResource("support/AQualifier.java"),
+            JavaFileObjects.forResource("support/BQualifier.java"),
             JavaFileObjects.forResource("good/SimpleClassProvidedDeps.java")))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
