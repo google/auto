@@ -42,12 +42,12 @@
     <dependency>
       <groupId>com.squareup.dagger</groupId>
       <artifactId>dagger</artifactId>
-      <version>1.1.0</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>com.squareup.dagger</groupId>
       <artifactId>dagger-compiler</artifactId>
-      <version>1.1.0</version>
+      <version>1.2.0</version>
       <optional>true</optional>
     </dependency>
     <dependency>
@@ -59,7 +59,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
-      <version>15.0</version>
+      <version>16.0-rc1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
