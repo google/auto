@@ -53,13 +53,13 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.10</version>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
-      <version>16.0-rc1</version>
+      <version>16.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
