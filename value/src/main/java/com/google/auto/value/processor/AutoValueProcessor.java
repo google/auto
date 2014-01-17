@@ -258,11 +258,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       "    int h = 1;",
       "$[props:p||" +
       "    h *= 1000003;",
-      "$[p.array?" +
-       "[    h ^= $[Arrays].hashCode($[p]);\n]" +
-       "[$[p.hashCodeStatements:statement||" +
-        "    $[statement]",
-      "]]]]" +
+      "    h ^= $[p.hashCodeExpression];",
+      "]" +
       "$[cacheHashCode?    hashCode = h;\n]" +
       "    return h;",
       "  }]" +
@@ -278,10 +275,12 @@ public class AutoValueProcessor extends AbstractProcessor {
   static class Property {
     private final ExecutableElement method;
     private final String type;
+    private final Map<String, Object> vars;
 
-    Property(ExecutableElement method, String type) {
+    Property(ExecutableElement method, String type, Map<String, Object> vars) {
       this.method = method;
       this.type = type;
+      this.vars = vars;
     }
 
     @Override
@@ -310,36 +309,31 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     /**
-     * One or more statements that, taken together, xor the hashCode of this
-     * property into the variable h.
+     * A string representing an expression that is the hashCode of this property.
      */
-    public List<String> hashCodeStatements() {
+    public String hashCodeExpression() {
       switch (method.getReturnType().getKind()) {
         case BYTE:
         case SHORT:
         case CHAR:
         case INT:
-          return Arrays.asList("h ^= " + this + ";");
+          return this.toString();
         case LONG:
-          return Arrays.asList("h ^= (" + this + ">>> 32) ^ " + this + ";");
+          return "(" + this + " >>> 32) ^ " + this;
         case FLOAT:
-          return Arrays.asList("h ^= Float.floatToIntBits(" + this + ");");
+          return "Float.floatToIntBits(" + this + ")";
         case DOUBLE:
-          return Arrays.asList(
-              "{",
-              "  long bits = Double.doubleToLongBits(" + this + ");",
-              "  h ^= (bits >>> 32) ^ bits;",
-              "}");
+          return "(Double.doubleToLongBits(" + this + ") >>> 32) ^ "
+              + "Double.doubleToLongBits(" + this + ")";
         case BOOLEAN:
-          return Arrays.asList("h ^= " + this + " ? 1231 : 1237;");
+          return this + " ? 1231 : 1237";
+        case ARRAY:
+          return vars.get("Arrays") + ".hashCode(" + this + ")";
         default:
           if (nullable()) {
-            return Arrays.asList(
-                "if (" + this + " != null) {",
-                "  h ^= " + this + ".hashCode();",
-                "}");
+            return "(" + this + " == null) ? 0 : " + this + ".hashCode()";
           } else {
-            return Arrays.asList("h ^= " + this + ".hashCode();");
+            return this + ".hashCode()";
           }
       }
     }
@@ -452,11 +446,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types);
     vars.put("imports", typeSimplifier.typesToImport());
+    vars.put("Arrays", typeSimplifier.simplify(javaUtilArrays));
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
-      props.add(new Property(method, typeSimplifier.simplify(method.getReturnType())));
+      String propType = typeSimplifier.simplify(method.getReturnType());
+      Property prop = new Property(method, propType, vars);
+      props.add(prop);
     }
-    vars.put("Arrays", typeSimplifier.simplify(javaUtilArrays));
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
     vars.put("props", props);
