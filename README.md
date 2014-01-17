@@ -23,7 +23,7 @@ Subprojects
     
     Latest version: Unreleased
 
-  * [AutoValue](https://github.com/google/auto/tree/master/value) - Java [value objects](http://en.wikipedia.org/wiki/Value_object) from minimal code.
+  * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+ Java.
     
     Latest version: Unreleased
 
