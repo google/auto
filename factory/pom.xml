@@ -27,9 +27,9 @@
 
   <groupId>com.google.auto.factory</groupId>
   <artifactId>auto-factory</artifactId>
-  <name>Auto-Factory</name>
+  <name>AutoFactory</name>
   <description>
-    The Auto-Factory code generator.
+    JSR-330-compatible factories.
   </description>
 
   <dependencies>
