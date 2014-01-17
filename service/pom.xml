@@ -26,9 +26,9 @@
 
   <groupId>com.google.auto.service</groupId>
   <artifactId>auto-service</artifactId>
-  <name>Auto-Service</name>
+  <name>AutoService</name>
   <description>
-    A generator for service loader properties files.
+    Provider-configuration files for ServiceLoader.
   </description>
 
   <dependencies>
