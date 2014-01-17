@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import java.util.Map;
-
-import junit.framework.TestCase;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
+
+import junit.framework.TestCase;
+
+import java.util.Map;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

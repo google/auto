@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import com.google.auto.value.AutoValue;
+
 import java.util.Map;
 
 import javax.annotation.Nullable;
-
-import com.google.auto.value.AutoValue;
 
 /**
  * Simple package-less value type for tests.

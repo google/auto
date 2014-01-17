@@ -15,12 +15,12 @@
  */
 package com.google.auto.value;
 
-import java.util.Map;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.testing.NullPointerTester;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.testing.NullPointerTester;
+import java.util.Map;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

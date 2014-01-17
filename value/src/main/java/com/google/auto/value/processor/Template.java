@@ -252,7 +252,7 @@ class Template {
   private static class CompoundNode extends Node {
     private final List<Node> nodes;
 
-    public CompoundNode(int templateIndex, List<Node> nodes) {
+    CompoundNode(int templateIndex, List<Node> nodes) {
       super(templateIndex);
       this.nodes = nodes;
     }

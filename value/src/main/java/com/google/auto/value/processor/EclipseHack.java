@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.AutoValueProcessor.Property;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,8 +47,6 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
-
-import com.google.auto.value.processor.AutoValueProcessor.Property;
 
 /**
  * Works around an Eclipse bug where methods are sorted into alphabetical order before being given

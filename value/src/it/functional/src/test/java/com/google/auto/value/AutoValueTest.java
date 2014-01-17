@@ -770,6 +770,7 @@ public class AutoValueTest extends TestCase {
   }
 
   static class AbstractBase implements Base {
+    @Override
     public int answer() {
       return 42;
     }
