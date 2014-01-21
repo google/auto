@@ -85,7 +85,9 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   @SuppressWarnings("serial")
+  // CHECKSTYLE:OFF:WhitespaceAround
   private static class CompileException extends Exception {}
+  // CHECKSTYLE:ON
 
   /**
    * Issue a compilation error. This method does not throw an exception, since we want to
@@ -307,10 +309,12 @@ public class AutoValueProcessor extends AbstractProcessor {
         "Float.floatToIntBits(this.$[p]) == Float.floatToIntBits(that.$[p]())");
     private static final Template DOUBLE_EQUALS_TEMPLATE = Template.compile(
         "Double.doubleToLongBits(this.$[p]) == Double.doubleToLongBits(that.$[p]())");
+    // CHECKSTYLE:OFF:OperatorWrap
     private static final Template OBJECT_EQUALS_TEMPLATE = Template.compile(
         "$[p.nullable?" +
           "(this.$[p] == null) ? (that.$[p]() == null) : ]" +
           "this.$[p].equals(that.$[p]())");
+    // CHECKSTYLE:ON
 
     /**
      * A string representing an expression that compares this property with the same property
@@ -685,7 +689,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     } else {
       String s = "<";
       String sep = "";
-      for (TypeParameterElement unused : typeParameters) {
+      for (int i = 0; i < typeParameters.size(); i++) {
         s += sep + "?";
         sep = ", ";
       }
