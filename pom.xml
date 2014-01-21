@@ -27,7 +27,7 @@
   <groupId>com.google.auto</groupId>
   <artifactId>auto-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0-rc1</version>
   <name>Auto (Parent)</name>
   <description>A collection of code generators for Java.</description>
   <url>https://github.com/google/auto</url>
@@ -183,6 +183,32 @@
       <properties>
         <toolsjar>${java.home}/../Classes/classes.jar</toolsjar>
       </properties>
+    </profile>
+    <profile>
+      <id>release-sign-artifacts</id>
+      <activation>
+        <property>
+          <name>performRelease</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>
