@@ -147,14 +147,6 @@
           <configLocation>checkstyle.xml</configLocation>
           <failOnViolation>false</failOnViolation>
         </configuration>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
     <pluginManagement>
