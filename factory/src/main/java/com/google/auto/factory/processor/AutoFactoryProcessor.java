@@ -81,8 +81,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     try {
       doProcess(annotations, roundEnv);
     } catch (Throwable e) {
-      messager.printMessage(Kind.ERROR, "Failed to process @AutoFactory annotations:\n" +
-          Throwables.getStackTraceAsString(e));
+      messager.printMessage(Kind.ERROR, "Failed to process @AutoFactory annotations:\n"
+          + Throwables.getStackTraceAsString(e));
     }
     return false;
   }
