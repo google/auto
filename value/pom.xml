@@ -32,6 +32,13 @@
     Immutable value-type code generation for Java 1.6+.
   </description>
 
+  <scm>
+    <url>http://github.com/google/auto</url>
+    <connection>scm:git:git://github.com/google/auto.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
   <dependencies>
     <dependency>
       <groupId>com.google.auto.service</groupId>
