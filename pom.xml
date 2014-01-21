@@ -145,6 +145,7 @@
         <configuration>
           <consoleOutput>true</consoleOutput>
           <configLocation>checkstyle.xml</configLocation>
+          <failOnViolation>false</failOnViolation>
         </configuration>
         <executions>
           <execution>
