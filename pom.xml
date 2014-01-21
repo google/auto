@@ -33,6 +33,7 @@
   <url>https://github.com/google/auto</url>
 
   <modules>
+    <module>build-tools</module>
     <module>factory</module>
     <module>service</module>
     <module>value</module>
@@ -157,8 +158,15 @@
         <version>2.9.1</version>
         <configuration>
           <consoleOutput>true</consoleOutput>
-          <configLocation>checkstyle.xml</configLocation>
+          <configLocation>com/google/auto/checkstyle.xml</configLocation>
         </configuration>
+        <dependencies>
+	  <dependency>
+	    <groupId>com.google.auto</groupId>
+	    <artifactId>build-tools</artifactId>
+	    <version>1.0-SNAPSHOT</version>
+	  </dependency>
+	</dependencies>
         <executions>
           <execution>
             <phase>generate-sources</phase>
