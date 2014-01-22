@@ -21,11 +21,11 @@ Subprojects
   
   * [AutoService](https://github.com/google/auto/tree/master/service) - Provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
     
-    Latest version: Unreleased
+    Latest version: `1.0-rc1`
 
   * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+ Java.
     
-    Latest version: Unreleased
+    Latest version: `1.0-rc1`
 
 License
 -------
