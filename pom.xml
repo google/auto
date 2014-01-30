@@ -32,6 +32,12 @@
   <description>A collection of code generators for Java.</description>
   <url>https://github.com/google/auto</url>
 
+  <modules>
+    <module>factory</module>
+    <module>service</module>
+    <module>value</module>
+  </modules>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.6</java.version>
