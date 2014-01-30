@@ -23,7 +23,7 @@ Subprojects
     
     Latest version: `1.0-rc1`
 
-  * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+ Java.
+  * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+.
     
     Latest version: `1.0-rc1`
 
