@@ -35,9 +35,6 @@ import java.lang.annotation.Target;
  *
  * @see <a href="http://goo.gl/Ter394">AutoValue User's Guide</a>
  *
- * <!-- MOE:begin_intracomment_strip -->
- * @see <a href="http://go/autovalue">Additional Google-internal information<a/>
- * <!-- MOE:end_intracomment_strip -->
  *
  * @author Éamonn McManus
  * @author Kevin Bourrillion

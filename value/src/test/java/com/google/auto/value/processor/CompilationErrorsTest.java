@@ -53,7 +53,7 @@ import javax.tools.ToolProvider;
  */
 public class CompilationErrorsTest extends TestCase {
 
-  // TODO(emcmanus): add tests for:
+  // TODO(user): add tests for:
   // - superclass in a different package with nonpublic abstract methods (this must fail but
   //   is it clean?)
 
@@ -80,7 +80,7 @@ public class CompilationErrorsTest extends TestCase {
   // temporary directory while this test is running and make you delete a bunch of unrelated stuff.
   // That's surely not much of a problem here, but just in case, we check that anything we're going
   // to delete is either a directory or ends with .java or .class.
-  // TODO(emcmanus): simplify now that we are only using this to test compilation failure.
+  // TODO(user): simplify now that we are only using this to test compilation failure.
   // It should be straightforward to know exactly what files will be generated.
   private boolean deleteDirectory(File dir) {
     File[] files = dir.listFiles();
@@ -254,6 +254,61 @@ public class CompilationErrorsTest extends TestCase {
       "public abstract class Existent extends NonExistent {\n" +
       "}\n";
     assertCompilationFails(ImmutableList.of(testSourceCode));
+  }
+
+  public void testImplementingAnnotationRequiresDefiningEquals() throws Exception {
+    // Since the equals algorithm we use for AutoValue classes is incompatible with the one
+    // specified by Annotation#equals(Object), we produce an error if we would be generating that
+    // incorrect method. The incompatibility is because we check instanceof RetentionImpl,
+    // where we should be checking instanceof Retention. That could be fixed by checking instanceof
+    // the most general ancestor that already contains all our abstract methods, but the motivation
+    // for doing that is not great.
+    String testSourceCode =
+        "package foo.bar;\n" +
+        "import com.google.auto.value.AutoValue;\n" +
+        "import java.lang.annotation.Retention;\n" +
+        "import java.lang.annotation.RetentionPolicy;\n" +
+        "@AutoValue\n" +
+        "public abstract class RetentionImpl implements Retention {\n" +
+        "  public static Retention create(RetentionPolicy policy) {\n" +
+        "    return new AutoValue_RetentionImpl(policy);\n" +
+        "  }\n" +
+        "  @Override public Class<? extends Retention> annotationType() {\n" +
+        "    return Retention.class;\n" +
+        "  }\n" +
+        "  @Override public int hashCode() {\n" +
+        "    return (\"value\".hashCode() * 127) ^ value().hashCode();\n" +
+        "  }\n" +
+        "}\n";
+    assertCompilationResultIs(
+        ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile("equals")),
+        ImmutableList.of(testSourceCode));
+  }
+
+  public void testImplementingAnnotationRequiresDefiningHashCode() throws Exception {
+    // Since the hashCode algorithm we use for AutoValue classes is incompatible with the one
+    // specified by Annotation#hashCode(), we produce an error if we would be generating that
+    // incorrect hashCode().
+    String testSourceCode =
+        "package foo.bar;\n" +
+        "import com.google.auto.value.AutoValue;\n" +
+        "import java.lang.annotation.Retention;\n" +
+        "import java.lang.annotation.RetentionPolicy;\n" +
+        "@AutoValue\n" +
+        "public abstract class RetentionImpl implements Retention {\n" +
+        "  public static Retention create(RetentionPolicy policy) {\n" +
+        "    return new AutoValue_RetentionImpl(policy);\n" +
+        "  }\n" +
+        "  @Override public Class<? extends Retention> annotationType() {\n" +
+        "    return Retention.class;\n" +
+        "  }\n" +
+        "  @Override public boolean equals(Object o) {\n" +
+        "    return o instanceof Retention && ((Retention) o).value().equals(value());\n" +
+        "  }\n" +
+        "}\n";
+    assertCompilationResultIs(
+        ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile("hashCode")),
+        ImmutableList.of(testSourceCode));
   }
 
   public void testExceptionBecomesError() throws Exception {

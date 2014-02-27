@@ -24,6 +24,8 @@ import junit.framework.TestCase;
 
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -38,7 +40,7 @@ import javax.annotation.Nullable;
  */
 public class AutoValueTest extends TestCase {
 
-  // TODO(emcmanus): add tests for exotic locales
+  // TODO(user): add tests for exotic locales
 
   @AutoValue
   abstract static class Simple {
@@ -318,6 +320,24 @@ public class AutoValueTest extends TestCase {
     assertNull(instance.nullableString());
     assertEquals(23, instance.randomInt());
     assertEquals("NullableProperties{nullableString=null, randomInt=23}", instance.toString());
+  }
+
+  @AutoValue
+  abstract static class AlternativeNullableProperties {
+    @interface Nullable {}
+    @AlternativeNullableProperties.Nullable abstract String nullableString();
+    abstract int randomInt();
+    static AlternativeNullableProperties create(@Nullable String nullableString, int randomInt) {
+      return new AutoValue_AutoValueTest_AlternativeNullableProperties(nullableString, randomInt);
+    }
+  }
+
+  public void testNullableCanBeFromElsewhere() throws Exception {
+    AlternativeNullableProperties instance = AlternativeNullableProperties.create(null, 23);
+    assertNull(instance.nullableString());
+    assertEquals(23, instance.randomInt());
+    assertEquals(
+        "AlternativeNullableProperties{nullableString=null, randomInt=23}", instance.toString());
   }
 
   @AutoValue
@@ -607,6 +627,45 @@ public class AutoValueTest extends TestCase {
     Method equals = instance.getClass().getMethod("equals", Object.class);
     assertNotSame(ExplicitEquals.class, instance.getClass());
     assertSame(ExplicitEquals.class, equals.getDeclaringClass());
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface MyAnnotation {
+    String value();
+  }
+
+  @AutoValue
+  abstract static class MyAnnotationImpl implements MyAnnotation {
+    static MyAnnotation create(String value) {
+      // The MyAnnotation.class parameter is for Annotation.annotationType(). In practice you would
+      // probably want to implement that method here to return the constant MyAnnotation.class.
+      return new AutoValue_AutoValueTest_MyAnnotationImpl(MyAnnotation.class, value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof MyAnnotation && ((MyAnnotation) o).value().equals(value());
+    }
+
+    @Override
+    public int hashCode() {
+      return ("value".hashCode() * 127) ^ value().hashCode();
+    }
+  }
+
+  public void testImplementAnnotation() {
+    // Test that you can use @AutoValue to implement an annotation if you really want to.
+    // Test cases in CompilationErrorsTest check that you must have your own implementation of
+    // equals and hashCode if so, as here.
+    @MyAnnotation("hello")
+        class Annotated {}
+    MyAnnotation expected = Annotated.class.getAnnotation(MyAnnotation.class);
+    MyAnnotation actual = MyAnnotationImpl.create("hello");
+    MyAnnotation other = MyAnnotationImpl.create("bonjour");
+    new EqualsTester()
+        .addEqualityGroup(expected, actual)
+        .addEqualityGroup(other)
+        .testEquals();
   }
 
   @AutoValue

@@ -21,6 +21,7 @@ import com.google.auto.value.AutoValue;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,12 +33,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -297,7 +298,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public boolean nullable() {
-      return method.getAnnotation(Nullable.class) != null;
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
+        if (name.equals("Nullable")) {
+          return true;
+        }
+      }
+      return false;
     }
 
     private static final Template PRIMITIVE_EQUALS_TEMPLATE =
@@ -476,11 +483,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     vars.putAll(objectMethodsToGenerate(methods));
+    dontImplementAnnotationEqualsOrHashCode(type, vars);
     List<ExecutableElement> toImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new HashSet<TypeMirror>();
     types.addAll(returnTypesOf(toImplement));
-    TypeMirror javaUtilArrays =
-        processingEnv.getElementUtils().getTypeElement(Arrays.class.getName()).asType();
+    TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
       // If there are array properties then we will be referencing java.util.Arrays.
       // Arrange to import it unless that would introduce ambiguity.
@@ -517,6 +524,23 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
     return false;
+  }
+
+  private void dontImplementAnnotationEqualsOrHashCode(TypeElement type, Map<String, ?> vars) {
+    TypeMirror javaLangAnnotationAnnotation = getTypeMirror(Annotation.class);
+    Types typeUtils = processingEnv.getTypeUtils();
+    if (typeUtils.isAssignable(type.asType(), javaLangAnnotationAnnotation)) {
+      boolean equals = (Boolean) vars.get("equals");
+      boolean hashCode = (Boolean) vars.get("hashCode");
+      if (equals || hashCode) {
+        String bad = equals
+            ? (hashCode ? "equals(Object) and hashCode()" : "equals(Object)")
+            : "hashCode()";
+        reportError("The implementation of " + bad + " that would be generated for this @AutoValue "
+            + "class would not obey the contract of " + bad + " in " + Annotation.class.getName(),
+            type);
+      }
+    }
   }
 
   /**
@@ -612,8 +636,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   // serialVersionUID = 1234L, otherwise "".
   private String getSerialVersionUID(TypeElement type) {
     Types typeUtils = processingEnv.getTypeUtils();
-    Elements elementUtils = processingEnv.getElementUtils();
-    TypeMirror serializable = elementUtils.getTypeElement(Serializable.class.getName()).asType();
+    TypeMirror serializable = getTypeMirror(Serializable.class);
     if (typeUtils.isAssignable(type.asType(), serializable)) {
       List<VariableElement> fields = ElementFilter.fieldsIn(type.getEnclosedElements());
       for (VariableElement field : fields) {
@@ -632,6 +655,10 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
     return "";
+  }
+
+  private TypeMirror getTypeMirror(Class<?> c) {
+    return processingEnv.getElementUtils().getTypeElement(c.getName()).asType();
   }
 
   // Why does TypeParameterElement.toString() not return this? Grrr.
