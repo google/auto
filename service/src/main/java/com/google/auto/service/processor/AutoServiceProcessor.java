@@ -15,7 +15,6 @@
  */
 package com.google.auto.service.processor;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -60,8 +59,6 @@ import com.google.common.collect.Sets;
  */
 @SupportedOptions({ "debug", "verify" })
 public class AutoServiceProcessor extends AbstractProcessor {
-  private static final String SERVICE_DIR = "META-INF" + File.separator + "services"
-      + File.separator;
 
   /**
    * Maps the class names of service provider interfaces to the
@@ -159,7 +156,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     Filer filer = processingEnv.getFiler();
 
     for (String providerInterface : providers.keySet()) {
-      String resourceFile = SERVICE_DIR + providerInterface;
+      String resourceFile = "META-INF/services/" + providerInterface;
       log("Working on resource file: " + resourceFile);
       try {
         SortedSet<String> allServices = Sets.newTreeSet();
