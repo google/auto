@@ -224,9 +224,11 @@ final class TypeSimplifier {
 
     @Override
     public Void visitDeclared(DeclaredType t, Void p) {
-      referenced.add(typeUtil.erasure(t));
-      for (TypeMirror param : t.getTypeArguments()) {
-        visit(param, p);
+      boolean added = referenced.add(typeUtil.erasure(t));
+      if (added) {
+        for (TypeMirror param : t.getTypeArguments()) {
+          visit(param, p);
+        }
       }
       return null;
     }

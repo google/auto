@@ -508,6 +508,30 @@ public class AutoValueTest extends TestCase {
     assertEquals(ImmutableMap.of(emptyList, "23"), instance.map());
   }
 
+  interface Mergeable<M extends Mergeable<M>> {
+    M merge(M other);
+  }
+
+  @AutoValue
+  static abstract class Delta<M extends Mergeable<M>> {
+    abstract M meta();
+
+    static <M extends Mergeable<M>> Delta<M> create(M meta) {
+      return new AutoValue_AutoValueTest_Delta(meta);
+    }
+  }
+
+  public void testRecursiveGeneric() {
+    class MergeableImpl implements Mergeable<MergeableImpl> {
+      @Override public MergeableImpl merge(MergeableImpl other) {
+        return this;
+      }
+    }
+    MergeableImpl mergeable = new MergeableImpl();
+    Delta<MergeableImpl> instance = Delta.create(mergeable);
+    assertSame(mergeable, instance.meta());
+  }
+
   @AutoValue
   abstract static class ExplicitToString {
     abstract String string();
