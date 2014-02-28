@@ -3,11 +3,14 @@ package com.google.auto.factory;
 import static org.truth0.Truth.ASSERT;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import com.google.inject.Guice;
 
 import dagger.ObjectGraph;
 
+@RunWith(JUnit4.class)
 public class DependencyInjectionIntegrationTest {
   @Test public void daggerInjectedFactory() {
     FactoryGeneratedFactory factoryGeneratedFactory =
