@@ -243,19 +243,13 @@ public class AutoValueProcessor extends AbstractProcessor {
 
       // hashCode()
       "$[hashCode?",
-      "$[cacheHashCode?  private transient int hashCode;\n\n]" +
-
       "  @Override",
       "  public int hashCode() {",
-      "$[cacheHashCode?    if (hashCode != 0) {",
-      "      return hashCode;",
-      "    }\n]" +
       "    int h = 1;",
       "$[props:p||" +
       "    h *= 1000003;",
       "    h ^= $[p.hashCodeExpression];",
       "]" +
-      "$[cacheHashCode?    hashCode = h;\n]" +
       "    return h;",
       "  }]" +
 
@@ -473,7 +467,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.put("actualtypes", actualTypeString(type));
     vars.put("wildcardtypes", wildcardTypeString(type));
     vars.put("subclass", simpleNameOf(generatedSubclassName(type)));
-    vars.put("cacheHashCode", autoValue.cacheHashCode());
     defineVarsForType(type, vars);
     String text = template.rewrite(vars);
     writeSourceFile(generatedSubclassName(type), text, type);

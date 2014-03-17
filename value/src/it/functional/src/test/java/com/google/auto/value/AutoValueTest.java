@@ -791,51 +791,16 @@ public class AutoValueTest extends TestCase {
     }
   }
 
-  abstract static class ObservedHashCode {
+  @AutoValue
+  abstract static class MaybeCachedHashCode {
     abstract HashCodeObserver hashCodeObserver();
     abstract int randomInt();
-  }
-
-  @AutoValue(cacheHashCode = false)
-  abstract static class UncachedHashCode extends ObservedHashCode {
-    static UncachedHashCode create(HashCodeObserver hashCodeObserver, int randomInt) {
-      return new AutoValue_AutoValueTest_UncachedHashCode(hashCodeObserver, randomInt);
-    }
-  }
-
-  @AutoValue(cacheHashCode = true)
-  abstract static class CachedHashCode extends ObservedHashCode {
-    static CachedHashCode create(HashCodeObserver hashCodeObserver, int randomInt) {
-      return new AutoValue_AutoValueTest_CachedHashCode(hashCodeObserver, randomInt);
-    }
-  }
-
-  @AutoValue
-  abstract static class MaybeCachedHashCode extends ObservedHashCode {
-    static MaybeCachedHashCode create (HashCodeObserver hashCodeObserver, int randomInt) {
+    static MaybeCachedHashCode create(HashCodeObserver hashCodeObserver, int randomInt) {
       return new AutoValue_AutoValueTest_MaybeCachedHashCode(hashCodeObserver, randomInt);
     }
   }
 
-  public void testCacheHashCode() {
-    HashCodeObserver uncachedObserver = new HashCodeObserver();
-    UncachedHashCode uncached = UncachedHashCode.create(uncachedObserver, 17);
-    int uncachedHash1 = uncached.hashCode();
-    int uncachedHash2 = uncached.hashCode();
-    assertEquals(uncachedHash1, uncachedHash2);
-    assertEquals(2, uncachedObserver.hashCodeCount);
-
-    HashCodeObserver cachedObserver = new HashCodeObserver();
-    CachedHashCode cached = CachedHashCode.create(cachedObserver, 17);
-    int cachedHash1 = cached.hashCode();
-    int cachedHash2 = cached.hashCode();
-    assertEquals(cachedHash1, cachedHash2);
-    assertEquals(1, cachedObserver.hashCodeCount);
-
-    assertEquals(cachedHash1, uncachedHash1);
-  }
-
-  public void testHashCodeNotCachedByDefault() {
+  public void testHashCodeNotCached() {
     HashCodeObserver observer = new HashCodeObserver();
     MaybeCachedHashCode maybeCached = MaybeCachedHashCode.create(observer, 17);
     int hash1 = maybeCached.hashCode();

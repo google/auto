@@ -42,14 +42,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface AutoValue {
-  /**
-   * Specifies whether the generated class should cache each instance's {@link Object#hashCode
-   * hashCode} value in a field once it is first computed. <b>Note:</b> most classes should have
-   * no need of this behavior and should omit this parameter entirely. Use only if certain of its
-   * performance benefit to your application.
-   *
-   * <p><b>Warning:</b> while using mutable field types is strongly discouraged in general, using
-   * this feature makes it <i>especially</i> dangerous.
-   */
-  boolean cacheHashCode() default false;
 }
