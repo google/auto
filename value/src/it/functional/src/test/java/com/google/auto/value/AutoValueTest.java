@@ -517,7 +517,7 @@ public class AutoValueTest extends TestCase {
     abstract M meta();
 
     static <M extends Mergeable<M>> Delta<M> create(M meta) {
-      return new AutoValue_AutoValueTest_Delta(meta);
+      return new AutoValue_AutoValueTest_Delta<M>(meta);
     }
   }
 
