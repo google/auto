@@ -17,46 +17,24 @@ package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.AutoValueProcessor.Property;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ElementVisitor;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.Name;
-import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
-import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-import javax.tools.FileObject;
-import javax.tools.StandardLocation;
 
 /**
  * Works around an Eclipse bug where methods are sorted into alphabetical order before being given
@@ -81,197 +59,10 @@ import javax.tools.StandardLocation;
  * @author Éamonn McManus
  */
 class EclipseHack {
-  static final String ENABLING_OPTION = "com.google.auto.value.EclipseHackTest";
-  static final String ENABLING_OPTION_BATCH =
-      "com.google.auto.value.EclipseBatchHackTest";
-
   private final ProcessingEnvironment processingEnv;
-  private final boolean eclipseHackTest;
-  private final boolean eclipseHackBatchTest;
 
   EclipseHack(ProcessingEnvironment processingEnv) {
-    boolean eclipseHackTest = processingEnv.getOptions().containsKey(ENABLING_OPTION);
-    this.processingEnv = eclipseHackTest
-        ? new EclipseProcessingEnvironment(processingEnv)
-        : processingEnv;
-    this.eclipseHackTest = eclipseHackTest;
-    eclipseHackBatchTest = processingEnv.getOptions().containsKey(ENABLING_OPTION_BATCH);
-  }
-
-  // Fake implementation of ProcessingEnvironment that looks like Eclipse's, for testing only.
-  private static class EclipseProcessingEnvironment implements ProcessingEnvironment {
-    private final ProcessingEnvironment processingEnv;
-
-    EclipseProcessingEnvironment(ProcessingEnvironment processingEnv) {
-      this.processingEnv = processingEnv;
-    }
-
-    @SuppressWarnings("unused") // accessed via reflection
-    public EclipseIFile getEnclosingIFile(Element element) {
-      return new EclipseIFile(processingEnv, (TypeElement) element);
-    }
-
-    @Override public Map<String, String> getOptions() {
-      return processingEnv.getOptions();
-    }
-
-    @Override public Messager getMessager() {
-      return processingEnv.getMessager();
-    }
-
-    @Override public Filer getFiler() {
-      return processingEnv.getFiler();
-    }
-
-    @Override public Elements getElementUtils() {
-      return processingEnv.getElementUtils();
-    }
-
-    @Override public Types getTypeUtils() {
-      return processingEnv.getTypeUtils();
-    }
-
-    @Override public SourceVersion getSourceVersion() {
-      return processingEnv.getSourceVersion();
-    }
-
-    @Override public Locale getLocale() {
-      return processingEnv.getLocale();
-    }
-  }
-
-  private static File getTestFile(ProcessingEnvironment processingEnv, TypeElement element) {
-      Filer filer = processingEnv.getFiler();
-      // walk up the enclosing elements until you find a top-level element
-      Element topLevel = element;
-      while (topLevel.getEnclosingElement().getKind() != ElementKind.PACKAGE) {
-        topLevel = topLevel.getEnclosingElement();
-      }
-      try {
-        FileObject resource = filer.getResource(StandardLocation.SOURCE_PATH,
-            processingEnv.getElementUtils().getPackageOf(element).getQualifiedName(),
-            topLevel.getSimpleName() + ".java");
-        File file = new File(resource.toUri());
-        if (!file.canRead()) {
-          processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-              "Cannot find source code in file " + file, element);
-        }
-        return file;
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-  }
-
-  /**
-   * A simulation of an Eclipse IFile object used in the {@link EclipseProcessingEnvironment}.
-   */
-  private static class EclipseIFile {
-    private final File file;
-
-    EclipseIFile(ProcessingEnvironment processingEnv, TypeElement element) {
-      this.file = getTestFile(processingEnv, element);
-    }
-
-    @SuppressWarnings("unused") // accessed via reflection
-    public String getCharset() {
-      return Charset.defaultCharset().name();
-    }
-
-    @SuppressWarnings("unused") // accessed via reflection
-    public InputStream getContents() throws IOException {
-      return new FileInputStream(file);
-    }
-
-    @SuppressWarnings("unused") // accessed via reflection
-    public URI getRawLocationURI() {
-      return file.toURI();
-    }
-  }
-
-  /**
-   * A wrapper around {@link TypeElement} that simulates the Eclipse implementation of that class.
-   * The {@link #getFileName()} method is used to get the filename and is added to this class.
-   */
-  private class EclipseTypeElement implements TypeElement {
-    private final TypeElement delegate;
-
-    EclipseTypeElement(TypeElement delegate) {
-      this.delegate = delegate;
-    }
-
-    @Override public TypeMirror asType() {
-      return delegate.asType();
-    }
-
-    @Override public ElementKind getKind() {
-      return delegate.getKind();
-    }
-
-    @Override public List<? extends AnnotationMirror> getAnnotationMirrors() {
-      return delegate.getAnnotationMirrors();
-    }
-
-    @Override public <A extends Annotation> A getAnnotation(Class<A> annotationType) {
-      return delegate.getAnnotation(annotationType);
-    }
-
-    @Override public Set<Modifier> getModifiers() {
-      return delegate.getModifiers();
-    }
-
-    @Override public <R, P> R accept(ElementVisitor<R, P> v, P p) {
-      return delegate.accept(v, p);
-    }
-
-    @Override public List<? extends Element> getEnclosedElements() {
-      return delegate.getEnclosedElements();
-    }
-
-    @Override public NestingKind getNestingKind() {
-      return delegate.getNestingKind();
-    }
-
-    @Override public Name getQualifiedName() {
-      return delegate.getQualifiedName();
-    }
-
-    @Override public Name getSimpleName() {
-      return delegate.getSimpleName();
-    }
-
-    @Override public TypeMirror getSuperclass() {
-      return delegate.getSuperclass();
-    }
-
-    @Override public List<? extends TypeMirror> getInterfaces() {
-      return delegate.getInterfaces();
-    }
-
-    @Override public List<? extends TypeParameterElement> getTypeParameters() {
-      return delegate.getTypeParameters();
-    }
-
-    @Override public Element getEnclosingElement() {
-      return delegate.getEnclosingElement();
-    }
-
-    @SuppressWarnings("unused")
-    public String getFileName() {
-      return getTestFile(processingEnv, delegate).toString();
-    }
-  }
-
-  private static final Comparator<ExecutableElement> ELEMENT_COMPARATOR =
-      new Comparator<ExecutableElement>() {
-    @Override public int compare(ExecutableElement a, ExecutableElement b) {
-      return a.getSimpleName().toString().compareTo(b.getSimpleName().toString());
-    }
-  };
-
-  void sortMethodsIfSimulatingEclipse(List<ExecutableElement> methods) {
-    if (eclipseHackTest) {
-      Collections.sort(methods, ELEMENT_COMPARATOR);
-    }
+    this.processingEnv = processingEnv;
   }
 
   /**
@@ -328,9 +119,7 @@ class EclipseHack {
     }
   }
 
-  private PropertyOrderer getPropertyOrderer(TypeElement originalType) {
-    TypeElement type = eclipseHackBatchTest ? new EclipseTypeElement(originalType) : originalType;
-
+  private PropertyOrderer getPropertyOrderer(TypeElement type) {
     try {
       // If we are in Eclipse, then processingEnv will be an instance of
       // org.eclipse.jdt.internal.apt.pluggable.core.dispatch.IdeProcessingEnvImpl

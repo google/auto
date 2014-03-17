@@ -36,7 +36,6 @@ import java.util.TreeMap;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -63,7 +62,6 @@ import javax.tools.JavaFileObject;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
-@SupportedOptions({EclipseHack.ENABLING_OPTION, EclipseHack.ENABLING_OPTION_BATCH })
 public class AutoValueProcessor extends AbstractProcessor {
   private static final boolean SILENT = true;
 
@@ -429,7 +427,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     // This algorithm is quadratic in the number of methods but it's hard to see how to improve
     // that while still using Elements.overrides.
     List<ExecutableElement> theseMethods = ElementFilter.methodsIn(type.getEnclosedElements());
-    eclipseHack().sortMethodsIfSimulatingEclipse(theseMethods);
     for (ExecutableElement method : theseMethods) {
       if (!method.getModifiers().contains(Modifier.PRIVATE)) {
         boolean alreadySeen = false;
