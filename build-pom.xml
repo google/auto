@@ -1,0 +1,14 @@
+<!-- A pure convenience for local builds and travis-ci. -->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>build-only</groupId>
+  <artifactId>build-only</artifactId>
+  <version>NO_VERSION</version>
+  <packaging>pom</packaging>
+  <modules>
+    <module>.</module>
+    <module>factory</module>
+    <module>service</module>
+    <module>value</module>
+  </modules>
+</project>
