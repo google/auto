@@ -26,6 +26,7 @@ import java.util.TreeSet;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
@@ -90,6 +91,47 @@ final class TypeSimplifier {
     return type.accept(new ToStringTypeVisitor(), new StringBuilder()).toString();
   }
 
+  // The formal type parameters of the given type.
+  // If we have @AutoValue abstract class Foo<T extends SomeClass> then this method will
+  // return <T extends Something> for Foo. Likewise it will return the angle-bracket part of:
+  // Foo<SomeClass>
+  // Foo<T extends Number>
+  // Foo<E extends Enum<E>>
+  // Foo<K, V extends Comparable<? extends K>>
+  // Type variables need special treatment because we only want to include their bounds when they
+  // are declared, not when they are referenced. We don't want to include the bounds of the second E
+  // in <E extends Enum<E>> or of the second K in <K, V extends Comparable<? extends K>>. That's
+  // why we put the "extends" handling here and not in ToStringTypeVisitor.
+  String formalTypeParametersString(TypeElement type) {
+    List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
+    if (typeParameters.isEmpty()) {
+      return "";
+    } else {
+      StringBuilder sb = new StringBuilder("<");
+      String sep = "";
+      for (TypeParameterElement typeParameter : typeParameters) {
+        sb.append(sep);
+        sep = ", ";
+        appendTypeParameterWithBounds(sb, typeParameter);
+      }
+      return sb.append(">").toString();
+    }
+  }
+
+  private void appendTypeParameterWithBounds(StringBuilder sb, TypeParameterElement typeParameter) {
+    sb.append(typeParameter.getSimpleName());
+    String sep = " extends ";
+    for (TypeMirror bound : typeParameter.getBounds()) {
+      if (!bound.toString().equals("java.lang.Object")) {
+        sb.append(sep);
+        sep = " & ";
+        bound.accept(TO_STRING_TYPE_VISITOR, sb);
+      }
+    }
+  }
+
+  private final ToStringTypeVisitor TO_STRING_TYPE_VISITOR = new ToStringTypeVisitor();
+
   /**
    * Visitor that produces a string representation of a type for use in generated code.
    * The visitor takes into account the imports defined by {@link #typesToImport} and will use
@@ -98,7 +140,7 @@ final class TypeSimplifier {
    * <p>A simpler alternative would be just to use TypeMirror.toString() and regular expressions to
    * pick apart the type references and replace fully-qualified types where possible. That depends
    * on unspecified behaviour of TypeMirror.toString(), though, and is vulnerable to formatting
-   * quirks such as the way it omits the comma in
+   * quirks such as the way it omits the space after the comma in
    * {@code java.util.Map<java.lang.String, java.lang.String>}.
    */
   private class ToStringTypeVisitor extends SimpleTypeVisitor6<StringBuilder, StringBuilder> {
@@ -225,11 +267,12 @@ final class TypeSimplifier {
 
   private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor6<Void, Void> {
     private final Types typeUtil;
-    private final Set<TypeMirror> referenced;
+    private final Set<TypeMirror> referencedTypes;
+    private final Set<TypeMirror> seenTypes = new HashSet<TypeMirror>();
 
     ReferencedClassTypeVisitor(Types typeUtil, Set<TypeMirror> referenced) {
       this.typeUtil = typeUtil;
-      this.referenced = referenced;
+      this.referencedTypes = referenced;
     }
 
     @Override
@@ -239,8 +282,8 @@ final class TypeSimplifier {
 
     @Override
     public Void visitDeclared(DeclaredType t, Void p) {
-      boolean added = referenced.add(typeUtil.erasure(t));
-      if (added) {
+      if (seenTypes.add(t)) {
+        referencedTypes.add(typeUtil.erasure(t));
         for (TypeMirror param : t.getTypeArguments()) {
           visit(param, p);
         }
@@ -250,8 +293,16 @@ final class TypeSimplifier {
 
     @Override
     public Void visitTypeVariable(TypeVariable t, Void p) {
-      visit(t.getLowerBound(), p);
-      return visit(t.getUpperBound(), p);
+      // Instead of visiting t.getUpperBound(), we explicitly visit the supertypes of t.
+      // The reason is that for a variable like <T extends Foo & Bar>, t.getUpperBound() will be
+      // the intersection type Foo & Bar, with no really simple way to extract Foo and Bar. But
+      // directSupertypes(t) will be exactly [Foo, Bar]. For plain <T>, directSupertypes(t) will
+      // be java.lang.Object, and it is harmless for us to record a reference to that since we won't
+      // try to import it or use it in the output string for <T>.
+      for (TypeMirror upper : typeUtil.directSupertypes(t)) {
+        visit(upper, p);
+      }
+      return visit(t.getLowerBound(), p);
     }
 
     @Override

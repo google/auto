@@ -460,9 +460,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.put("pkg", TypeSimplifier.packageNameOf(type));
     vars.put("origclass", classNameOf(type));
     vars.put("simpleclassname", simpleNameOf(classNameOf(type)));
-    vars.put("formaltypes", formalTypeString(type));
-    vars.put("actualtypes", actualTypeString(type));
-    vars.put("wildcardtypes", wildcardTypeString(type));
     vars.put("subclass", simpleNameOf(generatedSubclassName(type)));
     defineVarsForType(type, vars);
     String text = template.rewrite(vars);
@@ -498,6 +495,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     eclipseHack().reorderProperties(props);
     vars.put("props", props);
     vars.put("serialVersionUID", getSerialVersionUID(type));
+    vars.put("formaltypes", typeSimplifier.formalTypeParametersString(type));
+    vars.put("actualtypes", actualTypeParametersString(type));
+    vars.put("wildcardtypes", wildcardTypeParametersString(type));
   }
 
   private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {
@@ -651,39 +651,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     return processingEnv.getElementUtils().getTypeElement(c.getName()).asType();
   }
 
-  // Why does TypeParameterElement.toString() not return this? Grrr.
-  private static String typeParameterString(TypeParameterElement type) {
-    String s = type.getSimpleName().toString();
-    List<? extends TypeMirror> bounds = type.getBounds();
-    if (bounds.isEmpty()) {
-      return s;
-    } else {
-      s += " extends ";
-      String sep = "";
-      for (TypeMirror bound : bounds) {
-        s += sep + bound;
-        sep = " & ";
-      }
-      return s;
-    }
-  }
-
-  private static String formalTypeString(TypeElement type) {
-    List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
-    if (typeParameters.isEmpty()) {
-      return "";
-    } else {
-      String s = "<";
-      String sep = "";
-      for (TypeParameterElement typeParameter : typeParameters) {
-        s += sep + typeParameterString(typeParameter);
-        sep = ", ";
-      }
-      return s + ">";
-    }
-  }
-
-  private static String actualTypeString(TypeElement type) {
+  // The actual type parameters of the generated type.
+  // If we have @AutoValue abstract class Foo<T extends Something> then the subclass will be
+  // final class AutoValue_Foo<T extends Something> extends Foo<T>.
+  // <T extends Something> is the formal type parameter list and
+  // <T> is the actual type parameter list, which is what this method returns.
+  private static String actualTypeParametersString(TypeElement type) {
     List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
     if (typeParameters.isEmpty()) {
       return "";
@@ -699,7 +672,9 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   // The @AutoValue type, with a ? for every type.
-  private static String wildcardTypeString(TypeElement type) {
+  // If we have @AutoValue abstract class Foo<T extends Something> then this method will return
+  // just <?>.
+  private static String wildcardTypeParametersString(TypeElement type) {
     List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
     if (typeParameters.isEmpty()) {
       return "";

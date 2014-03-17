@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 
@@ -55,10 +56,13 @@ import javax.tools.ToolProvider;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 public class TypeSimplifierTest extends TestCase {
-  private static final String TEST_JAVA_CLASS_NAME = "Test";
-  private static final String TEST_JAVA_FILE_NAME = "Test.java";
-  private static final String TEST_JAVA_CLASS_FILE_NAME = "Test.class";
-  private static final String TEST_JAVA_CONTENTS = "public class Test {}\n";
+  private static final ImmutableMap<String, String> CLASS_TO_SOURCE = ImmutableMap.of(
+      "Test",
+          "public class Test {}\n",
+      "MultipleBounds",
+          "import java.util.List;\n"
+          + "public class MultipleBounds<K extends List<V> & Comparable<K>, V> {}\n"
+  );
 
   // This test is a bit unusual. The reason is that TypeSimplifier relies on interfaces such as
   // Types, TypeMirror, and TypeElement whose implementations are provided by the annotation
@@ -72,13 +76,18 @@ public class TypeSimplifierTest extends TestCase {
   // concatenation of all the individual failures.
   public void testTypeSimplifier() throws Exception {
     File tmpDir = Files.createTempDir();
-    File testJava = new File(tmpDir, TEST_JAVA_FILE_NAME);
-    Files.write(TEST_JAVA_CONTENTS, testJava, Charsets.UTF_8);
+    for (String className : CLASS_TO_SOURCE.keySet()) {
+      File java = new File(tmpDir, className + ".java");
+      Files.write(CLASS_TO_SOURCE.get(className), java, Charsets.UTF_8);
+    }
     try {
       doTestTypeSimplifier(tmpDir);
     } finally {
-      assertTrue(testJava.delete());
-      new File(tmpDir, TEST_JAVA_CLASS_FILE_NAME).delete();
+      for (String className : CLASS_TO_SOURCE.keySet()) {
+        File java = new File(tmpDir, className + ".java");
+        assertTrue(java.delete());
+        new File(tmpDir, className + ".class").delete();
+      }
       assertTrue(tmpDir.delete());
     }
   }
@@ -100,15 +109,19 @@ public class TypeSimplifierTest extends TestCase {
     javac.getTask(compilerOut, fileManager, diagnosticCollector, options, null, null);
     // This doesn't compile anything but communicates the paths to the JavaFileManager.
 
-    JavaFileObject sourceFile = fileManager.getJavaFileForInput(
-        StandardLocation.SOURCE_PATH, TEST_JAVA_CLASS_NAME, Kind.SOURCE);
+    ImmutableList.Builder<JavaFileObject> javaFilesBuilder = ImmutableList.builder();
+    for (String className : CLASS_TO_SOURCE.keySet()) {
+      JavaFileObject sourceFile = fileManager.getJavaFileForInput(
+          StandardLocation.SOURCE_PATH, className, Kind.SOURCE);
+      javaFilesBuilder.add(sourceFile);
+    }
 
     // Compile the empty source file to trigger the annotation processor.
     // (Annotation processors are somewhat misnamed because they run even on classes with no
     // annotations.)
     JavaCompiler.CompilationTask javacTask = javac.getTask(
         compilerOut, fileManager, diagnosticCollector, options,
-        ImmutableList.of(TEST_JAVA_CLASS_NAME), ImmutableList.of(sourceFile));
+        CLASS_TO_SOURCE.keySet(), javaFilesBuilder.build());
     boolean compiledOk = javacTask.call();
     assertTrue(compilerOut.toString() + diagnosticCollector.getDiagnostics(), compiledOk);
   }
@@ -168,7 +181,8 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     public void testPackageNameOfDefaultPackage() {
-      assertEquals("", TypeSimplifier.packageNameOf(typeElementOf(TEST_JAVA_CLASS_NAME)));
+      String aClassName = CLASS_TO_SOURCE.keySet().iterator().next();
+      assertEquals("", TypeSimplifier.packageNameOf(typeElementOf(aClassName)));
     }
 
     public void testImportsForNoTypes() {
@@ -253,21 +267,27 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     public void testImportsForDefaultPackage() {
-      Set<TypeMirror> types = ImmutableSet.of(
+      ImmutableSet.Builder<TypeMirror> typesBuilder = ImmutableSet.builder();
+      for (String className : CLASS_TO_SOURCE.keySet()) {
+        typesBuilder.add(typeMirrorOf(className));
+        // These are all in the default package so they don't need to be imported.
+        // But MultipleBounds references java.util.List so that will be imported.
+      }
+      typesBuilder.add(
           typeUtil.getPrimitiveType(TypeKind.INT),
-          typeMirrorOf(TEST_JAVA_CLASS_NAME),
           typeMirrorOf("java.lang.String"),
           typeMirrorOf("java.util.Map"),
           typeMirrorOf("java.util.Map.Entry"),
           typeMirrorOf("java.util.regex.Pattern"),
           typeMirrorOf("javax.management.MBeanServer"));
       List<String> expectedImports = ImmutableList.of(
+          "java.util.List",
           "java.util.Map",
           "java.util.Map.Entry",
           "java.util.regex.Pattern",
           "javax.management.MBeanServer"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "", types);
+      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "", typesBuilder.build());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
@@ -321,6 +341,8 @@ public class TypeSimplifierTest extends TestCase {
     public void testSimplifyComplicatedTypes() {
       TypeElement list = typeElementOf("java.util.List");
       TypeElement map = typeElementOf("java.util.Map");
+      TypeMirror string = typeMirrorOf("java.lang.String");
+      TypeMirror integer = typeMirrorOf("java.lang.Integer");
       TypeMirror pattern = typeMirrorOf("java.util.regex.Pattern");
       TypeMirror timer = typeMirrorOf("java.util.Timer");
       TypeMirror bigInteger = typeMirrorOf("java.math.BigInteger");
@@ -332,6 +354,7 @@ public class TypeSimplifierTest extends TestCase {
           typeUtil.getArrayType(typeUtil.getArrayType(pattern)),
           typeUtil.getDeclaredType(list, typeUtil.getWildcardType(null, null)),
           typeUtil.getDeclaredType(list, timer),
+          typeUtil.getDeclaredType(map, string, integer),
           typeUtil.getDeclaredType(map,
               typeUtil.getWildcardType(timer, null), typeUtil.getWildcardType(null, bigInteger)));
       List<String> expectedSimplifications = ImmutableList.of(
@@ -342,6 +365,7 @@ public class TypeSimplifierTest extends TestCase {
           "Pattern[][]",
           "List<?>",
           "List<Timer>",
+          "Map<String, Integer>",
           "Map<? extends Timer, ? super BigInteger>"
       );
       TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
@@ -350,6 +374,17 @@ public class TypeSimplifierTest extends TestCase {
         actualSimplifications.add(typeSimplifier.simplify(type));
       }
       assertEquals(expectedSimplifications, actualSimplifications);
+    }
+
+    public void testSimplifyMultipleBounds() {
+      TypeElement multipleBoundsElement = typeElementOf("MultipleBounds");
+      TypeMirror multipleBoundsMirror = multipleBoundsElement.asType();
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "", ImmutableSet.of(multipleBoundsMirror));
+      assertEquals(ImmutableSet.of("java.util.List"), typeSimplifier.typesToImport());
+      assertEquals("MultipleBounds<K, V>", typeSimplifier.simplify(multipleBoundsMirror));
+      assertEquals("<K extends List<V> & Comparable<K>, V>",
+          typeSimplifier.formalTypeParametersString(multipleBoundsElement));
     }
   }
 }
