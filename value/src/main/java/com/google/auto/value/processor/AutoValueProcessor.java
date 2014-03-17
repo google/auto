@@ -63,7 +63,7 @@ import javax.tools.JavaFileObject;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
-@SupportedOptions(EclipseHack.ENABLING_OPTION)
+@SupportedOptions({EclipseHack.ENABLING_OPTION, EclipseHack.ENABLING_OPTION_BATCH })
 public class AutoValueProcessor extends AbstractProcessor {
   private static final boolean SILENT = true;
 

@@ -19,10 +19,12 @@ import com.google.auto.value.processor.AutoValueProcessor.Property;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
@@ -32,16 +34,24 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ElementVisitor;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
+import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
@@ -65,16 +75,19 @@ import javax.tools.StandardLocation;
  * {@code @AutoValue} constructor calls like {@code new AutoValue_Foo(...)} suddenly start being
  * redlined in a new Eclipse version then the likely cause is that the APIs have changed and this
  * hack will need to be updated to track the change.
- *
- * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=300408
+ * <p>
+ * @see <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=300408">Eclipse bug 300408</a>
  *
  * @author Éamonn McManus
  */
 class EclipseHack {
   static final String ENABLING_OPTION = "com.google.auto.value.EclipseHackTest";
+  static final String ENABLING_OPTION_BATCH =
+      "com.google.auto.value.EclipseBatchHackTest";
 
   private final ProcessingEnvironment processingEnv;
   private final boolean eclipseHackTest;
+  private final boolean eclipseHackBatchTest;
 
   EclipseHack(ProcessingEnvironment processingEnv) {
     boolean eclipseHackTest = processingEnv.getOptions().containsKey(ENABLING_OPTION);
@@ -82,6 +95,7 @@ class EclipseHack {
         ? new EclipseProcessingEnvironment(processingEnv)
         : processingEnv;
     this.eclipseHackTest = eclipseHackTest;
+    eclipseHackBatchTest = processingEnv.getOptions().containsKey(ENABLING_OPTION_BATCH);
   }
 
   // Fake implementation of ProcessingEnvironment that looks like Eclipse's, for testing only.
@@ -126,10 +140,7 @@ class EclipseHack {
     }
   }
 
-  private static class EclipseIFile {
-    private final File file;
-
-    EclipseIFile(ProcessingEnvironment processingEnv, TypeElement element) {
+  private static File getTestFile(ProcessingEnvironment processingEnv, TypeElement element) {
       Filer filer = processingEnv.getFiler();
       // walk up the enclosing elements until you find a top-level element
       Element topLevel = element;
@@ -140,14 +151,25 @@ class EclipseHack {
         FileObject resource = filer.getResource(StandardLocation.SOURCE_PATH,
             processingEnv.getElementUtils().getPackageOf(element).getQualifiedName(),
             topLevel.getSimpleName() + ".java");
-        this.file = new File(resource.toUri());
+        File file = new File(resource.toUri());
         if (!file.canRead()) {
           processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
               "Cannot find source code in file " + file, element);
         }
+        return file;
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
+  }
+
+  /**
+   * A simulation of an Eclipse IFile object used in the {@link EclipseProcessingEnvironment}.
+   */
+  private static class EclipseIFile {
+    private final File file;
+
+    EclipseIFile(ProcessingEnvironment processingEnv, TypeElement element) {
+      this.file = getTestFile(processingEnv, element);
     }
 
     @SuppressWarnings("unused") // accessed via reflection
@@ -163,6 +185,79 @@ class EclipseHack {
     @SuppressWarnings("unused") // accessed via reflection
     public URI getRawLocationURI() {
       return file.toURI();
+    }
+  }
+
+  /**
+   * A wrapper around {@link TypeElement} that simulates the Eclipse implementation of that class.
+   * The {@link #getFileName()} method is used to get the filename and is added to this class.
+   */
+  private class EclipseTypeElement implements TypeElement {
+    private final TypeElement delegate;
+
+    EclipseTypeElement(TypeElement delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override public TypeMirror asType() {
+      return delegate.asType();
+    }
+
+    @Override public ElementKind getKind() {
+      return delegate.getKind();
+    }
+
+    @Override public List<? extends AnnotationMirror> getAnnotationMirrors() {
+      return delegate.getAnnotationMirrors();
+    }
+
+    @Override public <A extends Annotation> A getAnnotation(Class<A> annotationType) {
+      return delegate.getAnnotation(annotationType);
+    }
+
+    @Override public Set<Modifier> getModifiers() {
+      return delegate.getModifiers();
+    }
+
+    @Override public <R, P> R accept(ElementVisitor<R, P> v, P p) {
+      return delegate.accept(v, p);
+    }
+
+    @Override public List<? extends Element> getEnclosedElements() {
+      return delegate.getEnclosedElements();
+    }
+
+    @Override public NestingKind getNestingKind() {
+      return delegate.getNestingKind();
+    }
+
+    @Override public Name getQualifiedName() {
+      return delegate.getQualifiedName();
+    }
+
+    @Override public Name getSimpleName() {
+      return delegate.getSimpleName();
+    }
+
+    @Override public TypeMirror getSuperclass() {
+      return delegate.getSuperclass();
+    }
+
+    @Override public List<? extends TypeMirror> getInterfaces() {
+      return delegate.getInterfaces();
+    }
+
+    @Override public List<? extends TypeParameterElement> getTypeParameters() {
+      return delegate.getTypeParameters();
+    }
+
+    @Override public Element getEnclosingElement() {
+      return delegate.getEnclosingElement();
+    }
+
+    @SuppressWarnings("unused")
+    public String getFileName() {
+      return getTestFile(processingEnv, delegate).toString();
     }
   }
 
@@ -233,7 +328,9 @@ class EclipseHack {
     }
   }
 
-  private PropertyOrderer getPropertyOrderer(TypeElement type) {
+  private PropertyOrderer getPropertyOrderer(TypeElement originalType) {
+    TypeElement type = eclipseHackBatchTest ? new EclipseTypeElement(originalType) : originalType;
+
     try {
       // If we are in Eclipse, then processingEnv will be an instance of
       // org.eclipse.jdt.internal.apt.pluggable.core.dispatch.IdeProcessingEnvImpl
@@ -270,8 +367,26 @@ class EclipseHack {
         return new SourcePropertyOrderer(type, readerProvider);
       }
     } catch (Exception e) {
-      // Reflection failed, so we are presumably not in Eclipse.
-      return null;
+      // The method getRawLocationURI used above exists on the Eclipse IDE environment, but not on
+      // the batch compiler environment. However, the file can also be obtained from the TypeElement
+      // through the getFileName method.
+      if (!type.getClass().getName().toLowerCase().contains("eclipse")) {
+        // Guard against the case where a non-Eclipse type happens to have a getFileName method
+        return null;
+      }
+      try {
+        final String filename = (String) type.getClass().getMethod("getFileName").invoke(type);
+        Callable<Reader> readerProvider = new Callable<Reader>() {
+          @Override
+          public Reader call() throws Exception {
+            return new FileReader(filename);
+          }
+        };
+        return new SourcePropertyOrderer(type, readerProvider);
+      } catch (Exception e2) {
+        // Reflection failed (twice), so we are presumably not in Eclipse.
+        return null;
+      }
     }
   }
 
