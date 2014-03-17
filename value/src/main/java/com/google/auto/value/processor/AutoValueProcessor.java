@@ -88,6 +88,10 @@ public class AutoValueProcessor extends AbstractProcessor {
   private static class CompileException extends Exception {}
   // CHECKSTYLE:ON
 
+  private void reportWarning(String msg, Element e) {
+    processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, msg, e);
+  }
+
   /**
    * Issue a compilation error. This method does not throw an exception, since we want to
    * continue processing and perhaps report other errors. It is a good idea to introduce a
@@ -580,9 +584,8 @@ public class AutoValueProcessor extends AbstractProcessor {
           }
           toImplement.add(method);
         } else {
-          reportError("@AutoValue classes cannot have abstract methods other than property getters",
-              method);
-          errors = true;
+          reportWarning("@AutoValue classes cannot have abstract methods other than "
+              + "property getters", method);
         }
       }
     }

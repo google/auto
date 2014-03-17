@@ -179,6 +179,9 @@ public class CompilationErrorsTest extends TestCase {
     assertCompilationFails(ImmutableList.of(testSourceCode));
   }
 
+  private static final Pattern CANNOT_HAVE_NON_PROPERTIES = Pattern.compile(
+      "@AutoValue classes cannot have abstract methods other than property getters");
+
   public void testAbstractVoid() throws Exception {
     String testSourceCode =
         "package foo.bar;\n" +
@@ -187,7 +190,11 @@ public class CompilationErrorsTest extends TestCase {
         "public abstract class Baz {\n" +
         "  public abstract void foo();\n" +
         "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
+    ImmutableMultimap<Diagnostic.Kind, Pattern> expectedDiagnostics = ImmutableMultimap.of(
+        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
+        Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
+    );
+    assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
   }
 
   public void testAbstractWithParams() throws Exception {
@@ -198,7 +205,11 @@ public class CompilationErrorsTest extends TestCase {
         "public abstract class Baz {\n" +
         "  public abstract int foo(int bar);\n" +
         "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
+    ImmutableMultimap<Diagnostic.Kind, Pattern> expectedDiagnostics = ImmutableMultimap.of(
+        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
+        Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
+    );
+    assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
   }
 
   public void testExtendAutoValue() throws Exception {

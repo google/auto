@@ -16,6 +16,7 @@
 package com.google.auto.value;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
@@ -841,6 +842,64 @@ public class AutoValueTest extends TestCase {
     int hash2 = maybeCached.hashCode();
     assertEquals(hash1, hash2);
     assertEquals(2, observer.hashCodeCount);
+  }
+
+  @AutoValue
+  static abstract class Version implements Comparable<Version> {
+    abstract int major();
+    abstract int minor();
+
+    static Version create(int major, int minor) {
+      return new AutoValue_AutoValueTest_Version(major, minor);
+    }
+
+    @Override
+    public int compareTo(Version that) {
+      return ComparisonChain.start()
+          .compare(this.major(), that.major())
+          .compare(this.minor(), that.minor())
+          .result();
+    }
+  }
+
+  public void testComparisonChain() {
+    assertEquals(Version.create(1, 2), Version.create(1, 2));
+    Version[] versions = {Version.create(1, 2), Version.create(1, 3), Version.create(2, 1)};
+    for (int i = 0; i < versions.length; i++) {
+      for (int j = 0; j < versions.length; j++) {
+        int actual = Integer.signum(versions[i].compareTo(versions[j]));
+        int expected = Integer.signum(i - j);
+        assertEquals(actual, expected);
+      }
+    }
+  }
+
+  static abstract class LukesBase {
+    interface LukesVisitor<T> {
+      T visit(LukesSub s);
+    }
+
+    abstract <T> T accept(LukesVisitor<T> visitor);
+
+    @AutoValue static abstract class LukesSub extends LukesBase {
+      static LukesSub create() {
+        return new AutoValue_AutoValueTest_LukesBase_LukesSub();
+      }
+
+      @Override <T> T accept(LukesVisitor<T> visitor) {
+        return visitor.visit(this);
+      }
+    }
+  }
+
+  public void testVisitor() {
+    LukesBase.LukesVisitor<String> visitor = new LukesBase.LukesVisitor<String>() {
+      @Override public String visit(LukesBase.LukesSub s) {
+        return s.toString();
+      }
+    };
+    LukesBase.LukesSub sub = LukesBase.LukesSub.create();
+    assertEquals(sub.toString(), sub.accept(visitor));
   }
 
   @AutoValue
