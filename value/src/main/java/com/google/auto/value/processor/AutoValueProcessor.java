@@ -29,9 +29,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
@@ -173,99 +171,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  // This is just because I hate typing    "...\n" +   all the time.
-  private static String concatLines(String... lines) {
-    StringBuilder sb = new StringBuilder();
-    for (String line : lines) {
-      sb.append(line).append("\n");
-    }
-    return sb.toString();
-  }
-
-  // The code below uses a small templating language. This is not hugely readable, but is much more
-  // so than sb.append(this).append(that) with ifs and fors scattered around everywhere.
-  // See the Template class for an explanation of the various constructs.
-  private static final String TEMPLATE_STRING = concatLines(
-      // CHECKSTYLE:OFF:OperatorWrap
-      // Package declaration
-      "$[pkg?package $[pkg];\n]",
-
-      // Imports
-      "$[imports:i||import $[i];\n]",
-
-      // @Generated annotation
-      "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
-
-      // Class declaration
-      "final class $[subclass]$[formaltypes] extends $[origclass]$[actualtypes] {",
-
-      // Fields
-      "$[props:p||  private final $[p.type] $[p];\n]",
-
-      // Constructor
-      "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
-      "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
-      "      throw new NullPointerException(\"Null $[p]\");",
-      "    }",
-      "]]" +
-      "    this.$[p] = $[p];]",
-      "  }",
-
-      // Property getters
-      "$[props:p|\n|\n  @Override",
-      "  $[p.access]$[p.type] $[p]() {",
-      "    return $[p.array?[$[p.nullable?$[p] == null ? null : ]$[p].clone()][$[p]]];",
-      "  }]",
-
-      // toString()
-      "$[toString?\n  @Override",
-      "  public String toString() {",
-      "    return \"$[simpleclassname]{\"$[props?\n        + \"]" +
-      "$[props:p|\n        + \", |" +
-                "$[p]=\" + $[p.array?[$[Arrays].toString($[p])][$[p]]]]",
-      "        + \"}\";",
-      "  }]",
-
-      // equals(Object)
-      "$[equals?\n  @Override",
-      "  public boolean equals(Object o) {",
-      "    if (o == this) {",
-      "      return true;",
-      "    }",
-      "    if (o instanceof $[origclass]) {",
-      "      $[origclass]$[wildcardtypes] that = ($[origclass]$[wildcardtypes]) o;",
-      "      return $[props!true]" +
-                   "$[props:p|\n          && |($[p.equalsThatExpression])];",
-      "    }",
-      "    return false;",
-      "  }]",
-
-      // hashCode()
-      "$[hashCode?",
-      "  @Override",
-      "  public int hashCode() {",
-      "    int h = 1;",
-      "$[props:p||" +
-      "    h *= 1000003;",
-      "    h ^= $[p.hashCodeExpression];",
-      "]" +
-      "    return h;",
-      "  }]" +
-
-      // serialVersionUID
-      "$[serialVersionUID?\n\n  private static final long serialVersionUID = $[serialVersionUID];]",
-
-      "}"
-      // CHECKSTYLE:ON
-  );
-  private static final Template template = Template.compile(TEMPLATE_STRING);
-
   static class Property {
     private final ExecutableElement method;
     private final String type;
-    private final Map<String, Object> vars;
+    private final AutoValueTemplateVars vars;
 
-    Property(ExecutableElement method, String type, Map<String, Object> vars) {
+    Property(ExecutableElement method, String type, AutoValueTemplateVars vars) {
       this.method = method;
       this.type = type;
       this.vars = vars;
@@ -305,7 +216,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     private static final Template PRIMITIVE_EQUALS_TEMPLATE =
         Template.compile("this.$[p] == that.$[p]()");
     private static final Template ARRAY_EQUALS_TEMPLATE =
-        Template.compile("$[Arrays].equals(this.$[p], "
+        Template.compile("$[javaUtilArraysSpelling].equals(this.$[p], "
             + "(that instanceof $[subclass]) ? (($[subclass]) that).$[p] : that.$[p]())");
     private static final Template FLOAT_EQUALS_TEMPLATE = Template.compile(
         "Float.floatToIntBits(this.$[p]) == Float.floatToIntBits(that.$[p]())");
@@ -323,7 +234,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     public String equalsThatExpression() {
       // If the templating language had a case statement we wouldn't need this function, but the
       // language is unreadable enough as it is.
-      Template template;
+      final Template equalsTemplate;
       switch (method.getReturnType().getKind()) {
         case BYTE:
         case SHORT:
@@ -331,24 +242,35 @@ public class AutoValueProcessor extends AbstractProcessor {
         case INT:
         case LONG:
         case BOOLEAN:
-          template = PRIMITIVE_EQUALS_TEMPLATE;
+          equalsTemplate = PRIMITIVE_EQUALS_TEMPLATE;
           break;
         case FLOAT:
-          template = FLOAT_EQUALS_TEMPLATE;
+          equalsTemplate = FLOAT_EQUALS_TEMPLATE;
           break;
         case DOUBLE:
-          template = DOUBLE_EQUALS_TEMPLATE;
+          equalsTemplate = DOUBLE_EQUALS_TEMPLATE;
           break;
         case ARRAY:
-          template = ARRAY_EQUALS_TEMPLATE;
+          equalsTemplate = ARRAY_EQUALS_TEMPLATE;
           break;
         default:
-          template = OBJECT_EQUALS_TEMPLATE;
+          equalsTemplate = OBJECT_EQUALS_TEMPLATE;
           break;
       }
-      Map<String, Object> newVars = new TreeMap<String, Object>(vars);
-      newVars.put("p", this);
-      return template.rewrite(newVars);
+      class EqualsTemplateVars extends TemplateVars {
+        String javaUtilArraysSpelling;
+        String subclass;
+        Property p;
+
+        @Override Template template() {
+          return equalsTemplate;
+        }
+      }
+      EqualsTemplateVars equalsTemplateVars = new EqualsTemplateVars();
+      equalsTemplateVars.javaUtilArraysSpelling = vars.javaUtilArraysSpelling;
+      equalsTemplateVars.subclass = vars.subclass;
+      equalsTemplateVars.p = this;
+      return equalsTemplateVars.toText();
     }
 
     /**
@@ -371,7 +293,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         case BOOLEAN:
           return this + " ? 1231 : 1237";
         case ARRAY:
-          return vars.get("Arrays") + ".hashCode(" + this + ")";
+          return vars.javaUtilArraysSpelling + ".hashCode(" + this + ")";
         default:
           if (nullable()) {
             return "(" + this + " == null) ? 0 : " + this + ".hashCode()";
@@ -397,12 +319,28 @@ public class AutoValueProcessor extends AbstractProcessor {
     return type.getSuperclass().getKind() == TypeKind.NONE && type.getKind() == ElementKind.CLASS;
   }
 
-  private static boolean isToStringOrEqualsOrHashCode(ExecutableElement method) {
+  private enum ObjectMethodToOverride {
+    NONE, TO_STRING, EQUALS, HASH_CODE
+  }
+
+  private static ObjectMethodToOverride objectMethodToOverride(ExecutableElement method) {
     String name = method.getSimpleName().toString();
-    return ((name.equals("toString") || name.equals("hashCode"))
-              && method.getParameters().isEmpty())
-        || (name.equals("equals") && method.getParameters().size() == 1
-              && method.getParameters().get(0).asType().toString().equals("java.lang.Object"));
+    switch (method.getParameters().size()) {
+      case 0:
+        if (name.equals("toString")) {
+          return ObjectMethodToOverride.TO_STRING;
+        } else if (name.equals("hashCode")) {
+          return ObjectMethodToOverride.HASH_CODE;
+        }
+        break;
+      case 1:
+        if (name.equals("equals")
+            && method.getParameters().get(0).asType().toString().equals("java.lang.Object")) {
+          return ObjectMethodToOverride.EQUALS;
+        }
+        break;
+    }
+    return ObjectMethodToOverride.NONE;
   }
 
   private void findLocalAndInheritedMethods(TypeElement type, List<ExecutableElement> methods) {
@@ -456,21 +394,21 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (ancestorIsAutoValue(type)) {
       abortWithError("One @AutoValue class may not extend another", type);
     }
-    Map<String, Object> vars = new TreeMap<String, Object>();
-    vars.put("pkg", TypeSimplifier.packageNameOf(type));
-    vars.put("origclass", classNameOf(type));
-    vars.put("simpleclassname", simpleNameOf(classNameOf(type)));
-    vars.put("subclass", simpleNameOf(generatedSubclassName(type)));
+    AutoValueTemplateVars vars = new AutoValueTemplateVars();
+    vars.pkg = TypeSimplifier.packageNameOf(type);
+    vars.origClass = classNameOf(type);
+    vars.simpleClassName = simpleNameOf(vars.origClass);
+    vars.subclass = simpleNameOf(generatedSubclassName(type));
     defineVarsForType(type, vars);
-    String text = template.rewrite(vars);
+    String text = vars.toText();
     writeSourceFile(generatedSubclassName(type), text, type);
   }
 
-  private void defineVarsForType(TypeElement type, Map<String, Object> vars)
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars)
       throws CompileException {
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
-    vars.putAll(objectMethodsToGenerate(methods));
+    determineObjectMethodsToGenerate(methods, vars);
     dontImplementAnnotationEqualsOrHashCode(type, vars);
     List<ExecutableElement> toImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new HashSet<TypeMirror>();
@@ -483,8 +421,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types);
-    vars.put("imports", typeSimplifier.typesToImport());
-    vars.put("Arrays", typeSimplifier.simplify(javaUtilArrays));
+    vars.imports = typeSimplifier.typesToImport();
+    vars.javaUtilArraysSpelling = typeSimplifier.simplify(javaUtilArrays);
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
       String propType = typeSimplifier.simplify(method.getReturnType());
@@ -493,11 +431,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
-    vars.put("props", props);
-    vars.put("serialVersionUID", getSerialVersionUID(type));
-    vars.put("formaltypes", typeSimplifier.formalTypeParametersString(type));
-    vars.put("actualtypes", actualTypeParametersString(type));
-    vars.put("wildcardtypes", wildcardTypeParametersString(type));
+    vars.props = props;
+    vars.serialVersionUID = getSerialVersionUID(type);
+    vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
+    vars.actualTypes = actualTypeParametersString(type);
+    vars.wildcardTypes = wildcardTypeParametersString(type);
   }
 
   private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {
@@ -517,15 +455,14 @@ public class AutoValueProcessor extends AbstractProcessor {
     return false;
   }
 
-  private void dontImplementAnnotationEqualsOrHashCode(TypeElement type, Map<String, ?> vars) {
+  private void dontImplementAnnotationEqualsOrHashCode(
+      TypeElement type, AutoValueTemplateVars vars) {
     TypeMirror javaLangAnnotationAnnotation = getTypeMirror(Annotation.class);
     Types typeUtils = processingEnv.getTypeUtils();
     if (typeUtils.isAssignable(type.asType(), javaLangAnnotationAnnotation)) {
-      boolean equals = (Boolean) vars.get("equals");
-      boolean hashCode = (Boolean) vars.get("hashCode");
-      if (equals || hashCode) {
-        String bad = equals
-            ? (hashCode ? "equals(Object) and hashCode()" : "equals(Object)")
+      if (vars.equals || vars.hashCode) {
+        String bad = vars.equals
+            ? (vars.hashCode ? "equals(Object) and hashCode()" : "equals(Object)")
             : "hashCode()";
         reportError("The implementation of " + bad + " that would be generated for this @AutoValue "
             + "class would not obey the contract of " + bad + " in " + Annotation.class.getName(),
@@ -535,28 +472,34 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   /**
-   * Given a list of all methods defined in or inherited by a class, returns a map with keys
-   * "toString", "equals", "hashCode" and corresponding value true if that method should be
-   * generated.
+   * Given a list of all methods defined in or inherited by a class, sets the equals, hashCode, and
+   * toString fields of vars according as the corresponding methods should be generated.
    */
-  private static Map<String, Boolean> objectMethodsToGenerate(List<ExecutableElement> methods) {
-    Map<String, Boolean> vars = new TreeMap<String, Boolean>();
+  private static void determineObjectMethodsToGenerate(
+      List<ExecutableElement> methods, AutoValueTemplateVars vars) {
     // The defaults here only come into play when an ancestor class doesn't exist.
     // Compilation will fail in that case, but we don't want it to crash the compiler with
     // an exception before it does. If all ancestors do exist then we will definitely find
     // definitions of these three methods (perhaps the ones in Object) so we will overwrite these:
-    vars.put("equals", false);
-    vars.put("hashCode", false);
-    vars.put("toString", false);
+    vars.equals = false;
+    vars.hashCode = false;
+    vars.toString = false;
     for (ExecutableElement method : methods) {
-      if (isToStringOrEqualsOrHashCode(method)) {
-        boolean canGenerate = method.getModifiers().contains(Modifier.ABSTRACT)
-            || isJavaLangObject((TypeElement) method.getEnclosingElement());
-        vars.put(method.getSimpleName().toString(), canGenerate);
+      ObjectMethodToOverride override = objectMethodToOverride(method);
+      boolean canGenerate = method.getModifiers().contains(Modifier.ABSTRACT)
+          || isJavaLangObject((TypeElement) method.getEnclosingElement());
+      switch (override) {
+        case EQUALS:
+          vars.equals = canGenerate;
+          break;
+        case HASH_CODE:
+          vars.hashCode = canGenerate;
+          break;
+        case TO_STRING:
+          vars.toString = canGenerate;
+          break;
       }
     }
-    assert vars.size() == 3;
-    return vars;
   }
 
   private List<ExecutableElement> methodsToImplement(List<ExecutableElement> methods)
@@ -565,7 +508,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     boolean errors = false;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
-          && !isToStringOrEqualsOrHashCode(method)) {
+          && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
           if (isReferenceArrayType(method.getReturnType())) {
             reportError("An @AutoValue class cannot define an array-valued property unless it is "
