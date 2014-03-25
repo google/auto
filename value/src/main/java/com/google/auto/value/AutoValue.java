@@ -19,9 +19,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies that <a href="http://goo.gl/Ter394">AutoValue</a> should generate an implementation
- * class for the annotated abstract class, implementing the standard {@link Object} methods like
- * {@link Object#equals equals} to have conventional value semantics. A simple example: <pre>
+ * Specifies that <a href="https://github.com/google/auto/tree/master/value">AutoValue</a> should
+ * generate an implementation class for the annotated abstract class, implementing the standard
+ * {@link Object} methods like {@link Object#equals equals} to have conventional value semantics. A
+ * simple example: <pre>
  *
  *   &#64;AutoValue
  *   abstract class Person {
@@ -33,7 +34,7 @@ import java.lang.annotation.Target;
  *     abstract int id();
  *   }</pre>
  *
- * @see <a href="http://goo.gl/Ter394">AutoValue User's Guide</a>
+ * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
  *
  *
  * @author Éamonn McManus
