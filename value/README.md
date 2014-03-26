@@ -41,6 +41,7 @@ Contents
 - [Restrictions and non-features](#restrictions-and-non-features)
 - [Best practices](#best-practices)
 - [Alternatives](#alternatives)
+- [Troubleshooting](#troubleshooting)
 
 
 Background
@@ -359,3 +360,12 @@ why we considered them insufficient.
 
 [1]: http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ComparisonChain.html
 [2]: https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ75RE/edit
+
+
+Troubleshooting
+------------------
+
+If you get an error `error: cannot find symbol` related to the AutoValue
+generated class, and you are using nested classes, make sure you are
+using the correct generated name that includes the nesting classes. See
+the [Nesting](#Nesting) section.
