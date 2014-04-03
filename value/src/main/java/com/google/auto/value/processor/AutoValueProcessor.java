@@ -195,6 +195,33 @@ public class AutoValueProcessor extends AbstractProcessor {
       return type;
     }
 
+    public String castType() {
+      return primitive() ? box(method.getReturnType().getKind()) : type();
+    }
+
+    private String box(TypeKind kind) {
+      switch (kind) {
+        case BOOLEAN:
+          return "Boolean";
+        case BYTE:
+          return "Byte";
+        case SHORT:
+          return "Short";
+        case INT:
+          return "Integer";
+        case LONG:
+          return "Long";
+        case CHAR:
+          return "Character";
+        case FLOAT:
+          return "Float";
+        case DOUBLE:
+          return "Double";
+        default:
+          throw new RuntimeException("Unknown primitive of kind " + kind);
+        }
+    }
+
     public boolean primitive() {
       return method.getReturnType().getKind().isPrimitive();
     }
@@ -320,7 +347,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private enum ObjectMethodToOverride {
-    NONE, TO_STRING, EQUALS, HASH_CODE
+    NONE, TO_STRING, EQUALS, HASH_CODE, DESCRIBE_CONTENTS, WRITE_TO_PARCEL
   }
 
   private static ObjectMethodToOverride objectMethodToOverride(ExecutableElement method) {
@@ -331,12 +358,21 @@ public class AutoValueProcessor extends AbstractProcessor {
           return ObjectMethodToOverride.TO_STRING;
         } else if (name.equals("hashCode")) {
           return ObjectMethodToOverride.HASH_CODE;
+        } else if (name.equals("describeContents")) {
+          return ObjectMethodToOverride.DESCRIBE_CONTENTS;
         }
         break;
       case 1:
         if (name.equals("equals")
             && method.getParameters().get(0).asType().toString().equals("java.lang.Object")) {
           return ObjectMethodToOverride.EQUALS;
+        }
+        break;
+      case 2:
+        if (name.equals("writeToParcel")
+            && method.getParameters().get(0).asType().toString().equals("android.os.Parcelable")
+            && method.getParameters().get(1).asType().toString().equals("int")) {
+          return ObjectMethodToOverride.WRITE_TO_PARCEL;
         }
         break;
     }
@@ -436,6 +472,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
     vars.actualTypes = actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
+
+    TypeElement parcelable = processingEnv.getElementUtils().getTypeElement("android.os.Parcelable");
+    vars.parcelable = parcelable != null
+        && processingEnv.getTypeUtils().isAssignable(type.asType(), parcelable.asType());
   }
 
   private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {
