@@ -58,25 +58,22 @@ Download
 --------
 
 In order to activate code generation you will need to
-include `autofactory-${autofactory.version}.jar` in your build at 
+include `auto-factory-${autofactory.version}.jar` in your build at 
 compile time.
 
-In a Maven project, one would include the `autofactory-generator` 
+In a Maven project, one would include the `auto-factory` 
 artifact as an "optional" dependency:
 
 ```xml
 <dependencies>
   <dependency>
-    <groupId>com.google.autofactory</groupId>
-    <artifactId>autofactory-generator</artifactId>
+    <groupId>com.google.auto.factory</groupId>
+    <artifactId>auto-factory</artifactId>
     <version>${autofactory.version}</version>
     <optional>true</optional>
   </dependency>
 </dependencies>
 ```
-
-You can also find downloadable .jars on the [GitHub download page](http://github.com/google/autofactory/downloads).
-
 
 
 License

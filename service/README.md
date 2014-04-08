@@ -1,0 +1,92 @@
+AutoService
+======
+
+A configuration/metadata generator for java.util.ServiceLoader-style service providers 
+
+An annotation for service providers as described in {@link java.util.ServiceLoader}. The
+ * {@link ServiceProviderProcessor} generates the configuration files which allows service providers
+ * to be loaded with {@link java.util.ServiceLoader#load(Class)}.
+ *
+ * <p>Service providers assert that they conform to the service provider specification.
+ * Specifically, they must:
+ * <ul>
+ * <li>be a non-inner, non-anonymous, concrete class
+ * <li>have a publicly accessible no-arg constructor
+ * <li>implement the interface type returned by {@code value()}
+ * </ul>
+AutoWhat‽
+-------------
+
+[Java][java] annotation processors and other systems use the java.util.ServiceLoader to 
+allow JVMs to consume service providers from the classpath as noted in META-INF metadata.
+However, it is easy for a developer to forget to update or correctly specify the service
+descriptors.  AutoService generates this metadata for the developer, for any class annotated
+with `@AutoService`, avoiding typos, providing resistence to errors from refactoring, etc.
+
+Example
+-------
+
+Say you have:
+
+```java
+package foo.bar;
+
+// ... imports
+
+@AutoService(Processor.class)
+final class MyProcessor extends Processor {
+  // …
+}
+```
+
+AutoFactory will generate the file `META-INF/services/javax.annotation.processing.Processor`
+in the output classes folder. The file will contain:
+
+```
+foo.bar.MyProcessor
+```
+
+In the case of javax.annotation.processing.Processor, if this metadata file is included in a jar,
+and that jar is on javac's classpath, then javac will automatically load it, and include it in
+its normal annotation processing environemnt.  Other users of java.util.ServiceLoader may use 
+the infrastructure to different ends, but this metadata will provide auto-loading appropriately.
+
+Download
+--------
+
+In order to activate metadata generation you will need to include 
+`autoservice-${autoservice.version}.jar` in your build at compile time.
+
+In a Maven project, one would include the `autoservice` 
+artifact as an "optional" dependency:
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.google.auto.service</groupId>
+    <artifactId>autoservice</artifactId>
+    <version>${autoservice.version}</version>
+    <optional>true</optional>
+  </dependency>
+</dependencies>
+```
+
+License
+-------
+
+    Copyright 2013 Google, Inc.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+[java]: https://en.wikipedia.org/wiki/Java_(programming_language)
+
