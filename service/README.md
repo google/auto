@@ -44,17 +44,17 @@ Download
 --------
 
 In order to activate metadata generation you will need to include 
-`autoservice-${autoservice.version}.jar` in your build at compile time.
+`auto-service-${version}.jar` in your build at compile time.
 
-In a Maven project, one would include the `autoservice` 
+In a Maven project, one would include the `auto-service` 
 artifact as an "optional" dependency:
 
 ```xml
 <dependencies>
   <dependency>
     <groupId>com.google.auto.service</groupId>
-    <artifactId>autoservice</artifactId>
-    <version>${autoservice.version}</version>
+    <artifactId>auto-service</artifactId>
+    <version>${version}</version>
     <optional>true</optional>
   </dependency>
 </dependencies>

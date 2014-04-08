@@ -58,7 +58,7 @@ Download
 --------
 
 In order to activate code generation you will need to
-include `auto-factory-${autofactory.version}.jar` in your build at 
+include `auto-factory-${version}.jar` in your build at 
 compile time.
 
 In a Maven project, one would include the `auto-factory` 
@@ -69,7 +69,7 @@ artifact as an "optional" dependency:
   <dependency>
     <groupId>com.google.auto.factory</groupId>
     <artifactId>auto-factory</artifactId>
-    <version>${autofactory.version}</version>
+    <version>${version}</version>
     <optional>true</optional>
   </dependency>
 </dependencies>
