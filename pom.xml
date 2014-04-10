@@ -72,7 +72,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>16.0</version>
+        <version>16.0.1</version>
       </dependency>
       <dependency>
         <groupId>com.squareup</groupId>
@@ -82,12 +82,12 @@
       <dependency>
         <groupId>com.squareup.dagger</groupId>
         <artifactId>dagger</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.1</version>
       </dependency>
       <dependency>
         <groupId>com.squareup.dagger</groupId>
         <artifactId>dagger-compiler</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.1</version>
         <optional>true</optional>
       </dependency>
       <dependency>
@@ -100,13 +100,13 @@
       <dependency>
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>
-        <version>0.3</version>
+        <version>0.4</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava-testlib</artifactId>
-        <version>15.0</version>
+        <version>16.0.1</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -118,7 +118,7 @@
       <dependency>
         <groupId>org.truth0</groupId>
         <artifactId>truth</artifactId>
-        <version>0.13</version>
+        <version>0.15</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
