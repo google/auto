@@ -130,7 +130,7 @@ values going in and out.
 ```java
     public void testExample() {
       Example ex = Example.create("happy", 23);
-      assertEquals(“happy”, ex.name());
+      assertEquals("happy", ex.name());
       assertEquals(23, ex.integer());
     
       // You really don't need to write tests like these; just illustrating.
