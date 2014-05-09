@@ -17,9 +17,11 @@ package com.google.auto.value;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
-
 import junit.framework.TestCase;
 
+import java.beans.ConstructorProperties;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,6 +43,11 @@ public class SimpleValueTypeTest extends TestCase {
     expectedHashCode = (expectedHashCode * 1000003) ^ ((Object) testInt).hashCode();
     expectedHashCode = (expectedHashCode * 1000003) ^ testMap.hashCode();
     assertEquals(expectedHashCode, simple.hashCode());
+    ConstructorProperties constructorAnnotation = simple.getClass().getDeclaredConstructors()[0]
+        .getAnnotation(ConstructorProperties.class);
+    assertNotNull(constructorAnnotation);
+    List<String> expectedConstructorPropertyOrder = Arrays.asList("string", "integer", "map");
+    assertEquals(expectedConstructorPropertyOrder, Arrays.asList(constructorAnnotation.value()));
   }
 
   public void testNestedValueType() {
