@@ -97,6 +97,7 @@ class AutoValueTemplateVars extends TemplateVars {
       "$[props:p||  private final $[p.type] $[p];\n]",
 
       // Constructor
+      "  @java.beans.ConstructorProperties({\n      $[props:p|,\n      |\"$[p]\"]})",
       "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
       "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
       "      throw new NullPointerException(\"Null $[p]\");",
