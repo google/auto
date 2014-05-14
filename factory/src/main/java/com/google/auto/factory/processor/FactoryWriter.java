@@ -83,7 +83,7 @@ final class FactoryWriter {
     String factoryName = getSimpleName(descriptor.name()).toString();
     writer.emitAnnotation(Generated.class,
         ImmutableMap.of("value", "\"" + AutoFactoryProcessor.class.getName() + "\""));
-    EnumSet<Modifier> modifiers = EnumSet.of(FINAL);
+    EnumSet<Modifier> modifiers = EnumSet.noneOf(Modifier.class);
     if (descriptor.publicType()) {
       modifiers.add(PUBLIC);
     }

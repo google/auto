@@ -19,7 +19,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class FactoryExtendingAbstractClassFactory extends FactoryExtendingAbstractClass.AbstractFactory {
+class FactoryExtendingAbstractClassFactory extends FactoryExtendingAbstractClass.AbstractFactory {
   @Inject FactoryExtendingAbstractClassFactory() {}
   
   FactoryExtendingAbstractClass create() {

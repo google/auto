@@ -20,7 +20,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class ConstructorAnnotatedFactory {
+class ConstructorAnnotatedFactory {
   private final Provider<Object> objProvider;
   
   @Inject ConstructorAnnotatedFactory(Provider<Object> objProvider) {
