@@ -17,7 +17,7 @@ Subprojects
 
   * [AutoFactory](https://github.com/google/auto/tree/master/factory) - JSR-330-compatible factories
 
-    Latest version: Unreleased
+    Latest version: `0.1-beta1`
 
   * [AutoService](https://github.com/google/auto/tree/master/service) - Provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
 
