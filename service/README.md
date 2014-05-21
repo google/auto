@@ -6,11 +6,11 @@ A configuration/metadata generator for java.util.ServiceLoader-style service pro
 AutoWhat‽
 ---------
 
-[Java][java] annotation processors and other systems use the java.util.ServiceLoader to 
-allow JVMs to consume service providers from the classpath as noted in META-INF metadata.
-However, it is easy for a developer to forget to update or correctly specify the service
-descriptors.  AutoService generates this metadata for the developer, for any class annotated
-with `@AutoService`, avoiding typos, providing resistence to errors from refactoring, etc.
+[Java][java] annotation processors and other systems use [java.util.ServiceLoader][sl] to
+register implementations of well-known types using META-INF metadata. However, it is easy
+for a developer to forget to update or correctly specify the service descriptors.  
+AutoService generates this metadata for the developer, for any class annotated with
+`@AutoService`, avoiding typos, providing resistance to errors from refactoring, etc.
 
 Example
 -------
@@ -20,7 +20,7 @@ Say you have:
 ```java
 package foo.bar;
 
-// ... imports
+import javax.annotation.processing.Processor;
 
 @AutoService(Processor.class)
 final class MyProcessor extends Processor {
@@ -36,8 +36,8 @@ foo.bar.MyProcessor
 ```
 
 In the case of javax.annotation.processing.Processor, if this metadata file is included in a jar,
-and that jar is on javac's classpath, then javac will automatically load it, and include it in
-its normal annotation processing environemnt.  Other users of java.util.ServiceLoader may use 
+and that jar is on javac's classpath, then `javac` will automatically load it, and include it in
+its normal annotation processing environment.  Other users of java.util.ServiceLoader may use 
 the infrastructure to different ends, but this metadata will provide auto-loading appropriately.
 
 Download
@@ -78,4 +78,4 @@ License
     limitations under the License.
 
 [java]: https://en.wikipedia.org/wiki/Java_(programming_language)
-
+[sl]: http://docs.oracle.com/javase/6/docs/api/java/util/ServiceLoader.html
