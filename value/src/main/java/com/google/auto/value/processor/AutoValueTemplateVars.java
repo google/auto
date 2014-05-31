@@ -44,6 +44,9 @@ class AutoValueTemplateVars extends TemplateVars {
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
 
+  /** Whether to generate a Parcelable creator. */
+  Boolean parcelable;
+
   /**
    * The package of the class with the {@code @AutoValue} annotation and its generated subclass.
    */
@@ -86,9 +89,6 @@ class AutoValueTemplateVars extends TemplateVars {
 
       // Imports
       "$[imports:i||import $[i];\n]",
-
-      // @Generated annotation
-      "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
 
       // Class declaration
       "final class $[subclass]$[formalTypes] extends $[origClass]$[actualTypes] {",
@@ -148,6 +148,32 @@ class AutoValueTemplateVars extends TemplateVars {
 
       // serialVersionUID
       "$[serialVersionUID?\n\n  private static final long serialVersionUID = $[serialVersionUID];]",
+
+          // parcelable
+      "$[parcelable?\n\n",
+      "  public static final android.os.Parcelable.Creator<$[origClass]> CREATOR = new android.os.Parcelable.Creator<$[origClass]>() {",
+      "    @Override public $[origClass] createFromParcel(android.os.Parcel in) {",
+      "      return new $[subclass](in);",
+      "    }",
+      "    @Override public $[origClass][] newArray(int size) {",
+      "      return new $[origClass][size];",
+      "    }",
+      "  };",
+      "",
+      "  private final static java.lang.ClassLoader CL = $[subclass].class.getClassLoader();",
+      "",
+      "  private $[subclass](android.os.Parcel in) {",
+      "    this(\n      $[props:p|,\n      |($[p.castType]) in.readValue(CL)]);",
+      "  }",
+      "",
+      "  @Override public void writeToParcel(android.os.Parcel dest, int flags) {",
+      "$[props:p||    dest.writeValue($[p]);\n]",
+      "  }",
+      "",
+      "  @Override public int describeContents() {",
+      "    return 0;",
+      "  }",
+      "]",
 
       "}"
       // CHECKSTYLE:ON
