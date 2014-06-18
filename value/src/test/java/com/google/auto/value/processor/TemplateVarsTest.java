@@ -3,7 +3,12 @@ package com.google.auto.value.processor;
 import com.google.common.collect.ImmutableList;
 
 import junit.framework.TestCase;
+import org.apache.velocity.runtime.RuntimeSingleton;
+import org.apache.velocity.runtime.parser.ParseException;
+import org.apache.velocity.runtime.parser.node.SimpleNode;
 
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.List;
 
 /**
@@ -18,8 +23,17 @@ public class TemplateVarsTest extends TestCase {
     List<Integer> list;
     private static final String IGNORED_STATIC_FINAL = "hatstand";
 
-    @Override Template template() {
-      return Template.compile("integer=$[integer] string=$[string] list=$[list]");
+    @Override SimpleNode parsedTemplate() {
+      return parsedTemplateForString("integer=$integer string=$string list=$list");
+    }
+  }
+
+  static SimpleNode parsedTemplateForString(String string) {
+    try {
+      Reader reader = new StringReader(string);
+      return RuntimeSingleton.parse(reader, string);
+    } catch (ParseException e) {
+      throw new AssertionError(e);
     }
   }
 
@@ -59,7 +73,7 @@ public class TemplateVarsTest extends TestCase {
     Integer integer;
     private String string;
 
-    @Override Template template() {
+    @Override SimpleNode parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -76,7 +90,7 @@ public class TemplateVarsTest extends TestCase {
     Integer integer;
     static String string;
 
-    @Override Template template() {
+    @Override SimpleNode parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -93,7 +107,7 @@ public class TemplateVarsTest extends TestCase {
     int integer;
     String string;
 
-    @Override Template template() {
+    @Override SimpleNode parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -104,11 +118,5 @@ public class TemplateVarsTest extends TestCase {
       fail("Did not get expected exception");
     } catch (IllegalArgumentException expected) {
     }
-  }
-
-  public void testConcatLines() {
-    String actual = TemplateVars.concatLines("foo", "bar", "baz");
-    String expected = "foo\nbar\nbaz\n";
-    assertEquals(expected, actual);
   }
 }

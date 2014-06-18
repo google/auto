@@ -19,7 +19,9 @@ import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -133,6 +135,11 @@ public class AutoValueProcessor extends AbstractProcessor {
       } catch (RuntimeException e) {
         // Don't propagate this exception, which will confusingly crash the compiler.
         reportError("@AutoValue processor threw an exception: " + e, type);
+        StringWriter writer = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(writer);
+        e.printStackTrace(printWriter);
+        printWriter.flush();
+        note(writer.toString());
       }
     }
   }
@@ -171,7 +178,14 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  static class Property {
+  /**
+   * A property of an {@code @AutoValue} class, defined by one of its abstract methods.
+   * An instance of this class is made available to the Velocity template engine for
+   * each property. The public methods of this class define JavaBeans-style properties
+   * that are accessible from templates. For example {@link #getType()} means we can
+   * write {@code $p.type} for a Velocity variable {@code $p} that is a {@code Property}.
+   */
+  public static class Property {
     private final ExecutableElement method;
     private final String type;
     private final AutoValueTemplateVars vars;
@@ -187,23 +201,19 @@ public class AutoValueProcessor extends AbstractProcessor {
       return method.getSimpleName().toString();
     }
 
-    TypeElement owner() {
+    TypeElement getOwner() {
       return (TypeElement) method.getEnclosingElement();
     }
 
-    public String type() {
+    public String getType() {
       return type;
     }
 
-    public boolean primitive() {
-      return method.getReturnType().getKind().isPrimitive();
+    public TypeKind getKind() {
+      return method.getReturnType().getKind();
     }
 
-    public boolean array() {
-      return method.getReturnType().getKind() == TypeKind.ARRAY;
-    }
-
-    public boolean nullable() {
+    public boolean isNullable() {
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
         String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
         if (name.equals("Nullable")) {
@@ -213,97 +223,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       return false;
     }
 
-    private static final Template PRIMITIVE_EQUALS_TEMPLATE =
-        Template.compile("this.$[p] == that.$[p]()");
-    private static final Template ARRAY_EQUALS_TEMPLATE =
-        Template.compile("$[javaUtilArraysSpelling].equals(this.$[p], "
-            + "(that instanceof $[subclass]) ? (($[subclass]) that).$[p] : that.$[p]())");
-    private static final Template FLOAT_EQUALS_TEMPLATE = Template.compile(
-        "Float.floatToIntBits(this.$[p]) == Float.floatToIntBits(that.$[p]())");
-    private static final Template DOUBLE_EQUALS_TEMPLATE = Template.compile(
-        "Double.doubleToLongBits(this.$[p]) == Double.doubleToLongBits(that.$[p]())");
-    private static final Template OBJECT_EQUALS_TEMPLATE = Template.compile(
-        "$[p.nullable?"
-            + "(this.$[p] == null) ? (that.$[p]() == null) : ]"
-            + "this.$[p].equals(that.$[p]())");
-
-    /**
-     * A string representing an expression that compares this property with the same property
-     * in another variable called "that" whose type is the class marked {@code @AutoValue}.
-     */
-    public String equalsThatExpression() {
-      // If the templating language had a case statement we wouldn't need this function, but the
-      // language is unreadable enough as it is.
-      final Template equalsTemplate;
-      switch (method.getReturnType().getKind()) {
-        case BYTE:
-        case SHORT:
-        case CHAR:
-        case INT:
-        case LONG:
-        case BOOLEAN:
-          equalsTemplate = PRIMITIVE_EQUALS_TEMPLATE;
-          break;
-        case FLOAT:
-          equalsTemplate = FLOAT_EQUALS_TEMPLATE;
-          break;
-        case DOUBLE:
-          equalsTemplate = DOUBLE_EQUALS_TEMPLATE;
-          break;
-        case ARRAY:
-          equalsTemplate = ARRAY_EQUALS_TEMPLATE;
-          break;
-        default:
-          equalsTemplate = OBJECT_EQUALS_TEMPLATE;
-          break;
-      }
-      class EqualsTemplateVars extends TemplateVars {
-        String javaUtilArraysSpelling;
-        String subclass;
-        Property p;
-
-        @Override Template template() {
-          return equalsTemplate;
-        }
-      }
-      EqualsTemplateVars equalsTemplateVars = new EqualsTemplateVars();
-      equalsTemplateVars.javaUtilArraysSpelling = vars.javaUtilArraysSpelling;
-      equalsTemplateVars.subclass = vars.subclass;
-      equalsTemplateVars.p = this;
-      return equalsTemplateVars.toText();
-    }
-
-    /**
-     * A string representing an expression that is the hashCode of this property.
-     */
-    public String hashCodeExpression() {
-      switch (method.getReturnType().getKind()) {
-        case BYTE:
-        case SHORT:
-        case CHAR:
-        case INT:
-          return this.toString();
-        case LONG:
-          return "(" + this + " >>> 32) ^ " + this;
-        case FLOAT:
-          return "Float.floatToIntBits(" + this + ")";
-        case DOUBLE:
-          return "(Double.doubleToLongBits(" + this + ") >>> 32) ^ "
-              + "Double.doubleToLongBits(" + this + ")";
-        case BOOLEAN:
-          return this + " ? 1231 : 1237";
-        case ARRAY:
-          return vars.javaUtilArraysSpelling + ".hashCode(" + this + ")";
-        default:
-          if (nullable()) {
-            return "(" + this + " == null) ? 0 : " + this + ".hashCode()";
-          } else {
-            return this + ".hashCode()";
-          }
-      }
-    }
-
-    public String access() {
+    public String getAccess() {
       Set<Modifier> mods = method.getModifiers();
       if (mods.contains(Modifier.PUBLIC)) {
         return "public ";
@@ -401,6 +321,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.subclass = simpleNameOf(generatedSubclassName(type));
     defineVarsForType(type, vars);
     String text = vars.toText();
+    text = fixup(text);
     writeSourceFile(generatedSubclassName(type), text, type);
   }
 
@@ -635,5 +556,109 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private EclipseHack eclipseHack() {
     return new EclipseHack(processingEnv);
+  }
+
+  private static String fixup(String s) {
+    // Clean up the white space that the template engine leaves.
+    s = removeTrailingSpace(s);
+    s = compressBlankLines(s);
+    s = compressSpace(s);
+    return s;
+  }
+
+  private static String removeTrailingSpace(String s) {
+    // Remove trailing space from all lines. This is mainly to make it easier to find
+    // blank lines later.
+    if (!s.endsWith("\n")) {
+      s += '\n';
+    }
+    StringBuilder sb = new StringBuilder(s.length());
+    int start = 0;
+    while (start < s.length()) {
+      int nl = s.indexOf('\n', start);
+      int i = nl - 1;
+      while (i >= start && s.charAt(i) == ' ') {
+        i--;
+      }
+      sb.append(s.substring(start, i + 1)).append('\n');
+      start = nl + 1;
+    }
+    return sb.toString();
+  }
+
+  private static String compressBlankLines(String s) {
+    // Remove extra blank lines. An "extra" blank line is either a blank line where the previous
+    // line was also blank; or a blank line that appears inside parentheses or inside more than one
+    // set of braces. This means that we preserve blank lines inside our top-level class, but not
+    // within our generated methods.
+    StringBuilder sb = new StringBuilder(s.length());
+    int braces = 0;
+    int parens = 0;
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      switch (c) {
+        case '(':
+          parens++;
+          break;
+        case ')':
+          parens--;
+          break;
+        case '{':
+          braces++;
+          break;
+        case '}':
+          braces--;
+          break;
+        case '\n':
+          int j = i + 1;
+          while (j < s.length() && s.charAt(j) == '\n') {
+            j++;
+          }
+          if (j > i + 1) {
+            if (parens == 0 && braces <= 1) {
+              sb.append("\n");
+            }
+            i = j - 1;
+          }
+          break;
+      }
+      sb.append(c);
+    }
+    return sb.toString();
+  }
+
+  private static String compressSpace(String s) {
+    // Remove extra spaces. An "extra" space is one that is not part of the indentation at the start
+    // of a line, and where the next character is also a space or a right paren or a semicolon
+    // or a comma, or the preceding character is a left paren.
+    // We can't easily combine this with the removal of trailing whitespace, because in a line with
+    // nothing but spaces we would see trailing whitespace as indentation.
+    StringBuilder sb = new StringBuilder(s.length());
+    boolean indentation = true;
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      switch (c) {
+        case '\n':
+          indentation = true;
+          break;
+        case ' ':
+          if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '(') {
+            continue;
+          }
+          if (!indentation) {
+            // It is safe to look at the next char because the text ends with \n.
+            char nextC = s.charAt(i + 1);
+            if (" ,;)".indexOf(nextC) >= 0) {
+              continue;
+            }
+          }
+          break;
+        default:
+          indentation = false;
+          break;
+      }
+      sb.append(c);
+    }
+    return sb.toString();
   }
 }
