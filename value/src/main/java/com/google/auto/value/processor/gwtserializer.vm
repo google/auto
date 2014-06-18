@@ -45,13 +45,14 @@ public final class $serializerClass {
   }
 
   public static void deserialize(
-      SerializationStreamReader streamReader,
-      $subclass instance) throws SerializationException {
+      @SuppressWarnings("unused") SerializationStreamReader streamReader,
+      @SuppressWarnings("unused") $subclass instance) throws SerializationException {
     // instantiate already did all the work.
   }
 
   // This dummy field is a hash of the fields in $subclass that will change if they do, including
   // if their order changes. This is because GWT identity for a class that has a serializer is
   // based on the fields of the serializer rather than the class itself.
+  @SuppressWarnings("unused")
   private int dummy_$classHashString;
 }
