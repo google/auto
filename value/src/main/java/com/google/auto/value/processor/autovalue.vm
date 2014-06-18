@@ -96,13 +96,12 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
 #if ($equals)
   #macro (equalsThatExpression $p)
-    #if ($p.kind == "BYTE" || $p.kind == "SHORT" || $p.kind == "CHAR" || $p.kind == "INT"
-         || $p.kind == "LONG" || $p.kind == "BOOLEAN")
-      this.$p == that.$p() ##
-    #elseif ($p.kind == "FLOAT")
+    #if ($p.kind == "FLOAT")
       Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.$p()) ##
     #elseif ($p.kind == "DOUBLE")
       Double.doubleToLongBits(this.$p) == Double.doubleToLongBits(that.$p()) ##
+    #elseif ($p.kind.primitive)
+      this.$p == that.$p() ##
     #elseif ($p.kind == "ARRAY")
       ${javaUtilArraysSpelling}.equals(this.$p, ##
           (that instanceof $subclass) ? (($subclass) that).$p : that.$p()) ##

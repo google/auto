@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.SortedSet;
 
 /**
- * The template for AutoValue_Foo classes, and the variables to substitute into that template.
+ * The variables to substitute into the autovalue.vm template.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
@@ -78,7 +78,7 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   String wildcardTypes;
 
-  private static final SimpleNode TEMPLATE = parsedTemplateForResource("template.vm");
+  private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
   @Override
   SimpleNode parsedTemplate() {
