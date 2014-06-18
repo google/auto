@@ -420,7 +420,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.add(javaUtilArrays);
     }
     String pkg = TypeSimplifier.packageNameOf(type);
-    TypeSimplifier typeSimplifier = new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types);
+    TypeSimplifier typeSimplifier =
+        new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
     vars.javaUtilArraysSpelling = typeSimplifier.simplify(javaUtilArrays);
     List<Property> props = new ArrayList<Property>();

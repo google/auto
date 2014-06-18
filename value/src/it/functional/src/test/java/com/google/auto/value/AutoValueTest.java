@@ -907,4 +907,37 @@ public class AutoValueTest extends TestCase {
     InheritTwice inheritTwice = InheritTwice.create(42);
     assertEquals(42, inheritTwice.answer());
   }
+
+  @AutoValue
+  public static abstract class Optional {
+    public abstract com.google.common.base.Optional<Object> getOptional();
+
+    public static Optional create(com.google.common.base.Optional<Object> opt) {
+      return new AutoValue_AutoValueTest_Optional(opt);
+    }
+  }
+
+  public void testAmbiguityFromAutoValueType() {
+    Optional autoOptional = Optional.create(com.google.common.base.Optional.absent());
+    assertEquals(com.google.common.base.Optional.absent(), autoOptional.getOptional());
+  }
+
+  static class BaseWithNestedType {
+    static class Optional {}
+  }
+
+  @AutoValue
+  public static abstract class InheritsNestedType extends BaseWithNestedType {
+    public abstract com.google.common.base.Optional<Object> getOptional();
+
+    public static InheritsNestedType create(com.google.common.base.Optional<Object> opt) {
+      return new AutoValue_AutoValueTest_InheritsNestedType(opt);
+    }
+  }
+
+  public void testAmbiguityFromInheritedType() {
+    InheritsNestedType inheritsNestedType =
+        InheritsNestedType.create(com.google.common.base.Optional.absent());
+    assertEquals(com.google.common.base.Optional.absent(), inheritsNestedType.getOptional());
+  }
 }
