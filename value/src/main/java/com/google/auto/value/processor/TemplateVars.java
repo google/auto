@@ -15,20 +15,29 @@
  */
 package com.google.auto.value.processor;
 
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.runtime.RuntimeConstants;
+import org.apache.velocity.runtime.RuntimeInstance;
+import org.apache.velocity.runtime.parser.ParseException;
+import org.apache.velocity.runtime.parser.node.SimpleNode;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * A template and a set of variables to be substituted into that template. A concrete subclass of
  * this class defines a set of fields that are template variables, and an implementation of the
- * {@link #template()} method which is the template to substitute them into. Once the values of the
- * fields have been assigned, the {@link #toText()} method returns the result of substituting them
- * into the template.
+ * {@link #parsedTemplate()} method which is the template to substitute them into. Once the values
+ * of the fields have been assigned, the {@link #toText()} method returns the result of substituting
+ * them into the template.
  *
  * <p>The subclass must be a direct subclass of this class. Fields cannot be static unless they are
  * also final. They cannot be private, though they can be package-private if the class is in the
@@ -38,7 +47,25 @@ import java.util.TreeMap;
  * @author Éamonn McManus
  */
 abstract class TemplateVars {
-  abstract Template template();
+  abstract SimpleNode parsedTemplate();
+
+  private static final RuntimeInstance velocityRuntimeInstance = new RuntimeInstance();
+  static {
+    // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
+
+    // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
+    // context class loader. If that loader can see another copy of Velocity then that will lead
+    // to hard-to-diagnose exceptions during initialization.
+    Thread currentThread = Thread.currentThread();
+    ClassLoader oldContextLoader = currentThread.getContextClassLoader();
+    try {
+      currentThread.setContextClassLoader(TemplateVars.class.getClassLoader());
+      velocityRuntimeInstance.init();
+    } finally {
+      currentThread.setContextClassLoader(oldContextLoader);
+    }
+  }
 
   private final List<Field> fields;
 
@@ -67,39 +94,50 @@ abstract class TemplateVars {
   }
 
   /**
-   * Returns a string that is the concatenation of the given strings, with a newline added at
-   * the end of each one. This saves having to type {@code "...\n" +} all the time.
-   */
-  static String concatLines(String... lines) {
-    StringBuilder sb = new StringBuilder();
-    for (String line : lines) {
-      sb.append(line).append("\n");
-    }
-    return sb.toString();
-  }
-
-  /**
    * Returns the result of substituting the variables defined by the fields of this class
-   * (a concrete subclass of TemplateVars) into the template returned by {@link #template()}.
+   * (a concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
    */
   String toText() {
-    Map<String, Object> vars = toMap();
-    return template().rewrite(vars);
+    VelocityContext velocityContext = toVelocityContext();
+    StringWriter writer = new StringWriter();
+    SimpleNode parsedTemplate = parsedTemplate();
+    boolean rendered = velocityRuntimeInstance.render(
+        velocityContext, writer, parsedTemplate.getTemplateName(), parsedTemplate);
+    if (!rendered) {
+      // I don't know when this happens. Usually you get an exception during rendering.
+      throw new IllegalArgumentException("Template rendering failed");
+    }
+    return writer.toString();
   }
 
-  private Map<String, Object> toMap() {
-    Map<String, Object> map = new TreeMap<String, Object>();
+  private VelocityContext toVelocityContext() {
+    VelocityContext velocityContext = new VelocityContext();
     for (Field field : fields) {
       Object value = fieldValue(field, this);
       if (value == null) {
         throw new IllegalArgumentException("Field cannot be null (was it set?): " + field);
       }
-      Object old = map.put(field.getName(), value);
+      Object old = velocityContext.put(field.getName(), value);
       if (old != null) {
         throw new IllegalArgumentException("Two fields called " + field.getName() + "?!");
       }
     }
-    return Collections.unmodifiableMap(map);
+    return velocityContext;
+  }
+
+  static SimpleNode parsedTemplateForResource(String resourceName) {
+    InputStream in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
+    if (in == null) {
+      throw new IllegalArgumentException("Could not find resource: " + resourceName);
+    }
+    try {
+      Reader reader = new InputStreamReader(in, "UTF-8");
+      return velocityRuntimeInstance.parse(reader, resourceName);
+    } catch (UnsupportedEncodingException e) {
+      throw new AssertionError(e);
+    } catch (ParseException e) {
+      throw new AssertionError(e);
+    }
   }
 
   private static Object fieldValue(Field field, Object container) {

@@ -15,11 +15,13 @@
  */
 package com.google.auto.value.processor;
 
+import org.apache.velocity.runtime.parser.node.SimpleNode;
+
 import java.util.List;
 import java.util.SortedSet;
 
 /**
- * The template for AutoValue_Foo classes, and the variables to substitute into that template.
+ * The variables to substitute into the autovalue.vm template.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
@@ -76,86 +78,10 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   String wildcardTypes;
 
-  // The code below uses a small templating language. This is not hugely readable, but is much more
-  // so than sb.append(this).append(that) with ifs and fors scattered around everywhere.
-  // See the Template class for an explanation of the various constructs.
-  private static final String TEMPLATE_STRING = concatLines(
-      // CHECKSTYLE:OFF:OperatorWrap
-      // Package declaration
-      "$[pkg?package $[pkg];\n]",
-
-      // Imports
-      "$[imports:i||import $[i];\n]",
-
-      // @Generated annotation
-      "@javax.annotation.Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
-
-      // Class declaration
-      "final class $[subclass]$[formalTypes] extends $[origClass]$[actualTypes] {",
-
-      // Fields
-      "$[props:p||  private final $[p.type] $[p];\n]",
-
-      // Constructor
-      "  $[subclass](\n      $[props:p|,\n      |$[p.type] $[p]]) {",
-      "$[props:p|\n|$[p.primitive!$[p.nullable!    if ($[p] == null) {",
-      "      throw new NullPointerException(\"Null $[p]\");",
-      "    }",
-      "]]" +
-      "    this.$[p] = $[p];]",
-      "  }",
-
-      // Property getters
-      "$[props:p|\n|\n  @Override",
-      "  $[p.access]$[p.type] $[p]() {",
-      "    return $[p.array?[$[p.nullable?$[p] == null ? null : ]$[p].clone()][$[p]]];",
-      "  }]",
-
-      // toString()
-      "$[toString?\n  @Override",
-      "  public String toString() {",
-      "    return \"$[simpleClassName]{\"$[props?\n        + \"]" +
-      "$[props:p|\n        + \", |" +
-                "$[p]=\" + $[p.array?[$[javaUtilArraysSpelling].toString($[p])][$[p]]]]",
-      "        + \"}\";",
-      "  }]",
-
-      // equals(Object)
-      "$[equals?\n  @Override",
-      "  public boolean equals(Object o) {",
-      "    if (o == this) {",
-      "      return true;",
-      "    }",
-      "    if (o instanceof $[origClass]) {",
-      "      $[origClass]$[wildcardTypes] that = ($[origClass]$[wildcardTypes]) o;",
-      "      return $[props!true]" +
-                   "$[props:p|\n          && |($[p.equalsThatExpression])];",
-      "    }",
-      "    return false;",
-      "  }]",
-
-      // hashCode()
-      "$[hashCode?",
-      "  @Override",
-      "  public int hashCode() {",
-      "    int h = 1;",
-      "$[props:p||" +
-      "    h *= 1000003;",
-      "    h ^= $[p.hashCodeExpression];",
-      "]" +
-      "    return h;",
-      "  }]" +
-
-      // serialVersionUID
-      "$[serialVersionUID?\n\n  private static final long serialVersionUID = $[serialVersionUID];]",
-
-      "}"
-      // CHECKSTYLE:ON
-  );
-  private static final Template TEMPLATE = Template.compile(TEMPLATE_STRING);
+  private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
   @Override
-  Template template() {
+  SimpleNode parsedTemplate() {
     return TEMPLATE;
   }
 }

@@ -15,6 +15,9 @@
  */
 package com.google.auto.value.processor;
 
+import static javax.lang.model.element.Modifier.PRIVATE;
+
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +36,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
 
@@ -60,10 +64,11 @@ final class TypeSimplifier {
   private final Types typeUtil;
   private final Map<String, Spelling> imports;
 
-  TypeSimplifier(Types typeUtil, String packageName, Set<TypeMirror> types) {
+  TypeSimplifier(Types typeUtil, String packageName, Set<TypeMirror> types, TypeMirror base) {
     this.typeUtil = typeUtil;
     Set<TypeMirror> referenced = referencedClassTypes(typeUtil, types);
-    this.imports = findImports(typeUtil, packageName, referenced);
+    Set<TypeMirror> defined = nonPrivateDeclaredTypes(typeUtil, base);
+    this.imports = findImports(typeUtil, packageName, referenced, defined);
   }
 
   /**
@@ -203,6 +208,14 @@ final class TypeSimplifier {
     }
   }
 
+  static String simpleNameOf(String s) {
+    if (s.contains(".")) {
+      return s.substring(s.lastIndexOf('.') + 1);
+    } else {
+      return s;
+    }
+  }
+
   /**
    * Given a set of referenced types, works out which of them should be imported and what the
    * resulting spelling of each one is.
@@ -220,13 +233,19 @@ final class TypeSimplifier {
    *     defined. Other classes within the same package do not need to be imported.
    * @param referenced The complete set of declared types (classes and interfaces) that will be
    *     referenced in the generated code.
+   * @param defined The complete set of declared types (classes and interfaces) that are defined
+   *     within the scope of the generated class (i.e. nested somewhere in its superclass chain,
+   *     or in its interface set)
    * @return a map where the keys are fully-qualified types and the corresponding values indicate
    *     whether the type should be imported, and how the type should be spelled in the source code.
    */
   private static Map<String, Spelling> findImports(
-      Types typeUtil, String packageName, Set<TypeMirror> referenced) {
+      Types typeUtil, String packageName, Set<TypeMirror> referenced, Set<TypeMirror> defined) {
     Map<String, Spelling> imports = new HashMap<String, Spelling>();
-    Set<String> ambiguous = ambiguousNames(typeUtil, referenced);
+    Set<TypeMirror> typesInScope = new HashSet<TypeMirror>();
+    typesInScope.addAll(referenced);
+    typesInScope.addAll(defined);
+    Set<String> ambiguous = ambiguousNames(typeUtil, typesInScope);
     for (TypeMirror type : referenced) {
       TypeElement typeElement = (TypeElement) typeUtil.asElement(type);
       String fullName = typeElement.getQualifiedName().toString();
@@ -313,6 +332,30 @@ final class TypeSimplifier {
         }
       }
       return null;
+    }
+  }
+
+  /**
+   * Finds all types that are declared with non private visibility by the given {@code TypeMirror},
+   * any class in its superclass chain, or any interface it implements.
+   */
+  private static Set<TypeMirror> nonPrivateDeclaredTypes(Types typeUtil, TypeMirror type) {
+    if (type == null) {
+      return Collections.emptySet();
+    } else {
+      Set<TypeMirror> declared = new HashSet<TypeMirror>();
+      declared.add(type);
+      List<TypeElement> nestedTypes =
+          ElementFilter.typesIn(typeUtil.asElement(type).getEnclosedElements());
+      for (TypeElement nestedType : nestedTypes) {
+        if (!nestedType.getModifiers().contains(PRIVATE)) {
+          declared.add(nestedType.asType());
+        }
+      }
+      for (TypeMirror supertype : typeUtil.directSupertypes(type)) {
+        declared.addAll(nonPrivateDeclaredTypes(typeUtil, supertype));
+      }
+      return declared;
     }
   }
 

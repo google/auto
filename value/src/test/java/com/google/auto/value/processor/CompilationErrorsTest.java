@@ -24,19 +24,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.io.Files;
-import com.google.common.reflect.Reflection;
 
 import junit.framework.TestCase;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import javax.tools.Diagnostic;
@@ -118,34 +114,6 @@ public class CompilationErrorsTest extends TestCase {
     assertFalse(compiled);
   }
 
-  public void testNoMultidimensionalPrimitiveArrays() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract int[][] ints();\n" +
-        "  public static Baz create(int[][] ints) {\n" +
-        "    return new AutoValue_Baz(ints);\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
-  public void testNoObjectArrays() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract String[] strings();\n" +
-        "  public static Baz create(String[] strings) {\n" +
-        "    return new AutoValue_Baz(strings);\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
   public void testNoWarningsFromGenerics() throws Exception {
     String testSourceCode =
         "package foo.bar;\n" +
@@ -159,24 +127,6 @@ public class CompilationErrorsTest extends TestCase {
         "  }\n" +
         "}\n";
     assertCompilationSucceedsWithoutWarning(ImmutableList.of(testSourceCode));
-  }
-
-  public void testAnnotationOnInterface() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public interface Baz {}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
-  public void testAnnotationOnEnum() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public enum Baz {}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
   }
 
   private static final Pattern CANNOT_HAVE_NON_PROPERTIES = Pattern.compile(
@@ -210,150 +160,6 @@ public class CompilationErrorsTest extends TestCase {
         Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
     );
     assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
-  }
-
-  public void testExtendAutoValue() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "public class Outer {\n" +
-        "  @AutoValue\n" +
-        "  static abstract class Parent {\n" +
-        "    static Parent create(int randomProperty) {\n" +
-        "      return new AutoValue_Outer_Parent(randomProperty);\n" +
-        "    }\n" +
-        "    abstract int randomProperty();\n" +
-        "  }\n" +
-        "  @AutoValue\n" +
-        "  static abstract class Child extends Parent {\n" +
-        "    static Child create(int randomProperty) {\n" +
-        "      return new AutoValue_Outer_Child(randomProperty);\n" +
-        "    }\n" +
-        "    abstract int randomProperty();\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
-  public void testBogusSerialVersionUID() throws Exception {
-    String[] mistakes = {
-      "final long serialVersionUID = 1234L", // not static
-      "static long serialVersionUID = 1234L", // not final
-      "static final Long serialVersionUID = 1234L", // not long
-      "static final long serialVersionUID = (Long) 1234L", // not a compile-time constant
-    };
-    for (String mistake : mistakes) {
-      String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz implements java.io.Serializable {\n" +
-        "  " + mistake + ";\n" +
-        "  public abstract int foo();\n" +
-        "}\n";
-      assertCompilationFails(ImmutableList.of(testSourceCode));
-    }
-  }
-
-  public void testNonExistentSuperclass() throws Exception {
-    // The main purpose of this test is to check that AutoValueProcessor doesn't crash the
-    // compiler in this case.
-    String testSourceCode =
-      "package foo.bar;\n" +
-      "import com.google.auto.value.AutoValue;\n" +
-      "@AutoValue\n" +
-      "public abstract class Existent extends NonExistent {\n" +
-      "}\n";
-    assertCompilationFails(ImmutableList.of(testSourceCode));
-  }
-
-  public void testImplementingAnnotationRequiresDefiningEquals() throws Exception {
-    // Since the equals algorithm we use for AutoValue classes is incompatible with the one
-    // specified by Annotation#equals(Object), we produce an error if we would be generating that
-    // incorrect method. The incompatibility is because we check instanceof RetentionImpl,
-    // where we should be checking instanceof Retention. That could be fixed by checking instanceof
-    // the most general ancestor that already contains all our abstract methods, but the motivation
-    // for doing that is not great.
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "import java.lang.annotation.Retention;\n" +
-        "import java.lang.annotation.RetentionPolicy;\n" +
-        "@AutoValue\n" +
-        "public abstract class RetentionImpl implements Retention {\n" +
-        "  public static Retention create(RetentionPolicy policy) {\n" +
-        "    return new AutoValue_RetentionImpl(policy);\n" +
-        "  }\n" +
-        "  @Override public Class<? extends Retention> annotationType() {\n" +
-        "    return Retention.class;\n" +
-        "  }\n" +
-        "  @Override public int hashCode() {\n" +
-        "    return (\"value\".hashCode() * 127) ^ value().hashCode();\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationResultIs(
-        ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile("equals")),
-        ImmutableList.of(testSourceCode));
-  }
-
-  public void testImplementingAnnotationRequiresDefiningHashCode() throws Exception {
-    // Since the hashCode algorithm we use for AutoValue classes is incompatible with the one
-    // specified by Annotation#hashCode(), we produce an error if we would be generating that
-    // incorrect hashCode().
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "import java.lang.annotation.Retention;\n" +
-        "import java.lang.annotation.RetentionPolicy;\n" +
-        "@AutoValue\n" +
-        "public abstract class RetentionImpl implements Retention {\n" +
-        "  public static Retention create(RetentionPolicy policy) {\n" +
-        "    return new AutoValue_RetentionImpl(policy);\n" +
-        "  }\n" +
-        "  @Override public Class<? extends Retention> annotationType() {\n" +
-        "    return Retention.class;\n" +
-        "  }\n" +
-        "  @Override public boolean equals(Object o) {\n" +
-        "    return o instanceof Retention && ((Retention) o).value().equals(value());\n" +
-        "  }\n" +
-        "}\n";
-    assertCompilationResultIs(
-        ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile("hashCode")),
-        ImmutableList.of(testSourceCode));
-  }
-
-  public void testExceptionBecomesError() throws Exception {
-    // Ensure that if the annotation processor code gets an unexpected exception, it is converted
-    // into a compiler error rather than being propagated. Otherwise the output can be very
-    // confusing to the user who stumbles into a bug that causes an exception, whether in
-    // AutoValueProcessor or javac.
-    // We inject an exception by rigging fileManager to throw when the processor tries to output
-    // the generated class for an otherwise correct @AutoValue class.
-    final AtomicBoolean exceptionWasThrown = new AtomicBoolean();
-    final String message = "I don't understand the question, and I won't respond to it";
-    final StandardJavaFileManager realFileManager = fileManager;
-    InvocationHandler errorInjectionHandler = new InvocationHandler() {
-      @Override
-      public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (method.getName().equals("getJavaFileForOutput")) {
-          exceptionWasThrown.set(true);
-          throw new UnsupportedOperationException(message);
-        } else {
-          return method.invoke(realFileManager, args);
-        }
-      }
-    };
-    fileManager = Reflection.newProxy(StandardJavaFileManager.class, errorInjectionHandler);
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Empty {\n" +
-        "}\n";
-    assertCompilationResultIs(
-        ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile(message, Pattern.LITERAL)),
-        ImmutableList.of(testSourceCode));
-    assertTrue(exceptionWasThrown.get());
   }
 
   // We compile the test classes by writing the source out to our temporary directory and invoking

@@ -46,39 +46,48 @@
       <version>1.0-rc1</version>
     </dependency>
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-      <scope>compile</scope> <!-- Must have this where procesor runs -->
-    </dependency>
-    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.velocity</groupId>
+      <artifactId>velocity</artifactId>
+      <version>1.7</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
+      <version>17.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
+      <version>0.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.truth0</groupId>
       <artifactId>truth</artifactId>
+      <version>0.20</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/java</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

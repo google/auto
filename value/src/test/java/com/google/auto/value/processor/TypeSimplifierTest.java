@@ -126,6 +126,9 @@ public class TypeSimplifierTest extends TestCase {
     assertTrue(compilerOut.toString() + diagnosticCollector.getDiagnostics(), compiledOk);
   }
 
+  // A type which is deliberately ambiguous with Map.Entry. Used to perform an ambiguity test below.
+  static final class Entry {}
+
   @SupportedAnnotationTypes("*")
   public static class TestProcessor extends AbstractProcessor {
     private boolean testsRan;
@@ -172,6 +175,14 @@ public class TypeSimplifierTest extends TestCase {
       return typeElementOf(name).asType();
     }
 
+    private TypeMirror baseWithoutContainedTypes() {
+      return typeMirrorOf("java.lang.Object");
+    }
+
+    private TypeMirror baseDeclaresEntry() {
+      return typeMirrorOf("java.util.Map");
+    }
+
     public void testPackageNameOfString() {
       assertEquals("java.lang", TypeSimplifier.packageNameOf(typeElementOf("java.lang.String")));
     }
@@ -187,7 +198,8 @@ public class TypeSimplifierTest extends TestCase {
 
     public void testImportsForNoTypes() {
       Set<TypeMirror> types = ImmutableSet.of();
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(ImmutableSet.of(), typeSimplifier.typesToImport());
     }
 
@@ -198,7 +210,8 @@ public class TypeSimplifierTest extends TestCase {
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeUtil.getPrimitiveType(TypeKind.BOOLEAN)
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "javax.management", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "javax.management", types, baseWithoutContainedTypes());
       assertEquals(ImmutableSet.of(), typeSimplifier.typesToImport());
     }
 
@@ -216,7 +229,8 @@ public class TypeSimplifierTest extends TestCase {
           "java.util.regex.Pattern",
           "javax.management.MBeanServer"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
@@ -239,7 +253,8 @@ public class TypeSimplifierTest extends TestCase {
           "java.util.Timer",
           "java.util.regex.Pattern"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
@@ -262,7 +277,8 @@ public class TypeSimplifierTest extends TestCase {
           "java.util.regex.Matcher",
           "java.util.regex.Pattern"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
@@ -287,7 +303,8 @@ public class TypeSimplifierTest extends TestCase {
           "java.util.regex.Pattern",
           "javax.management.MBeanServer"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "", typesBuilder.build());
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "", typesBuilder.build(), baseWithoutContainedTypes());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
@@ -302,21 +319,24 @@ public class TypeSimplifierTest extends TestCase {
       List<String> expectedImports = ImmutableList.of(
           "java.util.Map"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier
+          = new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
     public void testSimplifyJavaLangString() {
       TypeMirror string = typeMirrorOf("java.lang.String");
       Set<TypeMirror> types = ImmutableSet.of(string);
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals("String", typeSimplifier.simplify(string));
     }
 
     public void testSimplifyJavaLangThreadState() {
       TypeMirror threadState = typeMirrorOf("java.lang.Thread.State");
       Set<TypeMirror> types = ImmutableSet.of(threadState);
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals("Thread.State", typeSimplifier.simplify(threadState));
     }
 
@@ -324,16 +344,26 @@ public class TypeSimplifierTest extends TestCase {
       TypeMirror javaAwtList = typeMirrorOf("java.awt.List");
       TypeMirror javaUtilList = typeMirrorOf("java.util.List");
       Set<TypeMirror> types = ImmutableSet.of(javaAwtList, javaUtilList);
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(javaAwtList.toString(), typeSimplifier.simplify(javaAwtList));
       assertEquals(javaUtilList.toString(), typeSimplifier.simplify(javaUtilList));
+    }
+
+    public void testSimplifyAmbiguityFromWithinClass() {
+      TypeMirror otherEntry = typeMirrorOf(TypeSimplifierTest.class.getCanonicalName() + ".Entry");
+      Set<TypeMirror> types = ImmutableSet.of(otherEntry);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseDeclaresEntry());
+      assertEquals(otherEntry.toString(), typeSimplifier.simplify(otherEntry));
     }
 
     public void testSimplifyJavaLangNamesake() {
       TypeMirror javaLangDouble = typeMirrorOf("java.lang.Double");
       TypeMirror awtDouble = typeMirrorOf("java.awt.geom.Arc2D.Double");
       Set<TypeMirror> types = ImmutableSet.of(javaLangDouble, awtDouble);
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(javaLangDouble.toString(), typeSimplifier.simplify(javaLangDouble));
       assertEquals(awtDouble.toString(), typeSimplifier.simplify(awtDouble));
     }
@@ -368,7 +398,8 @@ public class TypeSimplifierTest extends TestCase {
           "Map<String, Integer>",
           "Map<? extends Timer, ? super BigInteger>"
       );
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "foo.bar", types);
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       List<String> actualSimplifications = new ArrayList<String>();
       for (TypeMirror type : types) {
         actualSimplifications.add(typeSimplifier.simplify(type));
@@ -379,8 +410,8 @@ public class TypeSimplifierTest extends TestCase {
     public void testSimplifyMultipleBounds() {
       TypeElement multipleBoundsElement = typeElementOf("MultipleBounds");
       TypeMirror multipleBoundsMirror = multipleBoundsElement.asType();
-      TypeSimplifier typeSimplifier =
-          new TypeSimplifier(typeUtil, "", ImmutableSet.of(multipleBoundsMirror));
+      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "",
+          ImmutableSet.of(multipleBoundsMirror), baseWithoutContainedTypes());
       assertEquals(ImmutableSet.of("java.util.List"), typeSimplifier.typesToImport());
       assertEquals("MultipleBounds<K, V>", typeSimplifier.simplify(multipleBoundsMirror));
       assertEquals("<K extends List<V> & Comparable<K>, V>",

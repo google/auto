@@ -76,9 +76,9 @@ class EclipseHack {
     // fix each sublist independently.
     int index = 0;
     while (index < properties.size()) {
-      TypeElement owner = properties.get(index).owner();
+      TypeElement owner = properties.get(index).getOwner();
       int nextIndex = index + 1;
-      while (nextIndex < properties.size() && properties.get(nextIndex).owner().equals(owner)) {
+      while (nextIndex < properties.size() && properties.get(nextIndex).getOwner().equals(owner)) {
         nextIndex++;
       }
       List<Property> subList = properties.subList(index, nextIndex);

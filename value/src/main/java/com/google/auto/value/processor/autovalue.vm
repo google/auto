@@ -1,0 +1,181 @@
+## Template for each generated AutoValue_Foo class.
+## This template uses the Apache Velocity Template Language (VTL).
+## The variables ($pkg, $props, and so on) are defined by the fields of AutoValueTemplateVars.
+##
+## Comments, like this one, begin with ##. The comment text extends up to and including the newline
+## character at the end of the line. So comments also serve to join a line to the next one.
+## Velocity deletes a newline after a directive (#if, #foreach, #end etc) so ## is not needed there.
+## That does mean that we sometimes need an extra blank line after such a directive.
+##
+## A post-processing step will remove unwanted spaces and blank lines, but will not join two lines.
+
+#if (!$pkg.empty)
+package $pkg;
+#end
+
+#foreach ($i in $imports)
+import $i;
+#end
+
+@javax.annotation.Generated("com.google.auto.value.processor.AutoValueProcessor")
+final class $subclass$formalTypes extends $origClass$actualTypes {
+
+## Fields
+
+#foreach ($p in $props)
+  private final $p.type $p;
+#end
+
+## Constructor
+
+  $subclass(
+#foreach ($p in $props)
+
+      $p.type $p #if ($foreach.hasNext) , #end
+#end ) {
+#foreach ($p in $props)
+  #if (!$p.kind.primitive && !$p.nullable)
+
+    if ($p == null) {
+      throw new NullPointerException("Null $p");
+    }
+
+  #end
+
+    this.$p = $p;
+#end
+  }
+
+## Property getters
+
+#foreach ($p in $props)
+
+  @Override
+  ${p.access}${p.type} $p() {
+
+  #if ($p.kind == "ARRAY")
+
+    #if ($p.nullable)
+
+    return $p == null ? null : ${p}.clone();
+
+    #else
+
+    return ${p}.clone();
+
+    #end
+
+  #else
+
+    return $p;
+
+  #end
+
+  }
+
+#end
+
+#if ($toString)
+
+  @Override
+  public String toString() {
+    return "$simpleClassName{"
+
+  #foreach ($p in $props)
+
+        + "$p=" ##
+        + #if ($p.kind == "ARRAY") ${javaUtilArraysSpelling}.toString($p) #else $p #end
+        #if ($foreach.hasNext) + ", " #end
+
+  #end
+
+        + "}";
+  }
+
+#end
+
+#if ($equals)
+  #macro (equalsThatExpression $p)
+    #if ($p.kind == "FLOAT")
+      Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.$p()) ##
+    #elseif ($p.kind == "DOUBLE")
+      Double.doubleToLongBits(this.$p) == Double.doubleToLongBits(that.$p()) ##
+    #elseif ($p.kind.primitive)
+      this.$p == that.$p() ##
+    #elseif ($p.kind == "ARRAY")
+      ${javaUtilArraysSpelling}.equals(this.$p, ##
+          (that instanceof $subclass) ? (($subclass) that).$p : that.$p()) ##
+    #else
+      #if ($p.nullable) (this.$p == null) ? (that.$p() == null) : #end this.${p}.equals(that.$p()) ##
+    #end
+  #end
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (o instanceof $origClass) {
+
+  #if ($props.empty)
+
+      return true;
+
+  #else
+
+      $origClass$wildcardTypes that = ($origClass$wildcardTypes) o;
+      return ##
+           #foreach ($p in $props)
+           (#equalsThatExpression ($p))##
+             #if ($foreach.hasNext)
+
+           && ##
+             #end
+           #end
+           ;
+  #end
+
+    }
+    return false;
+  }
+
+#end
+
+#if ($hashCode)
+  #macro (hashCodeExpression $p)
+    #if ($p.kind == "BYTE" || $p.kind == "SHORT" || $p.kind == "CHAR" || $p.kind == "INT")
+      $p ##
+    #elseif ($p.kind == "LONG")
+      ($p >>> 32) ^ $p ##
+    #elseif ($p.kind == "FLOAT")
+      Float.floatToIntBits($p) ##
+    #elseif ($p.kind == "DOUBLE")
+      (Double.doubleToLongBits($p) >>> 32) ^ Double.doubleToLongBits($p) ##
+    #elseif ($p.kind == "BOOLEAN")
+      $p ? 1231 : 1237 ##
+    #elseif ($p.kind == "ARRAY")
+      ${javaUtilArraysSpelling}.hashCode($p) ##
+    #else
+      #if ($p.nullable) ($p == null) ? 0 : #end ${p}.hashCode() ##
+    #end
+  #end
+
+  @Override
+  public int hashCode() {
+    int h = 1;
+
+  #foreach ($p in $props)
+
+    h *= 1000003;
+    h ^= #hashCodeExpression($p);
+
+  #end
+
+    return h;
+  }
+#end
+
+#if (!$serialVersionUID.empty)
+  private static final long serialVersionUID = $serialVersionUID;
+#end
+}

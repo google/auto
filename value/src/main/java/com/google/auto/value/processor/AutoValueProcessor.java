@@ -19,7 +19,9 @@ import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -132,7 +134,12 @@ public class AutoValueProcessor extends AbstractProcessor {
         // We abandoned this type, but continue with the next.
       } catch (RuntimeException e) {
         // Don't propagate this exception, which will confusingly crash the compiler.
-        reportError("@AutoValue processor threw an exception: " + e, type);
+        // Instead, report a compiler error with the stack trace.
+        StringWriter writer = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(writer);
+        e.printStackTrace(printWriter);
+        printWriter.flush();
+        reportError("@AutoValue processor threw an exception: " + writer, type);
       }
     }
   }
@@ -152,14 +159,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     return generatedClassName(type, "AutoValue_");
   }
 
-  private static String simpleNameOf(String s) {
-    if (s.contains(".")) {
-      return s.substring(s.lastIndexOf('.') + 1);
-    } else {
-      return s;
-    }
-  }
-
   // Return the name of the class, including any enclosing classes but not the package.
   private static String classNameOf(TypeElement type) {
     String name = type.getQualifiedName().toString();
@@ -171,15 +170,20 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  static class Property {
+  /**
+   * A property of an {@code @AutoValue} class, defined by one of its abstract methods.
+   * An instance of this class is made available to the Velocity template engine for
+   * each property. The public methods of this class define JavaBeans-style properties
+   * that are accessible from templates. For example {@link #getType()} means we can
+   * write {@code $p.type} for a Velocity variable {@code $p} that is a {@code Property}.
+   */
+  public static class Property {
     private final ExecutableElement method;
     private final String type;
-    private final AutoValueTemplateVars vars;
 
-    Property(ExecutableElement method, String type, AutoValueTemplateVars vars) {
+    Property(ExecutableElement method, String type) {
       this.method = method;
       this.type = type;
-      this.vars = vars;
     }
 
     @Override
@@ -187,23 +191,19 @@ public class AutoValueProcessor extends AbstractProcessor {
       return method.getSimpleName().toString();
     }
 
-    TypeElement owner() {
+    TypeElement getOwner() {
       return (TypeElement) method.getEnclosingElement();
     }
 
-    public String type() {
+    public String getType() {
       return type;
     }
 
-    public boolean primitive() {
-      return method.getReturnType().getKind().isPrimitive();
+    public TypeKind getKind() {
+      return method.getReturnType().getKind();
     }
 
-    public boolean array() {
-      return method.getReturnType().getKind() == TypeKind.ARRAY;
-    }
-
-    public boolean nullable() {
+    public boolean isNullable() {
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
         String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
         if (name.equals("Nullable")) {
@@ -213,97 +213,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       return false;
     }
 
-    private static final Template PRIMITIVE_EQUALS_TEMPLATE =
-        Template.compile("this.$[p] == that.$[p]()");
-    private static final Template ARRAY_EQUALS_TEMPLATE =
-        Template.compile("$[javaUtilArraysSpelling].equals(this.$[p], "
-            + "(that instanceof $[subclass]) ? (($[subclass]) that).$[p] : that.$[p]())");
-    private static final Template FLOAT_EQUALS_TEMPLATE = Template.compile(
-        "Float.floatToIntBits(this.$[p]) == Float.floatToIntBits(that.$[p]())");
-    private static final Template DOUBLE_EQUALS_TEMPLATE = Template.compile(
-        "Double.doubleToLongBits(this.$[p]) == Double.doubleToLongBits(that.$[p]())");
-    private static final Template OBJECT_EQUALS_TEMPLATE = Template.compile(
-        "$[p.nullable?"
-            + "(this.$[p] == null) ? (that.$[p]() == null) : ]"
-            + "this.$[p].equals(that.$[p]())");
-
-    /**
-     * A string representing an expression that compares this property with the same property
-     * in another variable called "that" whose type is the class marked {@code @AutoValue}.
-     */
-    public String equalsThatExpression() {
-      // If the templating language had a case statement we wouldn't need this function, but the
-      // language is unreadable enough as it is.
-      final Template equalsTemplate;
-      switch (method.getReturnType().getKind()) {
-        case BYTE:
-        case SHORT:
-        case CHAR:
-        case INT:
-        case LONG:
-        case BOOLEAN:
-          equalsTemplate = PRIMITIVE_EQUALS_TEMPLATE;
-          break;
-        case FLOAT:
-          equalsTemplate = FLOAT_EQUALS_TEMPLATE;
-          break;
-        case DOUBLE:
-          equalsTemplate = DOUBLE_EQUALS_TEMPLATE;
-          break;
-        case ARRAY:
-          equalsTemplate = ARRAY_EQUALS_TEMPLATE;
-          break;
-        default:
-          equalsTemplate = OBJECT_EQUALS_TEMPLATE;
-          break;
-      }
-      class EqualsTemplateVars extends TemplateVars {
-        String javaUtilArraysSpelling;
-        String subclass;
-        Property p;
-
-        @Override Template template() {
-          return equalsTemplate;
-        }
-      }
-      EqualsTemplateVars equalsTemplateVars = new EqualsTemplateVars();
-      equalsTemplateVars.javaUtilArraysSpelling = vars.javaUtilArraysSpelling;
-      equalsTemplateVars.subclass = vars.subclass;
-      equalsTemplateVars.p = this;
-      return equalsTemplateVars.toText();
-    }
-
-    /**
-     * A string representing an expression that is the hashCode of this property.
-     */
-    public String hashCodeExpression() {
-      switch (method.getReturnType().getKind()) {
-        case BYTE:
-        case SHORT:
-        case CHAR:
-        case INT:
-          return this.toString();
-        case LONG:
-          return "(" + this + " >>> 32) ^ " + this;
-        case FLOAT:
-          return "Float.floatToIntBits(" + this + ")";
-        case DOUBLE:
-          return "(Double.doubleToLongBits(" + this + ") >>> 32) ^ "
-              + "Double.doubleToLongBits(" + this + ")";
-        case BOOLEAN:
-          return this + " ? 1231 : 1237";
-        case ARRAY:
-          return vars.javaUtilArraysSpelling + ".hashCode(" + this + ")";
-        default:
-          if (nullable()) {
-            return "(" + this + " == null) ? 0 : " + this + ".hashCode()";
-          } else {
-            return this + ".hashCode()";
-          }
-      }
-    }
-
-    public String access() {
+    public String getAccess() {
       Set<Modifier> mods = method.getModifiers();
       if (mods.contains(Modifier.PUBLIC)) {
         return "public ";
@@ -397,11 +307,14 @@ public class AutoValueProcessor extends AbstractProcessor {
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = classNameOf(type);
-    vars.simpleClassName = simpleNameOf(vars.origClass);
-    vars.subclass = simpleNameOf(generatedSubclassName(type));
+    vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
+    vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
     defineVarsForType(type, vars);
     String text = vars.toText();
+    text = Reformatter.fixup(text);
     writeSourceFile(generatedSubclassName(type), text, type);
+    GwtSerialization gwtSerialization = new GwtSerialization(processingEnv, type);
+    gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars)
@@ -420,13 +333,14 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.add(javaUtilArrays);
     }
     String pkg = TypeSimplifier.packageNameOf(type);
-    TypeSimplifier typeSimplifier = new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types);
+    TypeSimplifier typeSimplifier =
+        new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
     vars.javaUtilArraysSpelling = typeSimplifier.simplify(javaUtilArrays);
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
       String propType = typeSimplifier.simplify(method.getReturnType());
-      Property prop = new Property(method, propType, vars);
+      Property prop = new Property(method, propType);
       props.add(prop);
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
@@ -517,6 +431,10 @@ public class AutoValueProcessor extends AbstractProcessor {
           }
           toImplement.add(method);
         } else {
+          // This could reasonably be an error, were it not for an Eclipse bug in
+          // ElementUtils.override that sometimes fails to recognize that one method overrides
+          // another, and therefore leaves us with both an abstract method and the subclass method
+          // that overrides it. This shows up in AutoValueTest.LukesBase for example.
           reportWarning("@AutoValue classes cannot have abstract methods other than "
               + "property getters", method);
         }
