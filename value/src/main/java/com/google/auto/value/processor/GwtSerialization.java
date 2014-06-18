@@ -201,7 +201,7 @@ class GwtSerialization {
     for (AutoValueProcessor.Property prop : props) {
       update(crc, prop.toString() + ":" + prop.getType() + ";");
     }
-    return String.format("%8x", crc.getValue());
+    return String.format("%08x", crc.getValue());
   }
 
   private static void update(CRC32 crc, String s) {
