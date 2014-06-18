@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -207,6 +208,14 @@ final class TypeSimplifier {
     }
   }
 
+  static String simpleNameOf(String s) {
+    if (s.contains(".")) {
+      return s.substring(s.lastIndexOf('.') + 1);
+    } else {
+      return s;
+    }
+  }
+
   /**
    * Given a set of referenced types, works out which of them should be imported and what the
    * resulting spelling of each one is.
@@ -331,19 +340,23 @@ final class TypeSimplifier {
    * any class in its superclass chain, or any interface it implements.
    */
   private static Set<TypeMirror> nonPrivateDeclaredTypes(Types typeUtil, TypeMirror type) {
-    Set<TypeMirror> declared = new HashSet<TypeMirror>();
-    declared.add(type);
-    List<TypeElement> nestedTypes =
-        ElementFilter.typesIn(typeUtil.asElement(type).getEnclosedElements());
-    for (TypeElement nestedType : nestedTypes) {
-      if (!nestedType.getModifiers().contains(PRIVATE)) {
-        declared.add(nestedType.asType());
+    if (type == null) {
+      return Collections.emptySet();
+    } else {
+      Set<TypeMirror> declared = new HashSet<TypeMirror>();
+      declared.add(type);
+      List<TypeElement> nestedTypes =
+          ElementFilter.typesIn(typeUtil.asElement(type).getEnclosedElements());
+      for (TypeElement nestedType : nestedTypes) {
+        if (!nestedType.getModifiers().contains(PRIVATE)) {
+          declared.add(nestedType.asType());
+        }
       }
+      for (TypeMirror supertype : typeUtil.directSupertypes(type)) {
+        declared.addAll(nonPrivateDeclaredTypes(typeUtil, supertype));
+      }
+      return declared;
     }
-    for (TypeMirror supertype : typeUtil.directSupertypes(type)) {
-      declared.addAll(nonPrivateDeclaredTypes(typeUtil, supertype));
-    }
-    return declared;
   }
 
   private static Set<String> ambiguousNames(Types typeUtil, Set<TypeMirror> types) {

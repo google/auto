@@ -159,14 +159,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     return generatedClassName(type, "AutoValue_");
   }
 
-  private static String simpleNameOf(String s) {
-    if (s.contains(".")) {
-      return s.substring(s.lastIndexOf('.') + 1);
-    } else {
-      return s;
-    }
-  }
-
   // Return the name of the class, including any enclosing classes but not the package.
   private static String classNameOf(TypeElement type) {
     String name = type.getQualifiedName().toString();
@@ -317,12 +309,14 @@ public class AutoValueProcessor extends AbstractProcessor {
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = classNameOf(type);
-    vars.simpleClassName = simpleNameOf(vars.origClass);
-    vars.subclass = simpleNameOf(generatedSubclassName(type));
+    vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
+    vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
     defineVarsForType(type, vars);
     String text = vars.toText();
     text = fixup(text);
     writeSourceFile(generatedSubclassName(type), text, type);
+    GwtSerialization gwtSerialization = new GwtSerialization(processingEnv, type);
+    gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars)
