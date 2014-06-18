@@ -134,12 +134,12 @@ public class AutoValueProcessor extends AbstractProcessor {
         // We abandoned this type, but continue with the next.
       } catch (RuntimeException e) {
         // Don't propagate this exception, which will confusingly crash the compiler.
-        reportError("@AutoValue processor threw an exception: " + e, type);
+        // Instead, report a compiler error with the stack trace.
         StringWriter writer = new StringWriter();
         PrintWriter printWriter = new PrintWriter(writer);
         e.printStackTrace(printWriter);
         printWriter.flush();
-        note(writer.toString());
+        reportError("@AutoValue processor threw an exception: " + writer, type);
       }
     }
   }
