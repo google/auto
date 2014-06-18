@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import org.apache.velocity.VelocityContext;
+import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.RuntimeInstance;
 import org.apache.velocity.runtime.parser.ParseException;
 import org.apache.velocity.runtime.parser.node.SimpleNode;
@@ -51,8 +52,19 @@ abstract class TemplateVars {
   private static final RuntimeInstance velocityRuntimeInstance = new RuntimeInstance();
   static {
     // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
-    velocityRuntimeInstance.setProperty("runtime.references.strict", "true");
-    velocityRuntimeInstance.init();
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
+
+    // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
+    // context class loader. If that loader can see another copy of Velocity then that will lead
+    // to hard-to-diagnose exceptions during initialization.
+    Thread currentThread = Thread.currentThread();
+    ClassLoader oldContextLoader = currentThread.getContextClassLoader();
+    try {
+      currentThread.setContextClassLoader(TemplateVars.class.getClassLoader());
+      velocityRuntimeInstance.init();
+    } finally {
+      currentThread.setContextClassLoader(oldContextLoader);
+    }
   }
 
   private final List<Field> fields;
