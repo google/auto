@@ -36,9 +36,11 @@ import javax.tools.JavaFileObject;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 public class CompilationTest extends TestCase {
-  public void testCompilationWorks() {
-    // Ensure that these tests are not all passing just because something is wrong with the
-    // environment that causes all compilation to fail and therefore the tests to pass.
+  public void testCompilation() {
+    // Positive test case that ensures we generate the expected code for at least one case.
+    // Most AutoValue code-generation tests are functional, meaning that we check that the generated
+    // code does the right thing rather than checking what it looks like, but this test is a sanity
+    // check that we are not generating correct but weird code.
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -53,10 +55,52 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(buh);",
         "  }",
         "}");
+    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
+        "foo.bar.AutoValue_Baz",
+        "package foo.bar;",
+        "",
+        "@javax.annotation.Generated(\"" + AutoValueProcessor.class.getName() + "\")",
+        "final class AutoValue_Baz extends Baz {",
+        "  private final int buh;",
+        "",
+        "  Auto_Baz(int buh) {",
+        "    this.buh = buh;",
+        "  }",
+        "",
+        "  @Override public int buh() {",
+        "    return buh;",
+        "  }",
+        "",
+        "  @Override public String toString() {",
+        "    return \"Baz{\"",
+        "        + \"buh=\" + buh",
+        "        + \"}\";",
+        "  }",
+        "",
+        "  @Override public boolean equals(Object o) {",
+        "    if (o == this) {",
+        "      return true;",
+        "    }",
+        "    if (o instanceof Baz) {",
+        "      Baz that = (Baz) o;",
+        "      return (this.buh == that.buh());",
+        "    }",
+        "    return false;",
+        "  }",
+        "",
+        "  @Override public int hashCode() {",
+        "    int h = 1;",
+        "    h *= 1000003;",
+        "    h ^= buh;",
+        "    return h;",
+        "  }",
+        "}"
+    );
     ASSERT.about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
-        .compilesWithoutError();
+        .compilesWithoutError()
+        .and().generatesSources(expectedOutput);
   }
 
   public void testNoMultidimensionalPrimitiveArrays() throws Exception {
