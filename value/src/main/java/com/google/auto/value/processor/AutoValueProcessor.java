@@ -439,6 +439,10 @@ public class AutoValueProcessor extends AbstractProcessor {
           }
           toImplement.add(method);
         } else {
+          // This could reasonably be an error, were it not for an Eclipse bug in
+          // ElementUtils.override that sometimes fails to recognize that one method overrides
+          // another, and therefore leaves us with both an abstract method and the subclass method
+          // that overrides it. This shows up in AutoValueTest.LukesBase for example.
           reportWarning("@AutoValue classes cannot have abstract methods other than "
               + "property getters", method);
         }
