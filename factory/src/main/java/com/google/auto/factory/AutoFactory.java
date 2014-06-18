@@ -35,6 +35,10 @@ import java.lang.annotation.Target;
 @Target({ TYPE, CONSTRUCTOR })
 public @interface AutoFactory {
   /**
+   * The <i>simple</i> name of the generated factory; the factory is always generated in the same
+   * package.  The default value (the empty string) will result in a factory with the name of the
+   * type being created with {@code Factory} appended to the end.  E.g.: The default name for a
+   * factory for {@code MyType} will be {@code MyTypeFactory}.
    */
   String className() default "";
 
