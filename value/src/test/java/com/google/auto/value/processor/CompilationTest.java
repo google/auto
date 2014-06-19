@@ -63,7 +63,7 @@ public class CompilationTest extends TestCase {
         "final class AutoValue_Baz extends Baz {",
         "  private final int buh;",
         "",
-        "  Auto_Baz(int buh) {",
+        "  AutoValue_Baz(int buh) {",
         "    this.buh = buh;",
         "  }",
         "",
