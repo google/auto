@@ -98,24 +98,22 @@ public class AutoServiceProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     try {
-      return processImpl(annotations, roundEnv);
+      processImpl(annotations, roundEnv);
     } catch (Exception e) {
       // We don't allow exceptions of any kind to propagate to the compiler
       StringWriter writer = new StringWriter();
       e.printStackTrace(new PrintWriter(writer));
       fatalError(writer.toString());
-      return true;
     }
+    return false;
   }
 
-  private boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  private void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (roundEnv.processingOver()) {
       generateConfigFiles();
     } else {
       processAnnotations(annotations, roundEnv);
     }
-
-    return true;
   }
 
   private void processAnnotations(Set<? extends TypeElement> annotations,

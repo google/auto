@@ -112,15 +112,8 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    boolean claimed = (annotations.size() == 1
-        && annotations.iterator().next().getQualifiedName().toString().equals(
-            AutoValue.class.getName()));
-    if (claimed) {
-      process(roundEnv);
-      return true;
-    } else {
-      return false;
-    }
+    process(roundEnv);
+    return false;
   }
 
   private void process(RoundEnvironment roundEnv) {
