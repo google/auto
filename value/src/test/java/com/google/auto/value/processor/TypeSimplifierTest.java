@@ -28,7 +28,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -36,6 +36,8 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -183,6 +185,91 @@ public class TypeSimplifierTest extends TestCase {
       return typeMirrorOf("java.util.Map");
     }
 
+    private Set<TypeMirror> typeMirrorSet(TypeMirror... typeMirrors) {
+      Set<TypeMirror> set = new TypeMirrorSet();
+      for (TypeMirror typeMirror : typeMirrors) {
+        assertTrue(set.add(typeMirror));
+      }
+      return set;
+    }
+
+    private TypeMirror objectMirror() {
+      return typeMirrorOf("java.lang.Object");
+    }
+
+    private TypeMirror cloneReturnTypeMirror() {
+      TypeElement object = typeElementOf("java.lang.Object");
+      ExecutableElement clone = null;
+      for (Element element : object.getEnclosedElements()) {
+        if (element.getSimpleName().contentEquals("clone")) {
+          clone = (ExecutableElement) element;
+          break;
+        }
+      }
+      return clone.getReturnType();
+    }
+
+    /**
+     * This test shows why we need to have TypeMirrorSet. The mirror of java.lang.Object obtained
+     * from {@link Elements#getTypeElement Elements.getTypeElement("java.lang.Object")} does not
+     * compare equal to the mirror of the return type of Object.clone(), even though that is also
+     * java.lang.Object and {@link Types#isSameType} considers them the same.
+     *
+     * <p>There's no requirement that this test pass and if it starts failing or doesn't work in
+     * another test environment then we can delete it. The specification of
+     * {@link TypeMirror#equals} explicitly says that it cannot be used for type equality, so even
+     * if this particular case stops being a problem (which means this test would fail), we would
+     * need TypeMirrorSet for complete correctness.
+     */
+    public void testQuirkyTypeMirrors() {
+      TypeMirror objectMirror = objectMirror();
+      TypeMirror cloneReturnTypeMirror = cloneReturnTypeMirror();
+      assertFalse(objectMirror.equals(cloneReturnTypeMirror));
+      assertTrue(typeUtil.isSameType(objectMirror, cloneReturnTypeMirror));
+    }
+
+    public void testTypeMirrorSet() {
+      TypeMirror objectMirror = objectMirror();
+      TypeMirror otherObjectMirror = cloneReturnTypeMirror();
+      Set<TypeMirror> set = new TypeMirrorSet();
+      assertEquals(0, set.size());
+      assertTrue(set.isEmpty());
+      boolean added = set.add(objectMirror);
+      assertTrue(added);
+      assertEquals(1, set.size());
+
+      Set<TypeMirror> otherSet = typeMirrorSet(otherObjectMirror);
+      assertEquals(set, otherSet);
+      assertEquals(otherSet, set);
+      assertEquals(set.hashCode(), otherSet.hashCode());
+
+      assertFalse(set.add(otherObjectMirror));
+      assertTrue(set.contains(otherObjectMirror));
+
+      assertFalse(set.contains(null));
+      assertFalse(set.contains("foo"));
+      assertFalse(set.remove(null));
+      assertFalse(set.remove("foo"));
+
+      TypeElement list = typeElementOf("java.util.List");
+      TypeMirror listOfObjectMirror = typeUtil.getDeclaredType(list, objectMirror);
+      TypeMirror listOfOtherObjectMirror = typeUtil.getDeclaredType(list, otherObjectMirror);
+      assertFalse(listOfObjectMirror.equals(listOfOtherObjectMirror));
+      assertTrue(typeUtil.isSameType(listOfObjectMirror, listOfOtherObjectMirror));
+      added = set.add(listOfObjectMirror);
+      assertTrue(added);
+      assertEquals(2, set.size());
+      assertFalse(set.add(listOfOtherObjectMirror));
+      assertTrue(set.contains(listOfOtherObjectMirror));
+
+      boolean removed = set.remove(listOfOtherObjectMirror);
+      assertTrue(removed);
+      assertFalse(set.contains(listOfObjectMirror));
+
+      set.removeAll(otherSet);
+      assertTrue(set.isEmpty());
+    }
+
     public void testPackageNameOfString() {
       assertEquals("java.lang", TypeSimplifier.packageNameOf(typeElementOf("java.lang.String")));
     }
@@ -197,14 +284,13 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     public void testImportsForNoTypes() {
-      Set<TypeMirror> types = ImmutableSet.of();
       TypeSimplifier typeSimplifier =
-          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
+          new TypeSimplifier(typeUtil, "foo.bar", typeMirrorSet(), baseWithoutContainedTypes());
       assertEquals(ImmutableSet.of(), typeSimplifier.typesToImport());
     }
 
     public void testImportsForImplicitlyImportedTypes() {
-      Set<TypeMirror> types = ImmutableSet.of(
+      Set<TypeMirror> types = typeMirrorSet(
           typeMirrorOf("java.lang.String"),
           typeMirrorOf("javax.management.MBeanServer"),  // Same package, so no import.
           typeUtil.getPrimitiveType(TypeKind.INT),
@@ -216,7 +302,7 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     public void testImportsForPlainTypes() {
-      Set<TypeMirror> types = ImmutableSet.of(
+      Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeMirrorOf("java.lang.String"),
           typeMirrorOf("java.util.Map"),
@@ -237,7 +323,7 @@ public class TypeSimplifierTest extends TestCase {
     public void testImportsForComplicatedTypes() {
       TypeElement list = typeElementOf("java.util.List");
       TypeElement map = typeElementOf("java.util.Map");
-      Set<TypeMirror> types = ImmutableSet.of(
+      Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeMirrorOf("java.util.regex.Pattern"),
           typeUtil.getDeclaredType(list,  // List<Timer>
@@ -261,7 +347,7 @@ public class TypeSimplifierTest extends TestCase {
     public void testImportsForArrayTypes() {
       TypeElement list = typeElementOf("java.util.List");
       TypeElement set = typeElementOf("java.util.Set");
-      Set<TypeMirror> types = ImmutableSet.<TypeMirror>of(
+      Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getArrayType(typeUtil.getPrimitiveType(TypeKind.INT)),
           typeUtil.getArrayType(typeMirrorOf("java.util.regex.Pattern")),
           typeUtil.getArrayType(          // Set<Matcher[]>[]
@@ -283,19 +369,19 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     public void testImportsForDefaultPackage() {
-      ImmutableSet.Builder<TypeMirror> typesBuilder = ImmutableSet.builder();
+      Set<TypeMirror> types = typeMirrorSet();
       for (String className : CLASS_TO_SOURCE.keySet()) {
-        typesBuilder.add(typeMirrorOf(className));
+        assertTrue(types.add(typeMirrorOf(className)));
         // These are all in the default package so they don't need to be imported.
         // But MultipleBounds references java.util.List so that will be imported.
       }
-      typesBuilder.add(
+      types.addAll(typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeMirrorOf("java.lang.String"),
           typeMirrorOf("java.util.Map"),
           typeMirrorOf("java.util.Map.Entry"),
           typeMirrorOf("java.util.regex.Pattern"),
-          typeMirrorOf("javax.management.MBeanServer"));
+          typeMirrorOf("javax.management.MBeanServer")));
       List<String> expectedImports = ImmutableList.of(
           "java.util.List",
           "java.util.Map",
@@ -304,12 +390,12 @@ public class TypeSimplifierTest extends TestCase {
           "javax.management.MBeanServer"
       );
       TypeSimplifier typeSimplifier =
-          new TypeSimplifier(typeUtil, "", typesBuilder.build(), baseWithoutContainedTypes());
+          new TypeSimplifier(typeUtil, "", types, baseWithoutContainedTypes());
       assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
     }
 
     public void testImportsForAmbiguousNames() {
-      Set<TypeMirror> types = ImmutableSet.of(
+      Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeMirrorOf("java.awt.List"),
           typeMirrorOf("java.lang.String"),
@@ -326,7 +412,7 @@ public class TypeSimplifierTest extends TestCase {
 
     public void testSimplifyJavaLangString() {
       TypeMirror string = typeMirrorOf("java.lang.String");
-      Set<TypeMirror> types = ImmutableSet.of(string);
+      Set<TypeMirror> types = typeMirrorSet(string);
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals("String", typeSimplifier.simplify(string));
@@ -334,7 +420,7 @@ public class TypeSimplifierTest extends TestCase {
 
     public void testSimplifyJavaLangThreadState() {
       TypeMirror threadState = typeMirrorOf("java.lang.Thread.State");
-      Set<TypeMirror> types = ImmutableSet.of(threadState);
+      Set<TypeMirror> types = typeMirrorSet(threadState);
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals("Thread.State", typeSimplifier.simplify(threadState));
@@ -343,7 +429,7 @@ public class TypeSimplifierTest extends TestCase {
     public void testSimplifyAmbiguousNames() {
       TypeMirror javaAwtList = typeMirrorOf("java.awt.List");
       TypeMirror javaUtilList = typeMirrorOf("java.util.List");
-      Set<TypeMirror> types = ImmutableSet.of(javaAwtList, javaUtilList);
+      Set<TypeMirror> types = typeMirrorSet(javaAwtList, javaUtilList);
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(javaAwtList.toString(), typeSimplifier.simplify(javaAwtList));
@@ -352,7 +438,7 @@ public class TypeSimplifierTest extends TestCase {
 
     public void testSimplifyAmbiguityFromWithinClass() {
       TypeMirror otherEntry = typeMirrorOf(TypeSimplifierTest.class.getCanonicalName() + ".Entry");
-      Set<TypeMirror> types = ImmutableSet.of(otherEntry);
+      Set<TypeMirror> types = typeMirrorSet(otherEntry);
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseDeclaresEntry());
       assertEquals(otherEntry.toString(), typeSimplifier.simplify(otherEntry));
@@ -361,7 +447,7 @@ public class TypeSimplifierTest extends TestCase {
     public void testSimplifyJavaLangNamesake() {
       TypeMirror javaLangDouble = typeMirrorOf("java.lang.Double");
       TypeMirror awtDouble = typeMirrorOf("java.awt.geom.Arc2D.Double");
-      Set<TypeMirror> types = ImmutableSet.of(javaLangDouble, awtDouble);
+      Set<TypeMirror> types = typeMirrorSet(javaLangDouble, awtDouble);
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
       assertEquals(javaLangDouble.toString(), typeSimplifier.simplify(javaLangDouble));
@@ -376,7 +462,7 @@ public class TypeSimplifierTest extends TestCase {
       TypeMirror pattern = typeMirrorOf("java.util.regex.Pattern");
       TypeMirror timer = typeMirrorOf("java.util.Timer");
       TypeMirror bigInteger = typeMirrorOf("java.math.BigInteger");
-      Set<TypeMirror> types = ImmutableSet.of(
+      Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeUtil.getArrayType(typeUtil.getPrimitiveType(TypeKind.BYTE)),
           pattern,
@@ -387,7 +473,7 @@ public class TypeSimplifierTest extends TestCase {
           typeUtil.getDeclaredType(map, string, integer),
           typeUtil.getDeclaredType(map,
               typeUtil.getWildcardType(timer, null), typeUtil.getWildcardType(null, bigInteger)));
-      List<String> expectedSimplifications = ImmutableList.of(
+      Set<String> expectedSimplifications = ImmutableSet.of(
           "int",
           "byte[]",
           "Pattern",
@@ -400,7 +486,7 @@ public class TypeSimplifierTest extends TestCase {
       );
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
-      List<String> actualSimplifications = new ArrayList<String>();
+      Set<String> actualSimplifications = new HashSet<String>();
       for (TypeMirror type : types) {
         actualSimplifications.add(typeSimplifier.simplify(type));
       }
@@ -411,7 +497,7 @@ public class TypeSimplifierTest extends TestCase {
       TypeElement multipleBoundsElement = typeElementOf("MultipleBounds");
       TypeMirror multipleBoundsMirror = multipleBoundsElement.asType();
       TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtil, "",
-          ImmutableSet.of(multipleBoundsMirror), baseWithoutContainedTypes());
+          typeMirrorSet(multipleBoundsMirror), baseWithoutContainedTypes());
       assertEquals(ImmutableSet.of("java.util.List"), typeSimplifier.typesToImport());
       assertEquals("MultipleBounds<K, V>", typeSimplifier.simplify(multipleBoundsMirror));
       assertEquals("<K extends List<V> & Comparable<K>, V>",

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -32,7 +31,6 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
@@ -195,7 +193,7 @@ class GwtSerialization {
 
   private String computeClassHash(List<AutoValueProcessor.Property> props) {
     TypeSimplifier typeSimplifier = new TypeSimplifier(
-        processingEnv.getTypeUtils(), "", Collections.<TypeMirror>emptySet(), null);
+        processingEnv.getTypeUtils(), "", new TypeMirrorSet(), null);
     CRC32 crc = new CRC32();
     update(crc, typeSimplifier.simplify(type.asType()) + ":");
     for (AutoValueProcessor.Property prop : props) {

@@ -103,6 +103,99 @@ public class CompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  public void testImports() {
+    // Test that referring to the same class in two different ways does not confuse the import logic
+    // into thinking it is two different classes and that therefore it can't import. The code here
+    // is nonsensical but successfully reproduces a real problem, which is that a TypeMirror that is
+    // extracted using Elements.getTypeElement(name).asType() does not compare equal to one that is
+    // extracted from ExecutableElement.getReturnType(), even though Types.isSameType considers them
+    // equal. So unless we are careful, the java.util.Arrays that we import explicitly to use its
+    // methods will appear different from the java.util.Arrays that is the return type of the
+    // arrays() method here.
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "import java.util.Arrays;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract int[] ints();",
+        "  public abstract Arrays arrays();",
+        "",
+        "  public static Baz create(int[] ints, Arrays arrays) {",
+        "    return new AutoValue_Baz(ints, arrays);",
+        "  }",
+        "}");
+    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
+        "foo.bar.AutoValue_Baz",
+        "package foo.bar;",
+        "",
+        "import java.util.Arrays;",
+        "",
+        "@javax.annotation.Generated(\"" + AutoValueProcessor.class.getName() + "\")",
+        "final class AutoValue_Baz extends Baz {",
+        "  private final int[] ints;",
+        "  private final Arrays arrays;",
+        "",
+        "  AutoValue_Baz(int[] ints, Arrays arrays) {",
+        "    if (ints == null) {",
+        "      throw new NullPointerException(\"Null ints\");",
+        "    }",
+        "    this.ints = ints;",
+        "    if (arrays == null) {",
+        "      throw new NullPointerException(\"Null arrays\");",
+        "    }",
+        "    this.arrays = arrays;",
+        "  }",
+        "",
+        "  @Override public int[] ints() {",
+        "    return ints.clone();",
+        "  }",
+        "",
+        "  @Override public Arrays arrays() {",
+        "    return arrays;",
+        "  }",
+        "",
+        "  @Override public String toString() {",
+        "    return \"Baz{\"",
+        "        + \"ints=\" + Arrays.toString(ints) + \", \"",
+        "        + \"arrays=\" + arrays",
+        "        + \"}\";",
+        "  }",
+        "",
+        "  @Override public boolean equals(Object o) {",
+        "    if (o == this) {",
+        "      return true;",
+        "    }",
+        "    if (o instanceof Baz) {",
+        "      Baz that = (Baz) o;",
+        "      return (Arrays.equals(this.ints, (that instanceof AutoValue_Baz) "
+                      + "? ((AutoValue_Baz) that).ints : that.ints()))",
+        "          && (this.arrays.equals(that.arrays()));",
+        "    }",
+        "    return false;",
+        "  }",
+        "",
+        "  @Override public int hashCode() {",
+        "    int h = 1;",
+        "    h *= 1000003;",
+        "    h ^= Arrays.hashCode(ints);",
+        "    h *= 1000003;",
+        "    h ^= arrays.hashCode();",
+        "    return h;",
+        "  }",
+        "}"
+    );
+    ASSERT.about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(expectedOutput);
+  }
+
   public void testNoMultidimensionalPrimitiveArrays() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
