@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -319,12 +318,13 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars)
       throws CompileException {
+    Types typeUtils = processingEnv.getTypeUtils();
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     determineObjectMethodsToGenerate(methods, vars);
     dontImplementAnnotationEqualsOrHashCode(type, vars);
     List<ExecutableElement> toImplement = methodsToImplement(methods);
-    Set<TypeMirror> types = new HashSet<TypeMirror>();
+    Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(toImplement));
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
@@ -333,8 +333,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.add(javaUtilArrays);
     }
     String pkg = TypeSimplifier.packageNameOf(type);
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(processingEnv.getTypeUtils(), pkg, types, type.asType());
+    TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
     vars.javaUtilArraysSpelling = typeSimplifier.simplify(javaUtilArrays);
     List<Property> props = new ArrayList<Property>();
@@ -353,7 +352,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {
-    HashSet<TypeMirror> returnTypes = new HashSet<TypeMirror>();
+    Set<TypeMirror> returnTypes = new TypeMirrorSet();
     for (ExecutableElement method : methods) {
       returnTypes.add(method.getReturnType());
     }

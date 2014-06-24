@@ -17,7 +17,6 @@ package com.google.auto.value.processor;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,14 +60,14 @@ final class TypeSimplifier {
     }
   }
 
-  private final Types typeUtil;
+  private final Types typeUtils;
   private final Map<String, Spelling> imports;
 
-  TypeSimplifier(Types typeUtil, String packageName, Set<TypeMirror> types, TypeMirror base) {
-    this.typeUtil = typeUtil;
-    Set<TypeMirror> referenced = referencedClassTypes(typeUtil, types);
-    Set<TypeMirror> defined = nonPrivateDeclaredTypes(typeUtil, base);
-    this.imports = findImports(typeUtil, packageName, referenced, defined);
+  TypeSimplifier(Types typeUtils, String packageName, Set<TypeMirror> types, TypeMirror base) {
+    this.typeUtils = typeUtils;
+    Set<TypeMirror> referenced = referencedClassTypes(typeUtils, types);
+    Set<TypeMirror> defined = nonPrivateDeclaredTypes(typeUtils, base);
+    this.imports = findImports(typeUtils, packageName, referenced, defined);
   }
 
   /**
@@ -158,7 +157,7 @@ final class TypeSimplifier {
     }
 
     @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
-      TypeElement typeElement = (TypeElement) typeUtil.asElement(type);
+      TypeElement typeElement = (TypeElement) typeUtils.asElement(type);
       String typeString = typeElement.getQualifiedName().toString();
       if (imports.containsKey(typeString)) {
         sb.append(imports.get(typeString).spelling);
@@ -240,14 +239,14 @@ final class TypeSimplifier {
    *     whether the type should be imported, and how the type should be spelled in the source code.
    */
   private static Map<String, Spelling> findImports(
-      Types typeUtil, String packageName, Set<TypeMirror> referenced, Set<TypeMirror> defined) {
+      Types typeUtils, String packageName, Set<TypeMirror> referenced, Set<TypeMirror> defined) {
     Map<String, Spelling> imports = new HashMap<String, Spelling>();
-    Set<TypeMirror> typesInScope = new HashSet<TypeMirror>();
+    Set<TypeMirror> typesInScope = new TypeMirrorSet();
     typesInScope.addAll(referenced);
     typesInScope.addAll(defined);
-    Set<String> ambiguous = ambiguousNames(typeUtil, typesInScope);
+    Set<String> ambiguous = ambiguousNames(typeUtils, typesInScope);
     for (TypeMirror type : referenced) {
-      TypeElement typeElement = (TypeElement) typeUtil.asElement(type);
+      TypeElement typeElement = (TypeElement) typeUtils.asElement(type);
       String fullName = typeElement.getQualifiedName().toString();
       String simpleName = typeElement.getSimpleName().toString();
       String pkg = packageNameOf(typeElement);
@@ -275,9 +274,9 @@ final class TypeSimplifier {
    * {@code java.util.List<? extends java.lang.Number>} then both {@code java.util.List} and
    * {@code java.lang.Number} will be in the resulting set.
    */
-  private static Set<TypeMirror> referencedClassTypes(Types typeUtil, Set<TypeMirror> types) {
-    Set<TypeMirror> referenced = new HashSet<TypeMirror>();
-    TypeVisitor<Void, Void> typeVisitor = new ReferencedClassTypeVisitor(typeUtil, referenced);
+  private static Set<TypeMirror> referencedClassTypes(Types typeUtils, Set<TypeMirror> types) {
+    TypeMirrorSet referenced = new TypeMirrorSet();
+    TypeVisitor<Void, Void> typeVisitor = new ReferencedClassTypeVisitor(typeUtils, referenced);
     for (TypeMirror type : types) {
       type.accept(typeVisitor, null);
     }
@@ -285,13 +284,14 @@ final class TypeSimplifier {
   }
 
   private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor6<Void, Void> {
-    private final Types typeUtil;
+    private final Types typeUtils;
     private final Set<TypeMirror> referencedTypes;
-    private final Set<TypeMirror> seenTypes = new HashSet<TypeMirror>();
+    private final Set<TypeMirror> seenTypes;
 
-    ReferencedClassTypeVisitor(Types typeUtil, Set<TypeMirror> referenced) {
-      this.typeUtil = typeUtil;
+    ReferencedClassTypeVisitor(Types typeUtils, Set<TypeMirror> referenced) {
+      this.typeUtils = typeUtils;
       this.referencedTypes = referenced;
+      this.seenTypes = new TypeMirrorSet();
     }
 
     @Override
@@ -302,7 +302,7 @@ final class TypeSimplifier {
     @Override
     public Void visitDeclared(DeclaredType t, Void p) {
       if (seenTypes.add(t)) {
-        referencedTypes.add(typeUtil.erasure(t));
+        referencedTypes.add(typeUtils.erasure(t));
         for (TypeMirror param : t.getTypeArguments()) {
           visit(param, p);
         }
@@ -318,7 +318,7 @@ final class TypeSimplifier {
       // directSupertypes(t) will be exactly [Foo, Bar]. For plain <T>, directSupertypes(t) will
       // be java.lang.Object, and it is harmless for us to record a reference to that since we won't
       // try to import it or use it in the output string for <T>.
-      for (TypeMirror upper : typeUtil.directSupertypes(t)) {
+      for (TypeMirror upper : typeUtils.directSupertypes(t)) {
         visit(upper, p);
       }
       return visit(t.getLowerBound(), p);
@@ -339,31 +339,31 @@ final class TypeSimplifier {
    * Finds all types that are declared with non private visibility by the given {@code TypeMirror},
    * any class in its superclass chain, or any interface it implements.
    */
-  private static Set<TypeMirror> nonPrivateDeclaredTypes(Types typeUtil, TypeMirror type) {
+  private static Set<TypeMirror> nonPrivateDeclaredTypes(Types typeUtils, TypeMirror type) {
     if (type == null) {
-      return Collections.emptySet();
+      return new TypeMirrorSet();
     } else {
-      Set<TypeMirror> declared = new HashSet<TypeMirror>();
+      Set<TypeMirror> declared = new TypeMirrorSet();
       declared.add(type);
       List<TypeElement> nestedTypes =
-          ElementFilter.typesIn(typeUtil.asElement(type).getEnclosedElements());
+          ElementFilter.typesIn(typeUtils.asElement(type).getEnclosedElements());
       for (TypeElement nestedType : nestedTypes) {
         if (!nestedType.getModifiers().contains(PRIVATE)) {
           declared.add(nestedType.asType());
         }
       }
-      for (TypeMirror supertype : typeUtil.directSupertypes(type)) {
-        declared.addAll(nonPrivateDeclaredTypes(typeUtil, supertype));
+      for (TypeMirror supertype : typeUtils.directSupertypes(type)) {
+        declared.addAll(nonPrivateDeclaredTypes(typeUtils, supertype));
       }
       return declared;
     }
   }
 
-  private static Set<String> ambiguousNames(Types typeUtil, Set<TypeMirror> types) {
+  private static Set<String> ambiguousNames(Types typeUtils, Set<TypeMirror> types) {
     Set<String> ambiguous = new HashSet<String>();
     Set<String> simpleNames = new HashSet<String>();
     for (TypeMirror type : types) {
-      String simpleName = typeUtil.asElement(type).getSimpleName().toString();
+      String simpleName = typeUtils.asElement(type).getSimpleName().toString();
       if (!simpleNames.add(simpleName)) {
         ambiguous.add(simpleName);
       }
