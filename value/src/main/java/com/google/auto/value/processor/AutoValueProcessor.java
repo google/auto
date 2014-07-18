@@ -82,10 +82,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  @SuppressWarnings("serial")
-  private static class CompileException extends Exception {
-  }
-
   private void reportWarning(String msg, Element e) {
     processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, msg, e);
   }
@@ -104,9 +100,9 @@ public class AutoValueProcessor extends AbstractProcessor {
    * Issue a compilation error and abandon the processing of this class. This does not prevent
    * the processing of other classes.
    */
-  private void abortWithError(String msg, Element e) throws CompileException {
+  private void abortWithError(String msg, Element e) {
     reportError(msg, e);
-    throw new CompileException();
+    throw new AbortProcessingException();
   }
 
   @Override
@@ -129,7 +125,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     for (TypeElement type : types) {
       try {
         processType(type);
-      } catch (CompileException e) {
+      } catch (AbortProcessingException e) {
         // We abandoned this type, but continue with the next.
       } catch (RuntimeException e) {
         // Don't propagate this exception, which will confusingly crash the compiler.
@@ -289,7 +285,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private void processType(TypeElement type) throws CompileException {
+  private void processType(TypeElement type) {
     AutoValue autoValue = type.getAnnotation(AutoValue.class);
     if (autoValue == null) {
       // This shouldn't happen unless the compilation environment is buggy,
@@ -316,8 +312,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars)
-      throws CompileException {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
     Types typeUtils = processingEnv.getTypeUtils();
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
@@ -415,8 +410,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private List<ExecutableElement> methodsToImplement(List<ExecutableElement> methods)
-      throws CompileException {
+  private List<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
     List<ExecutableElement> toImplement = new ArrayList<ExecutableElement>();
     boolean errors = false;
     for (ExecutableElement method : methods) {
@@ -440,7 +434,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
     if (errors) {
-      throw new CompileException();
+      throw new AbortProcessingException();
     }
     return toImplement;
   }

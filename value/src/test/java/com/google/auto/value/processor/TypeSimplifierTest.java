@@ -24,24 +24,25 @@ import com.google.common.io.Files;
 import junit.framework.TestCase;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
@@ -65,6 +66,10 @@ public class TypeSimplifierTest extends TestCase {
           "import java.util.List;\n"
           + "public class MultipleBounds<K extends List<V> & Comparable<K>, V> {}\n"
   );
+  private static final ImmutableMap<String, String> ERROR_CLASS_TO_SOURCE = ImmutableMap.of(
+      "ExtendsUndefinedType",
+          "public class ExtendsUndefinedType extends MissingType {}\n"
+  );
 
   // This test is a bit unusual. The reason is that TypeSimplifier relies on interfaces such as
   // Types, TypeMirror, and TypeElement whose implementations are provided by the annotation
@@ -77,15 +82,25 @@ public class TypeSimplifierTest extends TestCase {
   // passes if there were no compiler errors, and otherwise fails with a message that is a
   // concatenation of all the individual failures.
   public void testTypeSimplifier() throws Exception {
+    doTestTypeSimplifierWithSources(new MainTestProcessor(), CLASS_TO_SOURCE);
+  }
+
+  public void testTypeSimplifierErrorTypes() throws IOException {
+    doTestTypeSimplifierWithSources(new ErrorTestProcessor(), ERROR_CLASS_TO_SOURCE);
+  }
+
+  private void doTestTypeSimplifierWithSources(
+      AbstractTestProcessor testProcessor, ImmutableMap<String, String> classToSource)
+      throws IOException {
     File tmpDir = Files.createTempDir();
-    for (String className : CLASS_TO_SOURCE.keySet()) {
+    for (String className : classToSource.keySet()) {
       File java = new File(tmpDir, className + ".java");
-      Files.write(CLASS_TO_SOURCE.get(className), java, Charsets.UTF_8);
+      Files.write(classToSource.get(className), java, Charsets.UTF_8);
     }
     try {
-      doTestTypeSimplifier(tmpDir);
+      doTestTypeSimplifier(testProcessor, tmpDir, classToSource);
     } finally {
-      for (String className : CLASS_TO_SOURCE.keySet()) {
+      for (String className : classToSource.keySet()) {
         File java = new File(tmpDir, className + ".java");
         assertTrue(java.delete());
         new File(tmpDir, className + ".class").delete();
@@ -94,7 +109,9 @@ public class TypeSimplifierTest extends TestCase {
     }
   }
 
-  private void doTestTypeSimplifier(File tmpDir) throws Exception {
+  private void doTestTypeSimplifier(
+      AbstractTestProcessor testProcessor, File tmpDir, ImmutableMap<String, String> classToSource)
+      throws IOException {
     JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
     DiagnosticCollector<JavaFileObject> diagnosticCollector =
         new DiagnosticCollector<JavaFileObject>();
@@ -106,13 +123,12 @@ public class TypeSimplifierTest extends TestCase {
     List<String> options = ImmutableList.of(
         "-sourcepath", tmpDir.getPath(),
         "-d", tmpDir.getPath(),
-        "-processor", TestProcessor.class.getName(),
         "-Xlint");
     javac.getTask(compilerOut, fileManager, diagnosticCollector, options, null, null);
     // This doesn't compile anything but communicates the paths to the JavaFileManager.
 
     ImmutableList.Builder<JavaFileObject> javaFilesBuilder = ImmutableList.builder();
-    for (String className : CLASS_TO_SOURCE.keySet()) {
+    for (String className : classToSource.keySet()) {
       JavaFileObject sourceFile = fileManager.getJavaFileForInput(
           StandardLocation.SOURCE_PATH, className, Kind.SOURCE);
       javaFilesBuilder.add(sourceFile);
@@ -123,30 +139,49 @@ public class TypeSimplifierTest extends TestCase {
     // annotations.)
     JavaCompiler.CompilationTask javacTask = javac.getTask(
         compilerOut, fileManager, diagnosticCollector, options,
-        CLASS_TO_SOURCE.keySet(), javaFilesBuilder.build());
-    boolean compiledOk = javacTask.call();
-    assertTrue(compilerOut.toString() + diagnosticCollector.getDiagnostics(), compiledOk);
+        classToSource.keySet(), javaFilesBuilder.build());
+    javacTask.setProcessors(ImmutableList.of(testProcessor));
+    javacTask.call();
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        new ArrayList<Diagnostic<? extends JavaFileObject>>(diagnosticCollector.getDiagnostics());
+
+    // In the ErrorTestProcessor case, the code being compiled contains a deliberate reference to an
+    // undefined type, so that we can capture an instance of ErrorType. (Synthesizing one ourselves
+    // leads to ClassCastException inside javac.) So remove the error for that from the output, and
+    // only fail if there were other errors.
+    if (!diagnostics.isEmpty()
+        && diagnostics.get(0).getSource().getName().contains("ExtendsUndefinedType")) {
+      diagnostics.remove(0);
+    }
+    // In the ErrorTestProcessor case, compilerOut.toString() will include the error for
+    // ExtendsUndefinedType, which can safely be ignored, as well as stack traces for any failing
+    // assertion.
+    assertEquals(compilerOut.toString() + diagnosticCollector.getDiagnostics(),
+        ImmutableList.of(), diagnostics);
   }
 
   // A type which is deliberately ambiguous with Map.Entry. Used to perform an ambiguity test below.
   static final class Entry {}
 
-  @SupportedAnnotationTypes("*")
-  public static class TestProcessor extends AbstractProcessor {
+  private abstract static class AbstractTestProcessor extends AbstractProcessor {
     private boolean testsRan;
-    private Elements elementUtil;
-    private Types typeUtil;
+    Types typeUtil;
 
     @Override
-    public SourceVersion getSupportedSourceVersion() {
+    public Set<String> getSupportedAnnotationTypes() {
+      return ImmutableSet.of("*");
+    }
+
+    @Override
+    public final SourceVersion getSupportedSourceVersion() {
       return SourceVersion.latest();
     }
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public final boolean process(
+        Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
       if (!testsRan) {
         testsRan = true;
-        elementUtil = processingEnv.getElementUtils();
         typeUtil = processingEnv.getTypeUtils();
         runTests();
       }
@@ -154,7 +189,7 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     private void runTests() {
-      for (Method method : TestProcessor.class.getMethods()) {
+      for (Method method : getClass().getMethods()) {
         if (method.getName().startsWith("test")) {
           try {
             method.invoke(this);
@@ -169,22 +204,24 @@ public class TypeSimplifierTest extends TestCase {
       }
     }
 
-    private TypeElement typeElementOf(String name) {
-      return elementUtil.getTypeElement(name);
+    TypeElement typeElementOf(String name) {
+      return processingEnv.getElementUtils().getTypeElement(name);
     }
 
-    private TypeMirror typeMirrorOf(String name) {
+    TypeMirror typeMirrorOf(String name) {
       return typeElementOf(name).asType();
     }
 
-    private TypeMirror baseWithoutContainedTypes() {
+    TypeMirror baseWithoutContainedTypes() {
       return typeMirrorOf("java.lang.Object");
     }
 
-    private TypeMirror baseDeclaresEntry() {
+    TypeMirror baseDeclaresEntry() {
       return typeMirrorOf("java.util.Map");
     }
+  }
 
+  private static class MainTestProcessor extends AbstractTestProcessor {
     private Set<TypeMirror> typeMirrorSet(TypeMirror... typeMirrors) {
       Set<TypeMirror> set = new TypeMirrorSet();
       for (TypeMirror typeMirror : typeMirrors) {
@@ -502,6 +539,32 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("MultipleBounds<K, V>", typeSimplifier.simplify(multipleBoundsMirror));
       assertEquals("<K extends List<V> & Comparable<K>, V>",
           typeSimplifier.formalTypeParametersString(multipleBoundsElement));
+    }
+  }
+
+  private static class ErrorTestProcessor extends AbstractTestProcessor {
+    public void testErrorTypes() {
+      TypeElement extendsUndefinedType =
+          processingEnv.getElementUtils().getTypeElement("ExtendsUndefinedType");
+      ErrorType errorType = (ErrorType) extendsUndefinedType.getSuperclass();
+      TypeMirror javaLangObject = typeMirrorOf("java.lang.Object");
+      TypeElement list = typeElementOf("java.util.List");
+      TypeMirror listOfError = typeUtil.getDeclaredType(list, errorType);
+      TypeMirror queryExtendsError = typeUtil.getWildcardType(errorType, null);
+      TypeMirror listOfQueryExtendsError = typeUtil.getDeclaredType(list, queryExtendsError);
+      TypeMirror querySuperError = typeUtil.getWildcardType(null, errorType);
+      TypeMirror listOfQuerySuperError = typeUtil.getDeclaredType(list, querySuperError);
+      TypeMirror arrayOfError = typeUtil.getArrayType(errorType);
+      TypeMirror[] typesWithErrors = {
+          errorType, listOfError, listOfQueryExtendsError, listOfQuerySuperError, arrayOfError
+      };
+      for (TypeMirror typeWithError : typesWithErrors) {
+        try {
+          new TypeSimplifier(typeUtil, "foo.bar", ImmutableSet.of(typeWithError), javaLangObject);
+          fail("Expected exception for type: " + typeWithError);
+        } catch (AbortProcessingException expected) {
+        }
+      }
     }
   }
 }

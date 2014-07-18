@@ -433,6 +433,85 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(8);
   }
 
+  public void testMissingPropertyType() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract MissingType missingType();",
+        "}");
+    ASSERT.about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("MissingType")
+        .in(javaFileObject).onLine(7);
+  }
+
+  public void testMissingGenericPropertyType() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract MissingType<?> missingType();",
+        "}");
+    ASSERT.about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("MissingType")
+        .in(javaFileObject).onLine(7);
+  }
+
+  public void testMissingComplexGenericPropertyType() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "import java.util.Map;",
+        "import java.util.Set;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract Map<Set<?>, MissingType<?>> missingType();",
+        "}");
+    ASSERT.about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("MissingType")
+        .in(javaFileObject).onLine(10);
+  }
+
+  public void testMissingSuperclassGenericParameter() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T extends MissingType<?>> {",
+        "  public abstract int foo();",
+        "}");
+    ASSERT.about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("MissingType")
+        .in(javaFileObject).onLine(6);
+  }
+
   private static class PoisonedAutoValueProcessor extends AutoValueProcessor {
     private final IllegalArgumentException filerException;
 

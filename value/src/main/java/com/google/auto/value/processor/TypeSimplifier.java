@@ -31,9 +31,9 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
-import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleTypeVisitor6;
@@ -63,9 +63,29 @@ final class TypeSimplifier {
   private final Types typeUtils;
   private final Map<String, Spelling> imports;
 
+  /**
+   * Makes a new simplifier for the given package and set of types.
+   *
+   * @param typeUtils the result of {@code ProcessingEnvironment.getTypeUtils()} for the current
+   *     annotation processing environment.
+   * @param packageName the name of the package from which classes will be referenced. Classes that
+   *     are in the same package do not need to be imported.
+   * @param types the types that will be referenced.
+   * @param base a base class that the class containing the references will extend. This is needed
+   *     because nested classes in that class or one of its ancestors are in scope in the generated
+   *     subclass, so a reference to another class with the same name as one of them is ambiguous.
+   *
+   * @throws AbortProcessingException if one of the input types contains an error (typically, is undefined).
+   *     This may be something like {@code UndefinedClass}, or something more subtle like
+   *     {@code Set<UndefinedClass<?>>}.
+   */
   TypeSimplifier(Types typeUtils, String packageName, Set<TypeMirror> types, TypeMirror base) {
     this.typeUtils = typeUtils;
-    Set<TypeMirror> referenced = referencedClassTypes(typeUtils, types);
+    Set<TypeMirror> typesPlusBase = new TypeMirrorSet(types);
+    if (base != null) {
+      typesPlusBase.add(base);
+    }
+    Set<TypeMirror> referenced = referencedClassTypes(typeUtils, typesPlusBase);
     Set<TypeMirror> defined = nonPrivateDeclaredTypes(typeUtils, base);
     this.imports = findImports(typeUtils, packageName, referenced, defined);
   }
@@ -274,11 +294,12 @@ final class TypeSimplifier {
    * {@code java.util.List<? extends java.lang.Number>} then both {@code java.util.List} and
    * {@code java.lang.Number} will be in the resulting set.
    */
-  private static Set<TypeMirror> referencedClassTypes(Types typeUtils, Set<TypeMirror> types) {
-    TypeMirrorSet referenced = new TypeMirrorSet();
-    TypeVisitor<Void, Void> typeVisitor = new ReferencedClassTypeVisitor(typeUtils, referenced);
+  private static Set<TypeMirror> referencedClassTypes(Types typeUtil, Set<TypeMirror> types) {
+    Set<TypeMirror> referenced = new TypeMirrorSet();
+    ReferencedClassTypeVisitor referencedClassVisitor =
+        new ReferencedClassTypeVisitor(typeUtil, referenced);
     for (TypeMirror type : types) {
-      type.accept(typeVisitor, null);
+      referencedClassVisitor.visit(type);
     }
     return referenced;
   }
@@ -332,6 +353,11 @@ final class TypeSimplifier {
         }
       }
       return null;
+    }
+
+    @Override
+    public Void visitError(ErrorType t, Void p) {
+      throw new AbortProcessingException();
     }
   }
 
