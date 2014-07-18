@@ -524,9 +524,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       return "";
     } else {
       return "<"
-          + FluentIterable.from(typeParameters)
-              .transform(ElementNameFunction.INSTANCE)
-              .join(Joiner.on(", "))
+          + Joiner.on(", ").join(
+              FluentIterable.from(typeParameters).transform(ElementNameFunction.INSTANCE))
           + ">";
     }
   }
@@ -540,9 +539,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       return "";
     } else {
       return "<"
-          + FluentIterable.from(typeParameters)
-              .transform(Functions.constant("?"))
-              .join(Joiner.on(", "))
+          + Joiner.on(", ").join(
+              FluentIterable.from(typeParameters).transform(Functions.constant("?")))
           + ">";
     }
   }
