@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.collect.ImmutableList;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -23,8 +25,6 @@ import org.objectweb.asm.Opcodes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A class file parser that lists the no-arg abstract methods in a class.
@@ -38,7 +38,7 @@ class AbstractMethodLister {
     this.inputStream = inputStream;
   }
 
-  List<String> abstractNoArgMethods() {
+  ImmutableList<String> abstractNoArgMethods() {
     try {
       return abstractNoArgMethodsX();
     } catch (IOException e) {
@@ -46,15 +46,15 @@ class AbstractMethodLister {
     }
   }
 
-  private List<String> abstractNoArgMethodsX() throws IOException {
+  private ImmutableList<String> abstractNoArgMethodsX() throws IOException {
     ClassReader classReader = new ClassReader(inputStream);
     RecordingClassVisitor classVisitor = new RecordingClassVisitor();
     classReader.accept(classVisitor, 0);
-    return classVisitor.abstractNoArgMethods;
+    return classVisitor.abstractNoArgMethods.build();
   }
 
   private static class RecordingClassVisitor extends ClassVisitor {
-    private final List<String> abstractNoArgMethods = new ArrayList<String>();
+    private final ImmutableList.Builder<String> abstractNoArgMethods = ImmutableList.builder();
 
     RecordingClassVisitor() {
       super(Opcodes.ASM4);

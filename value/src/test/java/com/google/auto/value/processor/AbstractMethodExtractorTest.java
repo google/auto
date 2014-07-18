@@ -1,13 +1,10 @@
 package com.google.auto.value.processor;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 
 import junit.framework.TestCase;
 
 import java.io.StringReader;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Tests for {@link AbstractMethodExtractor}.
@@ -30,9 +27,11 @@ public class AbstractMethodExtractorTest extends TestCase {
         + "}\n";
     JavaTokenizer tokenizer = new JavaTokenizer(new StringReader(source));
     AbstractMethodExtractor extractor = new AbstractMethodExtractor();
-    Map<String, List<String>> expected = ImmutableMap.<String, List<String>>of(
-        "com.example.Foo", ImmutableList.of("one", "two", "three"));
-    Map<String, List<String>> actual = extractor.abstractMethods(tokenizer, "com.example");
+    ImmutableMultimap<String, String> expected = ImmutableMultimap.of(
+        "com.example.Foo", "one",
+        "com.example.Foo", "two",
+        "com.example.Foo", "three");
+    ImmutableMultimap<String, String> actual = extractor.abstractMethods(tokenizer, "com.example");
     assertEquals(expected, actual);
   }
 
@@ -63,10 +62,11 @@ public class AbstractMethodExtractorTest extends TestCase {
         + "}\n";
     JavaTokenizer tokenizer = new JavaTokenizer(new StringReader(source));
     AbstractMethodExtractor extractor = new AbstractMethodExtractor();
-    Map<String, List<String>> expected = ImmutableMap.<String, List<String>>of(
-        "com.example.Foo.Baz", ImmutableList.of("complicated", "simple"),
-        "com.example.Foo.Bar", ImmutableList.of("whatever"));
-    Map<String, List<String>> actual = extractor.abstractMethods(tokenizer, "com.example");
+    ImmutableMultimap<String, String> expected = ImmutableMultimap.of(
+        "com.example.Foo.Baz", "complicated",
+        "com.example.Foo.Baz", "simple",
+        "com.example.Foo.Bar", "whatever");
+    ImmutableMultimap<String, String> actual = extractor.abstractMethods(tokenizer, "com.example");
     assertEquals(expected, actual);
   }
 }

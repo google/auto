@@ -15,12 +15,10 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.collect.ImmutableListMultimap;
+
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * An ultrasimplified Java parser for {@link EclipseHack} that examines classes to extract just
@@ -76,8 +74,9 @@ final class AbstractMethodExtractor {
   // checking that the method has no parameters, because an @AutoValue class will cause a compiler
   // error if there are abstract methods with parameters, since the @AutoValue processor doesn't
   // know how to implement them in the concrete subclass it generates.
-  Map<String, List<String>> abstractMethods(JavaTokenizer tokenizer, String packageName) {
-    Map<String, List<String>> abstractMethods = new HashMap<String, List<String>>();
+  ImmutableListMultimap<String, String> abstractMethods(
+      JavaTokenizer tokenizer, String packageName) {
+    ImmutableListMultimap.Builder<String, String> abstractMethods = ImmutableListMultimap.builder();
     Deque<String> classStack = new ArrayDeque<String>();
     classStack.addLast(packageName);
     int braceDepth = 1;
@@ -117,17 +116,12 @@ final class AbstractMethodExtractor {
           sawAbstract = true;
         } else if (token.equals("(")) {
           if (sawAbstract && Character.isJavaIdentifierStart(previousToken.charAt(0))) {
-            List<String> methods = abstractMethods.get(classStack.getLast());
-            if (methods == null) {
-              methods = new ArrayList<String>();
-              abstractMethods.put(classStack.getLast(), methods);
-            }
-            methods.add(previousToken);
+            abstractMethods.put(classStack.getLast(), previousToken);
           }
           sawAbstract = false;
         }
       }
     }
-    return abstractMethods;
+    return abstractMethods.build();
   }
 }

@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.collect.ImmutableList;
+
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.RuntimeInstance;
@@ -28,9 +30,6 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * A template and a set of variables to be substituted into that template. A concrete subclass of
@@ -67,13 +66,13 @@ abstract class TemplateVars {
     }
   }
 
-  private final List<Field> fields;
+  private final ImmutableList<Field> fields;
 
   TemplateVars() {
     if (getClass().getSuperclass() != TemplateVars.class) {
       throw new IllegalArgumentException("Class must extend TemplateVars directly");
     }
-    List<Field> fields = new ArrayList<Field>();
+    ImmutableList.Builder<Field> fields = ImmutableList.builder();
     Field[] declaredFields = getClass().getDeclaredFields();
     for (Field field : declaredFields) {
       if (field.isSynthetic() || isStaticFinal(field)) {
@@ -90,7 +89,7 @@ abstract class TemplateVars {
       }
       fields.add(field);
     }
-    this.fields = Collections.unmodifiableList(fields);
+    this.fields = fields.build();
   }
 
   /**

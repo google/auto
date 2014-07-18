@@ -17,17 +17,21 @@ package com.google.auto.value.processor;
 
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -68,7 +72,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
-    return Collections.singleton(AutoValue.class.getName());
+    return ImmutableSet.of(AutoValue.class.getName());
   }
 
   @Override
@@ -130,11 +134,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       } catch (RuntimeException e) {
         // Don't propagate this exception, which will confusingly crash the compiler.
         // Instead, report a compiler error with the stack trace.
-        StringWriter writer = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(writer);
-        e.printStackTrace(printWriter);
-        printWriter.flush();
-        reportError("@AutoValue processor threw an exception: " + writer, type);
+        String trace = Throwables.getStackTraceAsString(e);
+        reportError("@AutoValue processor threw an exception: " + trace, type);
       }
     }
   }
@@ -318,7 +319,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     findLocalAndInheritedMethods(type, methods);
     determineObjectMethodsToGenerate(methods, vars);
     dontImplementAnnotationEqualsOrHashCode(type, vars);
-    List<ExecutableElement> toImplement = methodsToImplement(methods);
+    ImmutableList<ExecutableElement> toImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(toImplement));
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
@@ -410,8 +411,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private List<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
-    List<ExecutableElement> toImplement = new ArrayList<ExecutableElement>();
+  private ImmutableList<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
+    ImmutableList.Builder<ExecutableElement> toImplement = ImmutableList.builder();
     boolean errors = false;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
@@ -436,7 +437,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (errors) {
       throw new AbortProcessingException();
     }
-    return toImplement;
+    return toImplement.build();
   }
 
   private static boolean isReferenceArrayType(TypeMirror type) {
@@ -505,6 +506,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     return processingEnv.getElementUtils().getTypeElement(c.getName()).asType();
   }
 
+  private enum ElementNameFunction implements Function<Element, String> {
+    INSTANCE;
+    @Override public String apply(Element element) {
+      return element.getSimpleName().toString();
+    }
+  }
+
   // The actual type parameters of the generated type.
   // If we have @AutoValue abstract class Foo<T extends Something> then the subclass will be
   // final class AutoValue_Foo<T extends Something> extends Foo<T>.
@@ -515,13 +523,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      String s = "<";
-      String sep = "";
-      for (TypeParameterElement typeParameter : typeParameters) {
-        s += sep + typeParameter.getSimpleName();
-        sep = ", ";
-      }
-      return s + ">";
+      return "<"
+          + FluentIterable.from(typeParameters)
+              .transform(ElementNameFunction.INSTANCE)
+              .join(Joiner.on(", "))
+          + ">";
     }
   }
 
@@ -533,13 +539,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      String s = "<";
-      String sep = "";
-      for (int i = 0; i < typeParameters.size(); i++) {
-        s += sep + "?";
-        sep = ", ";
-      }
-      return s + ">";
+      return "<"
+          + FluentIterable.from(typeParameters)
+              .transform(Functions.constant("?"))
+              .join(Joiner.on(", "))
+          + ">";
     }
   }
 
