@@ -87,19 +87,13 @@ final class AbstractMethodExtractor {
         previousToken = token, token = tokenizer.nextToken()) {
       boolean topLevel = (braceDepth == classStack.size());
       if (className != null) {
-        // get last term in fully-qualified class name (e.g. "class some.package.Bar { ...")
-        if (token.equals(".")) {
-          className = tokenizer.nextToken();
-          continue;
-        } else {
-          if (Character.isJavaIdentifierStart(className.charAt(0))
-              && !className.equals("instanceof")) {
-            String container = classStack.getLast();
-            // container might be empty in the case of a packageless class
-            classStack.add(container.isEmpty() ? className : container + "." + className);
-          }
-          className = null;
+        if (Character.isJavaIdentifierStart(className.charAt(0))
+            && !className.equals("instanceof")) {
+          String container = classStack.getLast();
+          // container might be empty in the case of a packageless class
+          classStack.add(container.isEmpty() ? className : container + "." + className);
         }
+        className = null;
       }
       if (token.equals("{")) {
         braceDepth++;
