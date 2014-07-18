@@ -15,25 +15,34 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.truth.Truth.assert_;
+import static org.junit.Assert.fail;
+
+import com.google.common.base.Optional;
+import com.google.common.truth.Expect;
 import com.google.testing.compile.CompilationRule;
-import java.lang.annotation.Documented;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.PackageElement;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.Elements;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import static com.google.common.truth.Truth.assert_;
-import static org.junit.Assert.fail;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 
 @RunWith(JUnit4.class)
 public class MoreElementsTest {
   @Rule public CompilationRule compilation = new CompilationRule();
+  @Rule public Expect expect = Expect.create();
 
   private PackageElement javaLangPackageElement;
   private TypeElement stringElement;
@@ -114,7 +123,11 @@ public class MoreElementsTest {
     } catch (IllegalArgumentException expected) {}
   }
 
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface InnerAnnotation {}
+
   @Documented
+  @InnerAnnotation
   private @interface AnnotatedAnnotation {}
 
   @Test
@@ -125,7 +138,32 @@ public class MoreElementsTest {
         .that(MoreElements.isAnnotationPresent(annotatedAnnotationElement, Documented.class))
         .isTrue();
     assert_()
+        .that(MoreElements.isAnnotationPresent(annotatedAnnotationElement, InnerAnnotation.class))
+        .isTrue();
+    assert_()
         .that(MoreElements.isAnnotationPresent(annotatedAnnotationElement, SuppressWarnings.class))
         .isFalse();
+  }
+
+  @Test
+  public void getAnnotationMirror() {
+    TypeElement element =
+        compilation.getElements().getTypeElement(AnnotatedAnnotation.class.getCanonicalName());
+
+    Optional<AnnotationMirror> documented =
+        MoreElements.getAnnotationMirror(element, Documented.class);
+    Optional<AnnotationMirror> innerAnnotation =
+        MoreElements.getAnnotationMirror(element, InnerAnnotation.class);
+    Optional<AnnotationMirror> suppressWarnings =
+        MoreElements.getAnnotationMirror(element, SuppressWarnings.class);
+
+    expect.that(documented).isPresent();
+    expect.that(innerAnnotation).isPresent();
+    expect.that(suppressWarnings).isAbsent();
+
+    expect.that(MoreElements.asType(documented.get().getAnnotationType().asElement())
+        .getQualifiedName().toString()).isEqualTo(Documented.class.getCanonicalName());
+    expect.that(MoreElements.asType(innerAnnotation.get().getAnnotationType().asElement())
+        .getQualifiedName().toString()).isEqualTo(InnerAnnotation.class.getCanonicalName());
   }
 }

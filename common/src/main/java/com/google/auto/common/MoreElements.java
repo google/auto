@@ -17,6 +17,7 @@
 package com.google.auto.common;
 
 import com.google.common.annotations.Beta;
+import com.google.common.base.Optional;
 import java.lang.annotation.Annotation;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -155,14 +156,25 @@ public final class MoreElements {
    */
   public static boolean isAnnotationPresent(Element element,
       Class<? extends Annotation> annotationClass) {
+    return getAnnotationMirror(element, annotationClass).isPresent();
+  }
+
+  /**
+   * Returns an {@link AnnotationMirror} for the annotation of type {@code annotationClass} on
+   * {@code element}, or {@link Optional#absent()} if no such annotation exists. This method is a
+   * safer alternative to calling {@link Element#getAnnotation} as it avoids any interaction with
+   * annotation proxies.
+   */
+  public static Optional<AnnotationMirror> getAnnotationMirror(Element element,
+      Class<? extends Annotation> annotationClass) {
     String annotationClassName = annotationClass.getCanonicalName();
     for (AnnotationMirror annotationMirror : element.getAnnotationMirrors()) {
       TypeElement annotationTypeElement = asType(annotationMirror.getAnnotationType().asElement());
       if (annotationTypeElement.getQualifiedName().contentEquals(annotationClassName)) {
-        return true;
+        return Optional.of(annotationMirror);
       }
     }
-    return false;
+    return Optional.absent();
   }
 
   private MoreElements() {}

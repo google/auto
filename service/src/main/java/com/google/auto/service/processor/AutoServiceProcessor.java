@@ -15,13 +15,13 @@
  */
 package com.google.auto.service.processor;
 
+import static com.google.auto.common.MoreElements.getAnnotationMirror;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.annotation.Annotation;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -129,7 +129,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     for (Element e : elements) {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = (TypeElement) e;
-      AnnotationMirror providerAnnotation = getAnnotationMirror(e, AutoService.class);
+      AnnotationMirror providerAnnotation = getAnnotationMirror(e, AutoService.class).get();
       DeclaredType providerInterface = getProviderInterface(providerAnnotation);
       TypeElement providerType = (TypeElement) providerInterface.asElement();
 
@@ -262,22 +262,6 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
     AnnotationValue value = valueIndex.values().iterator().next();
     return (DeclaredType) value.getValue();
-  }
-
-  private AnnotationMirror getAnnotationMirror(Element e, Class<? extends Annotation> klass) {
-    List<? extends AnnotationMirror> annotationMirrors = e.getAnnotationMirrors();
-    for (AnnotationMirror mirror : annotationMirrors) {
-      log("mirror: " + mirror);
-      DeclaredType type = mirror.getAnnotationType();
-      TypeElement typeElement = (TypeElement) type.asElement();
-      if (typeElement.getQualifiedName().contentEquals(klass.getName())) {
-        return mirror;
-      } else {
-        log("klass name: [" + klass.getName() + "]");
-        log("type name: [" + typeElement.getQualifiedName() + "]");
-      }
-    }
-    return null;
   }
 
   private void log(String msg) {
