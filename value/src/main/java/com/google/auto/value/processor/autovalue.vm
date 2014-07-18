@@ -17,7 +17,7 @@ package $pkg;
 import $i;
 #end
 
-@javax.annotation.Generated("com.google.auto.value.processor.AutoValueProcessor")
+@${generated}("com.google.auto.value.processor.AutoValueProcessor")
 final class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Fields
@@ -84,7 +84,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #foreach ($p in $props)
 
         + "$p=" ##
-        + #if ($p.kind == "ARRAY") ${javaUtilArraysSpelling}.toString($p) #else $p #end
+        + #if ($p.kind == "ARRAY") ${arrays}.toString($p) #else $p #end
         #if ($foreach.hasNext) + ", " #end
 
   #end
@@ -103,7 +103,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     #elseif ($p.kind.primitive)
       this.$p == that.$p() ##
     #elseif ($p.kind == "ARRAY")
-      ${javaUtilArraysSpelling}.equals(this.$p, ##
+      ${arrays}.equals(this.$p, ##
           (that instanceof $subclass) ? (($subclass) that).$p : that.$p()) ##
     #else
       #if ($p.nullable) (this.$p == null) ? (that.$p() == null) : #end this.${p}.equals(that.$p()) ##
@@ -154,7 +154,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     #elseif ($p.kind == "BOOLEAN")
       $p ? 1231 : 1237 ##
     #elseif ($p.kind == "ARRAY")
-      ${javaUtilArraysSpelling}.hashCode($p) ##
+      ${arrays}.hashCode($p) ##
     #else
       #if ($p.nullable) ($p == null) ? 0 : #end ${p}.hashCode() ##
     #end

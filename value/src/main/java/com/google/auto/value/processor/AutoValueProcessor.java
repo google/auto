@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -322,6 +323,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableList<ExecutableElement> toImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(toImplement));
+    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
+    types.add(javaxAnnotationGenerated);
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
       // If there are array properties then we will be referencing java.util.Arrays.
@@ -331,7 +334,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
-    vars.javaUtilArraysSpelling = typeSimplifier.simplify(javaUtilArrays);
+    vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
+    vars.arrays = typeSimplifier.simplify(javaUtilArrays);
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
       String propType = typeSimplifier.simplify(method.getReturnType());

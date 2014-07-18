@@ -40,8 +40,13 @@ class AutoValueTemplateVars extends TemplateVars {
   /** The fully-qualified names of the classes to be imported in the generated class. */
   SortedSet<String> imports;
 
+  /**
+   * The spelling of the javax.annotation.Generated class: Generated or javax.annotation.Generated.
+   */
+  String generated;
+
   /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
-  String javaUtilArraysSpelling;
+  String arrays;
 
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
