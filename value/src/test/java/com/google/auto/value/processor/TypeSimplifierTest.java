@@ -40,9 +40,13 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
@@ -64,7 +68,13 @@ public class TypeSimplifierTest extends TestCase {
           "public class Test {}\n",
       "MultipleBounds",
           "import java.util.List;\n"
-          + "public class MultipleBounds<K extends List<V> & Comparable<K>, V> {}\n"
+          + "public class MultipleBounds<K extends List<V> & Comparable<K>, V> {}\n",
+      "Wildcards",
+          "import java.util.Map;\n"
+          + "public abstract class Wildcards {\n"
+          + "  abstract <T extends V, U extends T, V> Map<? extends T, ? super U> one();\n"
+          + "  abstract <T extends V, U extends T, V> Map<? extends T, ? super U> two();\n"
+          + "}\n"
   );
   private static final ImmutableMap<String, String> ERROR_CLASS_TO_SOURCE = ImmutableMap.of(
       "ExtendsUndefinedType",
@@ -150,6 +160,7 @@ public class TypeSimplifierTest extends TestCase {
     // leads to ClassCastException inside javac.) So remove the error for that from the output, and
     // only fail if there were other errors.
     if (!diagnostics.isEmpty()
+        && diagnostics.get(0).getSource() != null
         && diagnostics.get(0).getSource().getName().contains("ExtendsUndefinedType")) {
       diagnostics.remove(0);
     }
@@ -305,6 +316,48 @@ public class TypeSimplifierTest extends TestCase {
 
       set.removeAll(otherSet);
       assertTrue(set.isEmpty());
+    }
+
+    public void testTypeMirrorSetWildcardCapture() {
+      // TODO(user): this test should really be in MoreTypesTest.
+      // This test checks the assumption made by MoreTypes that you can find the
+      // upper bounds of a TypeVariable tv like this:
+      //   TypeParameterElement tpe = (TypeParameterElement) tv.asElement();
+      //   List<? extends TypeMirror> bounds = tpe.getBounds();
+      // There was some doubt as to whether this would be true in exotic cases involving
+      // wildcard capture, but apparently it is.
+      // The methods one and two here have identical signatures:
+      //   abstract <T extends V, U extends T, V> Map<? extends T, ? super U> name();
+      // Their return types should be considered equal by TypeMirrorSet. The capture of
+      // each return type is different from the original return type, but the two captures
+      // should compare equal to each other. We also add various other types like ? super U
+      // to the set to ensure that the implied calls to the equals and hashCode visitors
+      // don't cause a ClassCastException for TypeParameterElement.
+      TypeElement wildcardsElement = typeElementOf("Wildcards");
+      List<? extends ExecutableElement> methods =
+          ElementFilter.methodsIn(wildcardsElement.getEnclosedElements());
+      assertEquals(2, methods.size());
+      ExecutableElement one = methods.get(0);
+      ExecutableElement two = methods.get(1);
+      assertEquals("one", one.getSimpleName().toString());
+      assertEquals("two", two.getSimpleName().toString());
+      TypeMirrorSet typeMirrorSet = new TypeMirrorSet();
+      assertTrue(typeMirrorSet.add(one.getReturnType()));
+      assertFalse(typeMirrorSet.add(two.getReturnType()));
+      DeclaredType captureOne = (DeclaredType) typeUtil.capture(one.getReturnType());
+      assertTrue(typeMirrorSet.add(captureOne));
+      DeclaredType captureTwo = (DeclaredType) typeUtil.capture(two.getReturnType());
+      assertFalse(typeMirrorSet.add(captureTwo));
+      // Reminder: captureOne is Map<?#123 extends T, ?#456 super U>
+      TypeVariable extendsT = (TypeVariable) captureOne.getTypeArguments().get(0);
+      assertTrue(typeMirrorSet.add(extendsT));
+      assertTrue(typeMirrorSet.add(extendsT.getLowerBound()));  // NoType
+      for (TypeMirror bound : ((TypeParameterElement) extendsT.asElement()).getBounds()) {
+        assertTrue(typeMirrorSet.add(bound));
+      }
+      TypeVariable superU = (TypeVariable) captureOne.getTypeArguments().get(1);
+      assertTrue(typeMirrorSet.add(superU));
+      assertFalse(typeMirrorSet.add(superU.getLowerBound()));  // We already added U
     }
 
     public void testPackageNameOfString() {
