@@ -16,6 +16,8 @@
 package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.AutoValueProcessor.Property;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -28,7 +30,6 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -92,7 +93,7 @@ class EclipseHack {
     if (propertyOrderer == null) {
       return;
     }
-    final List<String> order;
+    final ImmutableList<String> order;
     try {
       order = propertyOrderer.determinePropertyOrder();
     } catch (IOException e) {
@@ -180,7 +181,7 @@ class EclipseHack {
   }
 
   private interface PropertyOrderer {
-    List<String> determinePropertyOrder() throws IOException;
+    ImmutableList<String> determinePropertyOrder() throws IOException;
   }
 
   private class SourcePropertyOrderer implements PropertyOrderer {
@@ -201,24 +202,21 @@ class EclipseHack {
       this.readerProvider = readerProvider;
     }
 
-    @Override public List<String> determinePropertyOrder() throws IOException {
+    @Override public ImmutableList<String> determinePropertyOrder() throws IOException {
       Reader sourceReader;
       try {
         sourceReader = readerProvider.call();
       } catch (Exception e) {
-        return Collections.emptyList();
+        return ImmutableList.of();
       }
       try {
         String packageName = TypeSimplifier.packageNameOf(type);
         String className = type.getQualifiedName().toString();
         AbstractMethodExtractor extractor = new AbstractMethodExtractor();
         JavaTokenizer tokenizer = new JavaTokenizer(sourceReader);
-        Map<String, List<String>> methodOrders = extractor.abstractMethods(tokenizer, packageName);
-        if (methodOrders.containsKey(className)) {
-          return methodOrders.get(className);
-        } else {
-          return Collections.emptyList();
-        }
+        ImmutableListMultimap<String, String> methodOrders =
+            extractor.abstractMethods(tokenizer, packageName);
+        return methodOrders.get(className);
       } finally {
         sourceReader.close();
       }
@@ -233,7 +231,7 @@ class EclipseHack {
     }
 
     @Override
-    public List<String> determinePropertyOrder() throws IOException {
+    public ImmutableList<String> determinePropertyOrder() throws IOException {
       InputStream inputStream = null;
       try {
         URL classFileUrl = classFileUri.toURL();

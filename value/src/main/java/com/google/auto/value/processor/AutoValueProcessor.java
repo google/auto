@@ -17,21 +17,26 @@ package com.google.auto.value.processor;
 
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -68,7 +73,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
-    return Collections.singleton(AutoValue.class.getName());
+    return ImmutableSet.of(AutoValue.class.getName());
   }
 
   @Override
@@ -80,10 +85,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (!SILENT) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg);
     }
-  }
-
-  @SuppressWarnings("serial")
-  private static class CompileException extends Exception {
   }
 
   private void reportWarning(String msg, Element e) {
@@ -104,9 +105,9 @@ public class AutoValueProcessor extends AbstractProcessor {
    * Issue a compilation error and abandon the processing of this class. This does not prevent
    * the processing of other classes.
    */
-  private void abortWithError(String msg, Element e) throws CompileException {
+  private void abortWithError(String msg, Element e) {
     reportError(msg, e);
-    throw new CompileException();
+    throw new AbortProcessingException();
   }
 
   @Override
@@ -129,16 +130,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     for (TypeElement type : types) {
       try {
         processType(type);
-      } catch (CompileException e) {
+      } catch (AbortProcessingException e) {
         // We abandoned this type, but continue with the next.
       } catch (RuntimeException e) {
         // Don't propagate this exception, which will confusingly crash the compiler.
         // Instead, report a compiler error with the stack trace.
-        StringWriter writer = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(writer);
-        e.printStackTrace(printWriter);
-        printWriter.flush();
-        reportError("@AutoValue processor threw an exception: " + writer, type);
+        String trace = Throwables.getStackTraceAsString(e);
+        reportError("@AutoValue processor threw an exception: " + trace, type);
       }
     }
   }
@@ -289,7 +287,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private void processType(TypeElement type) throws CompileException {
+  private void processType(TypeElement type) {
     AutoValue autoValue = type.getAnnotation(AutoValue.class);
     if (autoValue == null) {
       // This shouldn't happen unless the compilation environment is buggy,
@@ -316,16 +314,17 @@ public class AutoValueProcessor extends AbstractProcessor {
     gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars)
-      throws CompileException {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
     Types typeUtils = processingEnv.getTypeUtils();
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     determineObjectMethodsToGenerate(methods, vars);
     dontImplementAnnotationEqualsOrHashCode(type, vars);
-    List<ExecutableElement> toImplement = methodsToImplement(methods);
+    ImmutableList<ExecutableElement> toImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(toImplement));
+    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
+    types.add(javaxAnnotationGenerated);
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
       // If there are array properties then we will be referencing java.util.Arrays.
@@ -335,7 +334,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
-    vars.javaUtilArraysSpelling = typeSimplifier.simplify(javaUtilArrays);
+    vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
+    vars.arrays = typeSimplifier.simplify(javaUtilArrays);
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
       String propType = typeSimplifier.simplify(method.getReturnType());
@@ -415,9 +415,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private List<ExecutableElement> methodsToImplement(List<ExecutableElement> methods)
-      throws CompileException {
-    List<ExecutableElement> toImplement = new ArrayList<ExecutableElement>();
+  private ImmutableList<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
+    ImmutableList.Builder<ExecutableElement> toImplement = ImmutableList.builder();
     boolean errors = false;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
@@ -440,9 +439,9 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
     if (errors) {
-      throw new CompileException();
+      throw new AbortProcessingException();
     }
-    return toImplement;
+    return toImplement.build();
   }
 
   private static boolean isReferenceArrayType(TypeMirror type) {
@@ -511,6 +510,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     return processingEnv.getElementUtils().getTypeElement(c.getName()).asType();
   }
 
+  private enum ElementNameFunction implements Function<Element, String> {
+    INSTANCE;
+    @Override public String apply(Element element) {
+      return element.getSimpleName().toString();
+    }
+  }
+
   // The actual type parameters of the generated type.
   // If we have @AutoValue abstract class Foo<T extends Something> then the subclass will be
   // final class AutoValue_Foo<T extends Something> extends Foo<T>.
@@ -521,13 +527,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      String s = "<";
-      String sep = "";
-      for (TypeParameterElement typeParameter : typeParameters) {
-        s += sep + typeParameter.getSimpleName();
-        sep = ", ";
-      }
-      return s + ">";
+      return "<"
+          + Joiner.on(", ").join(
+              FluentIterable.from(typeParameters).transform(ElementNameFunction.INSTANCE))
+          + ">";
     }
   }
 
@@ -539,13 +542,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      String s = "<";
-      String sep = "";
-      for (int i = 0; i < typeParameters.size(); i++) {
-        s += sep + "?";
-        sep = ", ";
-      }
-      return s + ">";
+      return "<"
+          + Joiner.on(", ").join(
+              FluentIterable.from(typeParameters).transform(Functions.constant("?")))
+          + ">";
     }
   }
 
