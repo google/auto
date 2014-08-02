@@ -28,7 +28,7 @@ final class MyProcessor extends Processor {
 }
 ```
 
-AutoFactory will generate the file `META-INF/services/javax.annotation.processing.Processor`
+AutoService will generate the file `META-INF/services/javax.annotation.processing.Processor`
 in the output classes folder. The file will contain:
 
 ```
