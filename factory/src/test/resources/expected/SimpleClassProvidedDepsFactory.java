@@ -20,7 +20,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class SimpleClassProvidedDepsFactory {
+class SimpleClassProvidedDepsFactory {
   private final Provider<String> providedDepAProvider;
   private final Provider<String> providedDepBProvider;
   

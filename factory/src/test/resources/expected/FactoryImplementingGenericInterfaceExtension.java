@@ -22,7 +22,7 @@ import javax.inject.Provider;
 import tests.FactoryImplementingGenericInterfaceExtension.MyFactory;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class FactoryImplementingGenericInterfaceExtensionFactory
+class FactoryImplementingGenericInterfaceExtensionFactory
     implements MyFactory {
   private final Provider<String> sProvider;
   @Inject

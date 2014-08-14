@@ -20,7 +20,7 @@ import javax.inject.Inject;
 import tests.SimpleClassImplementingSimpleInterface.SimpleInterface;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class SimpleClassImplementingSimpleInterfaceFactory implements SimpleInterface {
+class SimpleClassImplementingSimpleInterfaceFactory implements SimpleInterface {
   @Inject SimpleClassImplementingSimpleInterfaceFactory() {}
   
   SimpleClassImplementingSimpleInterface create() {

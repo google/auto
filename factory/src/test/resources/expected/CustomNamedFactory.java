@@ -19,7 +19,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class CustomNamedFactory {
+class CustomNamedFactory {
   @Inject CustomNamedFactory() {}
   
   SimpleClass create() {

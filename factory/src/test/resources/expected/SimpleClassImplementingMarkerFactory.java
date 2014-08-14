@@ -20,7 +20,7 @@ import javax.inject.Inject;
 import java.util.RandomAccess;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class SimpleClassImplementingMarkerFactory implements RandomAccess {
+class SimpleClassImplementingMarkerFactory implements RandomAccess {
   @Inject SimpleClassImplementingMarkerFactory() {}
   
   SimpleClassImplementingMarker create() {
