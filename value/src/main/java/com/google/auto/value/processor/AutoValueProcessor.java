@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Generated;
@@ -45,6 +46,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -194,12 +196,38 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     private static final Function<AnnotationMirror, String> mirrorToString = new Function<AnnotationMirror, String>() {
+      @Nullable
       @Override
-      public String apply(@Nullable AnnotationMirror annotationMirror) {
+      public String apply(AnnotationMirror annotationMirror) {
         Element element = annotationMirror.getAnnotationType().asElement();
         Symbol.ClassSymbol symbol = (Symbol.ClassSymbol) element;
-        return symbol.fullname.toString();
+        String rv = "@" + symbol.fullname.toString();
+
+        List<String> values = FluentIterable
+            .from(annotationMirror.getElementValues().entrySet())
+            .filter(Predicates.notNull())
+            .transform(valuesToString)
+            .toList();
+
+        if (!values.isEmpty()) {
+          rv += "(";
+          rv += Joiner.on(", ").join(values);
+          rv += ")";
+        }
+
+        return rv;
       }
+    };
+
+    private static Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String> valuesToString =
+        new Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String>() {
+          @Nullable
+          @Override
+          public String apply(Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry) {
+            String key = entry.getKey().getSimpleName().toString();
+            String value = entry.getValue().toString();
+            return key + "=" + value;
+          }
     };
 
     @Override

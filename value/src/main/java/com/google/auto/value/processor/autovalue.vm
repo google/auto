@@ -51,7 +51,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 #foreach ($p in $props)
 
   #foreach ($a in ${p.annotations})
-    @${a}
+    ${a}
   #end
   @Override
   ${p.access}${p.type} $p() {
