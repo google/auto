@@ -20,10 +20,12 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.sun.tools.javac.code.Symbol;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -37,6 +39,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Generated;
+import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -177,11 +180,27 @@ public class AutoValueProcessor extends AbstractProcessor {
   public static class Property {
     private final ExecutableElement method;
     private final String type;
+    private final ImmutableList<String> annotationClasses;
 
     Property(ExecutableElement method, String type) {
       this.method = method;
       this.type = type;
+
+      annotationClasses = FluentIterable
+          .from(method.getAnnotationMirrors())
+          .filter(Predicates.notNull())
+          .transform(mirrorToString)
+          .toList();
     }
+
+    private static final Function<AnnotationMirror, String> mirrorToString = new Function<AnnotationMirror, String>() {
+      @Override
+      public String apply(@Nullable AnnotationMirror annotationMirror) {
+        Element element = annotationMirror.getAnnotationType().asElement();
+        Symbol.ClassSymbol symbol = (Symbol.ClassSymbol) element;
+        return symbol.fullname.toString();
+      }
+    };
 
     @Override
     public String toString() {
@@ -202,6 +221,10 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     public TypeKind getKind() {
       return method.getReturnType().getKind();
+    }
+
+    public List<String> getAnnotations() {
+      return annotationClasses;
     }
 
     public boolean isNullable() {
