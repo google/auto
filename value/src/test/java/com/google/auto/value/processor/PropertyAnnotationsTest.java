@@ -20,21 +20,40 @@ public class PropertyAnnotationsTest extends TestCase {
   private static final String TEST_ANNOTATION_FULLNAME = "com.google.auto.value.processor.PropertyAnnotationsTest.TestAnnotation";
 
   public static enum TestEnum {
-    A, B, C
+    A, B;
+
+    @Override
+    public String toString() {
+      return "not the same value";
+    }
   }
 
   public static @interface TestAnnotation {
-    byte testByte() default 1;
+    byte testByte() default (byte) 1;
     short testShort() default 2;
     int testInt() default 3;
     long testLong() default 4L;
     float testFloat() default 5.6f;
-    double testDouble() default 7.8;
+    double testDouble() default 7.8d;
     char testChar() default 'a';
     String testString() default "10";
     boolean testBoolean() default false;
     Class testClass() default TestEnum.class;
     TestEnum testEnum() default TestEnum.A;
+  }
+
+  public static @interface TestAnnotationArray {
+    byte[] testBytes() default {(byte) 1, (byte) 2};
+    short[] testShorts() default {3, 4};
+    int[] testInts() default {5, 6};
+    long[] testLongs() default {7L, 8L};
+    float[] testFloats() default {9.1f, 2.3f};
+    double[] testDoubles() default {4.5d, 6.7d};
+    char[] testChars() default {'a', 'b'};
+    String[] testStrings() default {"cde", "fgh"};
+    boolean[] testBooleans() default {true, false};
+    Class[] testClasses() default {TestEnum.class, TestEnum.class};
+    TestEnum[] testEnums() default {TestEnum.A, TestEnum.B};
   }
 
   private JavaFileObject sourceCode(Iterable<String> imports, Iterable<String> annotations) {
@@ -157,15 +176,22 @@ public class PropertyAnnotationsTest extends TestCase {
   public void testNumberValueAnnotation() {
     assertGeneratedMatches(
         Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testByte = 0, testShort = 1, testInt = 2, testLong = 3)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testByte = 0, testShort = 1, testInt = 2, testLong = 3)"));
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testShort = 1, testInt = 2, testLong = 3L)"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testShort = 1, testInt = 2, testLong = 3L)"));
+  }
+
+  public void testByteValueAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testByte = (byte)0)"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testByte = (byte)0)"));
   }
 
   public void testDecimalValueAnnotation() {
     assertGeneratedMatches(
         Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2, testFloat = 3.4f)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2, testFloat = 3.4f)"));
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2d, testFloat = 3.4f)"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2d, testFloat = 3.4f)"));
   }
 
   public void testOtherValuesAnnotation() {
@@ -187,5 +213,54 @@ public class PropertyAnnotationsTest extends TestCase {
         Lists.<String>newArrayList(),
         Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"),
         Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"));
+  }
+
+  public void testNumberArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"));
+  }
+
+  public void testByteArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBytes = {(byte) 0, (byte) 1})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBytes = {(byte) 0, (byte) 1})"));
+  }
+
+  public void testDecimalArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"));
+  }
+
+  public void testOtherArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBooleans = {false, false}, testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBooleans = {false, false}, testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"));
+  }
+
+  public void testClassArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {String.class, Long.class})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {java.lang.String.class, java.lang.Long.class})"));
+  }
+
+  public void testImportedClassArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.newArrayList("import javax.annotation.Nullable;"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {Nullable.class, Long.class})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {javax.annotation.Nullable.class, java.lang.Long.class})"));
+  }
+
+  public void testEnumArrayAnnotation() {
+    assertGeneratedMatches(
+        Lists.<String>newArrayList(),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"),
+        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"));
   }
 }
