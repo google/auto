@@ -24,6 +24,8 @@ public class PropertyAnnotationsTest extends TestCase {
 
     @Override
     public String toString() {
+      // used to prove that the method we determine the value does not use the `toString()` method
+      // of the enum
       return "not the same value";
     }
   }
