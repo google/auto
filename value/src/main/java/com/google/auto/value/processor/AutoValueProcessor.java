@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Generated;
-import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -195,8 +194,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       ImmutableList.Builder<String> builder = ImmutableList.builder();
 
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-        String fullName = typeSimplifier.simplify(annotationMirror.getAnnotationType());
-        String annotationClass = "@" + fullName;
+        String annotationName = typeSimplifier.simplify(annotationMirror.getAnnotationType());
+        String annotation = "@" + annotationName;
 
         List<String> values = FluentIterable
             .from(annotationMirror.getElementValues().entrySet())
@@ -205,12 +204,10 @@ public class AutoValueProcessor extends AbstractProcessor {
             .toList();
 
         if (!values.isEmpty()) {
-          annotationClass += "(";
-          annotationClass += Joiner.on(", ").join(values);
-          annotationClass += ")";
+          annotation += "(" + Joiner.on(", ").join(values) + ")";
         }
 
-        builder.add(annotationClass);
+        builder.add(annotation);
       }
 
       return builder.build();
@@ -218,12 +215,9 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     private static Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String> valuesToString =
         new Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String>() {
-          @Nullable
           @Override
           public String apply(Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry) {
-            String key = entry.getKey().getSimpleName().toString();
-            String value = entry.getValue().toString();
-            return key + "=" + value;
+            return entry.getKey().getSimpleName().toString() + "=" + entry.getValue().toString();
           }
     };
 
