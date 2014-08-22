@@ -1,11 +1,11 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.testing.compile.JavaFileObjects;
 import junit.framework.TestCase;
 
 import javax.tools.JavaFileObject;
+import java.util.List;
 
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static org.truth0.Truth.ASSERT;
@@ -56,7 +56,7 @@ public class PropertyAnnotationsTest extends TestCase {
     TestEnum[] testEnums() default {TestEnum.A, TestEnum.B};
   }
 
-  private JavaFileObject sourceCode(Iterable<String> imports, Iterable<String> annotations) {
+  private JavaFileObject sourceCode(List<String> imports, List<String> annotations) {
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
             "package foo.bar;",
@@ -84,7 +84,7 @@ public class PropertyAnnotationsTest extends TestCase {
     return JavaFileObjects.forSourceLines("foo.bar.Baz", lines);
   }
 
-  private JavaFileObject expectedCode(Iterable<String> annotations) {
+  private JavaFileObject expectedCode(List<String> annotations) {
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
             "package foo.bar;",
@@ -138,9 +138,9 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   private void assertGeneratedMatches(
-      Iterable<String> imports,
-      Iterable<String> annotations,
-      Iterable<String> expectedAnnotations) {
+      List<String> imports,
+      List<String> annotations,
+      List<String> expectedAnnotations) {
 
     JavaFileObject javaFileObject = sourceCode(imports, annotations);
     JavaFileObject expectedOutput = expectedCode(expectedAnnotations);
@@ -154,113 +154,113 @@ public class PropertyAnnotationsTest extends TestCase {
 
   public void testSimpleAnnotation() {
     assertGeneratedMatches(
-        Lists.newArrayList("import javax.annotation.Nullable;"),
-        Lists.newArrayList("@Nullable"),
-        Lists.newArrayList("@javax.annotation.Nullable"));
+        ImmutableList.of("import javax.annotation.Nullable;"),
+        ImmutableList.of("@Nullable"),
+        ImmutableList.of("@javax.annotation.Nullable"));
   }
 
   public void testSingleStringValueAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@SuppressWarnings(\"a\")"),
-        Lists.newArrayList("@java.lang.SuppressWarnings(value={\"a\"})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@SuppressWarnings(\"a\")"),
+        ImmutableList.of("@java.lang.SuppressWarnings(value={\"a\"})"));
   }
 
   public void testMultiStringValueAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@SuppressWarnings({\"a\", \"b\"})"),
-        Lists.newArrayList("@java.lang.SuppressWarnings(value={\"a\", \"b\"})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@SuppressWarnings({\"a\", \"b\"})"),
+        ImmutableList.of("@java.lang.SuppressWarnings(value={\"a\", \"b\"})"));
   }
 
   public void testNumberValueAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testShort = 1, testInt = 2, testLong = 3L)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testShort = 1, testInt = 2, testLong = 3L)"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testShort = 1, testInt = 2, testLong = 3L)"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testShort = 1, testInt = 2, testLong = 3L)"));
   }
 
   public void testByteValueAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testByte = (byte)0)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testByte = (byte)0)"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testByte = (byte)0)"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testByte = (byte)0)"));
   }
 
   public void testDecimalValueAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2d, testFloat = 3.4f)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2d, testFloat = 3.4f)"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2d, testFloat = 3.4f)"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testDouble = 1.2d, testFloat = 3.4f)"));
   }
 
   public void testOtherValuesAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testBoolean = true, testString = \"hallo\", testChar = 'a')"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testBoolean = true, testString = \"hallo\", testChar = 'a')"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testBoolean = true, testString = \"hallo\", testChar = 'a')"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testBoolean = true, testString = \"hallo\", testChar = 'a')"));
   }
 
   public void testClassAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testClass = String.class)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testClass = java.lang.String.class)"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testClass = String.class)"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testClass = java.lang.String.class)"));
   }
 
   public void testEnumAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"));
   }
 
   public void testNumberArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"));
   }
 
   public void testByteArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBytes = {(byte) 0, (byte) 1})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBytes = {(byte) 0, (byte) 1})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testBytes = {(byte) 0, (byte) 1})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testBytes = {(byte) 0, (byte) 1})"));
   }
 
   public void testDecimalArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"));
   }
 
   public void testOtherArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBooleans = {false, false}, testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testBooleans = {false, false}, testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testBooleans = {false, false}, testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testBooleans = {false, false}, testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"));
   }
 
   public void testClassArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {String.class, Long.class})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {java.lang.String.class, java.lang.Long.class})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {String.class, Long.class})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {java.lang.String.class, java.lang.Long.class})"));
   }
 
   public void testImportedClassArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.newArrayList("import javax.annotation.Nullable;"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {Nullable.class, Long.class})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {javax.annotation.Nullable.class, java.lang.Long.class})"));
+        ImmutableList.of("import javax.annotation.Nullable;"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {Nullable.class, Long.class})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testClasses = {javax.annotation.Nullable.class, java.lang.Long.class})"));
   }
 
   public void testEnumArrayAnnotation() {
     assertGeneratedMatches(
-        Lists.<String>newArrayList(),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"),
-        Lists.newArrayList("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"));
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"));
   }
 }
