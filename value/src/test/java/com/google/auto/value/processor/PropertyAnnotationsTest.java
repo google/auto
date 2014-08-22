@@ -42,6 +42,12 @@ public class PropertyAnnotationsTest extends TestCase {
     boolean testBoolean() default false;
     Class testClass() default TestEnum.class;
     TestEnum testEnum() default TestEnum.A;
+    OtherAnnotation testAnnotation() default @OtherAnnotation(foo = 23, bar = "baz");
+  }
+
+  public static @interface OtherAnnotation {
+    int foo() default 123;
+    String bar() default "bar";
   }
 
   public static @interface TestAnnotationArray {
@@ -56,6 +62,7 @@ public class PropertyAnnotationsTest extends TestCase {
     boolean[] testBooleans() default {true, false};
     Class[] testClasses() default {TestEnum.class, TestEnum.class};
     TestEnum[] testEnums() default {TestEnum.A, TestEnum.B};
+    OtherAnnotation[] testAnnotations() default {@OtherAnnotation(foo = 999), @OtherAnnotation(bar = "baz")};
   }
 
   private JavaFileObject sourceCode(List<String> imports, List<String> annotations) {
@@ -217,6 +224,20 @@ public class PropertyAnnotationsTest extends TestCase {
         ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testEnum = com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A)"));
   }
 
+  public void testEmptyAnnotationAnnotation() {
+    assertGeneratedMatches(
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testAnnotation = @com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation)"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testAnnotation = @com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation)"));
+  }
+
+  public void testValuedAnnotationAnnotation() {
+    assertGeneratedMatches(
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testAnnotation = @com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation(foo=999))"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "(testAnnotation = @com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation(foo=999))"));
+  }
+
   public void testNumberArrayAnnotation() {
     assertGeneratedMatches(
         ImmutableList.<String>of(),
@@ -264,5 +285,19 @@ public class PropertyAnnotationsTest extends TestCase {
         ImmutableList.<String>of(),
         ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"),
         ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testEnums = {com.google.auto.value.processor.PropertyAnnotationsTest.TestEnum.A})"));
+  }
+
+  public void testArrayOfEmptyAnnotationAnnotation() {
+    assertGeneratedMatches(
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testAnnotations = {@com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testAnnotations = {@com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation})"));
+  }
+
+  public void testArrayOfValuedAnnotationAnnotation() {
+    assertGeneratedMatches(
+        ImmutableList.<String>of(),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testAnnotations = {@com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation(foo = 999)})"),
+        ImmutableList.of("@" + TEST_ANNOTATION_FULLNAME + "Array(testAnnotations = {@com.google.auto.value.processor.PropertyAnnotationsTest.OtherAnnotation(foo = 999)})"));
   }
 }
