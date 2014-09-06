@@ -65,7 +65,8 @@ public class MoreElementsTest {
 
   @Test
   public void asPackage() {
-    assert_().that(MoreElements.asPackage(javaLangPackageElement)).is(javaLangPackageElement);
+    assert_().that(MoreElements.asPackage(javaLangPackageElement))
+        .isEqualTo(javaLangPackageElement);
   }
 
   @Test
@@ -78,7 +79,7 @@ public class MoreElementsTest {
 
   @Test
   public void asType() {
-    assert_().that(MoreElements.asType(stringElement)).is(stringElement);
+    assert_().that(MoreElements.asType(stringElement)).isEqualTo(stringElement);
   }
 
   @Test
@@ -92,7 +93,7 @@ public class MoreElementsTest {
   @Test
   public void asVariable() {
     for (Element variableElement : ElementFilter.fieldsIn(stringElement.getEnclosedElements())) {
-      assert_().that(MoreElements.asVariable(variableElement)).is(variableElement);
+      assert_().that(MoreElements.asVariable(variableElement)).isEqualTo(variableElement);
     }
   }
 
@@ -107,11 +108,11 @@ public class MoreElementsTest {
   @Test
   public void asExecutable() {
     for (Element methodElement : ElementFilter.methodsIn(stringElement.getEnclosedElements())) {
-      assert_().that(MoreElements.asExecutable(methodElement)).is(methodElement);
+      assert_().that(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
     }
     for (Element methodElement
         : ElementFilter.constructorsIn(stringElement.getEnclosedElements())) {
-      assert_().that(MoreElements.asExecutable(methodElement)).is(methodElement);
+      assert_().that(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
     }
   }
 
