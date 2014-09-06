@@ -660,40 +660,6 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  abstract static class MyAnnotationImpl implements MyAnnotation {
-    static MyAnnotation create(String value) {
-      // The MyAnnotation.class parameter is for Annotation.annotationType(). In practice you would
-      // probably want to implement that method here to return the constant MyAnnotation.class.
-      return new AutoValue_AutoValueTest_MyAnnotationImpl(MyAnnotation.class, value);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      return o instanceof MyAnnotation && ((MyAnnotation) o).value().equals(value());
-    }
-
-    @Override
-    public int hashCode() {
-      return ("value".hashCode() * 127) ^ value().hashCode();
-    }
-  }
-
-  public void testImplementAnnotation() {
-    // Test that you can use @AutoValue to implement an annotation if you really want to.
-    // Test cases in CompilationErrorsTest check that you must have your own implementation of
-    // equals and hashCode if so, as here.
-    @MyAnnotation("hello")
-        class Annotated {}
-    MyAnnotation expected = Annotated.class.getAnnotation(MyAnnotation.class);
-    MyAnnotation actual = MyAnnotationImpl.create("hello");
-    MyAnnotation other = MyAnnotationImpl.create("bonjour");
-    new EqualsTester()
-        .addEqualityGroup(expected, actual)
-        .addEqualityGroup(other)
-        .testEquals();
-  }
-
-  @AutoValue
   abstract static class PrimitiveArrays {
     abstract boolean[] booleans();
     @Nullable abstract int[] ints();
