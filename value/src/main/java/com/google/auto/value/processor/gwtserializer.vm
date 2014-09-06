@@ -47,7 +47,7 @@ public final class $serializerClass {
 
   public static void deserialize(
       @SuppressWarnings("unused") SerializationStreamReader streamReader,
-      @SuppressWarnings("unused") $subclass instance) throws SerializationException {
+      @SuppressWarnings("unused") $subclass instance) {
     // instantiate already did all the work.
   }
 
