@@ -31,6 +31,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -157,12 +158,15 @@ public class TypeSimplifierTest extends TestCase {
 
     // In the ErrorTestProcessor case, the code being compiled contains a deliberate reference to an
     // undefined type, so that we can capture an instance of ErrorType. (Synthesizing one ourselves
-    // leads to ClassCastException inside javac.) So remove the error for that from the output, and
+    // leads to ClassCastException inside javac.) So remove any errors for that from the output, and
     // only fail if there were other errors.
-    if (!diagnostics.isEmpty()
-        && diagnostics.get(0).getSource() != null
-        && diagnostics.get(0).getSource().getName().contains("ExtendsUndefinedType")) {
-      diagnostics.remove(0);
+    for (Iterator<Diagnostic<? extends JavaFileObject>> it = diagnostics.iterator();
+         it.hasNext(); ) {
+      Diagnostic<? extends JavaFileObject> diagnostic = it.next();
+      if (diagnostic.getSource() != null
+          && diagnostic.getSource().getName().contains("ExtendsUndefinedType")) {
+        it.remove();
+      }
     }
     // In the ErrorTestProcessor case, compilerOut.toString() will include the error for
     // ExtendsUndefinedType, which can safely be ignored, as well as stack traces for any failing
