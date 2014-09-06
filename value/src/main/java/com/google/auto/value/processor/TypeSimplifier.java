@@ -32,6 +32,7 @@ import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
@@ -112,7 +113,7 @@ final class TypeSimplifier {
    * {@link #typesToImport}.
    */
   String simplify(TypeMirror type) {
-    return type.accept(new ToStringTypeVisitor(), new StringBuilder()).toString();
+    return type.accept(TO_STRING_TYPE_VISITOR, new StringBuilder()).toString();
   }
 
   // The formal type parameters of the given type.
@@ -389,6 +390,9 @@ final class TypeSimplifier {
     Set<String> ambiguous = new HashSet<String>();
     Set<String> simpleNames = new HashSet<String>();
     for (TypeMirror type : types) {
+      if (type.getKind() == TypeKind.ERROR) {
+        throw new AbortProcessingException();
+      }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
       if (!simpleNames.add(simpleName)) {
         ambiguous.add(simpleName);
