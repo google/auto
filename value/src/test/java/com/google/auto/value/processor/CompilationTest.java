@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.ASSERT;
+import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.testing.compile.JavaFileObjects;
@@ -98,7 +98,7 @@ public class CompilationTest extends TestCase {
         "  }",
         "}"
     );
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
@@ -192,7 +192,7 @@ public class CompilationTest extends TestCase {
         "  }",
         "}"
     );
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
@@ -214,7 +214,7 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(ints);",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -238,7 +238,7 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(strings);",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -256,7 +256,7 @@ public class CompilationTest extends TestCase {
         "",
         "@AutoValue",
         "public interface Baz {}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -273,7 +273,7 @@ public class CompilationTest extends TestCase {
         "",
         "@AutoValue",
         "public enum Baz {}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -307,7 +307,7 @@ public class CompilationTest extends TestCase {
         "    abstract int randomProperty();",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -335,7 +335,7 @@ public class CompilationTest extends TestCase {
           "",
           "  public abstract int foo();",
           "}");
-      ASSERT.about(javaSource())
+      assert_().about(javaSource())
           .that(javaFileObject)
           .processedWith(new AutoValueProcessor())
           .failsToCompile()
@@ -357,7 +357,7 @@ public class CompilationTest extends TestCase {
         "@AutoValue",
         "public abstract class Existent extends NonExistent {",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -394,7 +394,7 @@ public class CompilationTest extends TestCase {
         "    return (\"value\".hashCode() * 127) ^ value().hashCode();",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -428,7 +428,7 @@ public class CompilationTest extends TestCase {
         "    return o instanceof Retention && ((Retention) o).value().equals(value());",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -447,7 +447,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract MissingType missingType();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -466,7 +466,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract MissingType<?> missingType();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -488,7 +488,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract Map<Set<?>, MissingType<?>> missingType();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -507,7 +507,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz<T extends MissingType<?>> {",
         "  public abstract int foo();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -569,7 +569,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract int foo();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new PoisonedAutoValueProcessor(exception))
         .failsToCompile()

@@ -16,7 +16,7 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.factory.processor.AutoFactoryDeclaration.Factory.isValidIdentifier;
-import static com.google.common.truth.Truth.ASSERT;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,10 +25,10 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class AutoFactoryDeclarationTest {
   @Test public void identifiers() {
-    ASSERT.that(isValidIdentifier("String")).isTrue();
-    ASSERT.that(isValidIdentifier("9CantStartWithNumber")).isFalse();
-    ASSERT.that(isValidIdentifier("enum")).isFalse();
-    ASSERT.that(isValidIdentifier("goto")).isFalse();
-    ASSERT.that(isValidIdentifier("InvalidCharacter!")).isFalse();
+    assertThat(isValidIdentifier("String")).isTrue();
+    assertThat(isValidIdentifier("9CantStartWithNumber")).isFalse();
+    assertThat(isValidIdentifier("enum")).isFalse();
+    assertThat(isValidIdentifier("goto")).isFalse();
+    assertThat(isValidIdentifier("InvalidCharacter!")).isFalse();
   }
 }

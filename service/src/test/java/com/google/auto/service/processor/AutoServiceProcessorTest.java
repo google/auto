@@ -15,7 +15,7 @@
  */
 package com.google.auto.service.processor;
 
-import static com.google.common.truth.Truth.ASSERT;
+import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.auto.service.processor.AutoServiceProcessor;
@@ -34,7 +34,7 @@ import java.util.Arrays;
 public class AutoServiceProcessorTest {
   @Test
   public void autoService() {
-    ASSERT.about(javaSources())
+    assert_().about(javaSources())
         .that(Arrays.asList(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),

@@ -1,6 +1,6 @@
 package com.google.auto.factory;
 
-import static com.google.common.truth.Truth.ASSERT;
+import static com.google.common.truth.Truth.assertThat;
 
 import com.google.inject.Guice;
 
@@ -17,11 +17,11 @@ public class DependencyInjectionIntegrationTest {
         ObjectGraph.create(DaggerModule.class).get(FactoryGeneratedFactory.class);
     FactoryGenerated one = factoryGeneratedFactory.create("A");
     FactoryGenerated two = factoryGeneratedFactory.create("B");
-    ASSERT.that(one.name()).isEqualTo("A");
-    ASSERT.that(one.dependency()).isNotNull();
-    ASSERT.that(two.name()).isEqualTo("B");
-    ASSERT.that(two.dependency()).isNotNull();
-    ASSERT.that(one.dependency()).isNotEqualTo(two.dependency());
+    assertThat(one.name()).isEqualTo("A");
+    assertThat(one.dependency()).isNotNull();
+    assertThat(two.name()).isEqualTo("B");
+    assertThat(two.dependency()).isNotNull();
+    assertThat(one.dependency()).isNotEqualTo(two.dependency());
   }
 
   @Test public void guiceInjectedFactory() {
@@ -30,10 +30,10 @@ public class DependencyInjectionIntegrationTest {
             .getInstance(FactoryGeneratedFactory.class);
     FactoryGenerated one = factoryGeneratedFactory.create("A");
     FactoryGenerated two = factoryGeneratedFactory.create("B");
-    ASSERT.that(one.name()).isEqualTo("A");
-    ASSERT.that(one.dependency()).isNotNull();
-    ASSERT.that(two.name()).isEqualTo("B");
-    ASSERT.that(two.dependency()).isNotNull();
-    ASSERT.that(one.dependency()).isNotEqualTo(two.dependency());
+    assertThat(one.name()).isEqualTo("A");
+    assertThat(one.dependency()).isNotNull();
+    assertThat(two.name()).isEqualTo("B");
+    assertThat(two.dependency()).isNotNull();
+    assertThat(one.dependency()).isNotEqualTo(two.dependency());
   }
 }

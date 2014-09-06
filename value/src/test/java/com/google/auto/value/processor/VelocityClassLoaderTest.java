@@ -15,7 +15,8 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.ASSERT;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.auto.value.AutoValue;
@@ -54,9 +55,9 @@ public class VelocityClassLoaderTest extends TestCase {
     String velocityClassName = Velocity.class.getName();
     Class<?> myVelocity = myLoader.loadClass(velocityClassName);
     Class<?> newVelocity = newLoader.loadClass(velocityClassName);
-    ASSERT.that(myVelocity).isNotEqualTo(newVelocity);
+    assertThat(myVelocity).isNotEqualTo(newVelocity);
     Runnable test = (Runnable) newLoader.loadClass(RunInClassLoader.class.getName()).newInstance();
-    ASSERT.that(test.getClass()).isNotEqualTo(RunInClassLoader.class);
+    assertThat(test.getClass()).isNotEqualTo(RunInClassLoader.class);
     test.run();
   }
 
@@ -72,7 +73,7 @@ public class VelocityClassLoaderTest extends TestCase {
           "    return new AutoValue_Test(baz);",
           "  }",
           "}"));
-      ASSERT.about(javaSource())
+      assert_().about(javaSource())
           .that(JavaFileObjects.forSourceString("foo.bar.Test", source))
           .processedWith(new AutoValueProcessor())
           .compilesWithoutError();
