@@ -15,9 +15,9 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.truth.Truth.ASSERT;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
-import static org.truth0.Truth.ASSERT;
 
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;

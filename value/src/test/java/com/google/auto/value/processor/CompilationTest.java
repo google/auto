@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.ASSERT;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static org.truth0.Truth.ASSERT;
 
 import com.google.testing.compile.JavaFileObjects;
 

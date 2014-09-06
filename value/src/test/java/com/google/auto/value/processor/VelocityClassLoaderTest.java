@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.ASSERT;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static org.truth0.Truth.ASSERT;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Joiner;
@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
 
 import junit.framework.TestCase;
+
 import org.apache.velocity.app.Velocity;
 
 import java.net.URLClassLoader;

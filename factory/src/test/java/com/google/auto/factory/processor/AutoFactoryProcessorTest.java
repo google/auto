@@ -15,18 +15,18 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.truth.Truth.ASSERT;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
-import static org.truth0.Truth.ASSERT;
 
-import javax.tools.JavaFileObject;
+import com.google.common.collect.ImmutableSet;
+import com.google.testing.compile.JavaFileObjects;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.testing.compile.JavaFileObjects;
+import javax.tools.JavaFileObject;
 
 /**
  * Functional tests for the {@link AutoFactoryProcessor}.

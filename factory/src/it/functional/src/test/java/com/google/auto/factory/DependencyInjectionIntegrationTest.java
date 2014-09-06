@@ -1,14 +1,14 @@
 package com.google.auto.factory;
 
-import static org.truth0.Truth.ASSERT;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import static com.google.common.truth.Truth.ASSERT;
 
 import com.google.inject.Guice;
 
 import dagger.ObjectGraph;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class DependencyInjectionIntegrationTest {
