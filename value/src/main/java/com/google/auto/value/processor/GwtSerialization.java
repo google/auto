@@ -99,9 +99,11 @@ class GwtSerialization {
 
   public static class Property {
     private final AutoValueProcessor.Property property;
+    private final boolean isCastingUnchecked;
 
     Property(AutoValueProcessor.Property property) {
       this.property = property;
+      this.isCastingUnchecked = TypeSimplifier.isCastingUnchecked(property.getTypeMirror());
     }
 
     @Override public String toString() {
@@ -141,6 +143,10 @@ class GwtSerialization {
       } else {
         return "(" + getType() + ") ";
       }
+    }
+
+    public boolean isCastingUnchecked() {
+      return isCastingUnchecked;
     }
   }
 

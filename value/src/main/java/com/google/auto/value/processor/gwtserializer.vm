@@ -26,12 +26,12 @@ public final class $serializerClass {
   // There are no instances of this class.
   private ${serializerClass}() {}
 
-  @SuppressWarnings("unchecked")
-## @SuppressWarnings is only necessary if a property has a generic type like List<String>,
-## but it's harmless to suppress always.
   public static $subclass instantiate(
       SerializationStreamReader streamReader) throws SerializationException {
 #foreach ($p in $props)
+    #if ($p.castingUnchecked)
+    @SuppressWarnings("unchecked")
+    #end
     $p.type $p = ${p.gwtCast}streamReader.read${p.gwtType}();
 #end
     return new ${subclass}(#foreach ($p in $props) $p #if ($foreach.hasNext) , #end #end);

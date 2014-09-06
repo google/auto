@@ -192,6 +192,10 @@ public class AutoValueProcessor extends AbstractProcessor {
       return (TypeElement) method.getEnclosingElement();
     }
 
+    TypeMirror getTypeMirror() {
+      return method.getReturnType();
+    }
+
     public String getType() {
       return type;
     }
