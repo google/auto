@@ -313,11 +313,22 @@ Restrictions and non-features
   how builders for different types should be written, and it
   would be a disservice for us to start coercing everything
   into the same mold.
+
 * AutoValue currently doesn't inspect the new `AutoValue_Foo`
   line to issue warnings on parameter order. (There are
   certain technical issues with doing so.) As stated above
   in Warnings, you had better have some test somewhere that
   will catch such problems.
+
+* It might seem convenient to use AutoValue to implement annotation
+  interfaces, which frameworks such as [Guice][3] occasionally
+  require. But in fact such interfaces must obey the contracts for
+  `equals` and `hashCode` specified by
+  java.lang.annotation.Annotation, and the implementations of those
+  methods that AutoValue would generate do not. Instead, the
+  com.google.auto.value package includes another annotation
+  `@AutoAnnotation` specifically for this case. See its documentation
+  for more details.
 
 
 Best practices
@@ -379,10 +390,11 @@ don't have to wonder whether AutoValue is overriding it.
 
 Alternatives
 ------------------
-[This slide presentation][3]
+[This slide presentation][4]
 walks through several competing solutions to this problem and shows
 why we considered them insufficient.
 
 [1]: http://guava-libraries.googlecode.com
 [2]: http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ComparisonChain.html
-[3]: https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ75RE/edit
+[3]: https://github.com/google/guice/wiki/BindingAnnotations#user-content-binding-annotations-with-attributes
+[4]: https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ75RE/edit
