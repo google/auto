@@ -15,17 +15,17 @@
  */
 package com.google.auto.service.processor;
 
+import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
-import static org.truth0.Truth.ASSERT;
 
-import java.util.Arrays;
+import com.google.auto.service.processor.AutoServiceProcessor;
+import com.google.testing.compile.JavaFileObjects;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import com.google.auto.service.processor.AutoServiceProcessor;
-import com.google.testing.compile.JavaFileObjects;
+import java.util.Arrays;
 
 /**
  * Tests the {@link AutoServiceProcessor}.
@@ -34,7 +34,7 @@ import com.google.testing.compile.JavaFileObjects;
 public class AutoServiceProcessorTest {
   @Test
   public void autoService() {
-    ASSERT.about(javaSources())
+    assert_().about(javaSources())
         .that(Arrays.asList(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),

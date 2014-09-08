@@ -31,6 +31,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -41,12 +42,14 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
@@ -69,6 +72,21 @@ public class TypeSimplifierTest extends TestCase {
       "MultipleBounds",
           "import java.util.List;\n"
           + "public class MultipleBounds<K extends List<V> & Comparable<K>, V> {}\n",
+      "Erasure",
+          "import java.util.List;\n"
+          + "import java.util.Map;\n"
+          + "@SuppressWarnings(\"rawtypes\")"
+          + "public class Erasure<T> {\n"
+          + "  int intNo; boolean booleanNo; int[] intArrayNo; String stringNo;\n"
+          + "  String[] stringArrayNo; List rawListNo; List<?> listOfQueryNo;\n"
+          + "  List<? extends Object> listOfQueryExtendsObjectNo;\n"
+          + "  Map<?, ?> mapQueryToQueryNo;\n"
+          + "\n"
+          + "  List<String> listOfStringYes; List<? extends String> listOfQueryExtendsStringYes;\n"
+          + "  List<? super String> listOfQuerySuperStringYes; List<T> listOfTypeVarYes;\n"
+          + "  List<? extends T> listOfQueryExtendsTypeVarYes;\n"
+          + "  List<? super T> listOfQuerySuperTypeVarYes;\n"
+          + "}\n",
       "Wildcards",
           "import java.util.Map;\n"
           + "public abstract class Wildcards {\n"
@@ -157,12 +175,15 @@ public class TypeSimplifierTest extends TestCase {
 
     // In the ErrorTestProcessor case, the code being compiled contains a deliberate reference to an
     // undefined type, so that we can capture an instance of ErrorType. (Synthesizing one ourselves
-    // leads to ClassCastException inside javac.) So remove the error for that from the output, and
+    // leads to ClassCastException inside javac.) So remove any errors for that from the output, and
     // only fail if there were other errors.
-    if (!diagnostics.isEmpty()
-        && diagnostics.get(0).getSource() != null
-        && diagnostics.get(0).getSource().getName().contains("ExtendsUndefinedType")) {
-      diagnostics.remove(0);
+    for (Iterator<Diagnostic<? extends JavaFileObject>> it = diagnostics.iterator();
+         it.hasNext(); ) {
+      Diagnostic<? extends JavaFileObject> diagnostic = it.next();
+      if (diagnostic.getSource() != null
+          && diagnostic.getSource().getName().contains("ExtendsUndefinedType")) {
+        it.remove();
+      }
     }
     // In the ErrorTestProcessor case, compilerOut.toString() will include the error for
     // ExtendsUndefinedType, which can safely be ignored, as well as stack traces for any failing
@@ -592,6 +613,29 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("MultipleBounds<K, V>", typeSimplifier.simplify(multipleBoundsMirror));
       assertEquals("<K extends List<V> & Comparable<K>, V>",
           typeSimplifier.formalTypeParametersString(multipleBoundsElement));
+    }
+
+    // Test TypeSimplifier.isCastingUnchecked. We do this by examining the fields of the Erasure
+    // class that is defined in CLASS_TO_SOURCE. A field whose name ends with Yes has a type where
+    // isCastingUnchecked should return true, and one whose name ends with No has a type where
+    // isCastingUnchecked should return false.
+    public void testIsCastingUnchecked() {
+      TypeElement erasureClass = typeElementOf("Erasure");
+      List<VariableElement> fields = ElementFilter.fieldsIn(erasureClass.getEnclosedElements());
+      for (VariableElement field : fields) {
+        String fieldName = field.getSimpleName().toString();
+        boolean expectUnchecked;
+        if (fieldName.endsWith("Yes")) {
+          expectUnchecked = true;
+        } else if (fieldName.endsWith("No")) {
+          expectUnchecked = false;
+        } else {
+          throw new AssertionError("Fields in Erasure class must end with Yes or No: " + fieldName);
+        }
+        TypeMirror fieldType = field.asType();
+        boolean actualUnchecked = TypeSimplifier.isCastingUnchecked(fieldType);
+        assertEquals("Unchecked-cast status for " + fieldType, expectUnchecked, actualUnchecked);
+      }
     }
   }
 

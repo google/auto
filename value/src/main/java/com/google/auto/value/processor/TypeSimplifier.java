@@ -17,6 +17,9 @@ package com.google.auto.value.processor;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,9 +35,11 @@ import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
+import javax.lang.model.util.AbstractTypeVisitor6;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
@@ -112,7 +117,7 @@ final class TypeSimplifier {
    * {@link #typesToImport}.
    */
   String simplify(TypeMirror type) {
-    return type.accept(new ToStringTypeVisitor(), new StringBuilder()).toString();
+    return type.accept(TO_STRING_TYPE_VISITOR, new StringBuilder()).toString();
   }
 
   // The formal type parameters of the given type.
@@ -315,13 +320,11 @@ final class TypeSimplifier {
       this.seenTypes = new TypeMirrorSet();
     }
 
-    @Override
-    public Void visitArray(ArrayType t, Void p) {
+    @Override public Void visitArray(ArrayType t, Void p) {
       return visit(t.getComponentType(), p);
     }
 
-    @Override
-    public Void visitDeclared(DeclaredType t, Void p) {
+    @Override public Void visitDeclared(DeclaredType t, Void p) {
       if (seenTypes.add(t)) {
         referencedTypes.add(typeUtils.erasure(t));
         for (TypeMirror param : t.getTypeArguments()) {
@@ -331,8 +334,7 @@ final class TypeSimplifier {
       return null;
     }
 
-    @Override
-    public Void visitTypeVariable(TypeVariable t, Void p) {
+    @Override public Void visitTypeVariable(TypeVariable t, Void p) {
       // Instead of visiting t.getUpperBound(), we explicitly visit the supertypes of t.
       // The reason is that for a variable like <T extends Foo & Bar>, t.getUpperBound() will be
       // the intersection type Foo & Bar, with no really simple way to extract Foo and Bar. But
@@ -345,8 +347,7 @@ final class TypeSimplifier {
       return visit(t.getLowerBound(), p);
     }
 
-    @Override
-    public Void visitWildcard(WildcardType t, Void p) {
+    @Override public Void visitWildcard(WildcardType t, Void p) {
       for (TypeMirror bound : new TypeMirror[] {t.getSuperBound(), t.getExtendsBound()}) {
         if (bound != null) {
           visit(bound, p);
@@ -355,8 +356,7 @@ final class TypeSimplifier {
       return null;
     }
 
-    @Override
-    public Void visitError(ErrorType t, Void p) {
+    @Override public Void visitError(ErrorType t, Void p) {
       throw new AbortProcessingException();
     }
   }
@@ -389,6 +389,9 @@ final class TypeSimplifier {
     Set<String> ambiguous = new HashSet<String>();
     Set<String> simpleNames = new HashSet<String>();
     for (TypeMirror type : types) {
+      if (type.getKind() == TypeKind.ERROR) {
+        throw new AbortProcessingException();
+      }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
       if (!simpleNames.add(simpleName)) {
         ambiguous.add(simpleName);
@@ -396,4 +399,69 @@ final class TypeSimplifier {
     }
     return ambiguous;
   }
+
+  /**
+   * Returns true if casting to the given type will elicit an unchecked warning from the
+   * compiler. Only generic types such as {@code List<String>} produce such warnings. There will be
+   * no warning if the type's only generic parameters are simple wildcards, as in {@code Map<?, ?>}.
+   */
+  static boolean isCastingUnchecked(TypeMirror type) {
+    return CASTING_UNCHECKED_VISITOR.visit(type, false);
+  }
+
+  /**
+   * Visitor that tells whether a type is erased, in the sense of {@link #isCastingUnchecked}. Each
+   * visitX method returns true if its input parameter is true or if the type being visited is
+   * erased.
+   */
+  private static final AbstractTypeVisitor6<Boolean, Boolean> CASTING_UNCHECKED_VISITOR =
+      new SimpleTypeVisitor6<Boolean, Boolean>() {
+    @Override protected Boolean defaultAction(TypeMirror e, Boolean p) {
+      return p;
+    }
+
+    @Override public Boolean visitUnknown(TypeMirror t, Boolean p) {
+      // We don't know whether casting is unchecked for this mysterious type but assume it is,
+      // so we will insert a possible-unnecessary @SuppressWarnings("unchecked").
+      return true;
+    }
+
+    @Override public Boolean visitArray(ArrayType t, Boolean p) {
+      return visit(t.getComponentType(), p);
+    }
+
+    @Override public Boolean visitDeclared(DeclaredType t, Boolean p) {
+      return p || FluentIterable.from(t.getTypeArguments()).anyMatch(UNCHECKED_TYPE_ARGUMENT);
+    }
+
+    @Override public Boolean visitTypeVariable(TypeVariable t, Boolean p) {
+      return true;
+    }
+
+    // If a type has a type argument, then casting to the type is unchecked, except if the argument
+    // is <?> or <? extends Object>. The same applies to all type arguments, so casting to Map<?, ?>
+    // does not produce an unchecked warning for example.
+    private final Predicate<TypeMirror> UNCHECKED_TYPE_ARGUMENT = new Predicate<TypeMirror>() {
+      @Override public boolean apply(TypeMirror arg) {
+        if (arg.getKind() == TypeKind.WILDCARD) {
+          WildcardType wildcard = (WildcardType) arg;
+          if (wildcard.getExtendsBound() == null || isJavaLangObject(wildcard.getExtendsBound())) {
+            // This is <?>, unless there's a super bound, in which case it is <? super Foo> and
+            // is erased.
+            return (wildcard.getSuperBound() != null);
+          }
+        }
+        return true;
+      }
+    };
+
+    private boolean isJavaLangObject(TypeMirror type) {
+      if (type.getKind() != TypeKind.DECLARED) {
+        return false;
+      }
+      DeclaredType declaredType = (DeclaredType) type;
+      TypeElement typeElement = (TypeElement) declaredType.asElement();
+      return typeElement.getQualifiedName().contentEquals("java.lang.Object");
+    }
+  };
 }

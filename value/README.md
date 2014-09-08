@@ -14,7 +14,7 @@ AutoValue
 > The resulting program is likely to be shorter,
 > clearer, and freer of bugs. Two thumbs up."
 >  
-> – Joshua Bloch, author, Effective Java
+> -- Joshua Bloch, author, Effective Java
 
 
 Contents
@@ -27,7 +27,7 @@ Contents
   - [In Example.java](#in-examplejava)
   - [In ExampleTest.java](#in-exampletestjava)
   - [In pom.xml](#in-pomxml)
-  - [What’s going on here?](#whats-going-on-here)
+  - [What's going on here?](#whats-going-on-here)
 - [Optional "features"](#optional-features)
   - [Data hiding](#data-hiding)
   - [Multiple creation paths](#multiple-creation-paths)
@@ -60,7 +60,7 @@ the aid of IDE templates and a few Guava helpers, but they
 are a continual burden to reviewers, editors and future
 readers. Their wide expanses of boilerplate sharply decrease
 the signal-to-noise ratio of your code, and constitute
-probably the single greatest violation of the DRY (Don’t
+probably the single greatest violation of the DRY (Don't
 Repeat Yourself) principle we are ever forced to commit.
 
 AutoValue provides an easier way to create immutable value
@@ -102,17 +102,24 @@ automatically generate an implementing class.
 
 ```java
     import com.google.auto.value.AutoValue;
-    
-    /** Javadoc. (In real life, it would be on the methods too.) */
-    @AutoValue
-    public abstract class Example {
-      public static Example create(String name, int integer) {
-        return new AutoValue_Example(name, integer);
-      }
-      public abstract String name();
-      public abstract int integer();
+
+    class Example {
+      @AutoValue
+      abstract static class Animal {
+        static Animal create(String name, int numberOfLegs) {
+          return new AutoValue_Example_Animal(name, numberOfLegs);
+          // (or just AutoValue_Animal if this is not nested)
+        }
+
+        abstract String name();
+        abstract int numberOfLegs();
+      }
     }
+
 ```
+
+That's it! (In real life, some classes and methods would
+presumably be public and have Javadoc.)
 
 The central idea behind AutoValue is: if you can create
 an abstract class that has one "obvious" reasonable
@@ -128,18 +135,18 @@ interesting** with the object, instead of just checking field
 values going in and out.
 
 ```java
-    public void testExample() {
-      Example ex = Example.create("happy", 23);
-      assertEquals("happy", ex.name());
-      assertEquals(23, ex.integer());
-    
+    public void testAnimal() {
+      Animal dog = Animal.create("dog", 4);
+      assertEquals("dog", dog.name());
+      assertEquals(4, dog.numberOfLegs());
+
       // You really don't need to write tests like these; just illustrating.
-      
-      assertTrue(Example.create("happy", 23).equals(ex));
-      assertFalse(Example.create("sad", 23).equals(ex));
-      assertFalse(Example.create("happy", 24).equals(ex));
-      
-      assertEquals("Example{name=happy, integer=23}", ex.toString());
+
+      assertTrue(Animal.create("dog", 4).equals(dog));
+      assertFalse(Animal.create("cat", 4).equals(dog));
+      assertFalse(Animal.create("dog", 2).equals(dog));
+
+      assertEquals("Animal{name=dog, numberOfLegs=4}", dog.toString());
     }
 ```
 
@@ -159,7 +166,7 @@ add the following to your Maven configuration:
 Of course, please upgrade to the final 1.0 release once it is 
 available (likely in April 2014).
 
-### What’s going on here?
+### What's going on here?
 
 AutoValue runs as a standard annotation processor in javac.
 It generates source code, in your package, for a *package-private*
@@ -172,7 +179,7 @@ fashion, and implements an appropriate corresponding `hashCode`.
 It implements `toString` to return an unspecified string
 representation of the class.
 
-Consumers of your value type don’t need to know any of this.
+Consumers of your value type don't need to know any of this.
 They just invoke your provided factory method and get a
 well-behaved instance back.
 
@@ -216,8 +223,11 @@ generates? You can underride it! Just write your own, directly in your
 abstract class; AutoValue will see this and skip generating its own.
 
 ### Nesting
-For a nested abstract value type called `Foo.Bar.Qux`, the generated
-implementation class is named `AutoValue_Foo_Bar_Qux`.
+Your hand-written abstract value type can be nested at any level. The
+generated implementation class is named `AutoValue_` plus each
+component of the class named separated by underscores. For example,
+for the abstract class `Foo.Bar.Qux`, the generated implementation
+class is `AutoValue_Foo_Bar_Qux`, in the same package.
 
 ### Derived fields
 If a field exists to cache a derived value, and should be ignored in
@@ -226,17 +236,23 @@ instead of providing an abstract accessor for it. AutoValue will know
 nothing of it.
 
 You may have fields you wish to ignore in equals for other reasons.
-We're sorry: AutoValue doesn't work for these cases, since there’s no
+We're sorry: AutoValue doesn't work for these cases, since there's no
 way to pass the extra parameter "through" the generated class
 constructor.
 
-###Serialization
-As you might expect, the generated class will be serializable if your
-abstract class implements `Serializable`. (Ordinarily, abstract types
-should not implement `Serializable`, but in this case it's harmless,
-since we truly expect no other implementations to ever exist.) There
-is no way to mark individual fields as transient or customize the
-serialization behavior.
+### Serialization
+The generated class will be serializable if your abstract class
+implements `Serializable`. It will be GWT-serializable if your
+abstract class is annotated with `@GwtCompatible(serializable = true)`
+(any annotation with that name and field will do, such as the one
+included in [Guava][1]).
+
+(Ordinarily, abstract types should not be serializable, but in this
+case it's harmless, since we truly expect no other implementations to
+ever exist.)
+
+There is no way to mark individual fields as transient or customize
+the serialization behavior.
 
 
 Warnings
@@ -283,8 +299,8 @@ Restrictions and non-features
   package-private. The same is true for your `@AutoValue` class 
   itself (if it is a nested class).
 
-* We don’t generate `compareTo`, because we feel you need the
-  expressiveness that [ComparisonChain][1] provides, and we can't beat
+* We don't generate `compareTo`, because we feel you need the
+  expressiveness that [ComparisonChain][2] provides, and we can't beat
   it at its own game. If we find later that a large minority of 
   AutoValue classes are implementing compareTo by the exact same 
   formula, we will reconsider this feature.
@@ -297,11 +313,22 @@ Restrictions and non-features
   how builders for different types should be written, and it
   would be a disservice for us to start coercing everything
   into the same mold.
-* AutoValue currently doesn’t inspect the new `AutoValue_Foo`
+
+* AutoValue currently doesn't inspect the new `AutoValue_Foo`
   line to issue warnings on parameter order. (There are
   certain technical issues with doing so.) As stated above
   in Warnings, you had better have some test somewhere that
   will catch such problems.
+
+* It might seem convenient to use AutoValue to implement annotation
+  interfaces, which frameworks such as [Guice][3] occasionally
+  require. But in fact such interfaces must obey the contracts for
+  `equals` and `hashCode` specified by
+  java.lang.annotation.Annotation, and the implementations of those
+  methods that AutoValue would generate do not. Instead, the
+  com.google.auto.value package includes another annotation
+  `@AutoAnnotation` specifically for this case. See its documentation
+  for more details.
 
 
 Best practices
@@ -315,8 +342,18 @@ javadoc, and it prevents users outside your package from creating
 their own subclasses (and potentially subverting your
 immutability).
 
+In fact, **you should virtually never need an alternative
+implementation of your hand-written abstract class**, whether
+hand-written or generated by a mocking framework. Your class can
+and should contain simple intrinsic behavior, but if that behavior
+has enough complexity or enough dependencies that it actually needs
+to be mocked or faked, split it into a separate type that is *not*
+a value type. Otherwise it permits an instance with "real" behavior
+and one with "mock/fake" behavior to be `equals`, which does not
+make sense. Keep your value types straightforward.
+
 Other code in the same package will be able to directly access
-the generated class, *but should not*. It’s best if each generated
+the generated class, *but should not*. It's best if each generated
 class has **one and only one reference** from your source code.
 If you have multiple creation methods, have them all call through
 to the same point, so there is still one call to the generated file,
@@ -325,7 +362,7 @@ and one place to insert preconditions, etc.
 **Avoid mutable field types**, especially if you make your
 accessor methods `public`. The generated accessors won't copy the
 field value on its way out, so you'd be exposing your internal
-state. This doesn’t mean your factory method can't *accept*
+state. This doesn't mean your factory method can't *accept*
 mutable types as input parameters. Example:
 
 ```java
@@ -353,9 +390,11 @@ don't have to wonder whether AutoValue is overriding it.
 
 Alternatives
 ------------------
-[This slide presentation][2]
+[This slide presentation][4]
 walks through several competing solutions to this problem and shows
 why we considered them insufficient.
 
-[1]: http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ComparisonChain.html
-[2]: https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ75RE/edit
+[1]: http://guava-libraries.googlecode.com
+[2]: http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ComparisonChain.html
+[3]: https://github.com/google/guice/wiki/BindingAnnotations#user-content-binding-annotations-with-attributes
+[4]: https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ75RE/edit

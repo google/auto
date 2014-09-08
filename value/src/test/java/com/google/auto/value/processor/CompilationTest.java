@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static org.truth0.Truth.ASSERT;
 
 import com.google.testing.compile.JavaFileObjects;
 
@@ -98,7 +98,7 @@ public class CompilationTest extends TestCase {
         "  }",
         "}"
     );
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
@@ -192,7 +192,7 @@ public class CompilationTest extends TestCase {
         "  }",
         "}"
     );
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
@@ -214,7 +214,7 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(ints);",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -238,7 +238,7 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(strings);",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -256,7 +256,7 @@ public class CompilationTest extends TestCase {
         "",
         "@AutoValue",
         "public interface Baz {}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -273,7 +273,7 @@ public class CompilationTest extends TestCase {
         "",
         "@AutoValue",
         "public enum Baz {}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -307,7 +307,7 @@ public class CompilationTest extends TestCase {
         "    abstract int randomProperty();",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -335,7 +335,7 @@ public class CompilationTest extends TestCase {
           "",
           "  public abstract int foo();",
           "}");
-      ASSERT.about(javaSource())
+      assert_().about(javaSource())
           .that(javaFileObject)
           .processedWith(new AutoValueProcessor())
           .failsToCompile()
@@ -357,7 +357,7 @@ public class CompilationTest extends TestCase {
         "@AutoValue",
         "public abstract class Existent extends NonExistent {",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -365,47 +365,7 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
-  public void testImplementingAnnotationRequiresDefiningEquals() throws Exception {
-    // Since the equals algorithm we use for AutoValue classes is incompatible with the one
-    // specified by Annotation#equals(Object), we produce an error if we would be generating that
-    // incorrect method. The incompatibility is because we check instanceof RetentionImpl,
-    // where we should be checking instanceof Retention. That could be fixed by checking instanceof
-    // the most general ancestor that already contains all our abstract methods, but the motivation
-    // for doing that is not great.
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.RetentionImpl",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "import java.lang.annotation.Retention;",
-        "import java.lang.annotation.RetentionPolicy;",
-        "",
-        "@AutoValue",
-        "public abstract class RetentionImpl implements Retention {",
-        "  public static Retention create(RetentionPolicy policy) {",
-        "    return new AutoValue_RetentionImpl(policy);",
-        "  }",
-        "",
-        "  @Override public Class<? extends Retention> annotationType() {",
-        "    return Retention.class;",
-        "  }",
-        "",
-        "  @Override public int hashCode() {",
-        "    return (\"value\".hashCode() * 127) ^ value().hashCode();",
-        "  }",
-        "}");
-    ASSERT.about(javaSource())
-        .that(javaFileObject)
-        .processedWith(new AutoValueProcessor())
-        .failsToCompile()
-        .withErrorContaining("would not obey the contract of equals(Object)")
-        .in(javaFileObject).onLine(8);
-  }
-
-  public void testImplementingAnnotationRequiresDefiningHashCode() throws Exception {
-    // Since the hashCode algorithm we use for AutoValue classes is incompatible with the one
-    // specified by Annotation#hashCode(), we produce an error if we would be generating that
-    // incorrect hashCode().
+  public void testCannotImplementAnnotation() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.RetentionImpl",
         "package foo.bar;",
@@ -425,14 +385,18 @@ public class CompilationTest extends TestCase {
         "  }",
         "",
         "  @Override public boolean equals(Object o) {",
-        "    return o instanceof Retention && ((Retention) o).value().equals(value());",
+        "    return (o instanceof Retention && value().equals((Retention) o).value());",
+        "  }",
+        "",
+        "  @Override public int hashCode() {",
+        "    return (\"value\".hashCode() * 127) ^ value().hashCode();",
         "  }",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
-        .withErrorContaining("would not obey the contract of hashCode()")
+        .withErrorContaining("may not be used to implement an annotation interface")
         .in(javaFileObject).onLine(8);
   }
 
@@ -447,7 +411,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract MissingType missingType();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -466,7 +430,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract MissingType<?> missingType();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -488,7 +452,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract Map<Set<?>, MissingType<?>> missingType();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -507,7 +471,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz<T extends MissingType<?>> {",
         "  public abstract int foo();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -569,7 +533,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract int foo();",
         "}");
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new PoisonedAutoValueProcessor(exception))
         .failsToCompile()

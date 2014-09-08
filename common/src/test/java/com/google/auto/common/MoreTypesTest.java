@@ -15,9 +15,9 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
-import static org.truth0.Truth.ASSERT;
 
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
@@ -198,27 +198,27 @@ public class MoreTypesTest {
     TypeElement charSequenceElement =
         elements.getTypeElement(CharSequence.class.getCanonicalName());
 
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f1").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f1").asType()))
         .has().exactly(objectElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f2").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f2").asType()))
         .has().exactly(setElement, stringElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f3").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f3").asType()))
         .has().exactly(mapElement, stringElement, objectElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f4").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f4").asType()))
         .has().exactly(integerElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f5").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f5").asType()))
         .has().exactly(setElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f6").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f6").asType()))
         .has().exactly(setElement, charSequenceElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f7").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f7").asType()))
         .has().exactly(mapElement, stringElement, setElement, charSequenceElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f8").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f8").asType()))
         .has().exactly(stringElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f9").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f9").asType()))
         .has().exactly(stringElement);
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f10").asType())).isEmpty();
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f11").asType())).isEmpty();
-    ASSERT.that(MoreTypes.referencedTypes(fieldIndex.get("f12").asType()))
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f10").asType())).isEmpty();
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f11").asType())).isEmpty();
+    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f12").asType()))
         .has().exactly(setElement, stringElement);
   }
 

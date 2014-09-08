@@ -192,6 +192,10 @@ public class AutoValueProcessor extends AbstractProcessor {
       return (TypeElement) method.getEnclosingElement();
     }
 
+    TypeMirror getTypeMirror() {
+      return method.getReturnType();
+    }
+
     public String getType() {
       return type;
     }
@@ -301,6 +305,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (ancestorIsAutoValue(type)) {
       abortWithError("One @AutoValue class may not extend another", type);
     }
+    if (implementsAnnotation(type)) {
+      abortWithError("@AutoValue may not be used to implement an annotation interface; "
+          + "try using @AutoAnnotation instead", type);
+    }
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = classNameOf(type);
@@ -319,7 +327,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     determineObjectMethodsToGenerate(methods, vars);
-    dontImplementAnnotationEqualsOrHashCode(type, vars);
     ImmutableList<ExecutableElement> toImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(toImplement));
@@ -366,22 +373,6 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
     return false;
-  }
-
-  private void dontImplementAnnotationEqualsOrHashCode(
-      TypeElement type, AutoValueTemplateVars vars) {
-    TypeMirror javaLangAnnotationAnnotation = getTypeMirror(Annotation.class);
-    Types typeUtils = processingEnv.getTypeUtils();
-    if (typeUtils.isAssignable(type.asType(), javaLangAnnotationAnnotation)) {
-      if (vars.equals || vars.hashCode) {
-        String bad = vars.equals
-            ? (vars.hashCode ? "equals(Object) and hashCode()" : "equals(Object)")
-            : "hashCode()";
-        reportError("The implementation of " + bad + " that would be generated for this @AutoValue "
-            + "class would not obey the contract of " + bad + " in " + Annotation.class.getName(),
-            type);
-      }
-    }
   }
 
   /**
@@ -479,6 +470,11 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
       type = parentElement;
     }
+  }
+
+  private boolean implementsAnnotation(TypeElement type) {
+    Types typeUtils = processingEnv.getTypeUtils();
+    return typeUtils.isAssignable(type.asType(), getTypeMirror(Annotation.class));
   }
 
   // Return a string like "1234L" if type instanceof Serializable and defines
