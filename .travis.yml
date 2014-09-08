@@ -1,6 +1,6 @@
 language: java
-install: mvn -f build-pom.xml install clean --fail-never --quiet -DskipTests=true -Dinvoker.skip=true
-script: mvn -f build-pom.xml verify
+install: mvn -U -f build-pom.xml install clean --fail-never --quiet -DskipTests=true -Dinvoker.skip=true
+script: mvn -U -f build-pom.xml verify
 
 notifications:
   email: cgruber@google.com
