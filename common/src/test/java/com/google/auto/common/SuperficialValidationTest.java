@@ -228,7 +228,6 @@ public class SuperficialValidationTest {
         }).failsToCompile();
   }
 
-
   private static abstract class AssertingProcessor extends AbstractProcessor {
     @Override
     public Set<String> getSupportedAnnotationTypes() {

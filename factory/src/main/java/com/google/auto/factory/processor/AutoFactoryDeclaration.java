@@ -62,7 +62,6 @@ final class AutoFactoryDeclaration {
     this.implementingTypes = implementingTypes;
   }
 
-
   String getFactoryName(Name packageName, Name targetType) {
     StringBuilder builder = new StringBuilder(packageName);
     if (packageName.length() > 0) {
@@ -91,7 +90,6 @@ final class AutoFactoryDeclaration {
   ImmutableSet<TypeElement> implementingTypes() {
     return implementingTypes;
   }
-
 
   static final class Factory {
     private final Elements elements;
