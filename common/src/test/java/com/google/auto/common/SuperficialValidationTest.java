@@ -203,6 +203,32 @@ public class SuperficialValidationTest {
         .failsToCompile();
   }
 
+  @Test
+  public void invalidAnnotationValue() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines("test.Outer",
+        "package test;",
+        "",
+        "final class Outer {",
+        "  @interface TestAnnotation {",
+        "    Class[] classes();",
+        "  }",
+        "",
+        "  @TestAnnotation(classes = Foo)",
+        "  static class TestClass {}",
+        "}");
+    assert_().about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
+            assert_().that(SuperficialValidation.validateElement(testClassElement))
+                .named("testClassElement is valid").isFalse();
+          }
+        }).failsToCompile();
+  }
+
+
   private static abstract class AssertingProcessor extends AbstractProcessor {
     @Override
     public Set<String> getSupportedAnnotationTypes() {

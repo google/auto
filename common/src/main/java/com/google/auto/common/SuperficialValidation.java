@@ -16,6 +16,7 @@
 package com.google.auto.common;
 
 import java.util.List;
+import java.util.Map;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.AnnotationValueVisitor;
@@ -30,6 +31,7 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
@@ -73,7 +75,7 @@ public final class SuperficialValidation {
         @Override public Boolean visitExecutable(ExecutableElement e, Void p) {
           AnnotationValue defaultValue = e.getDefaultValue();
           return isValidBaseElement(e)
-              && (defaultValue == null || validateAnnotationValue(defaultValue))
+              && (defaultValue == null || validateAnnotationValue(defaultValue, e.getReturnType()))
               && validateType(e.getReturnType())
               && validateTypes(e.getThrownTypes())
               && validateElements(e.getTypeParameters())
@@ -85,8 +87,7 @@ public final class SuperficialValidation {
               && validateTypes(e.getBounds());
         }
 
-        @Override
-        public Boolean visitUnknown(Element e, Void p) {
+        @Override public Boolean visitUnknown(Element e, Void p) {
           // just assume that unknown elements are OK
           return true;
         }
@@ -177,41 +178,49 @@ public final class SuperficialValidation {
 
   private static boolean validateAnnotation(AnnotationMirror annotationMirror) {
     return validateType(annotationMirror.getAnnotationType())
-        && validateAnnotationValues(annotationMirror.getElementValues().values());
+        && validateAnnotationValues(annotationMirror.getElementValues());
   }
 
   private static boolean validateAnnotationValues(
-      Iterable<? extends AnnotationValue> annotationValues) {
-    for (AnnotationValue annotationMirror : annotationValues) {
-      if (!validateAnnotationValue(annotationMirror)) {
+      Map<? extends ExecutableElement, ? extends AnnotationValue> valueMap) {
+    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> valueEntry :
+        valueMap.entrySet()) {
+      TypeMirror expectedType = valueEntry.getKey().getReturnType();
+      if (!validateAnnotationValue(valueEntry.getValue(), expectedType)) {
         return false;
       }
     }
     return true;
   }
 
-  private static final AnnotationValueVisitor<Boolean, Void> ANNOTATION_VALUE_VALIDATING_VISITOR =
-      new SimpleAnnotationValueVisitor6<Boolean, Void>() {
-        @Override
-        protected Boolean defaultAction(Object o, Void p) {
-          return true;
+  private static final AnnotationValueVisitor<Boolean, TypeMirror> VALUE_VALIDATING_VISITOR =
+      new SimpleAnnotationValueVisitor6<Boolean, TypeMirror>() {
+        @Override protected Boolean defaultAction(Object o, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(o.getClass(), expectedType);
         }
 
-        @Override
-        public Boolean visitUnknown(AnnotationValue av, Void p) {
+        @Override public Boolean visitUnknown(AnnotationValue av, TypeMirror expectedType) {
           // just take the default action for the unknown
-          return defaultAction(av, p);
+          return defaultAction(av, expectedType);
+        }
+
+        @Override public Boolean visitAnnotation(AnnotationMirror a, TypeMirror expectedType) {
+          return MoreTypes.equivalence().equivalent(a.getAnnotationType(), expectedType)
+              && validateAnnotation(a);
         }
 
         @Override
-        public Boolean visitAnnotation(AnnotationMirror a, Void p) {
-          return validateAnnotation(a);
-        }
-
-        @Override
-        public Boolean visitArray(List<? extends AnnotationValue> values, Void p) {
+        public Boolean visitArray(List<? extends AnnotationValue> values, TypeMirror expectedType) {
+          if (!expectedType.getKind().equals(TypeKind.ARRAY)) {
+            return false;
+          }
+          try {
+            expectedType = MoreTypes.asArray(expectedType).getComponentType();
+          } catch (IllegalArgumentException e) {
+            return false; // Not an array expected, ergo invalid.
+          }
           for (AnnotationValue value : values) {
-            if (!value.accept(this, null)) {
+            if (!value.accept(this, expectedType)) {
               return false;
             }
           }
@@ -219,17 +228,54 @@ public final class SuperficialValidation {
         }
 
         @Override
-        public Boolean visitEnumConstant(VariableElement c, Void p) {
-          return validateElement(c);
+        public Boolean visitEnumConstant(VariableElement enumConstant, TypeMirror expectedType) {
+          return MoreTypes.equivalence().equivalent(enumConstant.asType(), expectedType)
+              && validateElement(enumConstant);
         }
 
-        @Override
-        public Boolean visitType(TypeMirror t, Void p) {
-          return validateType(t);
+        @Override public Boolean visitType(TypeMirror type, TypeMirror ignored) {
+          // We could check assignability here, but would require a Types instance. Since this
+          // isn't really the sort of thing that shows up in a bad AST from upstream compilation
+          // we ignore the expected type and just validate the type.  It might be wrong, but
+          // it's valid.
+          return validateType(type);
+        }
+
+        @Override public Boolean visitBoolean(boolean b, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Boolean.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitByte(byte b, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Byte.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitChar(char c, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Character.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitDouble(double d, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Double.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitFloat(float f, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Float.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitInt(int i, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Integer.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitLong(long l, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Long.TYPE, expectedType);
+        }
+
+        @Override public Boolean visitShort(short s, TypeMirror expectedType) {
+          return MoreTypes.isTypeOf(Short.TYPE, expectedType);
         }
       };
 
-  private static boolean validateAnnotationValue(AnnotationValue annotationValue) {
-    return annotationValue.accept(ANNOTATION_VALUE_VALIDATING_VISITOR, null);
+  private static boolean validateAnnotationValue(
+      AnnotationValue annotationValue, TypeMirror expectedType) {
+    return annotationValue.accept(VALUE_VALIDATING_VISITOR, expectedType);
   }
 }

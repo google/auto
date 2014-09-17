@@ -39,6 +39,10 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.NoType;
+import javax.lang.model.type.NullType;
+import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
@@ -387,6 +391,184 @@ public final class MoreTypes {
       builder.add(asTypeElement(types, mirror));
     }
     return builder.build();
+  }
+
+  /**
+   * Returns a {@link ArrayType} if the {@link TypeMirror} represents a primitive array or
+   * throws an {@link IllegalArgumentException}.
+   */
+  public static ArrayType asArray(TypeMirror maybeArrayType) {
+    return maybeArrayType.accept(new CastingTypeVisitor<ArrayType>() {
+      @Override public ArrayType visitArray(ArrayType type, String ignore) {
+        return type;
+      }
+    }, "primitive array");
+  }
+
+  /**
+   * Returns a {@link DeclaredType} if the {@link TypeMirror} represents a declared type such
+   * as a class, interface, union/compound, or enum or throws an {@link IllegalArgumentException}.
+   */
+  public static DeclaredType asDeclared(TypeMirror maybeDeclaredType) {
+    return maybeDeclaredType.accept(new CastingTypeVisitor<DeclaredType>() {
+      @Override public DeclaredType visitDeclared(DeclaredType type, String ignored) {
+        return type;
+      }
+    }, "declared type");
+  }
+
+  /**
+   * Returns a {@link ExecutableType} if the {@link TypeMirror} represents an executable type such
+   * as may result from missing code, or bad compiles or throws an {@link IllegalArgumentException}.
+   */
+  public static ErrorType asError(TypeMirror maybeErrorType) {
+    return maybeErrorType.accept(new CastingTypeVisitor<ErrorType>() {
+      @Override public ErrorType visitError(ErrorType type, String p) {
+        return type;
+      }
+    }, "error type");
+  }
+
+  /**
+   * Returns a {@link ExecutableType} if the {@link TypeMirror} represents an executable type such
+   * as a method, constructor, or initializer or throws an {@link IllegalArgumentException}.
+   */
+  public static ExecutableType asExecutable(TypeMirror maybeExecutableType) {
+    return maybeExecutableType.accept(new CastingTypeVisitor<ExecutableType>() {
+      @Override public ExecutableType visitExecutable(ExecutableType type, String p) {
+        return type;
+      }
+    }, "executable type");
+  }
+
+  /**
+   * Returns a {@link NoType} if the {@link TypeMirror} represents an non-type such
+   * as void, or package, etc. or throws an {@link IllegalArgumentException}.
+   */
+  public static NoType asNoType(TypeMirror maybeNoType) {
+    return maybeNoType.accept(new CastingTypeVisitor<NoType>() {
+      @Override public NoType visitNoType(NoType noType, String p) {
+        return noType;
+      }
+    }, "non-type");
+  }
+
+  /**
+   * Returns a {@link NullType} if the {@link TypeMirror} represents the null type
+   * or throws an {@link IllegalArgumentException}.
+   */
+  public static NullType asNullType(TypeMirror maybeNullType) {
+    return maybeNullType.accept(new CastingTypeVisitor<NullType>() {
+      @Override public NullType visitNull(NullType nullType, String p) {
+        return nullType;
+      }
+    }, "null");
+  }
+
+  /**
+   * Returns a {@link PrimitiveType} if the {@link TypeMirror} represents a primitive type
+   * or throws an {@link IllegalArgumentException}.
+   */
+  public static PrimitiveType asPrimitiveType(TypeMirror maybePrimitiveType) {
+    return maybePrimitiveType.accept(new CastingTypeVisitor<PrimitiveType>() {
+      @Override public PrimitiveType visitPrimitive(PrimitiveType type, String p) {
+        return type;
+      }
+    }, "primitive type");
+  }
+
+  //
+  // visitUnionType would go here, but it is a 1.7 API.
+  //
+
+  /**
+   * Returns a {@link TypeVariable} if the {@link TypeMirror} represents a type variable
+   * or throws an {@link IllegalArgumentException}.
+   */
+  public static TypeVariable asTypeVariable(TypeMirror maybeTypeVariable) {
+    return maybeTypeVariable.accept(new CastingTypeVisitor<TypeVariable>() {
+      @Override public TypeVariable visitTypeVariable(TypeVariable type, String p) {
+        return type;
+      }
+    }, "type variable");
+  }
+
+  /**
+   * Returns a {@link WildcardType} if the {@link TypeMirror} represents a wildcard type
+   * or throws an {@link IllegalArgumentException}.
+   */
+  public static WildcardType asWildcard(WildcardType maybeWildcardType) {
+    return maybeWildcardType.accept(new CastingTypeVisitor<WildcardType>() {
+      @Override public WildcardType visitWildcard(WildcardType type, String p) {
+        return type;
+      }
+    }, "wildcard type");
+  }
+
+  /**
+   *
+   * Returns true if the raw type underlying the given {@link TypeMirror} represents the
+   * same raw type as the given {@link Class} and throws an IllegalArgumentException if the
+   * {@link TypeMirror} does not represent a type that can be referenced by a {@link Class}
+   */
+  public static boolean isTypeOf(final Class<?> clazz, TypeMirror type) {
+    checkNotNull(clazz);
+    return type.accept(new SimpleTypeVisitor6<Boolean, Void>() {
+      @Override protected Boolean defaultAction(TypeMirror type, Void ignored) {
+        throw new IllegalArgumentException(type + " cannot be represented as a Class<?>.");
+      }
+
+      @Override public Boolean visitNoType(NoType noType, Void p) {
+        if (noType.getKind().equals(TypeKind.VOID)) {
+          return clazz.equals(Void.TYPE);
+        }
+        throw new IllegalArgumentException(noType + " cannot be represented as a Class<?>.");
+      }
+
+      @Override public Boolean visitPrimitive(PrimitiveType type, Void p) {
+        switch (type.getKind()) {
+          case BOOLEAN:
+            return clazz.equals(Boolean.TYPE);
+          case BYTE:
+            return clazz.equals(Byte.TYPE);
+          case CHAR:
+            return clazz.equals(Character.TYPE);
+          case DOUBLE:
+            return clazz.equals(Double.TYPE);
+          case FLOAT:
+            return clazz.equals(Float.TYPE);
+          case INT:
+            return clazz.equals(Integer.TYPE);
+          case LONG:
+            return clazz.equals(Long.TYPE);
+          case SHORT:
+            return clazz.equals(Short.TYPE);
+          default:
+            throw new IllegalArgumentException(type + " cannot be represented as a Class<?>.");
+        }
+      }
+
+      @Override public Boolean visitArray(ArrayType array, Void p) {
+        return clazz.isArray()
+            && isTypeOf(clazz.getComponentType(), array.getComponentType());
+      }
+
+      @Override public Boolean visitDeclared(DeclaredType type, Void ignored) {
+        TypeElement typeElement;
+        try {
+          typeElement = MoreElements.asType(type.asElement());
+        } catch (IllegalArgumentException iae) {
+          throw new IllegalArgumentException(type + " does not represent a class or interface.");
+        }
+        return typeElement.getQualifiedName().contentEquals(clazz.getCanonicalName());
+      }
+    }, null);
+  }
+
+  private static class CastingTypeVisitor<T> extends SimpleTypeVisitor6<T, String> {
+    @Override protected T defaultAction(TypeMirror e, String label) {
+      throw new IllegalArgumentException(e + " does not represent a " + label);
+    }
   }
 
   private MoreTypes() {}
