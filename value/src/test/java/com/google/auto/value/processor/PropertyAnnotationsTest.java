@@ -8,7 +8,7 @@ import javax.tools.JavaFileObject;
 import java.util.List;
 
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static org.truth0.Truth.ASSERT;
+import static com.google.common.truth.Truth.assert_;
 
 /**
  * Tests to ensure annotations are kept on AutoValue generated classes
@@ -40,7 +40,7 @@ public class PropertyAnnotationsTest extends TestCase {
     char testChar() default 'a';
     String testString() default "10";
     boolean testBoolean() default false;
-    Class testClass() default TestEnum.class;
+    Class<?> testClass() default TestEnum.class;
     TestEnum testEnum() default TestEnum.A;
     OtherAnnotation testAnnotation() default @OtherAnnotation(foo = 23, bar = "baz");
   }
@@ -60,7 +60,7 @@ public class PropertyAnnotationsTest extends TestCase {
     char[] testChars() default {'a', 'b'};
     String[] testStrings() default {"cde", "fgh"};
     boolean[] testBooleans() default {true, false};
-    Class[] testClasses() default {TestEnum.class, TestEnum.class};
+    Class<?>[] testClasses() default {TestEnum.class, TestEnum.class};
     TestEnum[] testEnums() default {TestEnum.A, TestEnum.B};
     OtherAnnotation[] testAnnotations() default {@OtherAnnotation(foo = 999), @OtherAnnotation(bar = "baz")};
   }
@@ -154,7 +154,7 @@ public class PropertyAnnotationsTest extends TestCase {
     JavaFileObject javaFileObject = sourceCode(imports, annotations);
     JavaFileObject expectedOutput = expectedCode(expectedAnnotations);
 
-    ASSERT.about(javaSource())
+    assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
