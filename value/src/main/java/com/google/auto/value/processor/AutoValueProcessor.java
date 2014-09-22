@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Generated;
@@ -42,6 +44,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -177,11 +180,46 @@ public class AutoValueProcessor extends AbstractProcessor {
   public static class Property {
     private final ExecutableElement method;
     private final String type;
+    private final ImmutableList<String> annotationClasses;
+    private final TypeSimplifier typeSimplifier;
 
-    Property(ExecutableElement method, String type) {
+    Property(ExecutableElement method, String type, TypeSimplifier typeSimplifier) {
       this.method = method;
       this.type = type;
+      this.typeSimplifier = typeSimplifier;
+      this.annotationClasses = buildAnnotationClasses();
     }
+
+    private ImmutableList<String> buildAnnotationClasses() {
+      ImmutableList.Builder<String> builder = ImmutableList.builder();
+
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        String annotationName = typeSimplifier.simplify(annotationMirror.getAnnotationType());
+        String annotation = "@" + annotationName;
+
+        List<String> values = FluentIterable
+            .from(annotationMirror.getElementValues().entrySet())
+            .filter(Predicates.notNull())
+            .transform(valuesToString)
+            .toList();
+
+        if (!values.isEmpty()) {
+          annotation += "(" + Joiner.on(", ").join(values) + ")";
+        }
+
+        builder.add(annotation);
+      }
+
+      return builder.build();
+    }
+
+    private static Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String> valuesToString =
+        new Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String>() {
+          @Override
+          public String apply(Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry) {
+            return entry.getKey().getSimpleName().toString() + "=" + entry.getValue().toString();
+          }
+    };
 
     @Override
     public String toString() {
@@ -202,6 +240,10 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     public TypeKind getKind() {
       return method.getReturnType().getKind();
+    }
+
+    public List<String> getAnnotations() {
+      return annotationClasses;
     }
 
     public boolean isNullable() {
@@ -346,7 +388,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
       String propType = typeSimplifier.simplify(method.getReturnType());
-      Property prop = new Property(method, propType);
+      Property prop = new Property(method, propType, typeSimplifier);
       props.add(prop);
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
