@@ -181,8 +181,10 @@ public final class SuperficialValidation {
         && validateAnnotationValues(annotationMirror.getElementValues());
   }
 
+  @SuppressWarnings("unused")
   private static boolean validateAnnotationValues(
       Map<? extends ExecutableElement, ? extends AnnotationValue> valueMap) {
+    /* TODO(gak): Enable when b/17584340 is resolved.
     for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> valueEntry :
         valueMap.entrySet()) {
       TypeMirror expectedType = valueEntry.getKey().getReturnType();
@@ -190,6 +192,7 @@ public final class SuperficialValidation {
         return false;
       }
     }
+    */
     return true;
   }
 
