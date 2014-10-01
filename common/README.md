@@ -14,7 +14,7 @@ The Auto project has a set of common utilities to help ease use of the annotatio
 
 ## Usage/Setup
 
-Auto common utilities have a standard maven setup (which can be used from Gradle, Ivy, Ant, or other systems which consume binary artifacts from the central maven repositories. 
+Auto common utilities have a standard maven setup which can be used from Gradle, Ivy, Ant, or other systems which consume binary artifacts from the central maven repositories. 
 
 ```xml
 <dependency>
