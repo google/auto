@@ -24,6 +24,7 @@ import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
 
 import com.google.common.base.Equivalence;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
@@ -191,6 +192,13 @@ public final class MoreTypes {
       };
 
   private static boolean equal(TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
+    // TypeMirror.equals is not guaranteed to return true for types that are equal, but we can
+    // assume that if it does return true then the types are equal. This check also avoids getting
+    // stuck in infinite recursion when Eclipse decrees that the upper bound of the second K in
+    // <K extends Comparable<K>> is a distinct but equal K.
+    if (Objects.equal(a, b)) {
+      return true;
+    }
     EqualVisitorParam p = new EqualVisitorParam();
     p.type = b;
     p.visiting = visiting;
