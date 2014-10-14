@@ -134,7 +134,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         }
       }
 
-
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
       indexedMethods.putAll(

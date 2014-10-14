@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -115,15 +116,12 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    boolean claimed = (annotations.size() == 1
-        && annotations.iterator().next().getQualifiedName().toString().equals(
-            AutoValue.class.getName()));
-    if (claimed) {
+    if (annotations.size() == 1
+        && Iterables.getOnlyElement(annotations).getQualifiedName().toString().equals(
+            AutoValue.class.getName())) {
       process(roundEnv);
-      return true;
-    } else {
-      return false;
     }
+    return false;  // never claim annotation, because who knows what other processors want?
   }
 
   private void process(RoundEnvironment roundEnv) {

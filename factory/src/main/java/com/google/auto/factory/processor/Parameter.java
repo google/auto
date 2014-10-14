@@ -39,7 +39,6 @@ final class Parameter {
   private final String type;
   private final String name;
 
-
   private Parameter(Optional<String> qualifier, String type, String name) {
     this.qualifier = checkNotNull(qualifier);
     this.type = checkNotNull(type);

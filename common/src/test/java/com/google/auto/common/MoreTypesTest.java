@@ -238,7 +238,6 @@ public class MoreTypesTest {
     Set<? super String> f12;
   }
 
-
   private static final ErrorType FAKE_ERROR_TYPE = new ErrorType() {
     @Override
     public TypeKind getKind() {

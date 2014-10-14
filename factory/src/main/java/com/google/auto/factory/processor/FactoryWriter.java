@@ -102,7 +102,6 @@ final class FactoryWriter {
       constructorTokens.add(qualifierPrefix + "Provider<" + key.getType() + ">").add(providerName);
     }
 
-
     writer.emitAnnotation("Inject");
     writer.beginMethod(null, factoryName,
         descriptor.publicType() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),

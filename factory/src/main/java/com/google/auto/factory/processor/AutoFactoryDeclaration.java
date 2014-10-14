@@ -62,7 +62,6 @@ final class AutoFactoryDeclaration {
     this.implementingTypes = implementingTypes;
   }
 
-
   String getFactoryName(Name packageName, Name targetType) {
     StringBuilder builder = new StringBuilder(packageName);
     if (packageName.length() > 0) {
@@ -92,7 +91,6 @@ final class AutoFactoryDeclaration {
     return implementingTypes;
   }
 
-
   static final class Factory {
     private final Elements elements;
     private final Messager messager;
@@ -114,10 +112,7 @@ final class AutoFactoryDeclaration {
       // className value is a string, so we can just call toString
       AnnotationValue classNameValue = values.get("className");
       String className = classNameValue.getValue().toString();
-      if (className.isEmpty()) {
-        messager.printMessage(NOTE, "Found an empty className value.  Using the default.", element,
-            mirror, classNameValue);
-      } else if (!isValidIdentifier(className)) {
+      if (!className.isEmpty() && !isValidIdentifier(className)) {
         messager.printMessage(ERROR,
             String.format("\"%s\" is not a valid Java identifier", className),
             element, mirror, classNameValue);

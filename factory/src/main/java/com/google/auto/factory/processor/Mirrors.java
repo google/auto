@@ -31,7 +31,6 @@ import javax.lang.model.util.SimpleElementVisitor6;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
-
 final class Mirrors {
   private Mirrors() { }
 
