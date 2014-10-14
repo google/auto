@@ -196,7 +196,10 @@ public final class MoreTypes {
     // assume that if it does return true then the types are equal. This check also avoids getting
     // stuck in infinite recursion when Eclipse decrees that the upper bound of the second K in
     // <K extends Comparable<K>> is a distinct but equal K.
-    if (Objects.equal(a, b)) {
+    // The javac implementation of ExecutableType, at least in some versions, does not take thrown
+    // exceptions into account in its equals implementation, so avoid this optimization for
+    // ExecutableType.
+    if (Objects.equal(a, b) && !(a instanceof ExecutableType)) {
       return true;
     }
     EqualVisitorParam p = new EqualVisitorParam();
