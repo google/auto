@@ -906,4 +906,25 @@ public class AutoValueTest extends TestCase {
         InheritsNestedType.create(com.google.common.base.Optional.absent());
     assertEquals(com.google.common.base.Optional.absent(), inheritsNestedType.getOptional());
   }
+
+  abstract static class AbstractParent {
+    abstract int foo();
+  }
+
+  @AutoValue
+  abstract static class AbstractChild extends AbstractParent {
+    // The main point of this test is to ensure that we don't try to copy this @Override into the
+    // generated implementation alongside the @Override that we put on all implementation methods.
+    @Override
+    abstract int foo();
+
+    static AbstractChild create(int foo) {
+      return new AutoValue_AutoValueTest_AbstractChild(foo);
+    }
+  }
+
+  public void testOverrideNotDuplicated() {
+    AbstractChild instance = AbstractChild.create(23);
+    assertEquals(23, instance.foo());
+  }
 }

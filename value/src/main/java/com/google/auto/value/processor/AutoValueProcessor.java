@@ -192,6 +192,13 @@ public class AutoValueProcessor extends AbstractProcessor {
       ImmutableList.Builder<String> builder = ImmutableList.builder();
 
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        TypeElement annotationElement =
+            (TypeElement) annotationMirror.getAnnotationType().asElement();
+        if (annotationElement.getQualifiedName().toString().equals(Override.class.getName())) {
+          // Don't copy @Override if present, since we will be adding our own @Override in the
+          // implementation.
+          continue;
+        }
         String annotationName = typeSimplifier.simplify(annotationMirror.getAnnotationType());
         String annotation = "@" + annotationName;
 
