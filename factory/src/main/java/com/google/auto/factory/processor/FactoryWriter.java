@@ -169,6 +169,9 @@ final class FactoryWriter {
 
   private static CharSequence getPackage(CharSequence fullyQualifiedName) {
     int lastDot = lastIndexOf(fullyQualifiedName, '.');
+    if (lastDot == -1) {
+      return "";
+    }
     return fullyQualifiedName.subSequence(0, lastDot);
   }
 

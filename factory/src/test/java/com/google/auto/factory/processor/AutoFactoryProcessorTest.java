@@ -243,4 +243,13 @@ public class AutoFactoryProcessorTest {
         .and().generatesSources(JavaFileObjects.forResource(
             "expected/FactoryImplementingGenericInterfaceExtension.java"));
   }
+
+  @Test public void topLevelClass() {
+    assert_().about(javaSource())
+        .that(JavaFileObjects.forResource("good/TopLevelClass.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(JavaFileObjects.forResource("expected/TopLevelClassFactory.java"));
+  }
+
 }
