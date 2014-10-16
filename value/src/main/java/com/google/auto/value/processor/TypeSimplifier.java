@@ -80,9 +80,9 @@ final class TypeSimplifier {
    *     because nested classes in that class or one of its ancestors are in scope in the generated
    *     subclass, so a reference to another class with the same name as one of them is ambiguous.
    *
-   * @throws AbortProcessingException if one of the input types contains an error (typically, is undefined).
-   *     This may be something like {@code UndefinedClass}, or something more subtle like
-   *     {@code Set<UndefinedClass<?>>}.
+   * @throws AbortProcessingException if one of the input types contains an error (typically,
+   *     is undefined). This may be something like {@code UndefinedClass}, or something more subtle
+   *     like {@code Set<UndefinedClass<?>>}.
    */
   TypeSimplifier(Types typeUtils, String packageName, Set<TypeMirror> types, TypeMirror base) {
     this.typeUtils = typeUtils;

@@ -20,12 +20,12 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -178,17 +178,15 @@ public class AutoValueProcessor extends AbstractProcessor {
   public static class Property {
     private final ExecutableElement method;
     private final String type;
-    private final ImmutableList<String> annotationClasses;
-    private final TypeSimplifier typeSimplifier;
+    private final ImmutableList<String> annotations;
 
     Property(ExecutableElement method, String type, TypeSimplifier typeSimplifier) {
       this.method = method;
       this.type = type;
-      this.typeSimplifier = typeSimplifier;
-      this.annotationClasses = buildAnnotationClasses();
+      this.annotations = buildAnnotations(typeSimplifier);
     }
 
-    private ImmutableList<String> buildAnnotationClasses() {
+    private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
       ImmutableList.Builder<String> builder = ImmutableList.builder();
 
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
@@ -201,12 +199,11 @@ public class AutoValueProcessor extends AbstractProcessor {
         }
         String annotationName = typeSimplifier.simplify(annotationMirror.getAnnotationType());
         String annotation = "@" + annotationName;
-
-        List<String> values = FluentIterable
-            .from(annotationMirror.getElementValues().entrySet())
-            .filter(Predicates.notNull())
-            .transform(valuesToString)
-            .toList();
+        List<String> values = Lists.newArrayList();
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
+            annotationMirror.getElementValues().entrySet()) {
+          values.add(entry.getKey().getSimpleName() + "=" + entry.getValue());
+        }
 
         if (!values.isEmpty()) {
           annotation += "(" + Joiner.on(", ").join(values) + ")";
@@ -217,14 +214,6 @@ public class AutoValueProcessor extends AbstractProcessor {
 
       return builder.build();
     }
-
-    private static Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String> valuesToString =
-        new Function<Map.Entry<? extends ExecutableElement, ? extends AnnotationValue>, String>() {
-          @Override
-          public String apply(Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry) {
-            return entry.getKey().getSimpleName().toString() + "=" + entry.getValue().toString();
-          }
-    };
 
     @Override
     public String toString() {
@@ -248,7 +237,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public List<String> getAnnotations() {
-      return annotationClasses;
+      return annotations;
     }
 
     public boolean isNullable() {
