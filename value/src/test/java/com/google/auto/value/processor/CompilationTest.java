@@ -493,7 +493,7 @@ public class CompilationTest extends TestCase {
         "}");
     assert_().about(javaSource())
         .that(javaFileObject)
-        .processedWith(new AutoValueProcessor())
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
         .withErrorContaining("More than one @AutoValue property called foo")
         .in(javaFileObject).onLine(8);
