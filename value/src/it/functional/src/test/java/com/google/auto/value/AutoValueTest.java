@@ -85,6 +85,44 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  abstract static class SimpleWithGetters {
+    abstract int getFoo();
+    abstract boolean isBar();
+    abstract boolean getOtherBar();
+    abstract String getPackage(); // package is a reserved word
+    abstract String getPackage0();
+    abstract String getHTMLPage();
+
+    static SimpleWithGetters create(
+        int foo, boolean bar, boolean otherBar, String pkg, String pkg0, String htmlPage) {
+      return new AutoValue_AutoValueTest_SimpleWithGetters(foo, bar, otherBar, pkg, pkg0, htmlPage);
+    }
+  }
+
+  public void testGetters() {
+    SimpleWithGetters instance = SimpleWithGetters.create(23, true, false, "foo", "bar", "<html>");
+    assertEquals(
+        "SimpleWithGetters{"
+            + "foo=23, bar=true, otherBar=false, package=foo, package0=bar, HTMLPage=<html>}",
+        instance.toString());
+  }
+
+  @AutoValue
+  abstract static class NotAllGetters {
+    abstract int getFoo();
+    abstract boolean bar();
+
+    static NotAllGetters create(int foo, boolean bar) {
+      return new AutoValue_AutoValueTest_NotAllGetters(foo, bar);
+    }
+  }
+
+  public void testNotGetters() {
+    NotAllGetters instance = NotAllGetters.create(23, true);
+    assertEquals("NotAllGetters{getFoo=23, bar=true}", instance.toString());
+  }
+
+  @AutoValue
   public abstract static class Serialize implements Serializable {
     public abstract int integer();
     public abstract String string();

@@ -26,7 +26,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
+import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
@@ -176,11 +179,20 @@ public class AutoValueProcessor extends AbstractProcessor {
    * write {@code $p.type} for a Velocity variable {@code $p} that is a {@code Property}.
    */
   public static class Property {
+    private final String name;
+    private final String identifier;
     private final ExecutableElement method;
     private final String type;
     private final ImmutableList<String> annotations;
 
-    Property(ExecutableElement method, String type, TypeSimplifier typeSimplifier) {
+    Property(
+        String name,
+        String identifier,
+        ExecutableElement method,
+        String type,
+        TypeSimplifier typeSimplifier) {
+      this.name = name;
+      this.identifier = identifier;
       this.method = method;
       this.type = type;
       this.annotations = buildAnnotations(typeSimplifier);
@@ -215,8 +227,32 @@ public class AutoValueProcessor extends AbstractProcessor {
       return builder.build();
     }
 
+    /**
+     * Returns the name of the property as it should be used when declaring identifiers (fields and
+     * parameters). If the original getter method was {@code foo()} then this will be {@code foo}.
+     * If it was {@code getFoo()} then it will be {@code foo}. If it was {@code getPackage()} then
+     * it will be something like {@code package0}, since {@code package} is a reserved word.
+     */
     @Override
     public String toString() {
+      return identifier;
+    }
+
+    /**
+     * Returns the name of the property as it should be used in strings visible to users. This is
+     * usually the same as {@code toString()}, except that if we had to use an identifier like
+     * "package0" because "package" is a reserved word, the name here will be the original
+     * "package".
+     */
+    public String getName() {
+      return name;
+    }
+
+    /**
+     * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
+     * class. For property {@code foo}, this will be {@code foo} or {@code getFoo} or {@code isFoo}.
+     */
+    public String getGetter() {
       return method.getSimpleName().toString();
     }
 
@@ -379,11 +415,24 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
+    Map<ExecutableElement, String> methodToPropertyName = Maps.newLinkedHashMap();
+    boolean allGetters = allGetters(toImplement);
+    for (ExecutableElement method : toImplement) {
+      String methodName = method.getSimpleName().toString();
+      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
+      methodToPropertyName.put(method, name);
+    }
+    if (allGetters) {
+      checkDuplicateGetters(methodToPropertyName);
+    }
+    Map<ExecutableElement, String> methodToIdentifier = Maps.newLinkedHashMap(methodToPropertyName);
+    fixReservedIdentifiers(methodToIdentifier);
     List<Property> props = new ArrayList<Property>();
     for (ExecutableElement method : toImplement) {
-      String propType = typeSimplifier.simplify(method.getReturnType());
-      Property prop = new Property(method, propType, typeSimplifier);
-      props.add(prop);
+      String propertyType = typeSimplifier.simplify(method.getReturnType());
+      String propertyName = methodToPropertyName.get(method);
+      String identifier = methodToIdentifier.get(method);
+      props.add(new Property(propertyName, identifier, method, propertyType, typeSimplifier));
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
@@ -392,6 +441,59 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
     vars.actualTypes = actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
+  }
+
+  private boolean allGetters(List<ExecutableElement> methods) {
+    for (ExecutableElement method : methods) {
+      String name = method.getSimpleName().toString();
+      // TODO(user): decide whether getfoo() (without a capital) is a getter. Currently it is.
+      boolean get = name.startsWith("get") && !name.equals("get");
+      boolean is = name.startsWith("is") && !name.equals("is")
+          && method.getReturnType().getKind() == TypeKind.BOOLEAN;
+      if (!get && !is) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private String nameWithoutPrefix(String name) {
+    if (name.startsWith("get")) {
+      name = name.substring(3);
+    } else {
+      assert name.startsWith("is");
+      name = name.substring(2);
+    }
+    return Introspector.decapitalize(name);
+  }
+
+  private void checkDuplicateGetters(Map<ExecutableElement, String> methodToIdentifier) {
+    Set<String> seen = Sets.newHashSet();
+    for (Map.Entry<ExecutableElement, String> entry : methodToIdentifier.entrySet()) {
+      if (!seen.add(entry.getValue())) {
+        reportError(
+            "More than one @AutoValue property called " + entry.getValue(), entry.getKey());
+      }
+    }
+  }
+
+  // If we have a getter called getPackage() then we can't use the identifier "package" to represent
+  // its value since that's a reserved word.
+  private void fixReservedIdentifiers(Map<ExecutableElement, String> methodToIdentifier) {
+    for (Map.Entry<ExecutableElement, String> entry : methodToIdentifier.entrySet()) {
+      if (SourceVersion.isKeyword(entry.getValue())) {
+        entry.setValue(disambiguate(entry.getValue(), methodToIdentifier.values()));
+      }
+    }
+  }
+
+  private String disambiguate(String name, Collection<String> existingNames) {
+    for (int i = 0; ; i++) {
+      String candidate = name + i;
+      if (!existingNames.contains(candidate)) {
+        return candidate;
+      }
+    }
   }
 
   private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {

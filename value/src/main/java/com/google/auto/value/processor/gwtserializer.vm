@@ -41,7 +41,7 @@ public final class $serializerClass {
       SerializationStreamWriter streamWriter,
       $subclass instance) throws SerializationException {
 #foreach ($p in $props)
-    streamWriter.write${p.gwtType}(instance.${p}());
+    streamWriter.write${p.gwtType}(instance.${p.getter}());
 #end
   }
 

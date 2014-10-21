@@ -37,7 +37,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #if (!$p.kind.primitive && !$p.nullable)
 
     if ($p == null) {
-      throw new NullPointerException("Null $p");
+      throw new NullPointerException("Null $p.name");
     }
 
   #end
@@ -57,7 +57,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #end
 
   @Override
-  ${p.access}${p.type} $p() {
+  ${p.access}${p.type} ${p.getter}() {
 
   #if ($p.kind == "ARRAY")
 
@@ -89,7 +89,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($p in $props)
 
-        + "$p=" ##
+        + "$p.name=" ##
         + #if ($p.kind == "ARRAY") ${arrays}.toString($p) #else $p #end
         #if ($foreach.hasNext) + ", " #end
 
@@ -103,16 +103,17 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 #if ($equals)
   #macro (equalsThatExpression $p)
     #if ($p.kind == "FLOAT")
-      Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.$p()) ##
+      Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.${p.getter}()) ##
     #elseif ($p.kind == "DOUBLE")
-      Double.doubleToLongBits(this.$p) == Double.doubleToLongBits(that.$p()) ##
+      Double.doubleToLongBits(this.$p) == Double.doubleToLongBits(that.${p.getter}()) ##
     #elseif ($p.kind.primitive)
-      this.$p == that.$p() ##
+      this.$p == that.${p.getter}() ##
     #elseif ($p.kind == "ARRAY")
       ${arrays}.equals(this.$p, ##
-          (that instanceof $subclass) ? (($subclass) that).$p : that.$p()) ##
+          (that instanceof $subclass) ? (($subclass) that).$p : that.${p.getter}()) ##
     #else
-      #if ($p.nullable) (this.$p == null) ? (that.$p() == null) : #end this.${p}.equals(that.$p()) ##
+      #if ($p.nullable) (this.$p == null) ? (that.${p.getter}() == null) : #end ##
+          this.${p}.equals(that.${p.getter}()) ##
     #end
   #end
 
