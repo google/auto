@@ -110,6 +110,10 @@ class GwtSerialization {
       return property.toString();
     }
 
+    public String getGetter() {
+      return property.getGetter();
+    }
+
     public String getType() {
       return property.getType();
     }

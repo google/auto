@@ -479,6 +479,26 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
+  public void testGetFooIsFoo() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract int getFoo();",
+        "  abstract boolean isFoo();",
+        "}");
+    assert_().about(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("More than one @AutoValue property called foo")
+        .in(javaFileObject).onLine(8);
+  }
+
   private static class PoisonedAutoValueProcessor extends AutoValueProcessor {
     private final IllegalArgumentException filerException;
 

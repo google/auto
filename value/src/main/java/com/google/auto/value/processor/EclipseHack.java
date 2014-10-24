@@ -103,7 +103,7 @@ class EclipseHack {
     // We expect that all the properties will be found, but if not then we won't try reordering.
     boolean allFound = true;
     for (Property property : properties) {
-      allFound &= order.contains(property.toString());
+      allFound &= order.contains(property.getGetter());
     }
     if (allFound) {
       // We successfully found the abstract methods corresponding to all the properties, so now
@@ -111,8 +111,8 @@ class EclipseHack {
       Comparator<Property> comparator = new Comparator<Property>() {
         @Override
         public int compare(Property a, Property b) {
-          String aName = a.toString();
-          String bName = b.toString();
+          String aName = a.getGetter();
+          String bName = b.getGetter();
           return order.indexOf(aName) - order.indexOf(bName);
         }
       };

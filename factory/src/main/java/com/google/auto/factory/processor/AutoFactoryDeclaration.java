@@ -20,12 +20,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.Diagnostic.Kind.NOTE;
 
 import java.util.Map;
 
 import javax.annotation.processing.Messager;
 import javax.inject.Inject;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -165,79 +165,8 @@ final class AutoFactoryDeclaration {
           implementingTypes));
     }
 
-    /**
-     * From the
-     * <a href="http://docs.oracle.com/javase/tutorial/java/nutsandbolts/_keywords.html">j2se</a>
-     * documentation.
-     */
-    private static final ImmutableSet<String> KEYWORDS = ImmutableSet.of(
-        "abstract",
-        "assert",
-        "boolean",
-        "break",
-        "byte",
-        "case",
-        "catch",
-        "char",
-        "class",
-        "const",
-        "continue",
-        "default",
-        "do",
-        "double",
-        "else",
-        "enum",
-        "extends",
-        "final",
-        "finally",
-        "float",
-        "for",
-        "goto",
-        "if",
-        "implements",
-        "import",
-        "instanceof",
-        "int",
-        "interface",
-        "long",
-        "native",
-        "new",
-        "package",
-        "private",
-        "protected",
-        "public",
-        "return",
-        "short",
-        "static",
-        "strictfp",
-        "super",
-        "switch",
-        "synchronized",
-        "this",
-        "throw",
-        "throws",
-        "transient",
-        "try",
-        "void",
-        "volatile",
-        "while");
-
     static boolean isValidIdentifier(String identifier) {
-      if (Strings.isNullOrEmpty(identifier)) {
-        return false;
-      }
-      if (KEYWORDS.contains(identifier)) {
-        return false;
-      }
-      if (!Character.isJavaIdentifierStart(identifier.charAt(0))) {
-        return false;
-      }
-      for (int i = 1; i < identifier.length(); i++) {
-        if (!Character.isJavaIdentifierPart(identifier.charAt(i))) {
-          return false;
-        }
-      }
-      return true;
+      return SourceVersion.isIdentifier(identifier) && !SourceVersion.isKeyword(identifier);
     }
   }
 }
