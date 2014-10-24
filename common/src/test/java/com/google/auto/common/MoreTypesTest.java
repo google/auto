@@ -199,27 +199,27 @@ public class MoreTypesTest {
         elements.getTypeElement(CharSequence.class.getCanonicalName());
 
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f1").asType()))
-        .has().exactly(objectElement);
+        .containsExactly(objectElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f2").asType()))
-        .has().exactly(setElement, stringElement);
+        .containsExactly(setElement, stringElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f3").asType()))
-        .has().exactly(mapElement, stringElement, objectElement);
+        .containsExactly(mapElement, stringElement, objectElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f4").asType()))
-        .has().exactly(integerElement);
+        .containsExactly(integerElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f5").asType()))
-        .has().exactly(setElement);
+        .containsExactly(setElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f6").asType()))
-        .has().exactly(setElement, charSequenceElement);
+        .containsExactly(setElement, charSequenceElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f7").asType()))
-        .has().exactly(mapElement, stringElement, setElement, charSequenceElement);
+        .containsExactly(mapElement, stringElement, setElement, charSequenceElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f8").asType()))
-        .has().exactly(stringElement);
+        .containsExactly(stringElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f9").asType()))
-        .has().exactly(stringElement);
+        .containsExactly(stringElement);
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f10").asType())).isEmpty();
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f11").asType())).isEmpty();
     assertThat(MoreTypes.referencedTypes(fieldIndex.get("f12").asType()))
-        .has().exactly(setElement, stringElement);
+        .containsExactly(setElement, stringElement);
   }
 
   @SuppressWarnings("unused") // types used in compiler tests
