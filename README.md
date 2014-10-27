@@ -21,15 +21,15 @@ Subprojects
 
   * [AutoService](https://github.com/google/auto/tree/master/service) - Provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
 
-    Latest version: `1.0-rc1`
+    Latest version: `1.0-rc2`
 
   * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+.
 
-    Latest version: `1.0-rc1`
+    Latest version: `1.0-rc2`
 
   * [Common](https://github.com/google/auto/tree/master/common) - Helper utilities for writing annotation processors.
 
-    Latest version: `0.2`
+    Latest version: `0.3`
 
 License
 -------

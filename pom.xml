@@ -27,7 +27,7 @@
   <groupId>com.google.auto</groupId>
   <artifactId>auto-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>3-SNAPSHOT</version>
   <name>Auto (Parent)</name>
   <description>A collection of code generators for Java.</description>
   <url>https://github.com/google/auto</url>
