@@ -52,6 +52,7 @@ abstract class TemplateVars {
   static {
     // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
     velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, "org.apache.velocity.runtime.log.NullLogChute" );
 
     // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
     // context class loader. If that loader can see another copy of Velocity then that will lead
