@@ -21,6 +21,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.runtime.log.NullLogChute;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.RuntimeInstance;
+import org.apache.velocity.runtime.log.NullLogChute;
 import org.apache.velocity.runtime.parser.ParseException;
 import org.apache.velocity.runtime.parser.node.SimpleNode;
 
@@ -61,6 +62,9 @@ abstract class TemplateVars {
     // Setting ResourceCacheImpl is should not be necessary since that is the default value, but
     // ensures that Maven shading sees that Apache Commons classes referenced from ResourceCacheImpl
     // are indeed referenced and cannot be removed during minimization.
+
+    // Disable any logging that Velocity might otherwise see fit to do.
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM, new NullLogChute());
 
     // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
     // context class loader. If that loader can see another copy of Velocity then that will lead
