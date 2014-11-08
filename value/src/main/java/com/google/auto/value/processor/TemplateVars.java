@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import com.google.common.collect.ImmutableList;
 
 import org.apache.velocity.VelocityContext;
+import org.apache.velocity.runtime.log.NullLogChute;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.RuntimeInstance;
 import org.apache.velocity.runtime.parser.ParseException;
@@ -52,6 +53,7 @@ abstract class TemplateVars {
   static {
     // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
     velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, new NullLogChute());
 
     // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
     // context class loader. If that loader can see another copy of Velocity then that will lead
