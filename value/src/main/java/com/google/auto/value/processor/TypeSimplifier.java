@@ -80,7 +80,7 @@ final class TypeSimplifier {
    *     because nested classes in that class or one of its ancestors are in scope in the generated
    *     subclass, so a reference to another class with the same name as one of them is ambiguous.
    *
-   * @throws AbortProcessingException if one of the input types contains an error (typically,
+   * @throws MissingTypeException if one of the input types contains an error (typically,
    *     is undefined). This may be something like {@code UndefinedClass}, or something more subtle
    *     like {@code Set<UndefinedClass<?>>}.
    */
@@ -357,7 +357,7 @@ final class TypeSimplifier {
     }
 
     @Override public Void visitError(ErrorType t, Void p) {
-      throw new AbortProcessingException();
+      throw new MissingTypeException();
     }
   }
 
@@ -390,7 +390,7 @@ final class TypeSimplifier {
     Set<String> simpleNames = new HashSet<String>();
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ERROR) {
-        throw new AbortProcessingException();
+        throw new MissingTypeException();
       }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
       if (!simpleNames.add(simpleName)) {
