@@ -1,5 +1,6 @@
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
@@ -185,14 +186,15 @@ public class AutoAnnotationErrorsTest extends TestCase {
           "    return new AutoAnnotation_Test_newTestAnnotation(value);",
           "  }",
           "}");
-      assert_().withFailureMessage("For wrong type " + wrongType).about(javaSources())
+      assertWithMessage("For wrong type " + wrongType)
+          .about(javaSources())
           .that(ImmutableList.of(testAnnotation, testSource))
           .processedWith(new AutoAnnotationProcessor())
           .failsToCompile()
-          .withErrorContaining(
-              "method parameter 'value' has type " + wrongType
-                  + " but com.example.TestAnnotation.value has type int[]")
-          .in(testSource).onLine(7);
+          .withErrorContaining("method parameter 'value' has type " + wrongType
+                               + " but com.example.TestAnnotation.value has type int[]")
+          .in(testSource)
+          .onLine(7);
     }
   }
 
