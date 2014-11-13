@@ -39,7 +39,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated(value = "com.google.auto.factory.AutoFactoryProcessor")
+@Generated(value = "com.google.auto.factory.processor.AutoFactoryProcessor")
 final class SomeClassFactory {
   private final Provider<String> providedDepAProvider;
   
