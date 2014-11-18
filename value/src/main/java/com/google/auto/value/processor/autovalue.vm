@@ -89,8 +89,12 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($p in $props)
 
-        + "$p.name=" ##
-        + #if ($p.kind == "ARRAY") ${arrays}.toString($p) #else $p #end
+        + "$p.name=" + ##
+        #if ($p.redacted)
+          ($p != null ? "██" : null) ##
+        #else
+          #if ($p.kind == "ARRAY") ${arrays}.toString($p) #else $p #end ##
+        #end
         #if ($foreach.hasNext) + ", " #end
 
   #end

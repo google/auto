@@ -15,6 +15,7 @@
  */
 package com.google.auto.value;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableMap;
@@ -461,6 +462,46 @@ public class AutoValueTest extends TestCase {
         .addEqualityGroup(somethingNull)
         .addEqualityGroup(nothingNull, nothingNullAgain)
         .testEquals();
+  }
+
+  public @interface Redacted {
+  }
+
+  @AutoValue
+  abstract static class RedactedProperties {
+    @Nullable @Redacted abstract String redactedString();
+    @Nullable @Redacted abstract String otherRedactedString();
+    static RedactedProperties create(String redactedString, String otherRedactedString) {
+      return new AutoValue_AutoValueTest_RedactedProperties(redactedString, otherRedactedString);
+    }
+  }
+
+  public void testRedactedPropertiesNonNull() {
+    RedactedProperties instance =
+        RedactedProperties.create("redactedString", "otherRedactedString");
+    assertEquals(
+        "RedactedProperties{redactedString=██, otherRedactedString=██}", instance.toString());
+  }
+
+  public void testRedactedPropertiesNull() {
+    RedactedProperties instance = RedactedProperties.create(null, null);
+    assertEquals(
+        "RedactedProperties{redactedString=null, otherRedactedString=null}", instance.toString());
+  }
+
+  @AutoValue
+  abstract static class RedactedNonRedacted {
+    @Redacted abstract String redactedString();
+    abstract String nonRedactedString();
+    static RedactedNonRedacted create(String redactedString, String nonRedactedString) {
+      return new AutoValue_AutoValueTest_RedactedNonRedacted(redactedString, nonRedactedString);
+    }
+  }
+  public void testRedactedNonRedacted() {
+    RedactedNonRedacted instance =
+        RedactedNonRedacted.create("redactedString", "nonRedactedString");
+    assertEquals("RedactedNonRedacted{redactedString=██, nonRedactedString=nonRedactedString}",
+        instance.toString());
   }
 
   @AutoValue
