@@ -286,6 +286,16 @@ public class AutoValueProcessor extends AbstractProcessor {
       return false;
     }
 
+    public boolean isRedacted() {
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
+        if (name.equals("Redacted")) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     public String getAccess() {
       Set<Modifier> mods = method.getModifiers();
       if (mods.contains(Modifier.PUBLIC)) {
