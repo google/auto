@@ -31,6 +31,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import org.apache.velocity.runtime.resource.ResourceCacheImpl;
 
 /**
  * A template and a set of variables to be substituted into that template. A concrete subclass of
@@ -53,7 +54,13 @@ abstract class TemplateVars {
   static {
     // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
     velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, new NullLogChute());
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+        new NullLogChute());
+    velocityRuntimeInstance.setProperty(RuntimeConstants.RESOURCE_MANAGER_CACHE_CLASS,
+        ResourceCacheImpl.class.getName());
+    // Setting ResourceCacheImpl is should not be necessary since that is the default value, but
+    // ensures that Maven shading sees that Apache Commons classes referenced from ResourceCacheImpl
+    // are indeed referenced and cannot be removed during minimization.
 
     // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
     // context class loader. If that loader can see another copy of Velocity then that will lead
