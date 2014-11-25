@@ -123,6 +123,46 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-shade-plugin</artifactId>
+	<version>2.3</version>
+	<executions>
+	  <execution>
+	    <phase>package</phase>
+	    <goals>
+	      <goal>shade</goal>
+	    </goals>
+	    <configuration>
+	      <minimizeJar>true</minimizeJar>
+              <filters>
+                <filter>
+                   <artifact>org.apache.velocity:*</artifact>
+                   <includes>
+                       <include>**</include>
+                   </includes>
+                </filter>
+              </filters>
+	      <relocations>
+		<!-- We don't relocate Apache classes because they often load classes from strings,
+                     and the relocator doesn't know to rewrite those strings. This applies to both
+                     Velocity and Commons. We also don't minimize Velocity for similar reasons. -->
+		<relocation>
+		  <pattern>org.objectweb</pattern>
+		  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
+		</relocation>
+		<relocation>
+		  <pattern>com.google</pattern>
+		  <shadedPattern>autovalue.shaded.com.google.common</shadedPattern>
+		  <excludes>
+		    <exclude>com.google.auto.value.**</exclude>
+		  </excludes>
+		</relocation>
+	      </relocations>
+	    </configuration>
+	  </execution>
+	</executions>
+      </plugin>
     </plugins>
   </build>
 </project>
