@@ -211,6 +211,15 @@ code for `equals` and `hashCode`. The `@Nullable` annotation can be
 `javax.annotation.Nullable` or a `Nullable` annotation defined in
 any other package.
 
+### JavaBeans-style prefixes are optional
+In the example above, we used the `name()` and `numberOfLegs()`
+methods to define the properties of the object. If you prefer, you can
+use JavaBeans-style method names, like `getName()` and
+`getNumberOfLegs()` to achieve the same effect. The property names
+will still be `name` and `numberOfLegs`, for example in the result of
+`toString()`. This applies only if every abstract method looks like
+`getX()` or `boolean isX()` for some non-empty string X.
+
 ### Other preconditions or preprocessing
 If you need to check preconditions or perform any other preparatory
 steps, insert the code to do so into your static factory method before
