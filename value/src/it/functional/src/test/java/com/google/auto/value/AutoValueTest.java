@@ -123,6 +123,25 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  abstract static class GettersAndConcreteNonGetters {
+    abstract int getFoo();
+    abstract byte[] getBytes();
+
+    boolean hasNoBytes() {
+      return getBytes().length == 0;
+    }
+
+    static GettersAndConcreteNonGetters create(int foo, byte[] bytes) {
+      return new AutoValue_AutoValueTest_GettersAndConcreteNonGetters(foo, bytes);
+    }
+  }
+
+  public void testGettersAndConcreteNonGetters() {
+    GettersAndConcreteNonGetters instance = GettersAndConcreteNonGetters.create(23, new byte[] {1});
+    assertFalse(instance.hasNoBytes());
+  }
+
+  @AutoValue
   public abstract static class Serialize implements Serializable {
     public abstract int integer();
     public abstract String string();
