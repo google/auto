@@ -139,6 +139,7 @@ public class AutoValueTest extends TestCase {
   public void testGettersAndConcreteNonGetters() {
     GettersAndConcreteNonGetters instance = GettersAndConcreteNonGetters.create(23, new byte[] {1});
     assertFalse(instance.hasNoBytes());
+    assertEquals("GettersAndConcreteNonGetters{foo=23, bytes=[1]}", instance.toString());
   }
 
   @AutoValue
