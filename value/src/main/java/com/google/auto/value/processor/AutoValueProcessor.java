@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -442,6 +443,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
     vars.actualTypes = actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
+    // Check for @AutoValue.Builder and add appropriate variables if it is present.
+    BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
+    Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
+    if (builder.isPresent() && builder.get().validSetters(methodToPropertyName)) {
+      // TODO(user): define vars for builder here
+    }
   }
 
   private boolean allGetters(List<ExecutableElement> methods) {
