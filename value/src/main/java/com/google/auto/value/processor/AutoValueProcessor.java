@@ -43,6 +43,7 @@ import java.util.Set;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
@@ -73,8 +74,6 @@ import javax.tools.JavaFileObject;
  */
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
-  private static final boolean SILENT = true;
-
   public AutoValueProcessor() {}
 
   @Override
@@ -87,40 +86,19 @@ public class AutoValueProcessor extends AbstractProcessor {
     return SourceVersion.latestSupported();
   }
 
-  private void note(String msg) {
-    if (!SILENT) {
-      processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg);
-    }
-  }
-
-  private void reportWarning(String msg, Element e) {
-    processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, msg, e);
-  }
-
-  /**
-   * Issue a compilation error. This method does not throw an exception, since we want to
-   * continue processing and perhaps report other errors. It is a good idea to introduce a
-   * test case in CompilationErrorsTest for any new call to reportError(...) to ensure that we
-   * continue correctly after an error.
-   */
-  private void reportError(String msg, Element e) {
-    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, msg, e);
-  }
-
-  /**
-   * Issue a compilation error and abandon the processing of this class. This does not prevent
-   * the processing of other classes.
-   */
-  private void abortWithError(String msg, Element e) {
-    reportError(msg, e);
-    throw new AbortProcessingException();
-  }
+  private ErrorReporter errorReporter;
 
   /**
    * Qualified names of {@code @AutoValue} classes that we attempted to process but had to abandon
    * because we needed other types that they referenced and those other types were missing.
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
+
+  @Override
+  public synchronized void init(ProcessingEnvironment processingEnv) {
+    super.init(processingEnv);
+    errorReporter = new ErrorReporter(processingEnv);
+  }
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -133,7 +111,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       // any new instances of @AutoValue; and we can't have any new types that are the reason a type
       // was in deferredTypes.
       for (TypeElement type : deferredTypes) {
-        reportError("Did not generate @AutoValue class for " + type.getQualifiedName()
+        errorReporter.reportError("Did not generate @AutoValue class for " + type.getQualifiedName()
             + " because it references undefined types", type);
       }
       return false;
@@ -162,7 +140,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         // Don't propagate this exception, which will confusingly crash the compiler.
         // Instead, report a compiler error with the stack trace.
         String trace = Throwables.getStackTraceAsString(e);
-        reportError("@AutoValue processor threw an exception: " + trace, type);
+        errorReporter.reportError("@AutoValue processor threw an exception: " + trace, type);
       }
     }
     return false;  // never claim annotation, because who knows what other processors want?
@@ -350,7 +328,6 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private void findLocalAndInheritedMethods(TypeElement type, List<ExecutableElement> methods) {
-    note("Looking at methods in " + type);
     Types typeUtils = processingEnv.getTypeUtils();
     Elements elementUtils = processingEnv.getElementUtils();
     for (TypeMirror superInterface : type.getInterfaces()) {
@@ -391,18 +368,19 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (autoValue == null) {
       // This shouldn't happen unless the compilation environment is buggy,
       // but it has happened in the past and can crash the compiler.
-      abortWithError("annotation processor for @AutoValue was invoked with a type that "
-          + "does not have that annotation; this is probably a compiler bug", type);
+      errorReporter.abortWithError("annotation processor for @AutoValue was invoked with a type"
+          + " that does not have that annotation; this is probably a compiler bug", type);
     }
     if (type.getKind() != ElementKind.CLASS) {
-      abortWithError("@" + AutoValue.class.getName() + " only applies to classes", type);
+      errorReporter.abortWithError(
+          "@" + AutoValue.class.getName() + " only applies to classes", type);
     }
     if (ancestorIsAutoValue(type)) {
-      abortWithError("One @AutoValue class may not extend another", type);
+      errorReporter.abortWithError("One @AutoValue class may not extend another", type);
     }
     if (implementsAnnotation(type)) {
-      abortWithError("@AutoValue may not be used to implement an annotation interface; "
-          + "try using @AutoAnnotation instead", type);
+      errorReporter.abortWithError("@AutoValue may not be used to implement an annotation"
+          + " interface; try using @AutoAnnotation instead", type);
     }
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
@@ -494,7 +472,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     Set<String> seen = Sets.newHashSet();
     for (Map.Entry<ExecutableElement, String> entry : methodToIdentifier.entrySet()) {
       if (!seen.add(entry.getValue())) {
-        reportError(
+        errorReporter.reportError(
             "More than one @AutoValue property called " + entry.getValue(), entry.getKey());
       }
     }
@@ -575,8 +553,8 @@ public class AutoValueProcessor extends AbstractProcessor {
           && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
           if (isReferenceArrayType(method.getReturnType())) {
-            reportError("An @AutoValue class cannot define an array-valued property unless it is "
-                + "a primitive array", method);
+            errorReporter.reportError("An @AutoValue class cannot define an array-valued property"
+                + " unless it is a primitive array", method);
             errors = true;
           }
           toImplement.add(method);
@@ -585,8 +563,8 @@ public class AutoValueProcessor extends AbstractProcessor {
           // ElementUtils.override that sometimes fails to recognize that one method overrides
           // another, and therefore leaves us with both an abstract method and the subclass method
           // that overrides it. This shows up in AutoValueTest.LukesBase for example.
-          reportWarning("@AutoValue classes cannot have abstract methods other than "
-              + "property getters", method);
+          errorReporter.reportWarning("@AutoValue classes cannot have abstract methods other than"
+              + " property getters", method);
         }
       }
     }
@@ -603,7 +581,6 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
     try {
-      note(text);
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);
       Writer writer = sourceFile.openWriter();
@@ -653,7 +630,7 @@ public class AutoValueProcessor extends AbstractProcessor {
               && value != null) {
             return value + "L";
           } else {
-            reportError(
+            errorReporter.reportError(
                 "serialVersionUID must be a static final long compile-time constant", field);
             break;
           }
