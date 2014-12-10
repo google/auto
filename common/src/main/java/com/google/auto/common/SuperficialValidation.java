@@ -95,7 +95,7 @@ public final class SuperficialValidation {
       };
 
   public static boolean validateElement(Element element) {
-     return element.accept(ELEMENT_VALIDATING_VISITOR, null);
+    return element.accept(ELEMENT_VALIDATING_VISITOR, null);
   }
 
   private static boolean isValidBaseElement(Element e) {

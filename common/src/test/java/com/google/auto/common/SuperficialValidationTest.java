@@ -26,7 +26,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import static com.google.common.truth.Truth.assert_;
+import static com.google.common.truth.Truth.assertAbout;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 @RunWith(JUnit4.class)
@@ -40,13 +41,13 @@ public class SuperficialValidationTest {
         "abstract class TestClass {",
         "  abstract MissingType blah();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
@@ -61,13 +62,13 @@ public class SuperficialValidationTest {
         "abstract class TestClass {",
         "  abstract MissingType<?> blah();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
@@ -85,13 +86,13 @@ public class SuperficialValidationTest {
         "abstract class TestClass {",
         "  abstract Map<Set<?>, MissingType<?>> blah();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
@@ -104,13 +105,34 @@ public class SuperficialValidationTest {
         "package test;",
         "",
         "class TestClass<T extends MissingType> {}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+          }
+        })
+        .failsToCompile();
+  }
+
+  @Test
+  public void missingParameterType() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "abstract class TestClass {",
+        "  abstract void foo(MissingType x);",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
@@ -124,32 +146,53 @@ public class SuperficialValidationTest {
         "",
         "@MissingAnnotation",
         "class TestClass {}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
   }
 
   @Test
-  public void handlesRecurisiveTypeParams() {
+  public void handlesRecursiveTypeParams() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "test.TestClass",
         "package test;",
         "",
         "class TestClass<T extends Comparable<T>> {}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isTrue();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
+          }
+        })
+        .compilesWithoutError();
+  }
+
+  @Test
+  public void handlesRecursiveType() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "abstract class TestClass {",
+        "  abstract TestClass foo(TestClass x);",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
           }
         })
         .compilesWithoutError();
@@ -172,13 +215,13 @@ public class SuperficialValidationTest {
         "    return null;",
         "  }",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
@@ -191,13 +234,13 @@ public class SuperficialValidationTest {
         "package test;",
         "",
         "class TestClass<T extends Number & Missing> {}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement)).isFalse();
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
           }
         })
         .failsToCompile();
@@ -218,20 +261,20 @@ public class SuperficialValidationTest {
         "  @TestAnnotation(classes = Foo)",
         "  static class TestClass {}",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AssertingProcessor() {
           @Override void runAssertions() {
             TypeElement testClassElement =
                 processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
-            assert_().that(SuperficialValidation.validateElement(testClassElement))
+            assertThat(SuperficialValidation.validateElement(testClassElement))
                 .named("testClassElement is valid").isFalse();
           }
         }).failsToCompile();
   }
   */
 
-  private static abstract class AssertingProcessor extends AbstractProcessor {
+  private abstract static class AssertingProcessor extends AbstractProcessor {
     @Override
     public Set<String> getSupportedAnnotationTypes() {
       return ImmutableSet.of("*");
