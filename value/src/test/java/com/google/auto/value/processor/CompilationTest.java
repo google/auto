@@ -15,21 +15,32 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.assert_;
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
 
 import junit.framework.TestCase;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Set;
 
+import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.ElementFilter;
 import javax.tools.JavaFileObject;
 
 /**
@@ -98,7 +109,7 @@ public class CompilationTest extends TestCase {
         "  }",
         "}"
     );
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
@@ -192,7 +203,7 @@ public class CompilationTest extends TestCase {
         "  }",
         "}"
     );
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
@@ -214,7 +225,7 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(ints);",
         "  }",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -238,7 +249,7 @@ public class CompilationTest extends TestCase {
         "    return new AutoValue_Baz(strings);",
         "  }",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -256,7 +267,7 @@ public class CompilationTest extends TestCase {
         "",
         "@AutoValue",
         "public interface Baz {}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -273,7 +284,7 @@ public class CompilationTest extends TestCase {
         "",
         "@AutoValue",
         "public enum Baz {}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -307,7 +318,7 @@ public class CompilationTest extends TestCase {
         "    abstract int randomProperty();",
         "  }",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -335,7 +346,7 @@ public class CompilationTest extends TestCase {
           "",
           "  public abstract int foo();",
           "}");
-      assert_().about(javaSource())
+      assertAbout(javaSource())
           .that(javaFileObject)
           .processedWith(new AutoValueProcessor())
           .failsToCompile()
@@ -357,7 +368,7 @@ public class CompilationTest extends TestCase {
         "@AutoValue",
         "public abstract class Existent extends NonExistent {",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -392,7 +403,7 @@ public class CompilationTest extends TestCase {
         "    return (\"value\".hashCode() * 127) ^ value().hashCode();",
         "  }",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -411,7 +422,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract MissingType missingType();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -430,7 +441,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract MissingType<?> missingType();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -452,7 +463,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract Map<Set<?>, MissingType<?>> missingType();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -471,7 +482,7 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz<T extends MissingType<?>> {",
         "  public abstract int foo();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -491,7 +502,7 @@ public class CompilationTest extends TestCase {
         "  abstract int getFoo();",
         "  abstract boolean isFoo();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .failsToCompile()
@@ -553,11 +564,90 @@ public class CompilationTest extends TestCase {
         "public abstract class Baz {",
         "  public abstract int foo();",
         "}");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new PoisonedAutoValueProcessor(exception))
         .failsToCompile()
         .withErrorContaining(exception.toString())
         .in(javaFileObject).onLine(6);
+  }
+
+  @Retention(RetentionPolicy.SOURCE)
+  public @interface Foo {}
+
+  /* Processor that generates an empty class BarFoo every time it sees a class Bar annotated with
+   * @Foo.
+   */
+  public static class FooProcessor extends AbstractProcessor {
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+      return ImmutableSet.of(Foo.class.getCanonicalName());
+    }
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
+
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+      Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(Foo.class);
+      for (TypeElement type : ElementFilter.typesIn(elements)) {
+        try {
+          generateFoo(type);
+        } catch (IOException e) {
+          throw new AssertionError(e);
+        }
+      }
+      return false;
+    }
+
+    private void generateFoo(TypeElement type) throws IOException {
+      String pkg = TypeSimplifier.packageNameOf(type);
+      String className = type.getSimpleName().toString();
+      String generatedClassName = className + "Foo";
+      JavaFileObject source =
+          processingEnv.getFiler().createSourceFile(pkg + "." + generatedClassName, type);
+      PrintWriter writer = new PrintWriter(source.openWriter());
+      writer.println("package " + pkg + ";");
+      writer.println("public class " + generatedClassName + " {}");
+      writer.close();
+    }
+  }
+
+  public void testReferencingGeneratedClass() {
+    // Test that ensures that a type that does not exist can be the type of an @AutoValue property
+    // as long as it later does come into existence. The BarFoo type referenced here does not exist
+    // when the AutoValueProcessor runs on the first round, but the FooProcessor then generates it.
+    // That generation provokes a further round of annotation processing and AutoValueProcessor
+    // should succeed then.
+    JavaFileObject bazFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract BarFoo barFoo();",
+        "",
+        "  public static Baz create(BarFoo barFoo) {",
+        "    return new AutoValue_Baz(barFoo);",
+        "  }",
+        "}");
+    JavaFileObject barFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Bar",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@" + Foo.class.getCanonicalName(),
+        "public abstract class Bar {",
+        "  public abstract BarFoo barFoo();",
+        "}");
+    assertAbout(javaSources())
+        .that(ImmutableList.of(bazFileObject, barFileObject))
+        .processedWith(new AutoValueProcessor(), new FooProcessor())
+        .compilesWithoutError();
   }
 }

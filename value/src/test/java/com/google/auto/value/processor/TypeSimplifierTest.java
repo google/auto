@@ -659,7 +659,7 @@ public class TypeSimplifierTest extends TestCase {
         try {
           new TypeSimplifier(typeUtil, "foo.bar", ImmutableSet.of(typeWithError), javaLangObject);
           fail("Expected exception for type: " + typeWithError);
-        } catch (AbortProcessingException expected) {
+        } catch (MissingTypeException expected) {
         }
       }
     }
