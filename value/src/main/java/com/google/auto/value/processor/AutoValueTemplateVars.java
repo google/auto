@@ -48,6 +48,13 @@ class AutoValueTemplateVars extends TemplateVars {
   /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
   String arrays;
 
+  /**
+   * The full spelling of the {@code @GwtCompatible} annotation to add to this class, or an empty
+   * string if there is none. A non-empty value might look something like
+   * {@code "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   */
+  String gwtCompatibleAnnotation;
+
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
 

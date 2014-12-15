@@ -15,12 +15,15 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.base.Optional;
+
 import org.apache.velocity.runtime.parser.node.SimpleNode;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -41,25 +44,26 @@ import javax.tools.JavaFileObject;
  * @author Éamonn McManus
  */
 class GwtSerialization {
+  private final GwtCompatibility gwtCompatibility;
   private final ProcessingEnvironment processingEnv;
   private final TypeElement type;
 
-  GwtSerialization(ProcessingEnvironment processingEnv, TypeElement type) {
+  GwtSerialization(
+      GwtCompatibility gwtCompatibility, ProcessingEnvironment processingEnv, TypeElement type) {
+    this.gwtCompatibility = gwtCompatibility;
     this.processingEnv = processingEnv;
     this.type = type;
   }
 
   private boolean shouldWriteGwtSerializer() {
-    List<? extends AnnotationMirror> annotations = type.getAnnotationMirrors();
-    for (AnnotationMirror annotation : annotations) {
-      String name = annotation.getAnnotationType().asElement().getSimpleName().toString();
-      if (name.equals("GwtCompatible")) {
-        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
-            annotation.getElementValues().entrySet()) {
-          if (entry.getKey().getSimpleName().toString().equals("serializable")
-              && entry.getValue().getValue().equals(true)) {
-            return true;
-          }
+    Optional<AnnotationMirror> optionalGwtCompatible = gwtCompatibility.gwtCompatibleAnnotation();
+    if (optionalGwtCompatible.isPresent()) {
+      AnnotationMirror gwtCompatible = optionalGwtCompatible.get();
+      for (Map.Entry<ExecutableElement, AnnotationValue> entry :
+          Collections.unmodifiableMap(gwtCompatible.getElementValues()).entrySet()) {
+        if (entry.getKey().getSimpleName().contentEquals("serializable")
+            && entry.getValue().getValue().equals(true)) {
+          return true;
         }
       }
     }

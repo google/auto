@@ -985,4 +985,41 @@ public class AutoValueTest extends TestCase {
     AbstractChild instance = AbstractChild.create(23);
     assertEquals(23, instance.foo());
   }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface GwtCompatible {
+    boolean funky() default false;
+  }
+
+  @AutoValue
+  @GwtCompatible(funky = true)
+  abstract static class GwtCompatibleTest {
+    abstract int foo();
+
+    static GwtCompatibleTest create(int foo) {
+      return new AutoValue_AutoValueTest_GwtCompatibleTest(foo);
+    }
+  }
+
+  @AutoValue
+  @GwtCompatible
+  abstract static class GwtCompatibleTestNoArgs {
+    abstract String bar();
+
+    static GwtCompatibleTestNoArgs create(String bar) {
+      return new AutoValue_AutoValueTest_GwtCompatibleTestNoArgs(bar);
+    }
+  }
+
+  public void testGwtCompatibleInherited() {
+    GwtCompatibleTest test = GwtCompatibleTest.create(23);
+    GwtCompatible gwtCompatible = test.getClass().getAnnotation(GwtCompatible.class);
+    assertNotNull(gwtCompatible);
+    assertTrue(gwtCompatible.funky());
+
+    GwtCompatibleTestNoArgs testNoArgs = GwtCompatibleTestNoArgs.create("23");
+    GwtCompatible gwtCompatibleNoArgs = testNoArgs.getClass().getAnnotation(GwtCompatible.class);
+    assertNotNull(gwtCompatibleNoArgs);
+    assertFalse(gwtCompatibleNoArgs.funky());
+  }
 }

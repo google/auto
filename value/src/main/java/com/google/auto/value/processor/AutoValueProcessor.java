@@ -389,10 +389,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
     defineVarsForType(type, vars);
+    GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
+    vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
     text = Reformatter.fixup(text);
     writeSourceFile(generatedSubclassName(type), text, type);
-    GwtSerialization gwtSerialization = new GwtSerialization(processingEnv, type);
+    GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 

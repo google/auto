@@ -17,6 +17,7 @@ package $pkg;
 import $i;
 #end
 
+${gwtCompatibleAnnotation}
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
 final class $subclass$formalTypes extends $origClass$actualTypes {
 
