@@ -1022,4 +1022,47 @@ public class AutoValueTest extends TestCase {
     assertNotNull(gwtCompatibleNoArgs);
     assertFalse(gwtCompatibleNoArgs.funky());
   }
+
+  @interface NestedAnnotation {
+    int anInt();
+    Class<?>[] aClassArray();
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface HairyAnnotation {
+    String aString();
+    Class<? extends Number> aClass();
+    RetentionPolicy anEnum();
+    NestedAnnotation anAnnotation();
+  }
+
+  @AutoValue
+  abstract static class CopyAnnotation {
+    @HairyAnnotation(
+        aString = "hello",
+        aClass = Integer.class,
+        anEnum = RetentionPolicy.RUNTIME,
+        anAnnotation = @NestedAnnotation(
+            anInt = 73,
+            aClassArray = {String.class, Object.class}))
+    abstract String id();
+
+    static CopyAnnotation create(String id) {
+      return new AutoValue_AutoValueTest_CopyAnnotation(id);
+    }
+  }
+
+  public void testCopyAnnotations() throws Exception {
+    CopyAnnotation x = CopyAnnotation.create("id");
+    Class<?> c = x.getClass();
+    assertNotSame(CopyAnnotation.class, c);
+    Method methodInSubclass = c.getDeclaredMethod("id");
+    Method methodInSuperclass = CopyAnnotation.class.getDeclaredMethod("id");
+    assertNotSame(methodInSuperclass, methodInSubclass);
+    HairyAnnotation annotationInSubclass =
+        methodInSubclass.getAnnotation(HairyAnnotation.class);
+    HairyAnnotation annotationInSuperclass =
+        methodInSuperclass.getAnnotation(HairyAnnotation.class);
+    assertEquals(annotationInSuperclass, annotationInSubclass);
+  }
 }

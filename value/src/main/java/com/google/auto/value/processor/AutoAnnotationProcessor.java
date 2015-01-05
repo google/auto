@@ -35,6 +35,7 @@ import java.util.Set;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
@@ -149,11 +150,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     TypeSimplifier typeSimplifier = new TypeSimplifier(
         typeUtils, pkg, referencedTypes, annotationTypeMirror);
 
-    AnnotationDefaults annotationDefaults =
-        new AnnotationDefaults(processingEnv, typeSimplifier, method);
+    AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
     ImmutableMap<String, AnnotationValue> defaultValues = getDefaultValues(annotationElement);
     ImmutableMap<String, Member> members =
-        getMembers(memberMethods, typeSimplifier, annotationDefaults);
+        getMembers(method, memberMethods, typeSimplifier, annotationOutput);
     ImmutableMap<String, Parameter> parameters =
         getParameters(annotationElement, method, members, typeSimplifier);
     validateParameters(annotationElement, method, members, parameters, defaultValues);
@@ -221,14 +221,17 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private ImmutableMap<String, Member> getMembers(
+      Element context,
       ImmutableMap<String, ExecutableElement> memberMethods,
       TypeSimplifier typeSimplifier,
-      AnnotationDefaults annotationDefaults) {
+      AnnotationOutput annotationOutput) {
     ImmutableMap.Builder<String, Member> members = ImmutableMap.builder();
     for (Map.Entry<String, ExecutableElement> entry : memberMethods.entrySet()) {
       ExecutableElement memberMethod = entry.getValue();
       String name = memberMethod.getSimpleName().toString();
-      members.put(name, new Member(memberMethod, typeSimplifier, annotationDefaults));
+      members.put(
+          name,
+          new Member(processingEnv, context, memberMethod, typeSimplifier, annotationOutput));
     }
     return members.build();
   }
@@ -416,17 +419,23 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   public static class Member {
+    private final ProcessingEnvironment processingEnv;
+    private final Element context;
     private final ExecutableElement method;
     private final TypeSimplifier typeSimplifier;
-    private final AnnotationDefaults annotationDefaults;
+    private final AnnotationOutput annotationOutput;
 
     Member(
+        ProcessingEnvironment processingEnv,
+        Element context,
         ExecutableElement method,
         TypeSimplifier typeSimplifier,
-        AnnotationDefaults annotationDefaults) {
+        AnnotationOutput annotationDefaults) {
+      this.processingEnv = processingEnv;
+      this.context = context;
       this.method = method;
       this.typeSimplifier = typeSimplifier;
-      this.annotationDefaults = annotationDefaults;
+      this.annotationOutput = annotationDefaults;
     }
 
     @Override
@@ -457,7 +466,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       if (defaultValue == null) {
         return null;
       } else {
-        return annotationDefaults.sourceForm(method);
+        return annotationOutput.sourceFormForInitializer(
+            defaultValue, processingEnv, method.getSimpleName().toString(), context);
       }
     }
   }

@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -49,7 +48,6 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -211,19 +209,8 @@ public class AutoValueProcessor extends AbstractProcessor {
           // implementation.
           continue;
         }
-        String annotationName = typeSimplifier.simplify(annotationMirror.getAnnotationType());
-        String annotation = "@" + annotationName;
-        List<String> values = Lists.newArrayList();
-        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
-            annotationMirror.getElementValues().entrySet()) {
-          values.add(entry.getKey().getSimpleName() + "=" + entry.getValue());
-        }
-
-        if (!values.isEmpty()) {
-          annotation += "(" + Joiner.on(", ").join(values) + ")";
-        }
-
-        builder.add(annotation);
+        AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
+        builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
 
       return builder.build();
