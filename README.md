@@ -25,7 +25,7 @@ Subprojects
 
   * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+.
 
-    Latest version: `1.0-rc2`
+    Latest version: `1.0`
 
   * [Common](https://github.com/google/auto/tree/master/common) - Helper utilities for writing annotation processors.
 
