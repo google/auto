@@ -170,6 +170,12 @@ class BuilderSpec {
       }
       return false;
     }
+
+    void defineVars(AutoValueTemplateVars vars) {
+      vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
+      vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
+      vars.buildMethodName = buildMethod.getSimpleName().toString();
+    }
   }
 
   /**

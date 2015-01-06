@@ -120,6 +120,15 @@ final class TypeSimplifier {
     return type.accept(TO_STRING_TYPE_VISITOR, new StringBuilder()).toString();
   }
 
+  /**
+   * Returns a string that can be used to refer to the given raw type given the imports defined by
+   * {@link #typesToImport}. The difference between this and {@link #simplify} is that the string
+   * returned here will not include type parameters.
+   */
+  String simplifyRaw(TypeMirror type) {
+    return type.accept(TO_STRING_RAW_TYPE_VISITOR, new StringBuilder()).toString();
+  }
+
   // The formal type parameters of the given type.
   // If we have @AutoValue abstract class Foo<T extends SomeClass> then this method will
   // return <T extends Something> for Foo. Likewise it will return the angle-bracket part of:
@@ -160,6 +169,7 @@ final class TypeSimplifier {
   }
 
   private final ToStringTypeVisitor TO_STRING_TYPE_VISITOR = new ToStringTypeVisitor();
+  private final ToStringTypeVisitor TO_STRING_RAW_TYPE_VISITOR = new ToStringRawTypeVisitor();
 
   /**
    * Visitor that produces a string representation of a type for use in generated code.
@@ -189,6 +199,11 @@ final class TypeSimplifier {
       } else {
         sb.append(typeString);
       }
+      appendTypeArguments(type, sb);
+      return sb;
+    }
+
+    void appendTypeArguments(DeclaredType type, StringBuilder sb) {
       List<? extends TypeMirror> arguments = type.getTypeArguments();
       if (!arguments.isEmpty()) {
         sb.append("<");
@@ -200,7 +215,6 @@ final class TypeSimplifier {
         }
         sb.append(">");
       }
-      return sb;
     }
 
     @Override public StringBuilder visitWildcard(WildcardType type, StringBuilder sb) {
@@ -216,6 +230,21 @@ final class TypeSimplifier {
       }
       return sb;
     }
+  }
+
+  private class ToStringRawTypeVisitor extends ToStringTypeVisitor {
+    @Override
+    void appendTypeArguments(DeclaredType type, StringBuilder sb) {
+    }
+  }
+
+  /**
+   * Returns the name of the given type, including any enclosing types but not the package.
+   */
+  static String classNameOf(TypeElement type) {
+    String name = type.getQualifiedName().toString();
+    String pkgName = packageNameOf(type);
+    return pkgName.isEmpty() ? name : name.substring(pkgName.length() + 1);
   }
 
   /**

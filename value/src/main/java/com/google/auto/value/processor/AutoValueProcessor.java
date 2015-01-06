@@ -35,6 +35,7 @@ import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -160,17 +161,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     return generatedClassName(type, "AutoValue_");
   }
 
-  // Return the name of the class, including any enclosing classes but not the package.
-  private static String classNameOf(TypeElement type) {
-    String name = type.getQualifiedName().toString();
-    String pkgName = TypeSimplifier.packageNameOf(type);
-    if (!pkgName.isEmpty()) {
-      return name.substring(pkgName.length() + 1);
-    } else {
-      return name;
-    }
-  }
-
   /**
    * A property of an {@code @AutoValue} class, defined by one of its abstract methods.
    * An instance of this class is made available to the Velocity template engine for
@@ -209,6 +199,7 @@ public class AutoValueProcessor extends AbstractProcessor {
           // implementation.
           continue;
         }
+        // TODO(user): we should import this type if it is not already imported
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
@@ -372,7 +363,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
-    vars.origClass = classNameOf(type);
+    vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
     defineVarsForType(type, vars);
@@ -401,11 +392,17 @@ public class AutoValueProcessor extends AbstractProcessor {
       // Arrange to import it unless that would introduce ambiguity.
       types.add(javaUtilArrays);
     }
+    BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
+    Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
+    if (builder.isPresent()) {
+      types.add(getTypeMirror(BitSet.class));
+    }
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
+    vars.bitSet = typeSimplifier.simplifyRaw(getTypeMirror(BitSet.class));
     Map<ExecutableElement, String> methodToPropertyName = Maps.newLinkedHashMap();
     boolean allGetters = allGetters(toImplement);
     for (ExecutableElement method : toImplement) {
@@ -433,10 +430,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.actualTypes = actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
-    BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
-    Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
     if (builder.isPresent() && builder.get().validSetters(methodToPropertyName)) {
-      // TODO(user): define vars for builder here
+      builder.get().defineVars(vars);
     }
   }
 

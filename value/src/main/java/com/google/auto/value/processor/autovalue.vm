@@ -53,8 +53,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($a in ${p.annotations})
 
-  ${a}
-
+  ${a}##
   #end
 
   @Override
@@ -185,5 +184,76 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
 #if (!$serialVersionUID.empty)
   private static final long serialVersionUID = $serialVersionUID;
+#end
+
+#if ($builderTypeName != "")
+  public static $builderTypeName builder() {
+    return new Builder();
+  }
+
+  private static final class Builder ##
+  #if ($builderIsInterface) implements #else extends #end
+      $builderTypeName {
+
+    private final $bitSet set$ = new ${bitSet}(${props.size()});
+
+    #foreach ($p in $props)
+
+    private $p.type $p;
+
+    #end
+
+    #foreach ($p in $props)
+
+    @Override
+    public ${builderTypeName} ${p}($p.type $p) {
+      #if ($p.kind == "ARRAY")
+        #if ($p.nullable)
+
+      this.$p = ($p == null) ? null : ${p}.clone();
+
+        #else
+
+      this.$p = ${p}.clone();
+
+        #end
+      #else
+
+      this.$p = $p;
+
+      #end
+
+      ## $velocityCount is the loop index, which is 1-origin by default
+      #set ($bit = $velocityCount - 1)
+
+      set$.set($bit);
+      return this;
+    }
+
+    #end
+
+    @Override
+    public ${origClass}${actualTypes} ${buildMethodName}() {
+      if (set$.cardinality() < ${props.size()}) {
+        String[] propertyNames = {
+
+         #foreach ($p in $props) "$p", #end
+
+        };
+        StringBuilder missing = new StringBuilder();
+        for (int i = 0; i < ${props.size()}; i++) {
+          if (!set$.get(i)) {
+            missing.append(' ').append(propertyNames[i]);
+          }
+        }
+        throw new IllegalStateException("Missing required properties:" + missing);
+      }
+      return new ${subclass}${actualTypes}(
+    #foreach ($p in $props)
+
+          this.$p #if ($foreach.hasNext) , #end
+    #end );
+    }
+  }
 #end
 }

@@ -15,6 +15,8 @@
  */
 package com.google.auto.value;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableMap;
@@ -572,7 +574,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  static abstract class Delta<M extends Mergeable<M>> {
+  abstract static class Delta<M extends Mergeable<M>> {
     abstract M meta();
 
     static <M extends Mergeable<M>> Delta<M> create(M meta) {
@@ -834,7 +836,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  static abstract class Version implements Comparable<Version> {
+  abstract static class Version implements Comparable<Version> {
     abstract int major();
     abstract int minor();
 
@@ -863,14 +865,14 @@ public class AutoValueTest extends TestCase {
     }
   }
 
-  static abstract class LukesBase {
+  abstract static class LukesBase {
     interface LukesVisitor<T> {
       T visit(LukesSub s);
     }
 
     abstract <T> T accept(LukesVisitor<T> visitor);
 
-    @AutoValue static abstract class LukesSub extends LukesBase {
+    @AutoValue abstract static class LukesSub extends LukesBase {
       static LukesSub create() {
         return new AutoValue_AutoValueTest_LukesBase_LukesSub();
       }
@@ -892,7 +894,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  public static abstract class ComplexInheritance extends AbstractBase implements A, B {
+  public abstract static class ComplexInheritance extends AbstractBase implements A, B {
     public static ComplexInheritance create(String name) {
       return new AutoValue_AutoValueTest_ComplexInheritance(name);
     }
@@ -921,7 +923,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  public static abstract class InheritTwice implements A, B {
+  public abstract static class InheritTwice implements A, B {
     public static InheritTwice create(int answer) {
       return new AutoValue_AutoValueTest_InheritTwice(answer);
     }
@@ -933,7 +935,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  public static abstract class Optional {
+  public abstract static class Optional {
     public abstract com.google.common.base.Optional<Object> getOptional();
 
     public static Optional create(com.google.common.base.Optional<Object> opt) {
@@ -951,7 +953,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  public static abstract class InheritsNestedType extends BaseWithNestedType {
+  public abstract static class InheritsNestedType extends BaseWithNestedType {
     public abstract com.google.common.base.Optional<Object> getOptional();
 
     public static InheritsNestedType create(com.google.common.base.Optional<Object> opt) {
@@ -984,6 +986,87 @@ public class AutoValueTest extends TestCase {
   public void testOverrideNotDuplicated() {
     AbstractChild instance = AbstractChild.create(23);
     assertEquals(23, instance.foo());
+  }
+
+  @AutoValue
+  public abstract static class BasicWithBuilder {
+    public abstract int foo();
+
+    public static Builder builder() {
+      return AutoValue_AutoValueTest_BasicWithBuilder.builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder foo(int foo);
+      BasicWithBuilder build();
+    }
+  }
+
+  public void testBasicWithBuilder() {
+    BasicWithBuilder x = BasicWithBuilder.builder().foo(23).build();
+    assertEquals(23, x.foo());
+    try {
+      BasicWithBuilder.builder().build();
+      fail("Expected exception for missing property");
+    } catch (IllegalStateException e) {
+      assertThat(e.getMessage()).contains("foo");
+    }
+  }
+
+  @AutoValue
+  public abstract static class EmptyWithBuilder {
+    public static Builder builder() {
+      return AutoValue_AutoValueTest_EmptyWithBuilder.builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      EmptyWithBuilder build();
+    }
+  }
+
+  public void testEmptyWithBuilder() {
+    EmptyWithBuilder x = EmptyWithBuilder.builder().build();
+    EmptyWithBuilder y = EmptyWithBuilder.builder().build();
+    assertEquals(x, y);
+  }
+
+  @AutoValue
+  public abstract static class TwoPropertiesWithBuilderClass {
+    public abstract String string();
+    public abstract int integer();
+
+    public static Builder builder() {
+      return AutoValue_AutoValueTest_TwoPropertiesWithBuilderClass.builder();
+    }
+
+    public static Builder builder(String string) {
+      return AutoValue_AutoValueTest_TwoPropertiesWithBuilderClass.builder()
+          .string(string);
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder string(String x);
+      public abstract Builder integer(int x);
+      public abstract TwoPropertiesWithBuilderClass build();
+    }
+  }
+
+  public void testTwoPropertiesWithBuilderClass() {
+    TwoPropertiesWithBuilderClass a1 =
+        TwoPropertiesWithBuilderClass.builder().string("23").integer(17).build();
+    TwoPropertiesWithBuilderClass a2 =
+        TwoPropertiesWithBuilderClass.builder("23").integer(17).build();
+    TwoPropertiesWithBuilderClass a3 =
+        TwoPropertiesWithBuilderClass.builder().integer(17).string("23").build();
+    TwoPropertiesWithBuilderClass b =
+        TwoPropertiesWithBuilderClass.builder().string("17").integer(17).build();
+    new EqualsTester()
+        .addEqualityGroup(a1, a2, a3)
+        .addEqualityGroup(b)
+        .testEquals();
   }
 
   @Retention(RetentionPolicy.RUNTIME)

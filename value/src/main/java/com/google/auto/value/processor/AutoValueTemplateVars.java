@@ -48,6 +48,9 @@ class AutoValueTemplateVars extends TemplateVars {
   /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
   String arrays;
 
+  /** The spelling of the java.util.BitSet class: BitSet or java.util.BitSet. */
+  String bitSet;
+
   /**
    * The full spelling of the {@code @GwtCompatible} annotation to add to this class, or an empty
    * string if there is none. A non-empty value might look something like
@@ -89,6 +92,23 @@ class AutoValueTemplateVars extends TemplateVars {
    * by a wildcard, for example {@code <?, ?>}.
    */
   String wildcardTypes;
+
+  /**
+   * The name of the builder type as it should appear in source code, or empty if there is no
+   * builder type. If class {@code Address} contains {@code @AutoValue.Builder} class Builder
+   * then this will typically be {@code "Address.Builder"}.
+   */
+  String builderTypeName = "";
+
+  /**
+   * True if the builder being implemented is an interface, false if it is an abstract class.
+   */
+  Boolean builderIsInterface = false;
+
+  /**
+   * The simple name of the builder's build method, often {@code "build"}.
+   */
+  String buildMethodName = "";
 
   private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
