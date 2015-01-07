@@ -20,6 +20,7 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
@@ -89,9 +90,36 @@ class BuilderSpec {
       }
     }
 
+    Optional<ExecutableElement> validateMethod = Optional.absent();
+    for (ExecutableElement containedMethod :
+        ElementFilter.methodsIn(autoValueClass.getEnclosedElements())) {
+      if (MoreElements.isAnnotationPresent(containedMethod, AutoValue.Validate.class)) {
+        if (containedMethod.getModifiers().contains(Modifier.STATIC)) {
+          errorReporter.reportError(
+              "@AutoValue.Validate cannot apply to a static method", containedMethod);
+        } else if (!containedMethod.getParameters().isEmpty()) {
+          errorReporter.reportError(
+              "@AutoValue.Validate method must not have parameters", containedMethod);
+        } else if (containedMethod.getReturnType().getKind() != TypeKind.VOID) {
+          errorReporter.reportError(
+              "Return type of @AutoValue.Validate method must be void", containedMethod);
+        } else if (validateMethod.isPresent()) {
+          errorReporter.reportError(
+              "There can only be one @AutoValue.Validate method", containedMethod);
+        } else {
+          validateMethod = Optional.of(containedMethod);
+        }
+      }
+    }
+
     if (builderTypeElement.isPresent()) {
-      return builderFrom(builderTypeElement.get());
+      return builderFrom(builderTypeElement.get(), validateMethod);
     } else {
+      if (validateMethod.isPresent()) {
+        errorReporter.reportError(
+            "@AutoValue.Validate is only meaningful if there is an @AutoValue.Builder",
+            validateMethod.get());
+      }
       return Optional.absent();
     }
   }
@@ -103,14 +131,17 @@ class BuilderSpec {
     private final TypeElement builderTypeElement;
     private final ExecutableElement buildMethod;
     private final ImmutableList<ExecutableElement> setters;
+    private final Optional<ExecutableElement> validateMethod;
 
     Builder(
         TypeElement builderTypeElement,
         ExecutableElement build,
-        List<ExecutableElement> setters) {
+        List<ExecutableElement> setters,
+        Optional<ExecutableElement> validateMethod) {
       this.builderTypeElement = builderTypeElement;
       this.buildMethod = build;
       this.setters = ImmutableList.copyOf(setters);
+      this.validateMethod = validateMethod;
     }
 
     ExecutableElement buildMethod() {
@@ -175,6 +206,11 @@ class BuilderSpec {
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.buildMethodName = buildMethod.getSimpleName().toString();
+      if (validateMethod.isPresent()) {
+        vars.validators = ImmutableSet.of(validateMethod.get().getSimpleName().toString());
+      } else {
+        vars.validators = ImmutableSet.of();
+      }
     }
   }
 
@@ -183,7 +219,8 @@ class BuilderSpec {
    * class or interface has abstract methods that could not be part of any builder, emits error
    * messages and returns null.
    */
-  private Optional<Builder> builderFrom(TypeElement builderTypeElement) {
+  private Optional<Builder> builderFrom(
+      TypeElement builderTypeElement, Optional<ExecutableElement> validateMethod) {
     List<ExecutableElement> buildMethods = new ArrayList<ExecutableElement>();
     List<ExecutableElement> setterMethods = new ArrayList<ExecutableElement>();
     boolean ok = true;
@@ -226,8 +263,11 @@ class BuilderSpec {
       ok = false;
     }
     if (ok) {
-      return Optional.of(
-          new Builder(builderTypeElement, Iterables.getOnlyElement(buildMethods), setterMethods));
+      return Optional.of(new Builder(
+          builderTypeElement,
+          Iterables.getOnlyElement(buildMethods),
+          setterMethods,
+          validateMethod));
     } else {
       return Optional.absent();
     }

@@ -1069,6 +1069,53 @@ public class AutoValueTest extends TestCase {
         .testEquals();
   }
 
+  @AutoValue
+  public abstract static class ValidationWithBuilder {
+    public abstract String string();
+    public abstract int integer();
+
+    public static Builder builder() {
+      return AutoValue_AutoValueTest_ValidationWithBuilder.builder();
+    }
+
+    @AutoValue.Validate
+    void validate() {
+      if (string().isEmpty()) {
+        throw new IllegalStateException("String is empty");
+      }
+      if (integer() < 0) {
+        throw new IllegalStateException("Integer is negative");
+      }
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder string(String string);
+      Builder integer(int integer);
+      ValidationWithBuilder build();
+    }
+  }
+
+  public void testValidation() {
+    ValidationWithBuilder ok = ValidationWithBuilder.builder().string("foo").integer(17).build();
+    assertEquals("foo", ok.string());
+    assertEquals(17, ok.integer());
+
+    try {
+      ValidationWithBuilder.builder().string("").integer(17).build();
+      fail("Expected IllegalStateException for empty string");
+    } catch (IllegalStateException expected) {
+      assertThat(expected).hasMessage("String is empty");
+    }
+
+    try {
+      ValidationWithBuilder.builder().string("foo").integer(-17).build();
+      fail("Expected IllegalStateException for negative integer");
+    } catch (IllegalStateException expected) {
+      assertThat(expected).hasMessage("Integer is negative");
+    }
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   @interface GwtCompatible {
     boolean funky() default false;
