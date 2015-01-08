@@ -18,6 +18,7 @@ package com.google.auto.common;
 import com.google.common.base.Ascii;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -307,7 +308,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       ImmutableSetMultimap<Class<? extends Annotation>, Element> stepElements =
           new ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element>()
               .putAll(indexByAnnotation(elementsDeferredBySteps.get(step)))
-              .putAll(filterKeys(validElements, in(step.annotations())))
+              .putAll(filterKeys(validElements, Predicates.<Object>in(step.annotations())))
               .build();
       if (stepElements.isEmpty()) {
         elementsDeferredBySteps.removeAll(step);

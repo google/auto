@@ -51,7 +51,8 @@ class GwtCompatibility {
   // Get rid of the misconceived <? extends ExecutableElement, ? extends AnnotationValue>
   // in the return type of getElementValues().
   static Map<ExecutableElement, AnnotationValue> getElementValues(AnnotationMirror annotation) {
-    return Collections.unmodifiableMap(annotation.getElementValues());
+    return Collections.<ExecutableElement, AnnotationValue>unmodifiableMap(
+        annotation.getElementValues());
   }
 
   String gwtCompatibleAnnotationString() {
