@@ -25,9 +25,11 @@ import static javax.lang.model.type.TypeKind.WILDCARD;
 
 import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
+import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -191,6 +193,22 @@ public final class MoreTypes {
         }
       };
 
+  private static final Class<?> INTERSECTION_TYPE;
+  private static final Method GET_BOUNDS;
+  static {
+    Class<?> c;
+    Method m;
+    try {
+      c = Class.forName("javax.lang.model.type.IntersectionType");
+      m = c.getMethod("getBounds");
+    } catch (Exception e) {
+      c = null;
+      m = null;
+    }
+    INTERSECTION_TYPE = c;
+    GET_BOUNDS = m;
+  }
+
   private static boolean equal(TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
     // TypeMirror.equals is not guaranteed to return true for types that are equal, but we can
     // assume that if it does return true then the types are equal. This check also avoids getting
@@ -205,7 +223,34 @@ public final class MoreTypes {
     EqualVisitorParam p = new EqualVisitorParam();
     p.type = b;
     p.visiting = visiting;
+    if (INTERSECTION_TYPE != null && INTERSECTION_TYPE.isInstance(a)) {
+      return equalIntersectionTypes(a, b, visiting);
+    }
     return (a == b) || (a != null && b != null && a.accept(EQUAL_VISITOR, p));
+  }
+
+  // The representation of an intersection type, as in <T extends Number & Comparable<T>>, changed
+  // between Java 7 and Java 8. In Java 7 it was modeled as a fake DeclaredType, and our logic
+  // for DeclaredType does the right thing. In Java 8 it is modeled as a new type IntersectionType.
+  // In order for our code to run on Java 7 (and Java 6) we can't even mention IntersectionType,
+  // so we can't override visitIntersectionType(IntersectionType). Instead, we discover through
+  // reflection whether IntersectionType exists, and if it does we extract the bounds of the
+  // intersection ((Number, Comparable<T>) in the example) and compare them directly.
+  @SuppressWarnings("unchecked")
+  private static boolean equalIntersectionTypes(
+      TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
+    if (!INTERSECTION_TYPE.isInstance(b)) {
+      return false;
+    }
+    List<? extends TypeMirror> aBounds;
+    List<? extends TypeMirror> bBounds;
+    try {
+      aBounds = (List<? extends TypeMirror>) GET_BOUNDS.invoke(a);
+      bBounds = (List<? extends TypeMirror>) GET_BOUNDS.invoke(b);
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    return equalLists(aBounds, bBounds, visiting);
   }
 
   private static boolean equalLists(
