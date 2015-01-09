@@ -17,7 +17,7 @@ package com.google.auto.common;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth.assert_;
+import static org.junit.Assert.fail;
 
 import com.google.common.collect.Iterables;
 import com.google.testing.compile.CompilationRule;
@@ -164,7 +164,7 @@ public class MoreTypesIsTypeOfTest {
         getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType();
     try {
       MoreTypes.isTypeOf(String.class, method);
-      assert_().fail();
+      fail();
     } catch (IllegalArgumentException expected) {}
   }
 
