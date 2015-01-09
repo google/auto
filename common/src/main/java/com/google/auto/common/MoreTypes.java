@@ -131,8 +131,9 @@ public final class MoreTypes {
             DeclaredType b = (DeclaredType) p.type;
             Element aElement = a.asElement();
             Element bElement = b.asElement();
-            ComparedElements comparedElements = new ComparedElements(aElement, bElement);
-            if (p.visiting.contains(comparedElements)) {
+            Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
+            if (newVisiting.equals(p.visiting)) {
+              // We're already visiting this pair of elements.
               // This can happen for example with Enum in Enum<E extends Enum<E>>. Return a
               // provisional true value since if the Elements are not in fact equal the original
               // visitor of Enum will discover that. We have to check both Elements being compared
@@ -140,8 +141,6 @@ public final class MoreTypes {
               // differs at exactly this point.
               return true;
             }
-            Set<ComparedElements> newVisiting = new HashSet<ComparedElements>(p.visiting);
-            newVisiting.add(comparedElements);
             return aElement.equals(bElement)
                 && equal(a.getEnclosingType(), a.getEnclosingType(), newVisiting)
                 && equalLists(a.getTypeArguments(), b.getTypeArguments(), newVisiting);
@@ -171,8 +170,17 @@ public final class MoreTypes {
         public Boolean visitTypeVariable(TypeVariable a, EqualVisitorParam p) {
           if (p.type.getKind().equals(TYPEVAR)) {
             TypeVariable b = (TypeVariable) p.type;
-            return equal(a.getUpperBound(), b.getUpperBound(), p.visiting)
-                && equal(a.getLowerBound(), b.getLowerBound(), p.visiting);
+            Element aElement = a.asElement();
+            Element bElement = b.asElement();
+            Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
+            if (newVisiting.equals(p.visiting)) {
+              // We're already visiting this pair of elements.
+              // This can happen with our friend Eclipse when looking at <T extends Comparable<T>>.
+              // It incorrectly reports the upper bound of T as T itself.
+              return true;
+            }
+            return equal(a.getUpperBound(), b.getUpperBound(), newVisiting)
+                && equal(a.getLowerBound(), b.getLowerBound(), newVisiting);
           }
           return false;
         }
@@ -190,6 +198,14 @@ public final class MoreTypes {
         @Override
         public Boolean visitUnknown(TypeMirror a, EqualVisitorParam p) {
           throw new UnsupportedOperationException();
+        }
+
+        private Set<ComparedElements> visitingSetPlus(
+            Set<ComparedElements> visiting, Element a, Element b) {
+          ComparedElements comparedElements = new ComparedElements(a, b);
+          Set<ComparedElements> newVisiting = new HashSet<ComparedElements>(visiting);
+          newVisiting.add(comparedElements);
+          return newVisiting;
         }
       };
 
