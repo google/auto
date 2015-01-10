@@ -180,7 +180,8 @@ public final class MoreTypes {
               return true;
             }
             return equal(a.getUpperBound(), b.getUpperBound(), newVisiting)
-                && equal(a.getLowerBound(), b.getLowerBound(), newVisiting);
+                && equal(a.getLowerBound(), b.getLowerBound(), newVisiting)
+                && a.asElement().getSimpleName().equals(b.asElement().getSimpleName());
           }
           return false;
         }
@@ -575,6 +576,35 @@ public final class MoreTypes {
         return type;
       }
     }, "wildcard type");
+  }
+
+  /**
+   * Returns true if the raw type underlying the given {@link TypeMirror} represents a type that can
+   * be referenced by a {@link Class}. If this returns true, then {@link #isTypeOf} is guaranteed to
+   * not throw.
+   */
+  public static boolean isType(TypeMirror type) {
+    return type.accept(new SimpleTypeVisitor6<Boolean, Void>() {
+      @Override protected Boolean defaultAction(TypeMirror type, Void ignored) {
+        return false;
+      }
+
+      @Override public Boolean visitNoType(NoType noType, Void p) {
+        return noType.getKind().equals(TypeKind.VOID);
+      }
+
+      @Override public Boolean visitPrimitive(PrimitiveType type, Void p) {
+        return true;
+      }
+
+      @Override public Boolean visitArray(ArrayType array, Void p) {
+        return true;
+      }
+
+      @Override public Boolean visitDeclared(DeclaredType type, Void ignored) {
+        return MoreElements.isType(type.asElement());
+      }
+    }, null);
   }
 
   /**

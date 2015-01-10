@@ -378,7 +378,7 @@ public class TypeSimplifierTest extends TestCase {
       }
       TypeVariable superU = (TypeVariable) captureOne.getTypeArguments().get(1);
       assertTrue(typeMirrorSet.add(superU));
-      assertFalse(typeMirrorSet.add(superU.getLowerBound()));  // We already added U
+      assertTrue(typeMirrorSet.add(superU.getLowerBound()));
     }
 
     public void testPackageNameOfString() {

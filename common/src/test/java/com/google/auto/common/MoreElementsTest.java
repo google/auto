@@ -16,6 +16,8 @@
 package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.base.Optional;
@@ -81,6 +83,7 @@ public class MoreElementsTest {
   @Test public void asTypeElement() {
     Element typeElement =
         compilation.getElements().getTypeElement(String.class.getCanonicalName());
+    assertTrue(MoreElements.isType(typeElement));
     assertThat(MoreElements.asType(typeElement)).isEqualTo(typeElement);
   }
 
@@ -88,6 +91,7 @@ public class MoreElementsTest {
     TypeElement typeElement =
         compilation.getElements().getTypeElement(String.class.getCanonicalName());
     for (ExecutableElement e : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
+      assertFalse(MoreElements.isType(e));
       try {
         MoreElements.asType(e);
         fail();
@@ -103,6 +107,7 @@ public class MoreElementsTest {
 
   @Test
   public void asType_illegalArgument() {
+    assertFalse(MoreElements.isType(javaLangPackageElement));
     try {
       MoreElements.asType(javaLangPackageElement);
       fail();
@@ -178,9 +183,14 @@ public class MoreElementsTest {
     expect.that(innerAnnotation).isPresent();
     expect.that(suppressWarnings).isAbsent();
 
-    expect.that(MoreElements.asType(documented.get().getAnnotationType().asElement())
-        .getQualifiedName().toString()).isEqualTo(Documented.class.getCanonicalName());
-    expect.that(MoreElements.asType(innerAnnotation.get().getAnnotationType().asElement())
-        .getQualifiedName().toString()).isEqualTo(InnerAnnotation.class.getCanonicalName());
+    Element annotationElement = documented.get().getAnnotationType().asElement();
+    expect.that(MoreElements.isType(annotationElement)).isTrue();
+    expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
+        .isEqualTo(Documented.class.getCanonicalName());
+    
+    annotationElement = innerAnnotation.get().getAnnotationType().asElement();
+    expect.that(MoreElements.isType(annotationElement)).isTrue();
+    expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
+        .isEqualTo(InnerAnnotation.class.getCanonicalName());
   }
 }
