@@ -21,10 +21,13 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import java.beans.Introspector;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -32,7 +35,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.annotation.CheckReturnValue;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -153,27 +155,37 @@ class BuilderSpec {
     }
 
     /**
-     * Returns true if the setters in this builder correspond exactly to the given getter methods.
-     * Otherwise, emits error messages and returns false.
+     * Returns a map from property name to setter method. If the setter methods are invalid
+     * (for example not every getter has a setter, or some setters don't correspond to getters)
+     * then emits an error message and returns null.
      *
      * @param getterToPropertyName a list of getter methods, such as {@code abstract String foo();}
      * or {@code abstract String getFoo();}.
      */
-    @CheckReturnValue
-    boolean validSetters(Map<ExecutableElement, String> getterToPropertyName) {
+    private Map<String, ExecutableElement> makeSetterMap(
+        Map<ExecutableElement, String> getterToPropertyName) {
+
       // Map property names to types based on the getters.
       Map<String, TypeMirror> getterMap = new TreeMap<String, TypeMirror>();
       for (Map.Entry<ExecutableElement, String> entry : getterToPropertyName.entrySet()) {
         getterMap.put(entry.getValue(), entry.getKey().getReturnType());
       }
 
-      boolean ok = true;
+      Map<String, ExecutableElement> noPrefixMap = Maps.newLinkedHashMap();
+      Map<String, ExecutableElement> prefixMap = Maps.newLinkedHashMap();
 
+      boolean ok = true;
       // For each setter, check that its name and type correspond to a getter, and remove it from
       // the map if so.
       for (ExecutableElement setter : setters) {
+        Map<String, ExecutableElement> map = noPrefixMap;
         String name = setter.getSimpleName().toString();
         TypeMirror type = getterMap.get(name);
+        if (type == null && name.startsWith("set")) {
+          name = Introspector.decapitalize(name.substring(3));
+          type = getterMap.get(name);
+          map = prefixMap;
+        }
         if (type == null) {
           errorReporter.reportError(
               "Method does not correspond to a property of " + autoValueClass, setter);
@@ -182,6 +194,7 @@ class BuilderSpec {
           VariableElement parameter = Iterables.getOnlyElement(setter.getParameters());
           if (TYPE_EQUIVALENCE.equivalent(type, parameter.asType())) {
             getterMap.remove(name);
+            map.put(name, setter);
           } else {
             errorReporter.reportError("Parameter type should be " + type, parameter);
             ok = false;
@@ -189,24 +202,47 @@ class BuilderSpec {
         }
       }
       if (!ok) {
-        return false;
+        return null;
+      }
+
+      boolean prefixing = !prefixMap.isEmpty();
+      if (prefixing && !noPrefixMap.isEmpty()) {
+        errorReporter.reportError(
+            "If any setter methods use the setFoo convention then all must",
+            noPrefixMap.values().iterator().next());
+        return null;
       }
 
       // If there are any properties left in the map then we didn't see setters for them. Report
       // an error for each one separately.
-      if (getterMap.isEmpty()) {
-        return true;
+      if (!getterMap.isEmpty()) {
+        for (Map.Entry<String, TypeMirror> entry : getterMap.entrySet()) {
+          String setterName = prefixing ? prefixWithSet(entry.getKey()) : entry.getKey();
+          String error = String.format(
+              "Expected a method with this signature: %s %s(%s)",
+              builderTypeElement, setterName, entry.getValue());
+          errorReporter.reportError(error, builderTypeElement);
+        }
+        return null;
       }
-      for (Map.Entry<String, TypeMirror> entry : getterMap.entrySet()) {
-        String error = String.format(
-            "Expected a method with this signature: %s %s(%s)",
-            builderTypeElement, entry.getKey(), entry.getValue());
-        errorReporter.reportError(error, builderTypeElement);
-      }
-      return false;
+
+      return noPrefixMap.isEmpty() ? prefixMap : noPrefixMap;
     }
 
-    void defineVars(AutoValueTemplateVars vars, TypeSimplifier typeSimplifier) {
+    private String prefixWithSet(String propertyName) {
+      // This is not internationalizationally correct, but it corresponds to what
+      // Introspector.decapitalize does.
+      return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+    }
+
+    void defineVars(
+        AutoValueTemplateVars vars,
+        TypeSimplifier typeSimplifier,
+        Map<ExecutableElement, String> getterToPropertyName) {
+      Map<String, ExecutableElement> propertyNameToSetter = makeSetterMap(getterToPropertyName);
+      if (propertyNameToSetter == null) {
+        return;
+      }
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
@@ -217,6 +253,11 @@ class BuilderSpec {
       } else {
         vars.validators = ImmutableSet.of();
       }
+      ImmutableMap.Builder<String, String> setterNameBuilder = ImmutableMap.builder();
+      for (Map.Entry<String, ExecutableElement> entry : propertyNameToSetter.entrySet()) {
+        setterNameBuilder.put(entry.getKey(), entry.getValue().getSimpleName().toString());
+      }
+      vars.builderSetterNames = setterNameBuilder.build();
     }
   }
 
@@ -301,6 +342,7 @@ class BuilderSpec {
       }
       ok = false;
     }
+
     if (ok) {
       return Optional.of(new Builder(
           builderTypeElement,

@@ -1142,6 +1142,56 @@ public class AutoValueTest extends TestCase {
     assertEquals((Integer) 23, instance.u());
   }
 
+  @AutoValue
+  public abstract static class BuilderWithSet<T extends Comparable<T>> {
+    public abstract List<T> list();
+    public abstract T t();
+
+    public static <T extends Comparable<T>> Builder<T> builder() {
+      return AutoValue_AutoValueTest_BuilderWithSet.builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Comparable<T>> {
+      Builder<T> setList(List<T> list);
+      Builder<T> setT(T t);
+      BuilderWithSet<T> build();
+    }
+  }
+
+  public void testBuilderWithSet() {
+    List<Integer> integers = ImmutableList.of(1, 2, 3);
+    BuilderWithSet<Integer> instance =
+        BuilderWithSet.<Integer>builder().setList(integers).setT(23).build();
+    assertEquals(integers, instance.list());
+    assertEquals((Integer) 23, instance.t());
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithSetAndGet {
+    public abstract List<Integer> getAList();
+    public abstract int getAnInt();
+
+    public static Builder builder() {
+      return AutoValue_AutoValueTest_BuilderWithSetAndGet.builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setAList(List<Integer> list);
+      Builder setAnInt(int i);
+      BuilderWithSetAndGet build();
+    }
+  }
+
+  public void testBuilderWithSetAndGet() {
+    List<Integer> integers = ImmutableList.of(1, 2, 3);
+    BuilderWithSetAndGet instance =
+        BuilderWithSetAndGet.builder().setAList(integers).setAnInt(23).build();
+    assertEquals(integers, instance.getAList());
+    assertEquals(23, instance.getAnInt());
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   @interface GwtCompatible {
     boolean funky() default false;

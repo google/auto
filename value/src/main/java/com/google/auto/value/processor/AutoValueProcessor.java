@@ -429,8 +429,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.actualTypes = typeSimplifier.actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
-    if (builder.isPresent() && builder.get().validSetters(methodToPropertyName)) {
-      builder.get().defineVars(vars, typeSimplifier);
+    if (builder.isPresent()) {
+      builder.get().defineVars(vars, typeSimplifier, methodToPropertyName);
     }
   }
 

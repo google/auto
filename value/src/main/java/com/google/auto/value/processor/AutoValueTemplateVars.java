@@ -17,10 +17,11 @@ package com.google.auto.value.processor;
 
 import org.apache.velocity.runtime.parser.node.SimpleNode;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  * The variables to substitute into the autovalue.vm template.
@@ -125,10 +126,15 @@ class AutoValueTemplateVars extends TemplateVars {
   String buildMethodName = "";
 
   /**
+   * A map from property names (like foo) to the corresponding setter method names (foo or setFoo).
+   */
+  Map<String, String> builderSetterNames = Collections.emptyMap();
+
+  /**
    * The simple names of validation methods (marked {@code @AutoValue.Validate}) in the AutoValue
    * class. (Currently, this set is either empty or a singleton.)
    */
-  Set<String> validators = new TreeSet<String>();
+  Set<String> validators = Collections.emptySet();
 
   private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 

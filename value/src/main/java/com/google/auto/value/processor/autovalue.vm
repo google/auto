@@ -206,7 +206,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     #foreach ($p in $props)
 
     @Override
-    public ${builderTypeName}${builderActualTypes} ${p}($p.type $p) {
+    public ${builderTypeName}${builderActualTypes} $builderSetterNames[${p.name}]($p.type $p) {
       #if ($p.kind == "ARRAY")
         #if ($p.nullable)
 
