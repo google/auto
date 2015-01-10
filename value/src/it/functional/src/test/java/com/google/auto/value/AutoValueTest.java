@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
@@ -1114,6 +1115,31 @@ public class AutoValueTest extends TestCase {
     } catch (IllegalStateException expected) {
       assertThat(expected).hasMessage("Integer is negative");
     }
+  }
+
+  @AutoValue
+  public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
+    public abstract List<T> list();
+    public abstract U u();
+
+    public static <T extends Number & Comparable<T>, U extends T> Builder<T, U> builder() {
+      return AutoValue_AutoValueTest_GenericsWithBuilder.builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Number & Comparable<T>, U extends T> {
+      Builder<T, U> list(List<T> list);
+      Builder<T, U> u(U u);
+      GenericsWithBuilder<T, U> build();
+    }
+  }
+
+  public void testBuilderGenerics() {
+    List<Integer> integers = ImmutableList.of(1, 2, 3);
+    GenericsWithBuilder<Integer, Integer> instance =
+        GenericsWithBuilder.<Integer, Integer>builder().list(integers).u(23).build();
+    assertEquals(integers, instance.list());
+    assertEquals((Integer) 23, instance.u());
   }
 
   @Retention(RetentionPolicy.RUNTIME)

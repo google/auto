@@ -38,7 +38,7 @@ class TypeMirrorSet extends AbstractSet<TypeMirror> {
   TypeMirrorSet() {
   }
 
-  TypeMirrorSet(Collection<TypeMirror> types) {
+  TypeMirrorSet(Collection<? extends TypeMirror> types) {
     addAll(types);
   }
 

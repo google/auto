@@ -497,13 +497,15 @@ public class CompilationTest extends TestCase {
         "",
         "import com.google.auto.value.AutoValue;",
         "",
+        "import java.util.List;",
         "import javax.annotation.Nullable;",
         "",
         "@AutoValue",
-        "public abstract class Baz {",
+        "public abstract class Baz<T extends Number> {",
         "  public abstract int anInt();",
         "  public abstract byte[] aByteArray();",
         "  @Nullable public abstract int[] aNullableIntArray();",
+        "  public abstract List<T> aList();",
         "",
         "  @AutoValue.Validate",
         "  void validate() {",
@@ -513,14 +515,15 @@ public class CompilationTest extends TestCase {
         "  }",
         "",
         "  @AutoValue.Builder",
-        "  public interface Builder {",
-        "    Builder anInt(int x);",
-        "    Builder aByteArray(byte[] x);",
-        "    Builder aNullableIntArray(@Nullable int[] x);",
-        "    Baz build();",
+        "  public interface Builder<T extends Number> {",
+        "    Builder<T> anInt(int x);",
+        "    Builder<T> aByteArray(byte[] x);",
+        "    Builder<T> aNullableIntArray(@Nullable int[] x);",
+        "    Builder<T> aList(List<T> x);",
+        "    Baz<T> build();",
         "  }",
         "",
-        "  public static Builder builder() {",
+        "  public static <T extends Number> Builder<T> builder() {",
         "    return AutoValue_Baz.builder();",
         "  }",
         "}");
@@ -530,21 +533,27 @@ public class CompilationTest extends TestCase {
         "",
         "import java.util.Arrays;",
         "import java.util.BitSet;",
+        "import java.util.List;",
         "import javax.annotation.Generated;",
         "",
         "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",
-        "final class AutoValue_Baz extends Baz {",
+        "final class AutoValue_Baz<T extends Number> extends Baz<T> {",
         "  private final int anInt;",
         "  private final byte[] aByteArray;",
         "  private final int[] aNullableIntArray;",
+        "  private final List<T> aList;",
         "",
-        "  AutoValue_Baz(int anInt, byte[] aByteArray, int[] aNullableIntArray) {",
+        "  AutoValue_Baz(int anInt, byte[] aByteArray, int[] aNullableIntArray, List<T> aList) {",
         "    this.anInt = anInt;",
         "    if (aByteArray == null) {",
         "      throw new NullPointerException(\"Null aByteArray\");",
         "    }",
         "    this.aByteArray = aByteArray;",
         "    this.aNullableIntArray = aNullableIntArray;",
+        "    if (aList == null) {",
+        "      throw new NullPointerException(\"Null aList\");",
+        "    }",
+        "    this.aList = aList;",
         "  }",
         "",
         "  @Override public int anInt() {",
@@ -560,11 +569,16 @@ public class CompilationTest extends TestCase {
         "    return aNullableIntArray == null ? null : aNullableIntArray.clone();",
         "  }",
         "",
+        "  @Override public List<T> aList() {",
+        "    return aList;",
+        "  }",
+        "",
         "  @Override public String toString() {",
         "    return \"Baz{\"",
         "        + \"anInt=\" + anInt + \", \"",
         "        + \"aByteArray=\" + Arrays.toString(aByteArray) + \", \"",
-        "        + \"aNullableIntArray=\" + Arrays.toString(aNullableIntArray)",
+        "        + \"aNullableIntArray=\" + Arrays.toString(aNullableIntArray) + \", \"",
+        "        + \"aList=\" + aList",
         "        + \"}\";",
         "  }",
         "",
@@ -573,7 +587,7 @@ public class CompilationTest extends TestCase {
         "      return true;",
         "    }",
         "    if (o instanceof Baz) {",
-        "      Baz that = (Baz) o;",
+        "      Baz<?> that = (Baz<?>) o;",
         "      return (this.anInt == that.anInt())",
         "          && (Arrays.equals(this.aByteArray, "
                     + "(that instanceof AutoValue_Baz) "
@@ -581,6 +595,7 @@ public class CompilationTest extends TestCase {
         "          && (Arrays.equals(this.aNullableIntArray, "
                     + "(that instanceof AutoValue_Baz) "
                         + "? ((AutoValue_Baz) that).aNullableIntArray : that.aNullableIntArray()))",
+        "          && (this.aList.equals(that.aList()));",
         "    }",
         "    return false;",
         "  }",
@@ -593,36 +608,39 @@ public class CompilationTest extends TestCase {
         "    h ^= Arrays.hashCode(aByteArray);",
         "    h *= 1000003;",
         "    h ^= Arrays.hashCode(aNullableIntArray);",
+        "    h *= 1000003;",
+        "    h ^= aList.hashCode();",
         "    return h;",
         "  }",
         "",
-        "  public static Baz.Builder builder() {",
-        "    return new Builder();",
+        "  public static <T extends Number> Baz.Builder<T> builder() {",
+        "    return new Builder<T>();",
         "  }",
         "",
-        "  private static final class Builder implements Baz.Builder {",
-        "    private final BitSet set$ = new BitSet(3);",
+        "  private static final class Builder<T extends Number> implements Baz.Builder<T> {",
+        "    private final BitSet set$ = new BitSet(4);",
         "",
         "    private int anInt;",
         "    private byte[] aByteArray;",
         "    private int[] aNullableIntArray;",
+        "    private List<T> aList;",
         "",
         "    @Override",
-        "    public Baz.Builder anInt(int anInt) {",
+        "    public Baz.Builder<T> anInt(int anInt) {",
         "      this.anInt = anInt;",
         "      set$.set(0);",
         "      return this;",
         "    }",
         "",
         "    @Override",
-        "    public Baz.Builder aByteArray(byte[] aByteArray) {",
+        "    public Baz.Builder<T> aByteArray(byte[] aByteArray) {",
         "      this.aByteArray = aByteArray.clone();",
         "      set$.set(1);",
         "      return this;",
         "    }",
         "",
         "    @Override",
-        "    public Baz.Builder aNullableIntArray(int[] aNullableIntArray) {",
+        "    public Baz.Builder<T> aNullableIntArray(int[] aNullableIntArray) {",
         "      this.aNullableIntArray = "
                 + "(aNullableIntArray == null) ? null : aNullableIntArray.clone();",
         "      set$.set(2);",
@@ -630,21 +648,28 @@ public class CompilationTest extends TestCase {
         "    }",
         "",
         "    @Override",
-        "    public Baz build() {",
-        "      if (set$.cardinality() < 3) {",
+        "    public Baz.Builder<T> aList(List<T> aList) {",
+        "      this.aList = aList;",
+        "      set$.set(3);",
+        "      return this;",
+        "    }",
+        "",
+        "    @Override",
+        "    public Baz<T> build() {",
+        "      if (set$.cardinality() < 4) {",
         "        String[] propertyNames = {",
-        "          \"anInt\", \"aByteArray\", \"aNullableIntArray\",",
+        "          \"anInt\", \"aByteArray\", \"aNullableIntArray\", \"aList\",",
         "        };",
         "        StringBuilder missing = new StringBuilder();",
-        "        for (int i = 0; i < 3; i++) {",
+        "        for (int i = 0; i < 4; i++) {",
         "          if (!set$.get(i)) {",
         "            missing.append(' ').append(propertyNames[i]);",
         "          }",
         "        }",
         "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
         "      }",
-        "      Baz result = new AutoValue_Baz(",
-        "          this.anInt, this.aByteArray, this.aNullableIntArray);",
+        "      Baz<T> result = new AutoValue_Baz<T>(",
+        "          this.anInt, this.aByteArray, this.aNullableIntArray, this.aList);",
         "      result.validate();",
         "      return result;",
         "    }",
@@ -656,6 +681,84 @@ public class CompilationTest extends TestCase {
         .compilesWithoutError()
         .and()
         .generatesSources(expectedOutput);
+  }
+
+  public void testAutoValueBuilderTypeParametersDontMatch1() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T> {",
+        "  abstract String blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    Builder blam(String x);",
+        "    String build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Type parameters of foo.bar.Baz.Builder must have same names and "
+            + "bounds as type parameters of foo.bar.Baz")
+        .in(javaFileObject).onLine(10);
+  }
+
+  public void testAutoValueBuilderTypeParametersDontMatch2() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T> {",
+        "  abstract T blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<E> {",
+        "    Builder<E> blam(E x);",
+        "    String build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Type parameters of foo.bar.Baz.Builder must have same names and "
+            + "bounds as type parameters of foo.bar.Baz")
+        .in(javaFileObject).onLine(10);
+  }
+
+  public void testAutoValueBuilderTypeParametersDontMatch3() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T extends Number & Comparable<T>> {",
+        "  abstract T blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T extends Number> {",
+        "    Builder<T> blam(T x);",
+        "    String build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Type parameters of foo.bar.Baz.Builder must have same names and "
+            + "bounds as type parameters of foo.bar.Baz")
+        .in(javaFileObject).onLine(10);
   }
 
   public void testAutoValueValidateNotInAutoValue() {

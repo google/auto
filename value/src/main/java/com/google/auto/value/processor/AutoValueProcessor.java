@@ -17,7 +17,6 @@ package com.google.auto.value.processor;
 
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -427,11 +426,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.props = props;
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
-    vars.actualTypes = actualTypeParametersString(type);
+    vars.actualTypes = typeSimplifier.actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     if (builder.isPresent() && builder.get().validSetters(methodToPropertyName)) {
-      builder.get().defineVars(vars);
+      builder.get().defineVars(vars, typeSimplifier);
     }
   }
 
@@ -633,30 +632,6 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private TypeMirror getTypeMirror(Class<?> c) {
     return processingEnv.getElementUtils().getTypeElement(c.getName()).asType();
-  }
-
-  private enum ElementNameFunction implements Function<Element, String> {
-    INSTANCE;
-    @Override public String apply(Element element) {
-      return element.getSimpleName().toString();
-    }
-  }
-
-  // The actual type parameters of the generated type.
-  // If we have @AutoValue abstract class Foo<T extends Something> then the subclass will be
-  // final class AutoValue_Foo<T extends Something> extends Foo<T>.
-  // <T extends Something> is the formal type parameter list and
-  // <T> is the actual type parameter list, which is what this method returns.
-  private static String actualTypeParametersString(TypeElement type) {
-    List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
-    if (typeParameters.isEmpty()) {
-      return "";
-    } else {
-      return "<"
-          + Joiner.on(", ").join(
-              FluentIterable.from(typeParameters).transform(ElementNameFunction.INSTANCE))
-          + ">";
-    }
   }
 
   // The @AutoValue type, with a ? for every type.

@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -37,6 +38,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -50,6 +52,8 @@ import javax.lang.model.util.Types;
  * @author Éamonn McManus
  */
 class BuilderSpec {
+  private static final Equivalence<TypeMirror> TYPE_EQUIVALENCE = MoreTypes.equivalence();
+
   private final TypeElement autoValueClass;
   private final Types typeUtils;
   private final Elements elementUtils;
@@ -176,7 +180,7 @@ class BuilderSpec {
           ok = false;
         } else {
           VariableElement parameter = Iterables.getOnlyElement(setter.getParameters());
-          if (typeUtils.isSameType(type, parameter.asType())) {
+          if (TYPE_EQUIVALENCE.equivalent(type, parameter.asType())) {
             getterMap.remove(name);
           } else {
             errorReporter.reportError("Parameter type should be " + type, parameter);
@@ -202,9 +206,11 @@ class BuilderSpec {
       return false;
     }
 
-    void defineVars(AutoValueTemplateVars vars) {
+    void defineVars(AutoValueTemplateVars vars, TypeSimplifier typeSimplifier) {
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
+      vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
+      vars.builderActualTypes = typeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethodName = buildMethod.getSimpleName().toString();
       if (validateMethod.isPresent()) {
         vars.validators = ImmutableSet.of(validateMethod.get().getSimpleName().toString());
@@ -221,9 +227,42 @@ class BuilderSpec {
    */
   private Optional<Builder> builderFrom(
       TypeElement builderTypeElement, Optional<ExecutableElement> validateMethod) {
+
+    // We require the builder to have the same type parameters as the @AutoValue class, meaning the
+    // same names and bounds. In principle the type parameters could have different names, but that
+    // would be confusing, and our code would reject it anyway because it wouldn't consider that
+    // the return type of Foo<U> build() was really the same as the declaration of Foo<T>. This
+    // check produces a better error message in that case and similar ones.
+
+    boolean ok = true;
+    int nTypeParameters = autoValueClass.getTypeParameters().size();
+    if (nTypeParameters != builderTypeElement.getTypeParameters().size()) {
+      ok = false;
+    } else {
+      for (int i = 0; i < nTypeParameters; i++) {
+        TypeParameterElement autoValueParam = autoValueClass.getTypeParameters().get(i);
+        TypeParameterElement builderParam = builderTypeElement.getTypeParameters().get(i);
+        if (!autoValueParam.getSimpleName().equals(builderParam.getSimpleName())) {
+          ok = false;
+          break;
+        }
+        Set<TypeMirror> autoValueBounds = new TypeMirrorSet(autoValueParam.getBounds());
+        Set<TypeMirror> builderBounds = new TypeMirrorSet(builderParam.getBounds());
+        if (!autoValueBounds.equals(builderBounds)) {
+          ok = false;
+          break;
+        }
+      }
+    }
+    if (!ok) {
+      errorReporter.reportError(
+          "Type parameters of " + builderTypeElement + " must have same names and bounds as "
+              + "type parameters of " + autoValueClass, builderTypeElement);
+      return Optional.absent();
+    }
+
     List<ExecutableElement> buildMethods = new ArrayList<ExecutableElement>();
     List<ExecutableElement> setterMethods = new ArrayList<ExecutableElement>();
-    boolean ok = true;
     // For each abstract method (in builderTypeElement or inherited), check that it is either
     // a setter method or a build method. A setter method has one argument and returns
     // builderTypeElement. A build method has no arguments and returns the @AutoValue class.
@@ -232,11 +271,11 @@ class BuilderSpec {
       boolean thisOk = false;
       int nParameters = method.getParameters().size();
       if (nParameters == 0
-          && typeUtils.isSameType(method.getReturnType(), autoValueClass.asType())) {
+          && TYPE_EQUIVALENCE.equivalent(method.getReturnType(), autoValueClass.asType())) {
         buildMethods.add(method);
         thisOk = true;
       } else if (nParameters == 1
-          && typeUtils.isSameType(method.getReturnType(), builderTypeElement.asType())) {
+          && TYPE_EQUIVALENCE.equivalent(method.getReturnType(), builderTypeElement.asType())) {
         setterMethods.add(method);
         thisOk = true;
       }
