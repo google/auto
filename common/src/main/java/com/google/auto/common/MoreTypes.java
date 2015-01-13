@@ -240,8 +240,12 @@ public final class MoreTypes {
     EqualVisitorParam p = new EqualVisitorParam();
     p.type = b;
     p.visiting = visiting;
-    if (INTERSECTION_TYPE != null && INTERSECTION_TYPE.isInstance(a)) {
-      return equalIntersectionTypes(a, b, visiting);
+    if (INTERSECTION_TYPE != null) {
+      if (INTERSECTION_TYPE.isInstance(a)) {
+        return equalIntersectionTypes(a, b, visiting);
+      } else if (INTERSECTION_TYPE.isInstance(b)) {
+        return false;
+      }
     }
     return (a == b) || (a != null && b != null && a.accept(EQUAL_VISITOR, p));
   }
