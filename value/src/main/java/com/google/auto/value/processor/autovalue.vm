@@ -187,11 +187,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 #end
 
 #if ($builderTypeName != "")
-  public static ${builderFormalTypes} ${builderTypeName}${builderActualTypes} builder() {
-    return new Builder${builderActualTypes}();
-  }
-
-  private static final class Builder${builderFormalTypes} ##
+  static final class Builder${builderFormalTypes} ##
   #if ($builderIsInterface) implements #else extends #end
       ${builderTypeName}${builderActualTypes} {
 

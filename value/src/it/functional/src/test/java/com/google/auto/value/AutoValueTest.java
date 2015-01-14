@@ -994,7 +994,7 @@ public class AutoValueTest extends TestCase {
     public abstract int foo();
 
     public static Builder builder() {
-      return AutoValue_AutoValueTest_BasicWithBuilder.builder();
+      return new AutoValue_AutoValueTest_BasicWithBuilder.Builder();
     }
 
     @AutoValue.Builder
@@ -1018,7 +1018,7 @@ public class AutoValueTest extends TestCase {
   @AutoValue
   public abstract static class EmptyWithBuilder {
     public static Builder builder() {
-      return AutoValue_AutoValueTest_EmptyWithBuilder.builder();
+      return new AutoValue_AutoValueTest_EmptyWithBuilder.Builder();
     }
 
     @AutoValue.Builder
@@ -1039,11 +1039,11 @@ public class AutoValueTest extends TestCase {
     public abstract int integer();
 
     public static Builder builder() {
-      return AutoValue_AutoValueTest_TwoPropertiesWithBuilderClass.builder();
+      return new AutoValue_AutoValueTest_TwoPropertiesWithBuilderClass.Builder();
     }
 
     public static Builder builder(String string) {
-      return AutoValue_AutoValueTest_TwoPropertiesWithBuilderClass.builder()
+      return new AutoValue_AutoValueTest_TwoPropertiesWithBuilderClass.Builder()
           .string(string);
     }
 
@@ -1076,7 +1076,7 @@ public class AutoValueTest extends TestCase {
     public abstract int integer();
 
     public static Builder builder() {
-      return AutoValue_AutoValueTest_ValidationWithBuilder.builder();
+      return new AutoValue_AutoValueTest_ValidationWithBuilder.Builder();
     }
 
     @AutoValue.Validate
@@ -1123,7 +1123,7 @@ public class AutoValueTest extends TestCase {
     public abstract U u();
 
     public static <T extends Number & Comparable<T>, U extends T> Builder<T, U> builder() {
-      return AutoValue_AutoValueTest_GenericsWithBuilder.builder();
+      return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>();
     }
 
     @AutoValue.Builder
@@ -1148,7 +1148,7 @@ public class AutoValueTest extends TestCase {
     public abstract T t();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
-      return AutoValue_AutoValueTest_BuilderWithSet.builder();
+      return new AutoValue_AutoValueTest_BuilderWithSet.Builder<T>();
     }
 
     @AutoValue.Builder
@@ -1173,7 +1173,7 @@ public class AutoValueTest extends TestCase {
     public abstract int getAnInt();
 
     public static Builder builder() {
-      return AutoValue_AutoValueTest_BuilderWithSetAndGet.builder();
+      return new AutoValue_AutoValueTest_BuilderWithSetAndGet.Builder();
     }
 
     @AutoValue.Builder
