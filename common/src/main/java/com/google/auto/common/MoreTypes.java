@@ -15,6 +15,12 @@
  */
 package com.google.auto.common;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.util.Elements;
+
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javax.lang.model.type.TypeKind.ARRAY;
@@ -22,19 +28,16 @@ import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
 import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
-
 import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
-
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -669,6 +672,34 @@ public final class MoreTypes {
         return typeElement.getQualifiedName().contentEquals(clazz.getCanonicalName());
       }
     }, null);
+  }
+
+  /**
+   * Returns the non-object superclass of the type with the proper type parameters.
+   * An absent Optional is returned if there is no non-Object superclass.
+   */
+  public static Optional<DeclaredType> nonObjectSuperclass(final Types types, Elements elements,
+      DeclaredType type) {
+    checkNotNull(types);
+    checkNotNull(elements);
+    checkNotNull(type);
+
+    final TypeMirror objectType =
+        elements.getTypeElement(Object.class.getCanonicalName()).asType();
+    // It's guaranteed there's only a single CLASS superclass because java doesn't have multiple
+    // class inheritance.
+    TypeMirror superclass = FluentIterable.from(types.directSupertypes(type))
+        .filter(new Predicate<TypeMirror>() {
+          @Override public boolean apply(TypeMirror input) {
+           return input.getKind().equals(TypeKind.DECLARED)
+               && (MoreElements.asType(
+                     MoreTypes.asDeclared(input).asElement())).getKind().equals(ElementKind.CLASS)
+               && !types.isSameType(objectType, input);
+          }
+        }).getOnlyElement(null);
+    return superclass != null
+        ? Optional.of(MoreTypes.asDeclared(superclass))
+        : Optional.<DeclaredType>absent();
   }
 
   private static class CastingTypeVisitor<T> extends SimpleTypeVisitor6<T, String> {
