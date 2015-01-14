@@ -199,10 +199,26 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
     #end
 
-    #foreach ($p in $props)
+    Builder() {
+    }
+
+    Builder(${origClass}${actualTypes} source) {
+
+      #foreach ($p in $props)
+
+      $builderSetterNames[$p.name](source.${p.getter}());
+      ## We use the setter methods rather than assigning the fields directly so we don't have
+      ## to duplicate the logic for cloning arrays. Not cloning arrays would conceivably be
+      ## a security problem.
+
+      #end
+
+    }
+
+#foreach ($p in $props)
 
     @Override
-    public ${builderTypeName}${builderActualTypes} $builderSetterNames[${p.name}]($p.type $p) {
+    public ${builderTypeName}${builderActualTypes} $builderSetterNames[$p.name]($p.type $p) {
       #if ($p.kind == "ARRAY")
         #if ($p.nullable)
 
@@ -249,8 +265,11 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
           this.$p #if ($foreach.hasNext) , #end
     #end );
+
     #foreach ($v in $validators)
+
       result.${v}();
+
     #end
 
       return result;

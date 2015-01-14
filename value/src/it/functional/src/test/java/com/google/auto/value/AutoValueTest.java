@@ -1126,6 +1126,11 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>();
     }
 
+    public Builder<T, U> toBuilder() {
+      // TODO(user): eventually we will implement this automatically if abstract
+      return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>(this);
+    }
+
     @AutoValue.Builder
     public interface Builder<T extends Number & Comparable<T>, U extends T> {
       Builder<T, U> list(List<T> list);
@@ -1140,6 +1145,14 @@ public class AutoValueTest extends TestCase {
         GenericsWithBuilder.<Integer, Integer>builder().list(integers).u(23).build();
     assertEquals(integers, instance.list());
     assertEquals((Integer) 23, instance.u());
+
+    GenericsWithBuilder<Integer, Integer> instance2 = instance.toBuilder().build();
+    assertEquals(instance, instance2);
+    assertNotSame(instance, instance2);
+
+    GenericsWithBuilder<Integer, Integer> instance3 = instance.toBuilder().u(17).build();
+    assertEquals(integers, instance3.list());
+    assertEquals((Integer) 17, instance3.u());
   }
 
   @AutoValue
@@ -1176,6 +1189,11 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_BuilderWithSetAndGet.Builder();
     }
 
+    public Builder toBuilder() {
+      // TODO(user): eventually we will implement this automatically if abstract
+      return new AutoValue_AutoValueTest_BuilderWithSetAndGet.Builder(this);
+    }
+
     @AutoValue.Builder
     public interface Builder {
       Builder setAList(List<Integer> list);
@@ -1190,6 +1208,14 @@ public class AutoValueTest extends TestCase {
         BuilderWithSetAndGet.builder().setAList(integers).setAnInt(23).build();
     assertEquals(integers, instance.getAList());
     assertEquals(23, instance.getAnInt());
+
+    BuilderWithSetAndGet instance2 = instance.toBuilder().build();
+    assertEquals(instance, instance2);
+    assertNotSame(instance, instance2);
+
+    BuilderWithSetAndGet instance3 = instance.toBuilder().setAnInt(17).build();
+    assertEquals(integers, instance3.getAList());
+    assertEquals(17, instance3.getAnInt());
   }
 
   @Retention(RetentionPolicy.RUNTIME)
