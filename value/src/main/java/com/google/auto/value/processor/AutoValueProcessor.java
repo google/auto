@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -380,9 +381,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     determineObjectMethodsToGenerate(methods, vars);
-    ImmutableList<ExecutableElement> toImplement = methodsToImplement(methods);
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
-    types.addAll(returnTypesOf(toImplement));
+    types.addAll(returnTypesOf(methodsToImplement));
     TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
     types.add(javaxAnnotationGenerated);
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
@@ -393,29 +394,29 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
     Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
+    ImmutableSet<ExecutableElement> toBuilderMethods;
     if (builder.isPresent()) {
       types.add(getTypeMirror(BitSet.class));
+      toBuilderMethods = builder.get().toBuilderMethods(typeUtils, methodsToImplement);
+    } else {
+      toBuilderMethods = ImmutableSet.of();
     }
+    vars.toBuilderMethods =
+        FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
+    Set<ExecutableElement> propertyMethods = Sets.difference(methodsToImplement, toBuilderMethods);
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
     vars.bitSet = typeSimplifier.simplifyRaw(getTypeMirror(BitSet.class));
-    Map<ExecutableElement, String> methodToPropertyName = Maps.newLinkedHashMap();
-    boolean allGetters = allGetters(toImplement);
-    for (ExecutableElement method : toImplement) {
-      String methodName = method.getSimpleName().toString();
-      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
-      methodToPropertyName.put(method, name);
-    }
-    if (allGetters) {
-      checkDuplicateGetters(methodToPropertyName);
-    }
-    Map<ExecutableElement, String> methodToIdentifier = Maps.newLinkedHashMap(methodToPropertyName);
+    ImmutableMap<ExecutableElement, String> methodToPropertyName =
+        methodToPropertyNameMap(propertyMethods);
+    Map<ExecutableElement, String> methodToIdentifier =
+        Maps.newLinkedHashMap(methodToPropertyName);
     fixReservedIdentifiers(methodToIdentifier);
     List<Property> props = new ArrayList<Property>();
-    for (ExecutableElement method : toImplement) {
+    for (ExecutableElement method : propertyMethods) {
       String propertyType = typeSimplifier.simplify(method.getReturnType());
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
@@ -426,7 +427,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.props = props;
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
-    vars.actualTypes = typeSimplifier.actualTypeParametersString(type);
+    vars.actualTypes = TypeSimplifier.actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     if (builder.isPresent()) {
@@ -434,7 +435,23 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private boolean allGetters(List<ExecutableElement> methods) {
+  private ImmutableMap<ExecutableElement, String> methodToPropertyNameMap(
+      Iterable<ExecutableElement> propertyMethods) {
+    ImmutableMap.Builder<ExecutableElement, String> builder = ImmutableMap.builder();
+    boolean allGetters = allGetters(propertyMethods);
+    for (ExecutableElement method : propertyMethods) {
+      String methodName = method.getSimpleName().toString();
+      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
+      builder.put(method, name);
+    }
+    ImmutableMap<ExecutableElement, String> map = builder.build();
+    if (allGetters) {
+      checkDuplicateGetters(map);
+    }
+    return map;
+  }
+
+  private static boolean allGetters(Iterable<ExecutableElement> methods) {
     for (ExecutableElement method : methods) {
       String name = method.getSimpleName().toString();
       // TODO(user): decide whether getfoo() (without a capital) is a getter. Currently it is.
@@ -487,7 +504,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private Set<TypeMirror> returnTypesOf(List<ExecutableElement> methods) {
+  private Set<TypeMirror> returnTypesOf(Iterable<ExecutableElement> methods) {
     Set<TypeMirror> returnTypes = new TypeMirrorSet();
     for (ExecutableElement method : methods) {
       returnTypes.add(method.getReturnType());
@@ -535,8 +552,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableList<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
-    ImmutableList.Builder<ExecutableElement> toImplement = ImmutableList.builder();
+  private ImmutableSet<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
+    ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
     boolean errors = false;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
@@ -554,7 +571,7 @@ public class AutoValueProcessor extends AbstractProcessor {
           // another, and therefore leaves us with both an abstract method and the subclass method
           // that overrides it. This shows up in AutoValueTest.LukesBase for example.
           errorReporter.reportWarning("@AutoValue classes cannot have abstract methods other than"
-              + " property getters", method);
+              + " property getters and Builder converters", method);
         }
       }
     }

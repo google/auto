@@ -20,6 +20,7 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -42,6 +43,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -219,8 +221,11 @@ class BuilderSpec {
         for (Map.Entry<String, TypeMirror> entry : getterMap.entrySet()) {
           String setterName = prefixing ? prefixWithSet(entry.getKey()) : entry.getKey();
           String error = String.format(
-              "Expected a method with this signature: %s %s(%s)",
-              builderTypeElement, setterName, entry.getValue());
+              "Expected a method with this signature: %s%s %s(%s)",
+              builderTypeElement,
+              TypeSimplifier.actualTypeParametersString(builderTypeElement),
+              setterName,
+              entry.getValue());
           errorReporter.reportError(error, builderTypeElement);
         }
         return null;
@@ -235,6 +240,59 @@ class BuilderSpec {
       return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
     }
 
+    /**
+     * Finds any methods in the set that return the builder type. If the builder has type parameters
+     * {@code <A, B>}, then the return type of the method must be {@code Builder<A, B>} with
+     * the same parameter names. We enforce elsewhere that the names and bounds of the builder
+     * parameters must be the same as those of the @AutoValue class. Here's a correct example:
+     * <pre>
+     * {@code @AutoValue abstract class Foo<A extends Number, B> {
+     *   abstract int someProperty();
+     *
+     *   abstract Builder<A, B> toBuilder();
+     *
+     *   interface Builder<A extends Number, B> {...}
+     * }}
+     * </pre>
+     *
+     * <p>We currently impose that there cannot be more than one such method.</p>
+     */
+    ImmutableSet<ExecutableElement> toBuilderMethods(
+        Types typeUtils, Set<ExecutableElement> abstractMethods) {
+
+      ImmutableList<String> builderTypeParamNames =
+          FluentIterable.from(builderTypeElement.getTypeParameters())
+              .transform(SimpleNameFunction.INSTANCE)
+              .toList();
+
+      ImmutableSet.Builder<ExecutableElement> methods = ImmutableSet.builder();
+      for (ExecutableElement method : abstractMethods) {
+        if (builderTypeElement.equals(typeUtils.asElement(method.getReturnType()))) {
+          methods.add(method);
+          DeclaredType returnType = MoreTypes.asDeclared(method.getReturnType());
+          ImmutableList.Builder<String> typeArguments = ImmutableList.builder();
+          for (TypeMirror typeArgument : returnType.getTypeArguments()) {
+            if (typeArgument.getKind().equals(TypeKind.TYPEVAR)) {
+              typeArguments.add(typeUtils.asElement(typeArgument).getSimpleName().toString());
+            }
+          }
+          if (!builderTypeParamNames.equals(typeArguments.build())) {
+            errorReporter.reportError(
+                "Builder converter method should return "
+                    + builderTypeElement
+                    + TypeSimplifier.actualTypeParametersString(builderTypeElement),
+                method);
+          }
+        }
+      }
+      ImmutableSet<ExecutableElement> builderMethods = methods.build();
+      if (builderMethods.size() > 1) {
+        errorReporter.reportError(
+            "There can be at most one builder converter method", builderMethods.iterator().next());
+      }
+      return builderMethods;
+    }
+
     void defineVars(
         AutoValueTemplateVars vars,
         TypeSimplifier typeSimplifier,
@@ -246,7 +304,7 @@ class BuilderSpec {
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
-      vars.builderActualTypes = typeSimplifier.actualTypeParametersString(builderTypeElement);
+      vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethodName = buildMethod.getSimpleName().toString();
       if (validateMethod.isPresent()) {
         vars.validators = ImmutableSet.of(validateMethod.get().getSimpleName().toString());
@@ -302,6 +360,8 @@ class BuilderSpec {
       return Optional.absent();
     }
 
+    String typeParams = TypeSimplifier.actualTypeParametersString(autoValueClass);
+
     List<ExecutableElement> buildMethods = new ArrayList<ExecutableElement>();
     List<ExecutableElement> setterMethods = new ArrayList<ExecutableElement>();
     // For each abstract method (in builderTypeElement or inherited), check that it is either
@@ -322,14 +382,17 @@ class BuilderSpec {
       }
       if (!thisOk) {
         errorReporter.reportError(
-            "Builder methods must either have no arguments and return " + autoValueClass
-            + " or have one argument and return " + builderTypeElement, method);
+            "Builder methods must either have no arguments and return "
+                + autoValueClass + typeParams + " or have one argument and return "
+                + builderTypeElement + typeParams,
+            method);
         ok = false;
       }
     }
     if (buildMethods.isEmpty()) {
       errorReporter.reportError(
-          "Builder must have a single no-argument method returning " + autoValueClass,
+          "Builder must have a single no-argument method returning "
+              + autoValueClass + typeParams,
           builderTypeElement);
       ok = false;
     } else if (buildMethods.size() > 1) {
@@ -337,7 +400,8 @@ class BuilderSpec {
       // that build method.
       for (ExecutableElement buildMethod : buildMethods) {
         errorReporter.reportError(
-            "Builder must have a single no-argument method returning " + autoValueClass,
+            "Builder must have a single no-argument method returning "
+                + autoValueClass + typeParams,
             buildMethod);
       }
       ok = false;

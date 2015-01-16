@@ -187,6 +187,16 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 #end
 
 #if ($builderTypeName != "")
+
+  #foreach ($m in $toBuilderMethods)
+
+  @Override
+  public ${builderTypeName}${builderActualTypes} ${m}() {
+    return new Builder${builderActualTypes}(this);
+  }
+
+  #end
+
   static final class Builder${builderFormalTypes} ##
   #if ($builderIsInterface) implements #else extends #end
       ${builderTypeName}${builderActualTypes} {

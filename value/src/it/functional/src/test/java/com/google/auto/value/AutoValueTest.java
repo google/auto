@@ -1126,10 +1126,11 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>();
     }
 
-    public Builder<T, U> toBuilder() {
-      // TODO(user): eventually we will implement this automatically if abstract
+    public Builder<T, U> toBuilderManual() {
       return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>(this);
     }
+
+    public abstract Builder<T, U> toBuilderGenerated();
 
     @AutoValue.Builder
     public interface Builder<T extends Number & Comparable<T>, U extends T> {
@@ -1146,13 +1147,21 @@ public class AutoValueTest extends TestCase {
     assertEquals(integers, instance.list());
     assertEquals((Integer) 23, instance.u());
 
-    GenericsWithBuilder<Integer, Integer> instance2 = instance.toBuilder().build();
+    GenericsWithBuilder<Integer, Integer> instance2 = instance.toBuilderManual().build();
     assertEquals(instance, instance2);
     assertNotSame(instance, instance2);
 
-    GenericsWithBuilder<Integer, Integer> instance3 = instance.toBuilder().u(17).build();
+    GenericsWithBuilder<Integer, Integer> instance3 = instance.toBuilderManual().u(17).build();
     assertEquals(integers, instance3.list());
     assertEquals((Integer) 17, instance3.u());
+
+    GenericsWithBuilder<Integer, Integer> instance4 = instance.toBuilderGenerated().build();
+    assertEquals(instance, instance4);
+    assertNotSame(instance, instance4);
+
+    GenericsWithBuilder<Integer, Integer> instance5 = instance.toBuilderManual().u(17).build();
+    assertEquals(integers, instance5.list());
+    assertEquals((Integer) 17, instance5.u());
   }
 
   @AutoValue
@@ -1189,10 +1198,7 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_BuilderWithSetAndGet.Builder();
     }
 
-    public Builder toBuilder() {
-      // TODO(user): eventually we will implement this automatically if abstract
-      return new AutoValue_AutoValueTest_BuilderWithSetAndGet.Builder(this);
-    }
+    public abstract Builder toBuilder();
 
     @AutoValue.Builder
     public interface Builder {

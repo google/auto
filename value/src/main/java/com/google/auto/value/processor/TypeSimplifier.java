@@ -17,7 +17,6 @@ package com.google.auto.value.processor;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -163,24 +162,16 @@ final class TypeSimplifier {
   // final class AutoValue_Foo<T extends Something> extends Foo<T>.
   // <T extends Something> is the formal type parameter list and
   // <T> is the actual type parameter list, which is what this method returns.
-  String actualTypeParametersString(TypeElement type) {
+  static String actualTypeParametersString(TypeElement type) {
     List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
     if (typeParameters.isEmpty()) {
       return "";
     } else {
       return "<"
-          + Joiner.on(", ").join(
-              FluentIterable.from(typeParameters)
-                  .transform(TypeParameterElementFunctions.SIMPLE_NAME))
+          + FluentIterable.from(typeParameters)
+              .transform(SimpleNameFunction.INSTANCE)
+              .join(Joiner.on(", "))
           + ">";
-    }
-  }
-
-  private enum TypeParameterElementFunctions implements Function<TypeParameterElement, String> {
-    SIMPLE_NAME {
-      @Override public String apply(TypeParameterElement element) {
-        return element.getSimpleName().toString();
-      }
     }
   }
 

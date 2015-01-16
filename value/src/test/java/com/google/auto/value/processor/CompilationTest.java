@@ -507,6 +507,8 @@ public class CompilationTest extends TestCase {
         "  @Nullable public abstract int[] aNullableIntArray();",
         "  public abstract List<T> aList();",
         "",
+        "  public abstract Builder<T> toBuilder();",
+        "",
         "  @AutoValue.Validate",
         "  void validate() {",
         "    if (anInt() < 0) {",
@@ -611,6 +613,10 @@ public class CompilationTest extends TestCase {
         "    h *= 1000003;",
         "    h ^= aList.hashCode();",
         "    return h;",
+        "  }",
+        "",
+        "  @Override public Baz.Builder<T> toBuilder() {",
+        "    return new Builder<T>(this);",
         "  }",
         "",
         "  static final class Builder<T extends Number> implements Baz.Builder<T> {",
@@ -984,19 +990,20 @@ public class CompilationTest extends TestCase {
         "import com.google.auto.value.AutoValue;",
         "",
         "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String blam();",
+        "public abstract class Baz<T> {",
+        "  abstract T blam();",
         "",
         "  @AutoValue.Builder",
-        "  public interface Builder {",
-        "    Builder blam(String x);",
+        "  public interface Builder<T> {",
+        "    Builder<T> blam(T x);",
         "  }",
         "}");
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
-        .withErrorContaining("Builder must have a single no-argument method returning foo.bar.Baz")
+        .withErrorContaining(
+            "Builder must have a single no-argument method returning foo.bar.Baz<T>")
         .in(javaFileObject).onLine(10);
   }
 
@@ -1068,7 +1075,7 @@ public class CompilationTest extends TestCase {
         "  @AutoValue.Builder",
         "  public interface Builder {",
         "    Builder blam(String x);",
-        "    String build();",
+        "    Baz build();",
         "  }",
         "}");
     assertAbout(javaSource())
@@ -1094,7 +1101,7 @@ public class CompilationTest extends TestCase {
         "  @AutoValue.Builder",
         "  public interface Builder<E> {",
         "    Builder<E> blam(E x);",
-        "    String build();",
+        "    Baz build();",
         "  }",
         "}");
     assertAbout(javaSource())
@@ -1120,7 +1127,7 @@ public class CompilationTest extends TestCase {
         "  @AutoValue.Builder",
         "  public interface Builder<T extends Number> {",
         "    Builder<T> blam(T x);",
-        "    String build();",
+        "    Baz build();",
         "  }",
         "}");
     assertAbout(javaSource())
@@ -1130,6 +1137,63 @@ public class CompilationTest extends TestCase {
         .withErrorContaining("Type parameters of foo.bar.Baz.Builder must have same names and "
             + "bounds as type parameters of foo.bar.Baz")
         .in(javaFileObject).onLine(10);
+  }
+
+  public void testAutoValueBuilderToBuilderWrongTypeParameters() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "abstract class Baz<K extends Comparable<K>, V> {",
+        "  abstract K key();",
+        "  abstract V value();",
+        "  abstract Builder<V, K> toBuilder1();",
+        "",
+        "  @AutoValue.Builder",
+        "  interface Builder<K extends Comparable<K>, V> {",
+        "    Builder<K, V> key(K key);",
+        "    Builder<K, V> value(V value);",
+        "    Baz<K, V> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Builder converter method should return foo.bar.Baz.Builder<K, V>")
+        .in(javaFileObject).onLine(9);
+  }
+
+  public void testAutoValueBuilderToBuilderDuplicate() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "abstract class Baz<K extends Comparable<K>, V> {",
+        "  abstract K key();",
+        "  abstract V value();",
+        "  abstract Builder<K, V> toBuilder1();",
+        "  abstract Builder<K, V> toBuilder2();",
+        "",
+        "  @AutoValue.Builder",
+        "  interface Builder<K extends Comparable<K>, V> {",
+        "    Builder<K, V> key(K key);",
+        "    Builder<K, V> value(V value);",
+        "    Baz<K, V> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("There can be at most one builder converter method")
+        .in(javaFileObject).onLine(9);
   }
 
   public void testAutoValueValidateNotInAutoValue() {

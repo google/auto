@@ -131,6 +131,11 @@ class AutoValueTemplateVars extends TemplateVars {
   Map<String, String> builderSetterNames = Collections.emptyMap();
 
   /**
+   * The names of any {@code toBuilder()} methods, that is methods that return the builder type.
+   */
+  List<String> toBuilderMethods;
+
+  /**
    * The simple names of validation methods (marked {@code @AutoValue.Validate}) in the AutoValue
    * class. (Currently, this set is either empty or a singleton.)
    */
