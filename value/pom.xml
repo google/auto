@@ -53,7 +53,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>17.0</version>
+      <version>18.0</version>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
@@ -99,6 +99,10 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.5</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-invoker-plugin</artifactId>
