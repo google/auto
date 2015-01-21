@@ -87,6 +87,18 @@ public final class MoreElements {
       };
 
   /**
+   * Returns true if the given {@link Element} instance is a {@link TypeElement}.
+   *
+   * <p>This method is functionally equivalent to an {@code instanceof} check, but should
+   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   *
+   * @throws NullPointerException if {@code element} is {@code null}
+   */
+  public static boolean isType(Element element) {
+    return element.getKind().isClass() || element.getKind().isInterface();
+  }
+
+  /**
    * Returns the given {@link Element} instance as {@link TypeElement}.
    *
    * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should

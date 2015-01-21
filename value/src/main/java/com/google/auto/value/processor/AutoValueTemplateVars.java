@@ -17,7 +17,10 @@ package com.google.auto.value.processor;
 
 import org.apache.velocity.runtime.parser.node.SimpleNode;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 
 /**
@@ -47,6 +50,16 @@ class AutoValueTemplateVars extends TemplateVars {
 
   /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
   String arrays;
+
+  /** The spelling of the java.util.BitSet class: BitSet or java.util.BitSet. */
+  String bitSet;
+
+  /**
+   * The full spelling of the {@code @GwtCompatible} annotation to add to this class, or an empty
+   * string if there is none. A non-empty value might look something like
+   * {@code "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   */
+  String gwtCompatibleAnnotation;
 
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
@@ -82,6 +95,51 @@ class AutoValueTemplateVars extends TemplateVars {
    * by a wildcard, for example {@code <?, ?>}.
    */
   String wildcardTypes;
+
+  /**
+   * The name of the builder type as it should appear in source code, or empty if there is no
+   * builder type. If class {@code Address} contains {@code @AutoValue.Builder} class Builder
+   * then this will typically be {@code "Address.Builder"}.
+   */
+  String builderTypeName = "";
+
+  /**
+   * The formal generic signature of the {@code AutoValue.Builder} class. This is empty, or contains
+   * type variables with optional bounds, for example {@code <K, V extends K>}.
+   */
+  String builderFormalTypes = "";
+  /**
+   * The generic signature used by the generated builder subclass for its superclass reference.
+   * This is empty, or contains only type variables with no bounds, for example
+   * {@code <K, V>}.
+   */
+  String builderActualTypes = "";
+
+  /**
+   * True if the builder being implemented is an interface, false if it is an abstract class.
+   */
+  Boolean builderIsInterface = false;
+
+  /**
+   * The simple name of the builder's build method, often {@code "build"}.
+   */
+  String buildMethodName = "";
+
+  /**
+   * A map from property names (like foo) to the corresponding setter method names (foo or setFoo).
+   */
+  Map<String, String> builderSetterNames = Collections.emptyMap();
+
+  /**
+   * The names of any {@code toBuilder()} methods, that is methods that return the builder type.
+   */
+  List<String> toBuilderMethods;
+
+  /**
+   * The simple names of validation methods (marked {@code @AutoValue.Validate}) in the AutoValue
+   * class. (Currently, this set is either empty or a singleton.)
+   */
+  Set<String> validators = Collections.emptySet();
 
   private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 

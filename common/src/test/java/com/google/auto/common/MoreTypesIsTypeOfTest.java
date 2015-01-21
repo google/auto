@@ -17,7 +17,9 @@ package com.google.auto.common;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth.assert_;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.collect.Iterables;
 import com.google.testing.compile.CompilationRule;
@@ -50,6 +52,7 @@ public class MoreTypesIsTypeOfTest {
   private interface TestType {}
 
   @Test public void isTypeOf_DeclaredType() {
+    assertTrue(MoreTypes.isType(typeElementFor(TestType.class).asType()));
     assertThat(MoreTypes.isTypeOf(TestType.class, typeElementFor(TestType.class).asType()))
         .named("mirror represents the TestType")
         .isTrue();
@@ -63,6 +66,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_ArrayType() {
+    assertTrue(MoreTypes.isType(typeElementFor(ArrayType.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(ArrayType.class));
     assertThat(MoreTypes.isTypeOf(new String[] {}.getClass(), type))
         .named("array mirror represents an array Class object")
@@ -74,6 +78,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveBoolean() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveBoolean.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveBoolean.class));
     assertThat(MoreTypes.isTypeOf(Boolean.TYPE, type)).named("mirror of a boolean").isTrue();
   }
@@ -83,6 +88,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveByte() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveByte.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveByte.class));
     assertThat(MoreTypes.isTypeOf(Byte.TYPE, type)).named("mirror of a byte").isTrue();
   }
@@ -92,6 +98,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveChar() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveChar.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveChar.class));
     assertThat(MoreTypes.isTypeOf(Character.TYPE, type)).named("mirror of a char").isTrue();
   }
@@ -101,6 +108,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveDouble() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveDouble.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveDouble.class));
     assertThat(MoreTypes.isTypeOf(Double.TYPE, type)).named("mirror of a double").isTrue();
   }
@@ -110,6 +118,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveFloat() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveFloat.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveFloat.class));
     assertThat(MoreTypes.isTypeOf(Float.TYPE, type)).named("mirror of a float").isTrue();
   }
@@ -119,6 +128,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveInt() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveInt.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveInt.class));
     assertThat(MoreTypes.isTypeOf(Integer.TYPE, type)).named("mirror of a int").isTrue();
   }
@@ -128,6 +138,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveLong() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveLong.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveLong.class));
     assertThat(MoreTypes.isTypeOf(Long.TYPE, type)).named("mirror of a long").isTrue();
   }
@@ -137,6 +148,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_PrimitiveShort() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveShort.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveShort.class));
     assertThat(MoreTypes.isTypeOf(Short.TYPE, type)).named("mirror of a short").isTrue();
   }
@@ -146,6 +158,7 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_void() {
+    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveVoid.class).asType()));
     TypeMirror primitive = extractReturnTypeFromHolder(typeElementFor(PrimitiveVoid.class));
     assertThat(MoreTypes.isTypeOf(Void.TYPE, primitive)).named("mirror of a void").isTrue();
   }
@@ -155,16 +168,19 @@ public class MoreTypesIsTypeOfTest {
   }
 
   @Test public void isTypeOf_Void() {
+    assertTrue(MoreTypes.isType(typeElementFor(DeclaredVoid.class).asType()));
     TypeMirror declared = extractReturnTypeFromHolder(typeElementFor(DeclaredVoid.class));
     assertThat(MoreTypes.isTypeOf(Void.class, declared)).named("mirror of a void").isTrue();
   }
 
   @Test public void isTypeOf_fail() {
+    assertFalse(MoreTypes.isType(
+        getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType()));
     TypeMirror method =
         getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType();
     try {
       MoreTypes.isTypeOf(String.class, method);
-      assert_().fail();
+      fail();
     } catch (IllegalArgumentException expected) {}
   }
 

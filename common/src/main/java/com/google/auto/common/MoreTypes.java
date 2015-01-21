@@ -15,24 +15,30 @@
  */
 package com.google.auto.common;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.util.Elements;
+
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static javax.lang.model.type.TypeKind.ARRAY;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
 import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
-
 import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
-
+import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -129,8 +135,9 @@ public final class MoreTypes {
             DeclaredType b = (DeclaredType) p.type;
             Element aElement = a.asElement();
             Element bElement = b.asElement();
-            ComparedElements comparedElements = new ComparedElements(aElement, bElement);
-            if (p.visiting.contains(comparedElements)) {
+            Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
+            if (newVisiting.equals(p.visiting)) {
+              // We're already visiting this pair of elements.
               // This can happen for example with Enum in Enum<E extends Enum<E>>. Return a
               // provisional true value since if the Elements are not in fact equal the original
               // visitor of Enum will discover that. We have to check both Elements being compared
@@ -138,8 +145,6 @@ public final class MoreTypes {
               // differs at exactly this point.
               return true;
             }
-            Set<ComparedElements> newVisiting = new HashSet<ComparedElements>(p.visiting);
-            newVisiting.add(comparedElements);
             return aElement.equals(bElement)
                 && equal(a.getEnclosingType(), a.getEnclosingType(), newVisiting)
                 && equalLists(a.getTypeArguments(), b.getTypeArguments(), newVisiting);
@@ -169,8 +174,18 @@ public final class MoreTypes {
         public Boolean visitTypeVariable(TypeVariable a, EqualVisitorParam p) {
           if (p.type.getKind().equals(TYPEVAR)) {
             TypeVariable b = (TypeVariable) p.type;
-            return equal(a.getUpperBound(), b.getUpperBound(), p.visiting)
-                && equal(a.getLowerBound(), b.getLowerBound(), p.visiting);
+            Element aElement = a.asElement();
+            Element bElement = b.asElement();
+            Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
+            if (newVisiting.equals(p.visiting)) {
+              // We're already visiting this pair of elements.
+              // This can happen with our friend Eclipse when looking at <T extends Comparable<T>>.
+              // It incorrectly reports the upper bound of T as T itself.
+              return true;
+            }
+            return equal(a.getUpperBound(), b.getUpperBound(), newVisiting)
+                && equal(a.getLowerBound(), b.getLowerBound(), newVisiting)
+                && a.asElement().getSimpleName().equals(b.asElement().getSimpleName());
           }
           return false;
         }
@@ -189,7 +204,31 @@ public final class MoreTypes {
         public Boolean visitUnknown(TypeMirror a, EqualVisitorParam p) {
           throw new UnsupportedOperationException();
         }
+
+        private Set<ComparedElements> visitingSetPlus(
+            Set<ComparedElements> visiting, Element a, Element b) {
+          ComparedElements comparedElements = new ComparedElements(a, b);
+          Set<ComparedElements> newVisiting = new HashSet<ComparedElements>(visiting);
+          newVisiting.add(comparedElements);
+          return newVisiting;
+        }
       };
+
+  private static final Class<?> INTERSECTION_TYPE;
+  private static final Method GET_BOUNDS;
+  static {
+    Class<?> c;
+    Method m;
+    try {
+      c = Class.forName("javax.lang.model.type.IntersectionType");
+      m = c.getMethod("getBounds");
+    } catch (Exception e) {
+      c = null;
+      m = null;
+    }
+    INTERSECTION_TYPE = c;
+    GET_BOUNDS = m;
+  }
 
   private static boolean equal(TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
     // TypeMirror.equals is not guaranteed to return true for types that are equal, but we can
@@ -205,7 +244,38 @@ public final class MoreTypes {
     EqualVisitorParam p = new EqualVisitorParam();
     p.type = b;
     p.visiting = visiting;
+    if (INTERSECTION_TYPE != null) {
+      if (INTERSECTION_TYPE.isInstance(a)) {
+        return equalIntersectionTypes(a, b, visiting);
+      } else if (INTERSECTION_TYPE.isInstance(b)) {
+        return false;
+      }
+    }
     return (a == b) || (a != null && b != null && a.accept(EQUAL_VISITOR, p));
+  }
+
+  // The representation of an intersection type, as in <T extends Number & Comparable<T>>, changed
+  // between Java 7 and Java 8. In Java 7 it was modeled as a fake DeclaredType, and our logic
+  // for DeclaredType does the right thing. In Java 8 it is modeled as a new type IntersectionType.
+  // In order for our code to run on Java 7 (and Java 6) we can't even mention IntersectionType,
+  // so we can't override visitIntersectionType(IntersectionType). Instead, we discover through
+  // reflection whether IntersectionType exists, and if it does we extract the bounds of the
+  // intersection ((Number, Comparable<T>) in the example) and compare them directly.
+  @SuppressWarnings("unchecked")
+  private static boolean equalIntersectionTypes(
+      TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
+    if (!INTERSECTION_TYPE.isInstance(b)) {
+      return false;
+    }
+    List<? extends TypeMirror> aBounds;
+    List<? extends TypeMirror> bBounds;
+    try {
+      aBounds = (List<? extends TypeMirror>) GET_BOUNDS.invoke(a);
+      bBounds = (List<? extends TypeMirror>) GET_BOUNDS.invoke(b);
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    return equalLists(aBounds, bBounds, visiting);
   }
 
   private static boolean equalLists(
@@ -517,6 +587,35 @@ public final class MoreTypes {
   }
 
   /**
+   * Returns true if the raw type underlying the given {@link TypeMirror} represents a type that can
+   * be referenced by a {@link Class}. If this returns true, then {@link #isTypeOf} is guaranteed to
+   * not throw.
+   */
+  public static boolean isType(TypeMirror type) {
+    return type.accept(new SimpleTypeVisitor6<Boolean, Void>() {
+      @Override protected Boolean defaultAction(TypeMirror type, Void ignored) {
+        return false;
+      }
+
+      @Override public Boolean visitNoType(NoType noType, Void p) {
+        return noType.getKind().equals(TypeKind.VOID);
+      }
+
+      @Override public Boolean visitPrimitive(PrimitiveType type, Void p) {
+        return true;
+      }
+
+      @Override public Boolean visitArray(ArrayType array, Void p) {
+        return true;
+      }
+
+      @Override public Boolean visitDeclared(DeclaredType type, Void ignored) {
+        return MoreElements.isType(type.asElement());
+      }
+    }, null);
+  }
+
+  /**
    *
    * Returns true if the raw type underlying the given {@link TypeMirror} represents the
    * same raw type as the given {@link Class} and throws an IllegalArgumentException if the
@@ -574,6 +673,34 @@ public final class MoreTypes {
         return typeElement.getQualifiedName().contentEquals(clazz.getCanonicalName());
       }
     }, null);
+  }
+
+  /**
+   * Returns the non-object superclass of the type with the proper type parameters.
+   * An absent Optional is returned if there is no non-Object superclass.
+   */
+  public static Optional<DeclaredType> nonObjectSuperclass(final Types types, Elements elements,
+      DeclaredType type) {
+    checkNotNull(types);
+    checkNotNull(elements);
+    checkNotNull(type);
+
+    final TypeMirror objectType =
+        elements.getTypeElement(Object.class.getCanonicalName()).asType();
+    // It's guaranteed there's only a single CLASS superclass because java doesn't have multiple
+    // class inheritance.
+    TypeMirror superclass = getOnlyElement(FluentIterable.from(types.directSupertypes(type))
+        .filter(new Predicate<TypeMirror>() {
+          @Override public boolean apply(TypeMirror input) {
+           return input.getKind().equals(TypeKind.DECLARED)
+               && (MoreElements.asType(
+                     MoreTypes.asDeclared(input).asElement())).getKind().equals(ElementKind.CLASS)
+               && !types.isSameType(objectType, input);
+          }
+        }), null);
+    return superclass != null
+        ? Optional.of(MoreTypes.asDeclared(superclass))
+        : Optional.<DeclaredType>absent();
   }
 
   private static class CastingTypeVisitor<T> extends SimpleTypeVisitor6<T, String> {

@@ -15,7 +15,9 @@
  */
 package com.google.auto.common;
 
-import static com.google.common.truth.Truth.assert_;
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.base.Optional;
@@ -34,6 +36,7 @@ import java.lang.annotation.RetentionPolicy;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
@@ -56,16 +59,16 @@ public class MoreElementsTest {
 
   @Test
   public void getPackage() {
-    assert_().that(javaLangPackageElement).isEqualTo(javaLangPackageElement);
-    assert_().that(MoreElements.getPackage(stringElement)).isEqualTo(javaLangPackageElement);
+    assertThat(javaLangPackageElement).isEqualTo(javaLangPackageElement);
+    assertThat(MoreElements.getPackage(stringElement)).isEqualTo(javaLangPackageElement);
     for (Element childElement : stringElement.getEnclosedElements()) {
-      assert_().that(MoreElements.getPackage(childElement)).isEqualTo(javaLangPackageElement);
+      assertThat(MoreElements.getPackage(childElement)).isEqualTo(javaLangPackageElement);
     }
   }
 
   @Test
   public void asPackage() {
-    assert_().that(MoreElements.asPackage(javaLangPackageElement))
+    assertThat(MoreElements.asPackage(javaLangPackageElement))
         .isEqualTo(javaLangPackageElement);
   }
 
@@ -77,13 +80,34 @@ public class MoreElementsTest {
     } catch (IllegalArgumentException expected) {}
   }
 
+  @Test public void asTypeElement() {
+    Element typeElement =
+        compilation.getElements().getTypeElement(String.class.getCanonicalName());
+    assertTrue(MoreElements.isType(typeElement));
+    assertThat(MoreElements.asType(typeElement)).isEqualTo(typeElement);
+  }
+
+  @Test public void asTypeElement_notATypeElement() {
+    TypeElement typeElement =
+        compilation.getElements().getTypeElement(String.class.getCanonicalName());
+    for (ExecutableElement e : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
+      assertFalse(MoreElements.isType(e));
+      try {
+        MoreElements.asType(e);
+        fail();
+      } catch (IllegalArgumentException expected) {
+      }
+    }
+  }
+
   @Test
   public void asType() {
-    assert_().that(MoreElements.asType(stringElement)).isEqualTo(stringElement);
+    assertThat(MoreElements.asType(stringElement)).isEqualTo(stringElement);
   }
 
   @Test
   public void asType_illegalArgument() {
+    assertFalse(MoreElements.isType(javaLangPackageElement));
     try {
       MoreElements.asType(javaLangPackageElement);
       fail();
@@ -93,7 +117,7 @@ public class MoreElementsTest {
   @Test
   public void asVariable() {
     for (Element variableElement : ElementFilter.fieldsIn(stringElement.getEnclosedElements())) {
-      assert_().that(MoreElements.asVariable(variableElement)).isEqualTo(variableElement);
+      assertThat(MoreElements.asVariable(variableElement)).isEqualTo(variableElement);
     }
   }
 
@@ -108,11 +132,11 @@ public class MoreElementsTest {
   @Test
   public void asExecutable() {
     for (Element methodElement : ElementFilter.methodsIn(stringElement.getEnclosedElements())) {
-      assert_().that(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
+      assertThat(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
     }
     for (Element methodElement
         : ElementFilter.constructorsIn(stringElement.getEnclosedElements())) {
-      assert_().that(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
+      assertThat(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
     }
   }
 
@@ -135,14 +159,11 @@ public class MoreElementsTest {
   public void isAnnotationPresent() {
     TypeElement annotatedAnnotationElement =
         compilation.getElements().getTypeElement(AnnotatedAnnotation.class.getCanonicalName());
-    assert_()
-        .that(MoreElements.isAnnotationPresent(annotatedAnnotationElement, Documented.class))
+    assertThat(MoreElements.isAnnotationPresent(annotatedAnnotationElement, Documented.class))
         .isTrue();
-    assert_()
-        .that(MoreElements.isAnnotationPresent(annotatedAnnotationElement, InnerAnnotation.class))
+    assertThat(MoreElements.isAnnotationPresent(annotatedAnnotationElement, InnerAnnotation.class))
         .isTrue();
-    assert_()
-        .that(MoreElements.isAnnotationPresent(annotatedAnnotationElement, SuppressWarnings.class))
+    assertThat(MoreElements.isAnnotationPresent(annotatedAnnotationElement, SuppressWarnings.class))
         .isFalse();
   }
 
@@ -162,9 +183,14 @@ public class MoreElementsTest {
     expect.that(innerAnnotation).isPresent();
     expect.that(suppressWarnings).isAbsent();
 
-    expect.that(MoreElements.asType(documented.get().getAnnotationType().asElement())
-        .getQualifiedName().toString()).isEqualTo(Documented.class.getCanonicalName());
-    expect.that(MoreElements.asType(innerAnnotation.get().getAnnotationType().asElement())
-        .getQualifiedName().toString()).isEqualTo(InnerAnnotation.class.getCanonicalName());
+    Element annotationElement = documented.get().getAnnotationType().asElement();
+    expect.that(MoreElements.isType(annotationElement)).isTrue();
+    expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
+        .isEqualTo(Documented.class.getCanonicalName());
+    
+    annotationElement = innerAnnotation.get().getAnnotationType().asElement();
+    expect.that(MoreElements.isType(annotationElement)).isTrue();
+    expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
+        .isEqualTo(InnerAnnotation.class.getCanonicalName());
   }
 }

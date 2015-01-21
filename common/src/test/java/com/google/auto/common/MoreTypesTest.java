@@ -15,10 +15,11 @@
  */
 package com.google.auto.common;
 
+import com.google.common.base.Optional;
+
 import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
-
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -26,17 +27,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.EquivalenceTester;
 import com.google.testing.compile.CompilationRule;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -66,6 +64,9 @@ public class MoreTypesTest {
     TypeElement setElement = elements.getTypeElement(Set.class.getCanonicalName());
     TypeElement enumElement = elements.getTypeElement(Enum.class.getCanonicalName());
     TypeElement funkyBounds = elements.getTypeElement(FunkyBounds.class.getCanonicalName());
+    TypeElement funkierBounds = elements.getTypeElement(FunkierBounds.class.getCanonicalName());
+    TypeMirror funkyBoundsVar = ((DeclaredType) funkyBounds.asType()).getTypeArguments().get(0);
+    TypeMirror funkierBoundsVar = ((DeclaredType) funkierBounds.asType()).getTypeArguments().get(0);
     DeclaredType mapOfObjectToObjectType =
         types.getDeclaredType(mapElement, objectType, objectType);
     TypeMirror mapType = mapElement.asType();
@@ -77,6 +78,9 @@ public class MoreTypesTest {
         .addEquivalenceGroup(objectType)
         .addEquivalenceGroup(stringType)
         .addEquivalenceGroup(funkyBounds.asType())
+        .addEquivalenceGroup(funkierBounds.asType())
+        .addEquivalenceGroup(funkyBoundsVar)
+        .addEquivalenceGroup(funkierBoundsVar)
         // Enum<E extends Enum<E>>
         .addEquivalenceGroup(enumElement.asType())
         // Map<K, V>
@@ -173,6 +177,9 @@ public class MoreTypesTest {
   @SuppressWarnings("unused")
   private static final class FunkyBounds<T extends Number & Comparable<T>> {}
 
+  @SuppressWarnings("unused")
+  private static final class FunkierBounds<T extends Number & Comparable<T> & Cloneable> {}
+
   @Test public void testReferencedTypes() {
     Elements elements = compilationRule.getElements();
     TypeElement testDataElement = elements
@@ -236,6 +243,51 @@ public class MoreTypesTest {
     int f10;
     int[] f11;
     Set<? super String> f12;
+  }
+  
+  private static class Parent<T> {}
+  private static class ChildA extends Parent<Number> {}
+  private static class ChildB extends Parent<String> {}
+  private static class GenericChild<T> extends Parent<T> {}
+  
+  @Test
+  public void testNonObjectSuperclass() {
+    Types types = compilationRule.getTypes();
+    Elements elements = compilationRule.getElements();
+    TypeMirror numberType = elements.getTypeElement(Number.class.getCanonicalName()).asType();
+    TypeMirror stringType = elements.getTypeElement(String.class.getCanonicalName()).asType();
+    TypeMirror integerType = elements.getTypeElement(Integer.class.getCanonicalName()).asType();
+    TypeElement parent = elements.getTypeElement(Parent.class.getCanonicalName());
+    TypeElement childA = elements.getTypeElement(ChildA.class.getCanonicalName());
+    TypeElement childB = elements.getTypeElement(ChildB.class.getCanonicalName());
+    TypeElement genericChild = elements.getTypeElement(GenericChild.class.getCanonicalName());
+    TypeMirror genericChildOfNumber = types.getDeclaredType(genericChild, numberType);
+    TypeMirror genericChildOfInteger = types.getDeclaredType(genericChild, integerType);
+    
+    assertThat(MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) parent.asType()))
+        .isAbsent();
+    
+    Optional<DeclaredType> parentOfChildA =
+        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) childA.asType());
+    Optional<DeclaredType> parentOfChildB =
+        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) childB.asType());
+    Optional<DeclaredType> parentOfGenericChild =
+        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) genericChild.asType());
+    Optional<DeclaredType> parentOfGenericChildOfNumber =
+        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) genericChildOfNumber);
+    Optional<DeclaredType> parentOfGenericChildOfInteger =
+        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) genericChildOfInteger);    
+
+    EquivalenceTester<TypeMirror> tester = EquivalenceTester.<TypeMirror>of(MoreTypes.equivalence())
+          .addEquivalenceGroup(parentOfChildA.get(),
+              types.getDeclaredType(parent, numberType),
+              parentOfGenericChildOfNumber.get())
+          .addEquivalenceGroup(parentOfChildB.get(), types.getDeclaredType(parent, stringType))
+          .addEquivalenceGroup(parentOfGenericChild.get(), parent.asType())
+          .addEquivalenceGroup(parentOfGenericChildOfInteger.get(),
+              types.getDeclaredType(parent, integerType));
+
+    tester.test();
   }
 
   private static final ErrorType FAKE_ERROR_TYPE = new ErrorType() {

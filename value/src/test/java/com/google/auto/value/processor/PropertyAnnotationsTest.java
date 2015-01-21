@@ -36,7 +36,7 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   public static @interface TestAnnotation {
-    byte testByte() default (byte) 1;
+    byte testByte() default 1;
     short testShort() default 2;
     int testInt() default 3;
     long testLong() default 4L;
@@ -56,7 +56,7 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   public static @interface TestAnnotationArray {
-    byte[] testBytes() default {(byte) 1, (byte) 2};
+    byte[] testBytes() default {1, 2};
     short[] testShorts() default {3, 4};
     int[] testInts() default {5, 6};
     long[] testLongs() default {7L, 8L};
@@ -198,8 +198,8 @@ public class PropertyAnnotationsTest extends TestCase {
   public void testByteValueAnnotation() {
     assertGeneratedMatches(
         ImmutableList.<String>of(),
-        ImmutableList.of(TEST_ANNOTATION + "(testByte = (byte)0)"),
-        ImmutableList.of(TEST_ANNOTATION + "(testByte = (byte)0)"));
+        ImmutableList.of(TEST_ANNOTATION + "(testByte = 0)"),
+        ImmutableList.of(TEST_ANNOTATION + "(testByte = 0)"));
   }
 
   public void testDecimalValueAnnotation() {
@@ -266,8 +266,8 @@ public class PropertyAnnotationsTest extends TestCase {
   public void testByteArrayAnnotation() {
     assertGeneratedMatches(
         ImmutableList.<String>of(),
-        ImmutableList.of(TEST_ANNOTATION + "Array(testBytes = {(byte) 0, (byte) 1})"),
-        ImmutableList.of(TEST_ANNOTATION + "Array(testBytes = {(byte) 0, (byte) 1})"));
+        ImmutableList.of(TEST_ANNOTATION + "Array(testBytes = {0, 1})"),
+        ImmutableList.of(TEST_ANNOTATION + "Array(testBytes = {0, 1})"));
   }
 
   public void testDecimalArrayAnnotation() {

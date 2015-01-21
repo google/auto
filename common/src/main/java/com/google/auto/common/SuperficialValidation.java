@@ -58,7 +58,8 @@ public final class SuperficialValidation {
   private static final ElementVisitor<Boolean, Void> ELEMENT_VALIDATING_VISITOR =
       new AbstractElementVisitor6<Boolean, Void>() {
         @Override public Boolean visitPackage(PackageElement e, Void p) {
-          return validateElements(e.getEnclosedElements());
+          // don't validate enclosed elements because it will return types in the package
+          return validateAnnotations(e.getAnnotationMirrors());
         }
 
         @Override public Boolean visitType(TypeElement e, Void p) {
@@ -94,7 +95,7 @@ public final class SuperficialValidation {
       };
 
   public static boolean validateElement(Element element) {
-     return element.accept(ELEMENT_VALIDATING_VISITOR, null);
+    return element.accept(ELEMENT_VALIDATING_VISITOR, null);
   }
 
   private static boolean isValidBaseElement(Element e) {
@@ -184,7 +185,6 @@ public final class SuperficialValidation {
   @SuppressWarnings("unused")
   private static boolean validateAnnotationValues(
       Map<? extends ExecutableElement, ? extends AnnotationValue> valueMap) {
-    /* TODO(gak): Enable when b/17584340 is resolved.
     for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> valueEntry :
         valueMap.entrySet()) {
       TypeMirror expectedType = valueEntry.getKey().getReturnType();
@@ -192,7 +192,6 @@ public final class SuperficialValidation {
         return false;
       }
     }
-    */
     return true;
   }
 
