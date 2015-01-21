@@ -23,6 +23,7 @@ import javax.lang.model.util.Elements;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static javax.lang.model.type.TypeKind.ARRAY;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
@@ -688,7 +689,7 @@ public final class MoreTypes {
         elements.getTypeElement(Object.class.getCanonicalName()).asType();
     // It's guaranteed there's only a single CLASS superclass because java doesn't have multiple
     // class inheritance.
-    TypeMirror superclass = FluentIterable.from(types.directSupertypes(type))
+    TypeMirror superclass = getOnlyElement(FluentIterable.from(types.directSupertypes(type))
         .filter(new Predicate<TypeMirror>() {
           @Override public boolean apply(TypeMirror input) {
            return input.getKind().equals(TypeKind.DECLARED)
@@ -696,7 +697,7 @@ public final class MoreTypes {
                      MoreTypes.asDeclared(input).asElement())).getKind().equals(ElementKind.CLASS)
                && !types.isSameType(objectType, input);
           }
-        }).getOnlyElement(null);
+        }), null);
     return superclass != null
         ? Optional.of(MoreTypes.asDeclared(superclass))
         : Optional.<DeclaredType>absent();
