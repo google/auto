@@ -158,7 +158,7 @@ add the following to your Maven configuration:
     <dependency>
       <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value</artifactId>
-      <version>1.0-rc1</version>
+      <version>1.0</version>
       <scope>provided</scope>
     </dependency>
 ```
