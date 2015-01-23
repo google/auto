@@ -15,33 +15,37 @@
  */
 package com.google.auto.common;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.util.Elements;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.google.common.base.Preconditions.checkState;
 import static javax.lang.model.type.TypeKind.ARRAY;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
 import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
+
 import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
+
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -54,6 +58,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
@@ -701,6 +706,38 @@ public final class MoreTypes {
     return superclass != null
         ? Optional.of(MoreTypes.asDeclared(superclass))
         : Optional.<DeclaredType>absent();
+  }
+  
+  /**
+   * Resolves a {@link VariableElement} parameter to a method or constructor based on the given
+   * container, or a member of a class. For parameters to a method or constructor, the variable's
+   * enclosing element must be a supertype of the container type. For example, given a
+   * {@code container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
+   * parameter in the {@code Set.add(E e)} method, this will return a TypeMirror for {@code String}.
+   */
+  public static TypeMirror asMemberOf(Types types, DeclaredType container,
+      VariableElement variable) {
+    if (variable.getKind().equals(ElementKind.PARAMETER)) {
+      ExecutableElement methodOrConstructor =
+          MoreElements.asExecutable(variable.getEnclosingElement());
+      ExecutableType resolvedMethodOrConstructor = MoreTypes.asExecutable(
+          types.asMemberOf(container, methodOrConstructor));
+      List<? extends VariableElement> parameters = methodOrConstructor.getParameters();
+      List<? extends TypeMirror> parameterTypes =
+          resolvedMethodOrConstructor.getParameterTypes();
+      checkState(parameters.size() == parameterTypes.size());
+      for (int i = 0; i < parameters.size(); i++) {
+        // We need to capture the parameter type of the variable we're concerned about,
+        // for later printing.  This is the only way to do it since we can't use
+        // types.asMemberOf on variables of methods.
+        if (parameters.get(i).equals(variable)) {
+          return parameterTypes.get(i);
+        }
+      }
+      throw new IllegalStateException("Could not find variable: " + variable);
+    } else {
+      return types.asMemberOf(container, variable);
+    }
   }
 
   private static class CastingTypeVisitor<T> extends SimpleTypeVisitor6<T, String> {

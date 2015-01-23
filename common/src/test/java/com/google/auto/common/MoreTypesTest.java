@@ -15,26 +15,30 @@
  */
 package com.google.auto.common;
 
-import com.google.common.base.Optional;
-
 import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
+
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.testing.EquivalenceTester;
 import com.google.testing.compile.CompilationRule;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -289,6 +293,55 @@ public class MoreTypesTest {
 
     tester.test();
   }
+  
+  @Test
+  public void testAsMemberOf_variableElement() {
+    Types types = compilationRule.getTypes();
+    Elements elements = compilationRule.getElements();
+    TypeMirror numberType = elements.getTypeElement(Number.class.getCanonicalName()).asType();
+    TypeMirror stringType = elements.getTypeElement(String.class.getCanonicalName()).asType();
+    TypeMirror integerType = elements.getTypeElement(Integer.class.getCanonicalName()).asType();
+
+    TypeElement paramsElement = elements.getTypeElement(Params.class.getCanonicalName());
+    VariableElement tParam = Iterables.getOnlyElement(Iterables.getOnlyElement(
+        ElementFilter.methodsIn(paramsElement.getEnclosedElements())).getParameters());
+    VariableElement tField =
+        Iterables.getOnlyElement(ElementFilter.fieldsIn(paramsElement.getEnclosedElements())); 
+    
+    DeclaredType numberParams =
+        (DeclaredType) elements.getTypeElement(NumberParams.class.getCanonicalName()).asType();
+    DeclaredType stringParams =
+        (DeclaredType) elements.getTypeElement(StringParams.class.getCanonicalName()).asType();
+    TypeElement genericParams = elements.getTypeElement(GenericParams.class.getCanonicalName());
+    DeclaredType genericParamsOfNumber = types.getDeclaredType(genericParams, numberType);
+    DeclaredType genericParamsOfInteger = types.getDeclaredType(genericParams, integerType);
+    
+    TypeMirror fieldOfNumberParams = MoreTypes.asMemberOf(types, numberParams, tField);
+    TypeMirror paramOfNumberParams = MoreTypes.asMemberOf(types, numberParams, tParam);
+    TypeMirror fieldOfStringParams = MoreTypes.asMemberOf(types, stringParams, tField);
+    TypeMirror paramOfStringParams = MoreTypes.asMemberOf(types, stringParams, tParam);
+    TypeMirror fieldOfGenericOfNumber = MoreTypes.asMemberOf(types, genericParamsOfNumber, tField);
+    TypeMirror paramOfGenericOfNumber = MoreTypes.asMemberOf(types, genericParamsOfNumber, tParam);
+    TypeMirror fieldOfGenericOfInteger =
+        MoreTypes.asMemberOf(types, genericParamsOfInteger, tField);
+    TypeMirror paramOfGenericOfInteger =
+        MoreTypes.asMemberOf(types, genericParamsOfInteger, tParam);
+
+    EquivalenceTester<TypeMirror> tester = EquivalenceTester.<TypeMirror>of(MoreTypes.equivalence())
+        .addEquivalenceGroup(fieldOfNumberParams, paramOfNumberParams, fieldOfGenericOfNumber,
+            paramOfGenericOfNumber, numberType)
+        .addEquivalenceGroup(fieldOfStringParams, paramOfStringParams, stringType)
+        .addEquivalenceGroup(fieldOfGenericOfInteger, paramOfGenericOfInteger, integerType);
+    tester.test();
+  }
+  
+  private static class Params<T> {
+    @SuppressWarnings("unused") T t;
+    @SuppressWarnings("unused") void add(T t) {}
+  }
+  private static class NumberParams extends Params<Number> {}
+  private static class StringParams extends Params<String> {}
+  private static class GenericParams<T> extends Params<T> {}
 
   private static final ErrorType FAKE_ERROR_TYPE = new ErrorType() {
     @Override
