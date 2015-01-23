@@ -68,8 +68,10 @@ public class MoreTypesTest {
     TypeElement setElement = elements.getTypeElement(Set.class.getCanonicalName());
     TypeElement enumElement = elements.getTypeElement(Enum.class.getCanonicalName());
     TypeElement funkyBounds = elements.getTypeElement(FunkyBounds.class.getCanonicalName());
+    TypeElement funkyBounds2 = elements.getTypeElement(FunkyBounds2.class.getCanonicalName());
     TypeElement funkierBounds = elements.getTypeElement(FunkierBounds.class.getCanonicalName());
     TypeMirror funkyBoundsVar = ((DeclaredType) funkyBounds.asType()).getTypeArguments().get(0);
+    TypeMirror funkyBounds2Var = ((DeclaredType) funkyBounds2.asType()).getTypeArguments().get(0);
     TypeMirror funkierBoundsVar = ((DeclaredType) funkierBounds.asType()).getTypeArguments().get(0);
     DeclaredType mapOfObjectToObjectType =
         types.getDeclaredType(mapElement, objectType, objectType);
@@ -82,8 +84,9 @@ public class MoreTypesTest {
         .addEquivalenceGroup(objectType)
         .addEquivalenceGroup(stringType)
         .addEquivalenceGroup(funkyBounds.asType())
+        .addEquivalenceGroup(funkyBounds2.asType())
         .addEquivalenceGroup(funkierBounds.asType())
-        .addEquivalenceGroup(funkyBoundsVar)
+        .addEquivalenceGroup(funkyBoundsVar, funkyBounds2Var)
         .addEquivalenceGroup(funkierBoundsVar)
         // Enum<E extends Enum<E>>
         .addEquivalenceGroup(enumElement.asType())
@@ -180,6 +183,9 @@ public class MoreTypesTest {
 
   @SuppressWarnings("unused")
   private static final class FunkyBounds<T extends Number & Comparable<T>> {}
+
+  @SuppressWarnings("unused")
+  private static final class FunkyBounds2<T extends Number & Comparable<T>> {}
 
   @SuppressWarnings("unused")
   private static final class FunkierBounds<T extends Number & Comparable<T> & Cloneable> {}

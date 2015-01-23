@@ -179,8 +179,8 @@ public final class MoreTypes {
         public Boolean visitTypeVariable(TypeVariable a, EqualVisitorParam p) {
           if (p.type.getKind().equals(TYPEVAR)) {
             TypeVariable b = (TypeVariable) p.type;
-            Element aElement = a.asElement();
-            Element bElement = b.asElement();
+            TypeParameterElement aElement = (TypeParameterElement) a.asElement();
+            TypeParameterElement bElement = (TypeParameterElement) b.asElement();
             Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
             if (newVisiting.equals(p.visiting)) {
               // We're already visiting this pair of elements.
@@ -188,7 +188,12 @@ public final class MoreTypes {
               // It incorrectly reports the upper bound of T as T itself.
               return true;
             }
-            return equal(a.getUpperBound(), b.getUpperBound(), newVisiting)
+            // We use aElement.getBounds() instead of a.getUpperBound() to avoid having to deal with
+            // the different way intersection types (like <T extends Number & Comparable<T>>) are
+            // represented before and after Java 8. We do have an issue that this code may consider
+            // that <T extends Foo & Bar> is different from <T extends Bar & Foo>, but it's very
+            // hard to avoid that, and not likely to be much of a problem in practice.
+            return equalLists(aElement.getBounds(), bElement.getBounds(), newVisiting)
                 && equal(a.getLowerBound(), b.getLowerBound(), newVisiting)
                 && a.asElement().getSimpleName().equals(b.asElement().getSimpleName());
           }
@@ -250,13 +255,17 @@ public final class MoreTypes {
     p.type = b;
     p.visiting = visiting;
     if (INTERSECTION_TYPE != null) {
-      if (INTERSECTION_TYPE.isInstance(a)) {
+      if (isIntersectionType(a)) {
         return equalIntersectionTypes(a, b, visiting);
-      } else if (INTERSECTION_TYPE.isInstance(b)) {
+      } else if (isIntersectionType(b)) {
         return false;
       }
     }
     return (a == b) || (a != null && b != null && a.accept(EQUAL_VISITOR, p));
+  }
+
+  private static boolean isIntersectionType(TypeMirror t) {
+    return t != null && t.getKind().name().equals("INTERSECTION");
   }
 
   // The representation of an intersection type, as in <T extends Number & Comparable<T>>, changed
@@ -269,7 +278,7 @@ public final class MoreTypes {
   @SuppressWarnings("unchecked")
   private static boolean equalIntersectionTypes(
       TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
-    if (!INTERSECTION_TYPE.isInstance(b)) {
+    if (!isIntersectionType(b)) {
       return false;
     }
     List<? extends TypeMirror> aBounds;
