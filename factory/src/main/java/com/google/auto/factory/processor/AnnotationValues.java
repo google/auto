@@ -31,6 +31,19 @@ import com.google.common.collect.Iterables;
 final class AnnotationValues {
   private AnnotationValues() {}
 
+  static boolean asBoolean(AnnotationValue value) {
+    return value.accept(
+        new SimpleAnnotationValueVisitor6<Boolean, Void>() {
+          @Override protected Boolean defaultAction(Object o, Void p) {
+            throw new IllegalArgumentException();
+          }
+
+          @Override public Boolean visitBoolean(boolean b, Void p) {
+            return b;
+          }
+        }, null);
+  }
+
   static TypeElement asType(AnnotationValue value) {
     return value.accept(
         new SimpleAnnotationValueVisitor6<TypeElement, Void>() {
@@ -38,7 +51,7 @@ final class AnnotationValues {
             throw new IllegalArgumentException();
           }
 
-          @Override  public TypeElement visitType(TypeMirror t, Void p) {
+          @Override public TypeElement visitType(TypeMirror t, Void p) {
             return t.accept(
                 new SimpleTypeVisitor6<TypeElement, Void>() {
                   @Override

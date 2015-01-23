@@ -47,16 +47,19 @@ final class FactoryDescriptor {
   private final ImmutableSet<FactoryMethodDescriptor> methodDescriptors;
   private final ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors;
   private final ImmutableMap<Key, String> providerNames;
+  private final boolean allowSubclasses;
 
   FactoryDescriptor(String name, String extendingType, ImmutableSortedSet<String> implementingTypes,
       boolean publicType, ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
-      ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors) {
+      ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors,
+      boolean allowSubclasses) {
     this.name = checkNotNull(name);
     this.extendingType = checkNotNull(extendingType);
     this.implementingTypes = checkNotNull(implementingTypes);
     this.publicType = publicType;
     this.methodDescriptors = checkNotNull(methodDescriptors);
     this.implementationMethodDescriptors = checkNotNull(implementationMethodDescriptors);
+    this.allowSubclasses = allowSubclasses;
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
@@ -107,5 +110,9 @@ final class FactoryDescriptor {
 
   ImmutableMap<Key, String> providerNames() {
     return providerNames;
+  }
+
+  boolean allowSubclasses() {
+    return allowSubclasses;
   }
 }

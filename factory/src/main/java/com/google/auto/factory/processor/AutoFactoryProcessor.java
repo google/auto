@@ -15,6 +15,8 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -149,25 +151,40 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       ImmutableSet.Builder<String> extending = ImmutableSet.builder();
       ImmutableSortedSet.Builder<String> implementing = ImmutableSortedSet.naturalOrder();
       boolean publicType = false;
+      Boolean allowSubclasses = null;
+      boolean skipCreation = false;
       for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
         extending.add(methodDescriptor.declaration().extendingType().getQualifiedName().toString());
         for (TypeElement implementingType : methodDescriptor.declaration().implementingTypes()) {
           implementing.add(implementingType.getQualifiedName().toString());
         }
         publicType |= methodDescriptor.publicMethod();
+        if (allowSubclasses == null) {
+          allowSubclasses = methodDescriptor.declaration().allowSubclasses();
+        } else if (!allowSubclasses.equals(methodDescriptor.declaration().allowSubclasses())) {
+          skipCreation = true;
+          messager.printMessage(Kind.ERROR,
+              "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.",
+              methodDescriptor.declaration().target(),
+              methodDescriptor.declaration().mirror(),
+              methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
+        }
       }
-      try {
-        factoryWriter.writeFactory(
-            new FactoryDescriptor(
-                entry.getKey(),
-                Iterables.getOnlyElement(extending.build()),
-                implementing.build(),
-                publicType,
-                ImmutableSet.copyOf(entry.getValue()),
-                // TODO(gak): this needs to be indexed too
-                implementationMethodDescriptors.build()));
-      } catch (IOException e) {
-        messager.printMessage(Kind.ERROR, "failed");
+      if (!skipCreation) {
+        try {
+          factoryWriter.writeFactory(
+              new FactoryDescriptor(
+                  entry.getKey(),
+                  Iterables.getOnlyElement(extending.build()),
+                  implementing.build(),
+                  publicType,
+                  ImmutableSet.copyOf(entry.getValue()),
+                  // TODO(gak): this needs to be indexed too
+                  implementationMethodDescriptors.build(),
+                  allowSubclasses));
+        } catch (IOException e) {
+          messager.printMessage(Kind.ERROR, "failed");
+        }
       }
     }
   }
