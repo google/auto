@@ -1071,6 +1071,53 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  public abstract static class NullablePropertyWithBuilder {
+    public abstract String notNullable();
+    @Nullable public abstract String nullable();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_NullablePropertyWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder notNullable(String s);
+      Builder nullable(@Nullable String s);
+      NullablePropertyWithBuilder build();
+    }
+  }
+
+  public void testOmitNullableWithBuilder() {
+    NullablePropertyWithBuilder instance1 = NullablePropertyWithBuilder.builder()
+        .notNullable("hello")
+        .build();
+    assertThat(instance1.notNullable()).isEqualTo("hello");
+    assertThat(instance1.nullable()).isNull();
+
+    NullablePropertyWithBuilder instance2 = NullablePropertyWithBuilder.builder()
+        .notNullable("hello")
+        .nullable(null)
+        .build();
+    assertThat(instance2.notNullable()).isEqualTo("hello");
+    assertThat(instance2.nullable()).isNull();
+    assertThat(instance1).isEqualTo(instance2);
+
+    NullablePropertyWithBuilder instance3 = NullablePropertyWithBuilder.builder()
+        .notNullable("hello")
+        .nullable("world")
+        .build();
+    assertThat(instance3.notNullable()).isEqualTo("hello");
+    assertThat(instance3.nullable()).isEqualTo("world");
+
+    try {
+      NullablePropertyWithBuilder.builder().build();
+      fail("Expected IllegalStateException for unset non-@Nullable property");
+    } catch (IllegalStateException e) {
+      assertThat(e.getMessage()).contains("notNullable");
+    }
+  }
+
+  @AutoValue
   public abstract static class ValidationWithBuilder {
     public abstract String string();
     public abstract int integer();
