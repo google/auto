@@ -59,7 +59,6 @@ class BuilderSpec {
   private static final Equivalence<TypeMirror> TYPE_EQUIVALENCE = MoreTypes.equivalence();
 
   private final TypeElement autoValueClass;
-  private final Types typeUtils;
   private final Elements elementUtils;
   private final ErrorReporter errorReporter;
 
@@ -68,7 +67,6 @@ class BuilderSpec {
       ProcessingEnvironment processingEnv,
       ErrorReporter errorReporter) {
     this.autoValueClass = autoValueClass;
-    this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.errorReporter = errorReporter;
   }
@@ -431,7 +429,7 @@ class BuilderSpec {
       return;
     }
 
-    TypeElement typeElement = MoreTypes.asTypeElement(typeUtils, typeMirror);
+    TypeElement typeElement = MoreTypes.asTypeElement(typeMirror);
     addAbstractMethods(typeElement.getSuperclass(), abstractMethods);
     for (TypeMirror interfaceMirror : typeElement.getInterfaces()) {
       addAbstractMethods(interfaceMirror, abstractMethods);

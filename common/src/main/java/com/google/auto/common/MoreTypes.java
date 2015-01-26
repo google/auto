@@ -15,7 +15,6 @@
  */
 package com.google.auto.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.base.Preconditions.checkState;
@@ -59,7 +58,6 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleElementVisitor6;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
 
@@ -460,30 +458,48 @@ public final class MoreTypes {
     return elements.build();
   }
 
-  public static TypeElement asTypeElement(Types types, TypeMirror mirror) {
-    checkNotNull(types);
-    checkNotNull(mirror);
-    Element element = types.asElement(mirror);
-    checkArgument(element != null);
-    return element.accept(new SimpleElementVisitor6<TypeElement, Void>() {
-      @Override
-      protected TypeElement defaultAction(Element e, Void p) {
-        throw new IllegalArgumentException();
-      }
-
-      @Override public TypeElement visitType(TypeElement e, Void p) {
-        return e;
-      }
-    }, null);
+  /**
+   * An alternate implementation of {@link Types#asElement} that does not require a {@link Types}
+   * instance with the notable difference that it will throw {@link IllegalArgumentException}
+   * instead of returning null if the {@link TypeMirror} can not be converted to an {@link Element}.
+   *
+   * @throws NullPointerException if {@code typeMirror} is {@code null}
+   * @throws IllegalArgumentException if {@code typeMirror} cannot be converted to an
+   *     {@link Element}
+   */
+  public static Element asElement(TypeMirror typeMirror) {
+    return typeMirror.accept(AS_ELEMENT_VISITOR, null);
   }
 
-  public static ImmutableSet<TypeElement> asTypeElements(Types types,
-      Iterable<? extends TypeMirror> mirrors) {
-    checkNotNull(types);
+  private static final TypeVisitor<Element, Void> AS_ELEMENT_VISITOR =
+      new SimpleTypeVisitor6<Element, Void>() {
+        @Override protected Element defaultAction(TypeMirror e, Void p) {
+          throw new IllegalArgumentException(e + "cannot be converted to an Element");
+        }
+
+        @Override public Element visitDeclared(DeclaredType t, Void p) {
+          return t.asElement();
+        }
+
+        @Override public Element visitError(ErrorType t, Void p) {
+          return t.asElement();
+        }
+
+        @Override public Element visitTypeVariable(TypeVariable t, Void p) {
+          return t.asElement();
+        }
+      };
+
+  // TODO(gak): consider removing these two methods as they're pretty trivial now
+  public static TypeElement asTypeElement(TypeMirror mirror) {
+    return MoreElements.asType(asElement(mirror));
+  }
+
+  public static ImmutableSet<TypeElement> asTypeElements(Iterable<? extends TypeMirror> mirrors) {
     checkNotNull(mirrors);
     ImmutableSet.Builder<TypeElement> builder = ImmutableSet.builder();
     for (TypeMirror mirror : mirrors) {
-      builder.add(asTypeElement(types, mirror));
+      builder.add(asTypeElement(mirror));
     }
     return builder.build();
   }
@@ -716,7 +732,7 @@ public final class MoreTypes {
         ? Optional.of(MoreTypes.asDeclared(superclass))
         : Optional.<DeclaredType>absent();
   }
-  
+
   /**
    * Resolves a {@link VariableElement} parameter to a method or constructor based on the given
    * container, or a member of a class. For parameters to a method or constructor, the variable's

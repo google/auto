@@ -18,6 +18,7 @@ package com.google.auto.common;
 import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
+import static org.junit.Assert.fail;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -42,6 +43,7 @@ import java.util.Set;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -254,12 +256,34 @@ public class MoreTypesTest {
     int[] f11;
     Set<? super String> f12;
   }
-  
+
   private static class Parent<T> {}
   private static class ChildA extends Parent<Number> {}
   private static class ChildB extends Parent<String> {}
   private static class GenericChild<T> extends Parent<T> {}
-  
+
+  @Test
+  public void asElement_throws() {
+    TypeMirror javaDotLang =
+        compilationRule.getElements().getPackageElement("java.lang").asType();
+    try {
+      MoreTypes.asElement(javaDotLang);
+      fail();
+    } catch (IllegalArgumentException expected) {}
+
+  }
+
+  @Test
+  public void asElement() {
+    Elements elements = compilationRule.getElements();
+    TypeElement stringElement = elements.getTypeElement("java.lang.String");
+    assertThat(MoreTypes.asElement(stringElement.asType())).isEqualTo(stringElement);
+    TypeParameterElement setParameterElement = Iterables.getOnlyElement(
+        compilationRule.getElements().getTypeElement("java.util.Set").getTypeParameters());
+    assertThat(MoreTypes.asElement(setParameterElement.asType())).isEqualTo(setParameterElement);
+    // we don't test error types because those are very hard to get predictably
+  }
+
   @Test
   public void testNonObjectSuperclass() {
     Types types = compilationRule.getTypes();
@@ -273,10 +297,10 @@ public class MoreTypesTest {
     TypeElement genericChild = elements.getTypeElement(GenericChild.class.getCanonicalName());
     TypeMirror genericChildOfNumber = types.getDeclaredType(genericChild, numberType);
     TypeMirror genericChildOfInteger = types.getDeclaredType(genericChild, integerType);
-    
+
     assertThat(MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) parent.asType()))
         .isAbsent();
-    
+
     Optional<DeclaredType> parentOfChildA =
         MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) childA.asType());
     Optional<DeclaredType> parentOfChildB =
@@ -286,7 +310,7 @@ public class MoreTypesTest {
     Optional<DeclaredType> parentOfGenericChildOfNumber =
         MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) genericChildOfNumber);
     Optional<DeclaredType> parentOfGenericChildOfInteger =
-        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) genericChildOfInteger);    
+        MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) genericChildOfInteger);
 
     EquivalenceTester<TypeMirror> tester = EquivalenceTester.<TypeMirror>of(MoreTypes.equivalence())
           .addEquivalenceGroup(parentOfChildA.get(),
