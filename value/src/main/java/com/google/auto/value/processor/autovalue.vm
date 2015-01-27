@@ -29,6 +29,9 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Constructor
 
+#if ($builderTypeName != "")
+  private ##
+#end
   $subclass(
 #foreach ($p in $props)
 
