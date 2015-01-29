@@ -15,8 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -54,8 +52,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 
-import dagger.ObjectGraph;
-
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
  *
@@ -74,8 +70,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
-    ObjectGraph.create(new ProcessorModule(processingEnv), new AutoFactoryProcessorModule())
-        .inject(this);
+    Dagger_AutoFactoryProcessorComponent.builder()
+        .processorModule(new ProcessorModule(processingEnv))
+        .build()
+        .injectProcessor(this);
   }
 
   @Override
