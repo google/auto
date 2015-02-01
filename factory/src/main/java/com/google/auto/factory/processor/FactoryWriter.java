@@ -131,7 +131,7 @@ final class FactoryWriter {
       writer.endMethod();
     }
 
-    for (ImplemetationMethodDescriptor methodDescriptor
+    for (ImplementationMethodDescriptor methodDescriptor
         : descriptor.implementationMethodDescriptors()) {
       writer.emitAnnotation(Override.class);
       writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),

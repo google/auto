@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
-final class ImplemetationMethodDescriptor {
+final class ImplementationMethodDescriptor {
   private final String name;
   private final String returnType;
   private final boolean publicMethod;
   private final ImmutableSet<Parameter> passedParameters;
 
-  private ImplemetationMethodDescriptor(Builder builder) {
+  private ImplementationMethodDescriptor(Builder builder) {
     this.name = builder.name.get();
     this.returnType = builder.returnType.get();
     this.publicMethod = builder.publicMethod;
@@ -92,8 +92,8 @@ final class ImplemetationMethodDescriptor {
       return this;
     }
 
-    ImplemetationMethodDescriptor build() {
-      return new ImplemetationMethodDescriptor(this);
+    ImplementationMethodDescriptor build() {
+      return new ImplementationMethodDescriptor(this);
     }
   }
 }
