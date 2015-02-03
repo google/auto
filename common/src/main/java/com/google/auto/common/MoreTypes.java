@@ -15,33 +15,36 @@
  */
 package com.google.auto.common;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.util.Elements;
-
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.google.common.base.Preconditions.checkState;
 import static javax.lang.model.type.TypeKind.ARRAY;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
 import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
+
 import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
+
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -54,7 +57,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
-import javax.lang.model.util.SimpleElementVisitor6;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
 
@@ -174,8 +177,8 @@ public final class MoreTypes {
         public Boolean visitTypeVariable(TypeVariable a, EqualVisitorParam p) {
           if (p.type.getKind().equals(TYPEVAR)) {
             TypeVariable b = (TypeVariable) p.type;
-            Element aElement = a.asElement();
-            Element bElement = b.asElement();
+            TypeParameterElement aElement = (TypeParameterElement) a.asElement();
+            TypeParameterElement bElement = (TypeParameterElement) b.asElement();
             Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
             if (newVisiting.equals(p.visiting)) {
               // We're already visiting this pair of elements.
@@ -183,7 +186,12 @@ public final class MoreTypes {
               // It incorrectly reports the upper bound of T as T itself.
               return true;
             }
-            return equal(a.getUpperBound(), b.getUpperBound(), newVisiting)
+            // We use aElement.getBounds() instead of a.getUpperBound() to avoid having to deal with
+            // the different way intersection types (like <T extends Number & Comparable<T>>) are
+            // represented before and after Java 8. We do have an issue that this code may consider
+            // that <T extends Foo & Bar> is different from <T extends Bar & Foo>, but it's very
+            // hard to avoid that, and not likely to be much of a problem in practice.
+            return equalLists(aElement.getBounds(), bElement.getBounds(), newVisiting)
                 && equal(a.getLowerBound(), b.getLowerBound(), newVisiting)
                 && a.asElement().getSimpleName().equals(b.asElement().getSimpleName());
           }
@@ -245,13 +253,17 @@ public final class MoreTypes {
     p.type = b;
     p.visiting = visiting;
     if (INTERSECTION_TYPE != null) {
-      if (INTERSECTION_TYPE.isInstance(a)) {
+      if (isIntersectionType(a)) {
         return equalIntersectionTypes(a, b, visiting);
-      } else if (INTERSECTION_TYPE.isInstance(b)) {
+      } else if (isIntersectionType(b)) {
         return false;
       }
     }
     return (a == b) || (a != null && b != null && a.accept(EQUAL_VISITOR, p));
+  }
+
+  private static boolean isIntersectionType(TypeMirror t) {
+    return t != null && t.getKind().name().equals("INTERSECTION");
   }
 
   // The representation of an intersection type, as in <T extends Number & Comparable<T>>, changed
@@ -264,7 +276,7 @@ public final class MoreTypes {
   @SuppressWarnings("unchecked")
   private static boolean equalIntersectionTypes(
       TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
-    if (!INTERSECTION_TYPE.isInstance(b)) {
+    if (!isIntersectionType(b)) {
       return false;
     }
     List<? extends TypeMirror> aBounds;
@@ -446,30 +458,48 @@ public final class MoreTypes {
     return elements.build();
   }
 
-  public static TypeElement asTypeElement(Types types, TypeMirror mirror) {
-    checkNotNull(types);
-    checkNotNull(mirror);
-    Element element = types.asElement(mirror);
-    checkArgument(element != null);
-    return element.accept(new SimpleElementVisitor6<TypeElement, Void>() {
-      @Override
-      protected TypeElement defaultAction(Element e, Void p) {
-        throw new IllegalArgumentException();
-      }
-
-      @Override public TypeElement visitType(TypeElement e, Void p) {
-        return e;
-      }
-    }, null);
+  /**
+   * An alternate implementation of {@link Types#asElement} that does not require a {@link Types}
+   * instance with the notable difference that it will throw {@link IllegalArgumentException}
+   * instead of returning null if the {@link TypeMirror} can not be converted to an {@link Element}.
+   *
+   * @throws NullPointerException if {@code typeMirror} is {@code null}
+   * @throws IllegalArgumentException if {@code typeMirror} cannot be converted to an
+   *     {@link Element}
+   */
+  public static Element asElement(TypeMirror typeMirror) {
+    return typeMirror.accept(AS_ELEMENT_VISITOR, null);
   }
 
-  public static ImmutableSet<TypeElement> asTypeElements(Types types,
-      Iterable<? extends TypeMirror> mirrors) {
-    checkNotNull(types);
+  private static final TypeVisitor<Element, Void> AS_ELEMENT_VISITOR =
+      new SimpleTypeVisitor6<Element, Void>() {
+        @Override protected Element defaultAction(TypeMirror e, Void p) {
+          throw new IllegalArgumentException(e + "cannot be converted to an Element");
+        }
+
+        @Override public Element visitDeclared(DeclaredType t, Void p) {
+          return t.asElement();
+        }
+
+        @Override public Element visitError(ErrorType t, Void p) {
+          return t.asElement();
+        }
+
+        @Override public Element visitTypeVariable(TypeVariable t, Void p) {
+          return t.asElement();
+        }
+      };
+
+  // TODO(gak): consider removing these two methods as they're pretty trivial now
+  public static TypeElement asTypeElement(TypeMirror mirror) {
+    return MoreElements.asType(asElement(mirror));
+  }
+
+  public static ImmutableSet<TypeElement> asTypeElements(Iterable<? extends TypeMirror> mirrors) {
     checkNotNull(mirrors);
     ImmutableSet.Builder<TypeElement> builder = ImmutableSet.builder();
     for (TypeMirror mirror : mirrors) {
-      builder.add(asTypeElement(types, mirror));
+      builder.add(asTypeElement(mirror));
     }
     return builder.build();
   }
@@ -701,6 +731,38 @@ public final class MoreTypes {
     return superclass != null
         ? Optional.of(MoreTypes.asDeclared(superclass))
         : Optional.<DeclaredType>absent();
+  }
+
+  /**
+   * Resolves a {@link VariableElement} parameter to a method or constructor based on the given
+   * container, or a member of a class. For parameters to a method or constructor, the variable's
+   * enclosing element must be a supertype of the container type. For example, given a
+   * {@code container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
+   * parameter in the {@code Set.add(E e)} method, this will return a TypeMirror for {@code String}.
+   */
+  public static TypeMirror asMemberOf(Types types, DeclaredType container,
+      VariableElement variable) {
+    if (variable.getKind().equals(ElementKind.PARAMETER)) {
+      ExecutableElement methodOrConstructor =
+          MoreElements.asExecutable(variable.getEnclosingElement());
+      ExecutableType resolvedMethodOrConstructor = MoreTypes.asExecutable(
+          types.asMemberOf(container, methodOrConstructor));
+      List<? extends VariableElement> parameters = methodOrConstructor.getParameters();
+      List<? extends TypeMirror> parameterTypes =
+          resolvedMethodOrConstructor.getParameterTypes();
+      checkState(parameters.size() == parameterTypes.size());
+      for (int i = 0; i < parameters.size(); i++) {
+        // We need to capture the parameter type of the variable we're concerned about,
+        // for later printing.  This is the only way to do it since we can't use
+        // types.asMemberOf on variables of methods.
+        if (parameters.get(i).equals(variable)) {
+          return parameterTypes.get(i);
+        }
+      }
+      throw new IllegalStateException("Could not find variable: " + variable);
+    } else {
+      return types.asMemberOf(container, variable);
+    }
   }
 
   private static class CastingTypeVisitor<T> extends SimpleTypeVisitor6<T, String> {

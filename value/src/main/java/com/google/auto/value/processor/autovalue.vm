@@ -29,6 +29,9 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Constructor
 
+#if ($builderTypeName != "")
+  private ##
+#end
   $subclass(
 #foreach ($p in $props)
 
@@ -201,7 +204,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #if ($builderIsInterface) implements #else extends #end
       ${builderTypeName}${builderActualTypes} {
 
-    private final $bitSet set$ = new ${bitSet}(${props.size()});
+    private final $bitSet set$ = new ${bitSet}();
 
     #foreach ($p in $props)
 
@@ -225,6 +228,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
     }
 
+#set ($index = 0)
 #foreach ($p in $props)
 
     @Override
@@ -245,10 +249,12 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
       #end
 
-      ## $velocityCount is the loop index, which is 1-origin by default
-      #set ($bit = $velocityCount - 1)
+      #if (!$p.nullable)
 
-      set$.set($bit);
+      set$.set($index);
+      #set ($index = $index + 1)
+
+      #end
       return this;
     }
 
@@ -256,14 +262,14 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
     @Override
     public ${origClass}${actualTypes} ${buildMethodName}() {
-      if (set$.cardinality() < ${props.size()}) {
+      if (set$.cardinality() < $index) {
         String[] propertyNames = {
 
-         #foreach ($p in $props) "$p", #end
+         #foreach ($p in $props) #if (!$p.nullable) "$p", #end #end
 
         };
         StringBuilder missing = new StringBuilder();
-        for (int i = 0; i < ${props.size()}; i++) {
+        for (int i = 0; i < $index; i++) {
           if (!set$.get(i)) {
             missing.append(' ').append(propertyNames[i]);
           }

@@ -41,6 +41,15 @@ public class AutoFactoryProcessorTest {
         .and().generatesSources(JavaFileObjects.forResource("expected/SimpleClassFactory.java"));
   }
 
+  @Test public void simpleClassNonFinal() {
+    assert_().about(javaSource())
+        .that(JavaFileObjects.forResource("good/SimpleClassNonFinal.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/SimpleClassNonFinalFactory.java"));
+  }
+
   @Test public void publicClass() {
     assert_().about(javaSource())
         .that(JavaFileObjects.forResource("good/PublicClass.java"))
@@ -98,6 +107,15 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource("expected/ConstructorAnnotatedFactory.java"));
   }
 
+  @Test public void constructorAnnotatedNonFinal() {
+    assert_().about(javaSource())
+        .that(JavaFileObjects.forResource("good/ConstructorAnnotatedNonFinal.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/ConstructorAnnotatedNonFinalFactory.java"));
+  }
+
   @Test public void simpleClassImplementingMarker() {
     assert_().about(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClassImplementingMarker.java"))
@@ -123,6 +141,20 @@ public class AutoFactoryProcessorTest {
         .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("expected/MixedDepsImplementingInterfacesFactory.java"));
+  }
+
+  @Test public void failsWithMixedFinals() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/MixedFinals.java");
+    assert_().about(javaSource())
+            .that(file)
+            .processedWith(new AutoFactoryProcessor())
+            .failsToCompile()
+            .withErrorContaining(
+                "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
+                .in(file).onLine(25).atColumn(3)
+             .and().withErrorContaining(
+                "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
+                .in(file).onLine(26).atColumn(3);
   }
 
   @Test public void failsOnGenericClass() {

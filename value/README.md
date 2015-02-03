@@ -28,14 +28,19 @@ Contents
   - [In ExampleTest.java](#in-exampletestjava)
   - [In pom.xml](#in-pomxml)
   - [What's going on here?](#whats-going-on-here)
+  - [Builders](#builders)
 - [Optional "features"](#optional-features)
   - [Data hiding](#data-hiding)
   - [Multiple creation paths](#multiple-creation-paths)
+  - [Default values with builders](#default-values-with-builders)
   - [Nullability](#nullability)
+  - [JavaBeans-style prefixes are optional](#javabeans-style-prefixes-are-optional)
   - [Other preconditions or preprocessing](#other-preconditions-or-preprocessing)
   - [Custom implementations](#custom-implementations)
   - [Nesting](#nesting)
   - [Derived fields](#derived-fields)
+  - [Generics](#generics)
+  - [Converting back to a builder](#converting-back-to-a-builder)
   - [Serialization](#serialization)
 - [Warnings](#warnings)
 - [Restrictions and non-features](#restrictions-and-non-features)
@@ -183,6 +188,46 @@ Consumers of your value type don't need to know any of this.
 They just invoke your provided factory method and get a
 well-behaved instance back.
 
+### Builders
+
+You may prefer to construct some objects through _builders_. If there
+is a nested interface or abstract class that is annotated with
+`@AutoValue.Builder`, then AutoValue will implement it to make it a
+builder class. The `@AutoValue.Builder` interface or class is conventionally
+called `Builder`. It must have method for every property to set the
+value of the property, and a build method. Here is the example above
+written using builders.
+
+```java
+    import com.google.auto.value.AutoValue;
+
+    class Example {
+      @AutoValue
+      abstract static class Animal {
+        static Builder builder() {
+          return new AutoValue_Example_Animal.Builder();
+        }
+
+        abstract String name();
+        abstract int numberOfLegs();
+ 
+        @AutoValue.Builder
+        interface Builder {
+          Builder name(String s);
+          Builder numberOfLegs(int n);
+          Animal build();
+        }
+      }
+    }
+
+```
+
+Now client code can look something like this:
+
+```java
+    Animal dog = Animal.builder().name("dog").numberOfLegs(4).build();
+```
+
 
 Optional "features"
 ------------------
@@ -201,9 +246,29 @@ You can offer as many static creation methods as you need, named
 descriptively, to cover different combinations of parameters.
 They do not need to be named `create` as in the example.
 
+### Default values with builders
+Generated builders require every property to be set, except
+`@Nullable` properties. If you want to define a default value for a
+property, set it in the `builder()` method before returning. Here's
+how to define that animals have 4 legs by default:
+
+```java
+    class Example {
+      @AutoValue
+      abstract static class Animal {
+        static Builder builder() {
+          return new AutoValue_Example_Animal.Builder()
+              .numberOfLegs(4);
+        }
+        // ...remainder as before...
+      }
+    }
+
+```
+
 ### Nullability
 By default, AutoValue inserts a not-null check for each non-primitive
-parameter passed the generated constructor. If your class has a
+parameter passed to the generated constructor. If your class has a
 property that is allowed to be null, apply `@Nullable` to the
 corresponding accessor method and factory parameter. This has two
 effects: AutoValue will skip the null check, and generate null-friendly
@@ -220,11 +285,38 @@ will still be `name` and `numberOfLegs`, for example in the result of
 `toString()`. This applies only if every abstract method looks like
 `getX()` or `boolean isX()` for some non-empty string X.
 
+Similarly, in a builder you can use methods like `name(String s)` and
+`numberOfLegs(int n)` or methods like `setName(String s)` and
+`setNumberOfLegs(int n)`. Again, every abstract method must follow the
+same one of the two conventions.
+
 ### Other preconditions or preprocessing
 If you need to check preconditions or perform any other preparatory
 steps, insert the code to do so into your static factory method before
 invoking the generated constructor. Remember that null checks are
 already present in the generated constructor.
+
+When using builders, you can validate using a method annotated with
+`@AutoValue.Validate`. The method will be called immediately after a
+new instance is constructed by the build method and before that
+instance is returned to the client. It can throw an exception if
+validation fails. Here's how our example might be validated:
+
+```java
+    class Example {
+      @AutoValue
+      abstract static class Animal {
+        @AutoValue.Validate
+        void validate() {
+          if (numberOfLegs() < 0) {
+            throw new IllegalStateException("Negative legs");
+          }
+        }
+        // ...remainder as before...
+      }
+    }
+
+```
 
 ### Custom implementations
 Don't like the `equals`, `hashCode` or `toString` method AutoValue
@@ -249,6 +341,66 @@ We're sorry: AutoValue doesn't work for these cases, since there's no
 way to pass the extra parameter "through" the generated class
 constructor.
 
+### Generics
+An `@AutoValue` class can have type parameters, as illustrated in these
+examples:
+
+```java
+    @AutoValue
+    abstract class MapEntry<K extends Comparable<K>, V> implements Map.Entry<K, V> {
+      static <K extends Comparable<K>, V> MapEntry<K, V> create(K key, V value) {
+        return new AutoValue_MapEntry<K, V>(key, value);
+      }
+      ...
+    }
+```
+
+or
+
+```java
+    @AutoValue
+    abstract class MapEntry<K extends Comparable<K>, V> implements Map.Entry<K, V> {
+      static <K extends Comparable<K>, V> Builder<K, V> builder() {
+        return new AutoValue_MapEntry.Builder<K, V>();
+      }
+
+      interface Builder<K extends Comparable<K>, V> {
+        Builder setKey(K key);
+        Builder setValue(V value);
+        MapEntry<K, V> build();
+      }
+      ...
+    }
+```
+
+### Converting back to a builder
+An `@AutoValue` class with a builder can optionally have an abstract
+method that returns the builder type. It will be implemented by
+initializing the builder with the values of the properties. This can
+be exposed directly to clients, or used to implement "wither" methods
+that return a new object that is the same as the original one except
+for one changed property. Here is an example:
+
+```java
+    class Example {
+      @AutoValue
+      abstract static class Animal {
+        static Builder builder() {
+          return AutoValue_Example_Animal.Builder();
+        }
+
+        abstract Builder toBuilder();
+
+        Animal withNumberOfLegs(int n) {
+          return toBuilder().numberOfLegs(n).build();
+        }
+        // ...remainder as before...
+      }
+    }
+
+```
+
+
 ### Serialization
 The generated class will be serializable if your abstract class
 implements `Serializable`. It will be GWT-serializable if your
@@ -271,13 +423,13 @@ Use of AutoValue has one serious **negative consequence**: certain
 formerly safe refactorings could now break your code, and be caught
 only by your tests.
 
-You must ensure that parameters are passed to the auto-generated
-constructor in the ***same order*** the corresponding accessor
-methods are defined in the file. **Your tests must be sufficient**
-to catch any field ordering problem. In most cases this should
-be the natural outcome from testing whatever actual purpose this
-value type was created for! In other cases a very simple test
-like the one shown above is enough.
+If you are not using builders, you must ensure that parameters are
+passed to the auto-generated constructor in the ***same order*** the
+corresponding accessor methods are defined in the file. **Your tests
+must be sufficient** to catch any field ordering problem. In most
+cases this should be the natural outcome from testing whatever actual
+purpose this value type was created for! In other cases a very simple
+test like the one shown above is enough.
 
 We reserve the right to **change the `hashCode` implementation**
 at any time. Do not depend on the order your objects appear in
@@ -314,20 +466,12 @@ Restrictions and non-features
   AutoValue classes are implementing compareTo by the exact same 
   formula, we will reconsider this feature.
 
-* Many users have asked for AutoValue to generate a builder
-  class. We explored this idea deeply. It is much more complex
-  than it seems, especially because field values often need 
-  validation. We also feel that, unlike the simple value
-  objects themselves, there is a lot of natural variation in
-  how builders for different types should be written, and it
-  would be a disservice for us to start coercing everything
-  into the same mold.
-
-* AutoValue currently doesn't inspect the new `AutoValue_Foo`
+* AutoValue currently doesn't inspect the `new AutoValue_Foo`
   line to issue warnings on parameter order. (There are
   certain technical issues with doing so.) As stated above
   in Warnings, you had better have some test somewhere that
-  will catch such problems.
+  will catch such problems. Or you can use builders to avoid having
+  a parameter order at all.
 
 * It might seem convenient to use AutoValue to implement annotation
   interfaces, which frameworks such as [Guice][3] occasionally
@@ -390,7 +534,8 @@ case only AutoValue does return a copy of the internal array
 from the generated accessor. It does not automatically copy the
 data on its way in, however, so your static factory method should
 pass `array.clone()` in to the generated constructor instead of
-the input `array` itself.
+the input `array` itself. If you are using builders, arrays will
+be cloned in the generated builder.
 
 Finally, if you choose to provide an explicit `equals`, `hashCode`
 or `toString` implementation, please make it **`final`**, so readers

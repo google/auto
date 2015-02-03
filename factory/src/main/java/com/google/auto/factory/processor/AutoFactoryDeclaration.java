@@ -41,6 +41,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -53,13 +54,21 @@ final class AutoFactoryDeclaration {
   private final Optional<String> className;
   private final TypeElement extendingType;
   private final ImmutableSet<TypeElement> implementingTypes;
+  private final boolean allowSubclasses;
+  private final AnnotationMirror mirror;
+  private final ImmutableMap<String, AnnotationValue> valuesMap;
 
   private AutoFactoryDeclaration(Element target, Optional<String> className,
-      TypeElement extendingType, ImmutableSet<TypeElement> implementingTypes) {
+      TypeElement extendingType, ImmutableSet<TypeElement> implementingTypes,
+      boolean allowSubclasses, AnnotationMirror mirror,
+      Map<String, AnnotationValue> valuesMap) {
     this.target = target;
     this.className = className;
     this.extendingType = extendingType;
     this.implementingTypes = implementingTypes;
+    this.allowSubclasses = allowSubclasses;
+    this.mirror = mirror;
+    this.valuesMap = ImmutableMap.copyOf(valuesMap);
   }
 
   String getFactoryName(Name packageName, Name targetType) {
@@ -91,6 +100,18 @@ final class AutoFactoryDeclaration {
     return implementingTypes;
   }
 
+  boolean allowSubclasses() {
+    return allowSubclasses;
+  }
+
+  AnnotationMirror mirror() {
+    return mirror;
+  }
+
+  ImmutableMap<String, AnnotationValue> valuesMap() {
+    return valuesMap;
+  }
+
   static final class Factory {
     private final Elements elements;
     private final Messager messager;
@@ -107,7 +128,7 @@ final class AutoFactoryDeclaration {
           contentEquals(AutoFactory.class.getName()));
       Map<String, AnnotationValue> values =
           Mirrors.simplifyAnnotationValueMap(elements.getElementValuesWithDefaults(mirror));
-      checkState(values.size() == 3);
+      checkState(values.size() == 4);
 
       // className value is a string, so we can just call toString
       AnnotationValue classNameValue = values.get("className");
@@ -159,10 +180,17 @@ final class AutoFactoryDeclaration {
         builder.add(AnnotationValues.asType(implementingTypeValue));
       }
       ImmutableSet<TypeElement> implementingTypes = builder.build();
+
+      AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
+      boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
+
       return Optional.of(new AutoFactoryDeclaration(element,
           className.isEmpty() ? Optional.<String>absent() : Optional.of(className),
           extendingType,
-          implementingTypes));
+          implementingTypes,
+          allowSubclasses,
+          mirror,
+          values));
     }
 
     static boolean isValidIdentifier(String identifier) {

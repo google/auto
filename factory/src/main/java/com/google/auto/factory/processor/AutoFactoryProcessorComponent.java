@@ -15,12 +15,14 @@
  */
 package com.google.auto.factory.processor;
 
-import dagger.Module;
+import dagger.Component;
 
 /**
- * The Dagger module that declares all of the bindings for {@link AutoFactoryProcessor}.
+ * The Dagger component that declares all of the bindings for {@link AutoFactoryProcessor}.
  *
  * @author Gregory Kick
  */
-@Module(addsTo = ProcessorModule.class, injects = AutoFactoryProcessor.class)
-final class AutoFactoryProcessorModule { }
+@Component(modules = ProcessorModule.class)
+interface AutoFactoryProcessorComponent {
+  void injectProcessor(AutoFactoryProcessor processor);
+}

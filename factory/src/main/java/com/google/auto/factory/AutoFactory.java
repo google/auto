@@ -51,4 +51,10 @@ public @interface AutoFactory {
    * The type that the generated factory is require to extend.
    */
   Class<?> extending() default Object.class;
+
+  /**
+   * Whether or not the generated factory should be final.
+   * Defaults to disallowing subclasses (generating the factory as final).
+   */
+  boolean allowSubclasses() default false;
 }
