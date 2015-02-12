@@ -17,19 +17,28 @@
 package com.google.auto.common;
 
 import com.google.common.annotations.Beta;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+
 import java.lang.annotation.Annotation;
+
+import static javax.lang.model.element.ElementKind.PACKAGE;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ElementVisitor;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
-
-import static javax.lang.model.element.ElementKind.PACKAGE;
 
 /**
  * Static utility methods pertaining to {@link Element} instances.
@@ -187,6 +196,101 @@ public final class MoreElements {
       }
     }
     return Optional.absent();
+  }
+
+  /**
+   * Returns all methods (static and instance) of the given {@code element}.
+   * <p>
+   * Note: This does not include any super type methods.
+   */
+  public static ImmutableList<ExecutableElement> getMethods(TypeElement element) {
+    return FluentIterable.from(element.getEnclosedElements())
+        .filter(new Predicate<Element>() {
+          @Override public boolean apply(Element input) {
+            return input.getKind() == ElementKind.METHOD;
+        }
+      })
+      .transform(new Function<Element, ExecutableElement>() {
+        @Override public ExecutableElement apply(Element input) {
+          return (ExecutableElement) input;
+        }
+      }).toList();
+  }
+
+  /**
+   * Returns all instance methods of the given {@code element}.
+   * <p>
+   * Note: This does not include any super type methods.
+   */
+  public static ImmutableList<ExecutableElement> getIntanceMethods(TypeElement element) {
+    return FluentIterable.from(getMethods(element))
+        .filter(new Predicate<ExecutableElement>() {
+          @Override public boolean apply(ExecutableElement input) {
+            return !input.getModifiers().contains(Modifier.STATIC);
+        }
+      }).toList();
+  }
+
+  /**
+   * Returns all static methods of the given {@code element}.
+   * <p>
+   * Note: This does not include any super type methods.
+   */
+  public static ImmutableList<ExecutableElement> getStaticMethods(TypeElement element) {
+    return FluentIterable.from(getMethods(element))
+        .filter(new Predicate<ExecutableElement>() {
+          @Override public boolean apply(ExecutableElement input) {
+            return input.getModifiers().contains(Modifier.STATIC);
+        }
+      }).toList();
+  }
+
+  /**
+   * Returns all fields (static and instance) of the given {@code element}.
+   * <p>
+   * Note: This does not include any super type fields.
+   */
+  public static ImmutableList<VariableElement> getFields(TypeElement element) {
+    Preconditions.checkArgument(element.getKind() == ElementKind.CLASS);
+    return FluentIterable.from(element.getEnclosedElements())
+        .filter(new Predicate<Element>() {
+          @Override public boolean apply(Element input) {
+            return input.getKind() == ElementKind.FIELD;
+        }
+      })
+      .transform(new Function<Element, VariableElement>() {
+        @Override public VariableElement apply(Element input) {
+          return (VariableElement) input;
+        }
+      }).toList();
+  }
+
+  /**
+   * Returns all instance fields of the given {@code element}.
+   * <p>
+   * Note: This does not include any super type fields.
+   */
+  public static ImmutableList<VariableElement> getInstanceFields(TypeElement element) {
+    return FluentIterable.from(getFields(element))
+        .filter(new Predicate<VariableElement>() {
+          @Override public boolean apply(VariableElement input) {
+            return !input.getModifiers().contains(Modifier.STATIC);
+        }
+      }).toList();
+  }
+
+  /**
+   * Returns all static fields of the given {@code element}.
+   * <p>
+   * Note: This does not include any super type fields.
+   */
+  public static ImmutableList<VariableElement> getStaticFields(TypeElement element) {
+    return FluentIterable.from(getFields(element))
+        .filter(new Predicate<VariableElement>() {
+          @Override public boolean apply(VariableElement input) {
+            return input.getModifiers().contains(Modifier.STATIC);
+        }
+      }).toList();
   }
 
   private MoreElements() {}

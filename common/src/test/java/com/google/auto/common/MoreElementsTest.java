@@ -16,12 +16,17 @@
 package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertThat;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.truth.Expect;
+import com.google.common.truth.Truth;
 import com.google.testing.compile.CompilationRule;
 
 import org.junit.Before;
@@ -39,6 +44,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 
@@ -49,12 +55,14 @@ public class MoreElementsTest {
 
   private PackageElement javaLangPackageElement;
   private TypeElement stringElement;
+  private TypeElement moreElementsTestClass;
 
   @Before
   public void initializeTestElements() {
     Elements elements = compilation.getElements();
     this.javaLangPackageElement = elements.getPackageElement("java.lang");
     this.stringElement = elements.getTypeElement(String.class.getCanonicalName());
+    this.moreElementsTestClass = elements.getTypeElement(MoreElementsTestClazz.class.getCanonicalName());
   }
 
   @Test
@@ -187,10 +195,139 @@ public class MoreElementsTest {
     expect.that(MoreElements.isType(annotationElement)).isTrue();
     expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
         .isEqualTo(Documented.class.getCanonicalName());
-    
+
     annotationElement = innerAnnotation.get().getAnnotationType().asElement();
     expect.that(MoreElements.isType(annotationElement)).isTrue();
     expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
         .isEqualTo(InnerAnnotation.class.getCanonicalName());
+  }
+
+  //Used from test
+  @SuppressWarnings("unused")
+  // Defining a base type so we can make sure its fields / methods are not included in our queries
+  private static class MoreElementsBaseTestClazz {
+
+    private static Object basePrivateStaticField;
+    protected static Object baseProtectedStaticField;
+    public static Object basePublicStaticField;
+    static Object basePackageProtectedStaticField;
+
+    private static void basePrivateStaticMethod() {}
+    protected static void baseProtectedStaticMethod() {}
+    public static void basePublicStaticMethod() {}
+    static void basePackageProtectedStaticMethod() {}
+
+    private Object basePrivateField;
+    protected Object baseProtectedField;
+    public Object basePublicField;
+    Object basePackageProtectedField;
+
+    private void basePrivateMethod() {}
+    protected void baseProtectedMethod() {}
+    public void basePublicMethod() {}
+    void basePackageProtectedMethod() {}
+  }
+
+  @SuppressWarnings("unused")
+  private static class MoreElementsTestClazz extends MoreElementsBaseTestClazz {
+
+    static {
+      // A broken implementation of MoreElements.geMethods might include clinit
+      privateStaticField = new Object();
+    }
+    private static Object privateStaticField;
+    protected static Object protectedStaticField;
+    public static Object publicStaticField;
+    static Object packageProtectedStaticField;
+
+
+    private static void privateStaticMethod() {}
+    protected static void protectedStaticMethod() {}
+    public static void publicStaticMethod() {}
+    static void packageProtectedStaticMethod() {}
+
+    public MoreElementsTestClazz() {}
+    public MoreElementsTestClazz(Object o) {}
+
+    // Fields are initialized so that we create init calls in the class
+    // These might show up as methods if MoreElements.getMethods is broken
+    private Object privateField = new Object();
+    protected Object protectedField = new Object();
+    public Object publicField = new Object();
+    Object packageProtectedField = new Object();
+
+    private void privateMethod() {}
+    protected void protectedMethod() {}
+    public void publicMethod() {}
+    void packageProtectedMethod() {}
+  }
+
+  private static Function<Element, String> ELEMENT_TOSTRING_TRANSFORMER =
+      new Function<Element, String>() {
+        @Override public String apply(Element input) {
+          return input.getSimpleName().toString();
+        }
+      };
+
+  @Test
+  public void testGetMethods() {
+    ImmutableList<String> methodsAsString = FluentIterable.from(
+        MoreElements.getMethods(moreElementsTestClass)).transform(ELEMENT_TOSTRING_TRANSFORMER)
+        .toList();
+
+    Truth.assertThat(methodsAsString).containsExactly("privateStaticMethod",
+        "protectedStaticMethod", "publicStaticMethod", "packageProtectedStaticMethod",
+        "privateMethod", "protectedMethod", "publicMethod", "packageProtectedMethod").inOrder();
+  }
+
+  @Test
+  public void testGetInstanceMethods() {
+    ImmutableList<String> methodsAsString = FluentIterable.from(
+        MoreElements.getIntanceMethods(moreElementsTestClass)).transform(
+        ELEMENT_TOSTRING_TRANSFORMER).toList();
+
+    Truth.assertThat(methodsAsString).containsExactly("privateMethod", "protectedMethod",
+        "publicMethod", "packageProtectedMethod").inOrder();
+  }
+
+  @Test
+  public void testGetStaticMethods() {
+    ImmutableList<String> methodsAsString = FluentIterable.from(
+        MoreElements.getStaticMethods(moreElementsTestClass)).transform(
+        ELEMENT_TOSTRING_TRANSFORMER).toList();
+
+    Truth.assertThat(methodsAsString).containsExactly("privateStaticMethod",
+        "protectedStaticMethod", "publicStaticMethod", "packageProtectedStaticMethod").inOrder();
+  }
+
+  @Test
+  public void testGetFields() {
+    ImmutableList<String> methodsAsString = FluentIterable.from(
+        MoreElements.getFields(moreElementsTestClass)).transform(ELEMENT_TOSTRING_TRANSFORMER)
+        .toList();
+
+    Truth.assertThat(methodsAsString).containsExactly("privateStaticField", "protectedStaticField",
+        "publicStaticField", "packageProtectedStaticField", "privateField", "protectedField",
+        "publicField", "packageProtectedField").inOrder();
+  }
+
+  @Test
+  public void testGetInstanceFields() {
+    ImmutableList<String> methodsAsString = FluentIterable.from(
+        MoreElements.getInstanceFields(moreElementsTestClass)).transform(
+        ELEMENT_TOSTRING_TRANSFORMER).toList();
+
+    Truth.assertThat(methodsAsString).containsExactly("privateField", "protectedField",
+        "publicField", "packageProtectedField").inOrder();
+  }
+
+  @Test
+  public void testGetStaticFields() {
+    ImmutableList<String> methodsAsString = FluentIterable.from(
+        MoreElements.getStaticFields(moreElementsTestClass)).transform(ELEMENT_TOSTRING_TRANSFORMER)
+        .toList();
+
+    Truth.assertThat(methodsAsString).containsExactly("privateStaticField", "protectedStaticField",
+        "publicStaticField", "packageProtectedStaticField").inOrder();
   }
 }
