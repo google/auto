@@ -11,7 +11,7 @@ import org.apache.velocity.runtime.log.JdkLogChute;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -74,6 +74,6 @@ public class NoVelocityLoggingTest extends TestCase {
 
     // The log file should be empty.
     fileHandler.close();
-    assertEquals("", Files.toString(log, StandardCharsets.UTF_8));
+    assertEquals("", Files.toString(log, Charset.forName("UTF-8")));
   }
 }

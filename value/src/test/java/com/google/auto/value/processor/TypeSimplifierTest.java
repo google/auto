@@ -15,7 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,6 +28,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -123,7 +123,7 @@ public class TypeSimplifierTest extends TestCase {
     File tmpDir = Files.createTempDir();
     for (String className : classToSource.keySet()) {
       File java = new File(tmpDir, className + ".java");
-      Files.write(classToSource.get(className), java, Charsets.UTF_8);
+      Files.write(classToSource.get(className), java, Charset.forName("UTF-8"));
     }
     try {
       doTestTypeSimplifier(testProcessor, tmpDir, classToSource);
