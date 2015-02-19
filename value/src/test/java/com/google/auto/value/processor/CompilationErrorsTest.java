@@ -15,7 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -30,6 +29,7 @@ import junit.framework.TestCase;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -206,7 +206,7 @@ public class CompilationErrorsTest extends TestCase {
       dir.mkdirs();
       assertTrue(dir.isDirectory());  // True if we just made it, or it was already there.
       String sourceName = className.simpleName + ".java";
-      Files.write(source, new File(dir, sourceName), Charsets.UTF_8);
+      Files.write(source, new File(dir, sourceName), Charset.forName("UTF-8"));
       classNames.add(className.fullName());
       JavaFileObject sourceFile = fileManager.getJavaFileForInput(
           StandardLocation.SOURCE_PATH, className.fullName(), Kind.SOURCE);
