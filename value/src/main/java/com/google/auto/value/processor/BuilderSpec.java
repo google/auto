@@ -159,8 +159,9 @@ class BuilderSpec {
      * (for example not every getter has a setter, or some setters don't correspond to getters)
      * then emits an error message and returns null.
      *
-     * @param getterToPropertyName a list of getter methods, such as {@code abstract String foo();}
-     * or {@code abstract String getFoo();}.
+     * @param getterToPropertyName a map where the keys are getter methods, such as
+     *     {@code abstract String foo();} or {@code abstract String getFoo();}, and the values are
+     *     the corresponding properties, such as {@code foo}.
      */
     private Map<String, ExecutableElement> makeSetterMap(
         Map<ExecutableElement, String> getterToPropertyName) {

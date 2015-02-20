@@ -23,6 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.util.Types;
+
 /**
  * The variables to substitute into the autovalue.vm template.
  *
@@ -40,6 +43,9 @@ class AutoValueTemplateVars extends TemplateVars {
   /** Whether to generate a toString() method. */
   Boolean toString;
 
+  /** The type utilities returned by {@link ProcessingEnvironment#getTypeUtils()}. */
+  Types types;
+
   /** The fully-qualified names of the classes to be imported in the generated class. */
   SortedSet<String> imports;
 
@@ -50,9 +56,6 @@ class AutoValueTemplateVars extends TemplateVars {
 
   /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
   String arrays;
-
-  /** The spelling of the java.util.BitSet class: BitSet or java.util.BitSet. */
-  String bitSet;
 
   /**
    * The full spelling of the {@code @GwtCompatible} annotation to add to this class, or an empty
