@@ -172,7 +172,7 @@ add the following to your Maven configuration:
 
 AutoValue runs as a standard annotation processor in javac.
 It generates source code, in your package, for a *package-private*
-implementation class called **`AutoValue_Example`**. The generated
+implementation class called **`AutoValue_Example_Animal`**. The generated
 class contains a field for each abstract accessor method, and
 the generated constructor sets these fields. It implements the
 accessor methods to simply return those references/values. It
@@ -454,8 +454,8 @@ Restrictions and non-features
   instead, such as `ImmutableList`.
 
 * Your accessor methods may not be `private` -- but they may be 
-  package-private. The same is true for your `@AutoValue` class 
-  itself (if it is a nested class).
+package-private. The same is true for your `@AutoValue` class 
+  itself.
 
 * We don't generate `compareTo`, because we feel you need the
   expressiveness that [ComparisonChain][2] provides, and we can't beat
