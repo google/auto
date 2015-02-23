@@ -454,7 +454,7 @@ Restrictions and non-features
   instead, such as `ImmutableList`.
 
 * Your accessor methods may not be `private` -- but they may be 
-package-private. The same is true for your `@AutoValue` class 
+  package-private. The same is true for your `@AutoValue` class 
   itself.
 
 * We don't generate `compareTo`, because we feel you need the
