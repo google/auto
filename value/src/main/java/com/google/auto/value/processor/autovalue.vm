@@ -204,89 +204,100 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #if ($builderIsInterface) implements #else extends #end
       ${builderTypeName}${builderActualTypes} {
 
-    private final $bitSet set$ = new ${bitSet}();
+  #foreach ($p in $props)
 
-    #foreach ($p in $props)
+    #if ($p.kind.primitive)
+
+    private $types.boxedClass($p.typeMirror).simpleName $p;
+
+    #else
 
     private $p.type $p;
 
     #end
+
+  #end
 
     Builder() {
     }
 
     Builder(${origClass}${actualTypes} source) {
 
-      #foreach ($p in $props)
+  #foreach ($p in $props)
 
       $builderSetterNames[$p.name](source.${p.getter}());
       ## We use the setter methods rather than assigning the fields directly so we don't have
       ## to duplicate the logic for cloning arrays. Not cloning arrays would conceivably be
       ## a security problem.
 
-      #end
+  #end
 
     }
 
-#set ($index = 0)
-#foreach ($p in $props)
+  #foreach ($p in $props)
 
     @Override
     public ${builderTypeName}${builderActualTypes} $builderSetterNames[$p.name]($p.type $p) {
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
+    #if ($p.kind == "ARRAY")
+      #if ($p.nullable)
 
       this.$p = ($p == null) ? null : ${p}.clone();
 
-        #else
+      #else
 
       this.$p = ${p}.clone();
 
-        #end
-      #else
+      #end
+    #else
 
       this.$p = $p;
 
-      #end
+    #end
 
-      #if (!$p.nullable)
-
-      set$.set($index);
-      #set ($index = $index + 1)
-
-      #end
       return this;
     }
 
-    #end
+  #end
+
+#set ($requiredCount = 0)
+#foreach ($p in $props)
+  #if (!$p.nullable)
+    #set ($requiredCount = $requiredCount + 1)
+  #end
+#end
 
     @Override
     public ${origClass}${actualTypes} ${buildMethodName}() {
-      if (set$.cardinality() < $index) {
-        String[] propertyNames = {
+  #if ($requiredCount > 0)
 
-         #foreach ($p in $props) #if (!$p.nullable) "$p", #end #end
+      String missing = "";
 
-        };
-        StringBuilder missing = new StringBuilder();
-        for (int i = 0; i < $index; i++) {
-          if (!set$.get(i)) {
-            missing.append(' ').append(propertyNames[i]);
-          }
-        }
+    #foreach ($p in $props)
+      #if (!$p.nullable)
+
+      if ($p == null) {
+        missing += " $p.name";
+      }
+
+      #end
+    #end
+
+      if (!missing.isEmpty()) {
         throw new IllegalStateException("Missing required properties:" + missing);
       }
+  #end
+
       ${origClass}${actualTypes} result = new ${subclass}${actualTypes}(
-    #foreach ($p in $props)
+  #foreach ($p in $props)
 
           this.$p #if ($foreach.hasNext) , #end
-    #end );
+  #end );
 
-    #foreach ($v in $validators)
+  #foreach ($v in $validators)
 
       result.${v}();
 
-    #end
+  #end
 
       return result;
     }

@@ -87,6 +87,10 @@ class GwtSerialization {
       vars.imports = autoVars.imports;
       vars.pkg = autoVars.pkg;
       vars.subclass = autoVars.subclass;
+      vars.formalTypes = autoVars.formalTypes;
+      vars.actualTypes = autoVars.actualTypes;
+      vars.useBuilder = !autoVars.builderTypeName.isEmpty();
+      vars.builderSetterNames = autoVars.builderSetterNames;
       vars.generated = autoVars.generated;
       String className = (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass
           + "_CustomFieldSerializer";
@@ -120,6 +124,10 @@ class GwtSerialization {
 
     public String getType() {
       return property.getType();
+    }
+
+    public String getName() {
+      return property.getName();
     }
 
     /**
@@ -173,6 +181,30 @@ class GwtSerialization {
 
     /** The simple name of the generated subclass. */
     String subclass;
+
+    /**
+     * The formal generic signature of the class with the {@code @AutoValue} annotation and its
+     * generated subclass. This is empty, or contains type variables with optional bounds,
+     * for example {@code <K, V extends K>}.
+     */
+    String formalTypes;
+    /**
+     * The generic signature used by the generated subclass for its superclass reference.
+     * This is empty, or contains only type variables with no bounds, for example
+     * {@code <K, V>}.
+     */
+    String actualTypes;
+
+    /**
+     * True if the {@code @AutoValue} class is constructed using a generated builder.
+     */
+    Boolean useBuilder;
+
+    /**
+     * A map from property names (like foo) to the corresponding setter method names
+     * (foo or setFoo).
+     */
+    Map<String, String> builderSetterNames;
 
     /** The simple name of the generated GWT serializer class. */
     String serializerClass;

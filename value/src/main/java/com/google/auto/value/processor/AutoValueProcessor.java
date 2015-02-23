@@ -35,7 +35,6 @@ import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -240,7 +239,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       return (TypeElement) method.getEnclosingElement();
     }
 
-    TypeMirror getTypeMirror() {
+    public TypeMirror getTypeMirror() {
       return method.getReturnType();
     }
 
@@ -366,6 +365,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
+    vars.types = processingEnv.getTypeUtils();
     defineVarsForType(type, vars);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
@@ -396,7 +396,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
     ImmutableSet<ExecutableElement> toBuilderMethods;
     if (builder.isPresent()) {
-      types.add(getTypeMirror(BitSet.class));
       toBuilderMethods = builder.get().toBuilderMethods(typeUtils, methodsToImplement);
     } else {
       toBuilderMethods = ImmutableSet.of();
@@ -409,7 +408,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
-    vars.bitSet = typeSimplifier.simplifyRaw(getTypeMirror(BitSet.class));
     ImmutableMap<ExecutableElement, String> methodToPropertyName =
         methodToPropertyNameMap(propertyMethods);
     Map<ExecutableElement, String> methodToIdentifier =
