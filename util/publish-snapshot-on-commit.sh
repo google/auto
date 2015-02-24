@@ -1,6 +1,6 @@
 # see https://coderwall.com/p/9b_lfq
 
-if [ "$TRAVIS_REPO_SLUG" == "google/truth" ] && \
+if [ "$TRAVIS_REPO_SLUG" == "google/auto" ] && \
    [ "$TRAVIS_JDK_VERSION" == "oraclejdk7" ] && \
    [ "$TRAVIS_PULL_REQUEST" == "false" ] && \
    [ "$TRAVIS_BRANCH" == "master" ]; then
