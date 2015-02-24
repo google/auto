@@ -12,4 +12,16 @@
     <module>service</module>
     <module>value</module>
   </modules>
+  <distributionManagement>
+    <repository>
+      <id>sonatype-nexus-staging</id>
+      <name>Nexus Release Repository</name>
+      <url>file:///tmp/auto_project_maven_fake_repo/</url>
+    </repository>
+    <snapshotRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>file:///tmp/auto_project_maven_fake_repo/</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>
