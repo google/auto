@@ -163,19 +163,16 @@ add the following to your Maven configuration:
     <dependency>
       <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value</artifactId>
-      <version>1.0-rc1</version>
+      <version>1.0</version>
       <scope>provided</scope>
     </dependency>
 ```
-
-Of course, please upgrade to the final 1.0 release once it is 
-available (likely in April 2014).
 
 ### What's going on here?
 
 AutoValue runs as a standard annotation processor in javac.
 It generates source code, in your package, for a *package-private*
-implementation class called **`AutoValue_Example`**. The generated
+implementation class called **`AutoValue_Example_Animal`**. The generated
 class contains a field for each abstract accessor method, and
 the generated constructor sets these fields. It implements the
 accessor methods to simply return those references/values. It
@@ -458,7 +455,7 @@ Restrictions and non-features
 
 * Your accessor methods may not be `private` -- but they may be 
   package-private. The same is true for your `@AutoValue` class 
-  itself (if it is a nested class).
+  itself.
 
 * We don't generate `compareTo`, because we feel you need the
   expressiveness that [ComparisonChain][2] provides, and we can't beat
