@@ -18,11 +18,19 @@ package com.google.auto.common;
 
 import com.google.common.annotations.Beta;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+
 import java.lang.annotation.Annotation;
+import java.util.Collection;
+import java.util.Set;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementVisitor;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -187,6 +195,42 @@ public final class MoreElements {
       }
     }
     return Optional.absent();
+  }
+
+  /**
+   * Returns a {@link Predicate} that can be used to filter elements by {@link Modifier}.
+   * The predicate returns {@code true} if the input {@link Element} has all of the given
+   * {@code modifiers}, perhaps in addition to others.
+   *
+   * <p>Here is an example how one could get a List of static methods of a class:
+   * <pre>{@code
+   * FluentIterable.from(ElementFilter.methodsIn(clazzElement.getEnclosedElements()))
+   *     .filter(MoreElements.hasModifiers(Modifier.STATIC).toList();
+   * }</pre>
+   */
+  public static Predicate<Element> hasModifiers(Modifier... modifiers) {
+    return hasModifiers(ImmutableSet.copyOf(modifiers));
+  }
+
+  /**
+   * Returns a {@link Predicate} that can be used to filter elements by {@link Modifier}.
+   * The predicate returns {@code true} if the input {@link Element} has all of the given
+   * {@code modifiers}, perhaps in addition to others.
+   *
+   * <p>Here is an example how one could get a List of methods with certain modifiers of a class:
+   * <pre>{@code
+   * Set<Modifier> modifiers = ...;
+   * FluentIterable.from(ElementFilter.methodsIn(clazzElement.getEnclosedElements()))
+   *     .filter(MoreElements.hasModifiers(modifiers).toList();}
+   * </pre>
+   */
+  public static Predicate<Element> hasModifiers(final Set<Modifier> modifiers) {
+    return new Predicate<Element>() {
+      @Override
+      public boolean apply(Element input) {
+        return input.getModifiers().containsAll(modifiers);
+      }
+    };
   }
 
   private MoreElements() {}
