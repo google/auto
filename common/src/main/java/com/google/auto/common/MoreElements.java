@@ -20,10 +20,8 @@ import com.google.common.annotations.Beta;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 
 import java.lang.annotation.Annotation;
-import java.util.Collection;
 import java.util.Set;
 
 import javax.lang.model.element.AnnotationMirror;
