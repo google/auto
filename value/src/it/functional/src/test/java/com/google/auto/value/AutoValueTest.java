@@ -44,7 +44,7 @@ import javax.annotation.Nullable;
  */
 public class AutoValueTest extends TestCase {
 
-  // TODO(user): add tests for exotic locales
+  // TODO(emcmanus): add tests for exotic locales
 
   @AutoValue
   abstract static class Simple {

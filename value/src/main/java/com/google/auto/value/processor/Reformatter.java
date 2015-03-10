@@ -79,7 +79,7 @@ class Reformatter {
     // Remove extra spaces. An "extra" space is one that is not part of the indentation at the start
     // of a line, and where the next character is also a space or a right paren or a semicolon
     // or a comma, or the preceding character is a left paren.
-    // TODO(user): consider merging all three passes using this tokenization approach.
+    // TODO(emcmanus): consider merging all three passes using this tokenization approach.
     StringBuilder sb = new StringBuilder(s.length());
     Tokenizer tokenizer = new Tokenizer(s);
     int len = s.length();
