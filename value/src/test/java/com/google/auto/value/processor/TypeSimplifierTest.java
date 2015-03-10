@@ -340,7 +340,7 @@ public class TypeSimplifierTest extends TestCase {
     }
 
     public void testTypeMirrorSetWildcardCapture() {
-      // TODO(user): this test should really be in MoreTypesTest.
+      // TODO(emcmanus): this test should really be in MoreTypesTest.
       // This test checks the assumption made by MoreTypes that you can find the
       // upper bounds of a TypeVariable tv like this:
       //   TypeParameterElement tpe = (TypeParameterElement) tv.asElement();

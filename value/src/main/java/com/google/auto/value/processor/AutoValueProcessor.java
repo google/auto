@@ -198,7 +198,7 @@ public class AutoValueProcessor extends AbstractProcessor {
           // implementation.
           continue;
         }
-        // TODO(user): we should import this type if it is not already imported
+        // TODO(emcmanus): we should import this type if it is not already imported
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
@@ -452,7 +452,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   private static boolean allGetters(Iterable<ExecutableElement> methods) {
     for (ExecutableElement method : methods) {
       String name = method.getSimpleName().toString();
-      // TODO(user): decide whether getfoo() (without a capital) is a getter. Currently it is.
+      // TODO(emcmanus): decide whether getfoo() (without a capital) is a getter. Currently it is.
       boolean get = name.startsWith("get") && !name.equals("get");
       boolean is = name.startsWith("is") && !name.equals("is")
           && method.getReturnType().getKind() == TypeKind.BOOLEAN;
