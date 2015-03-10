@@ -180,8 +180,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     // Look at the elements we've found and the new elements from this round and validate them.
     for (Class<? extends Annotation> annotationClass : getSupportedAnnotationClasses()) {
+      // This should just call roundEnv.getElementsAnnotatedWith(Class) directly, but there is a bug
+      // in some versions of eclipse that cause that method to crash.
+      TypeElement annotationType = elements.getTypeElement(annotationClass.getCanonicalName());
+      Set<? extends Element> elementsAnnotatedWith = (annotationType == null)
+          ? ImmutableSet.<Element>of()
+          : roundEnv.getElementsAnnotatedWith(annotationType);
       for (Element annotatedElement : Sets.union(
-          roundEnv.getElementsAnnotatedWith(annotationClass),
+          elementsAnnotatedWith,
           deferredElementsByAnnotation.get(annotationClass))) {
         if (annotatedElement.getKind().equals(PACKAGE)) {
           PackageElement annotatedPackageElement = (PackageElement) annotatedElement;
