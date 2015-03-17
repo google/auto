@@ -39,6 +39,10 @@
     <tag>HEAD</tag>
   </scm>
 
+  <properties>
+    <guava.version>18.0</guava.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.google.auto</groupId>
@@ -53,7 +57,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>18.0</version>
+      <version>${guava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
@@ -69,7 +73,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
-      <version>17.0</version>
+      <version>${guava.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -81,7 +85,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -139,33 +143,34 @@
 	    </goals>
 	    <configuration>
 	      <minimizeJar>true</minimizeJar>
-              <filters>
-                <filter>
-                   <artifact>org.apache.velocity:*</artifact>
-                   <includes>
-                       <include>**</include>
-                   </includes>
-                </filter>
-              </filters>
+          <artifactSet>
+            <!-- We don't include Apache classes because they often load classes from strings,
+                 and the relocator doesn't know to rewrite those strings. This applies to both
+                 Velocity and Commons. -->
+            <includes>
+              <include>com.google.auto:*</include>
+              <include>com.google.auto.service:*</include>
+              <include>com.google.guava:*</include>
+              <include>org.ow2.asm:*</include>
+              <include>org.objectweb:*</include>
+            </includes>
+          </artifactSet>
 	      <relocations>
-		<!-- We don't relocate Apache classes because they often load classes from strings,
-                     and the relocator doesn't know to rewrite those strings. This applies to both
-                     Velocity and Commons. We also don't minimize Velocity for similar reasons. -->
-		<relocation>
-		  <pattern>org.objectweb</pattern>
-		  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
-		</relocation>
-		<relocation>
-		  <pattern>com.google</pattern>
-		  <shadedPattern>autovalue.shaded.com.google.common</shadedPattern>
-		  <excludes>
-		    <exclude>com.google.auto.value.**</exclude>
-		  </excludes>
-		</relocation>
-	      </relocations>
-	    </configuration>
-	  </execution>
-	</executions>
+            <relocation>
+              <pattern>org.objectweb</pattern>
+              <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>com.google</pattern>
+              <shadedPattern>autovalue.shaded.com.google.common</shadedPattern>
+              <excludes>
+                <exclude>com.google.auto.value.**</exclude>
+              </excludes>
+            </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
