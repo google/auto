@@ -148,9 +148,18 @@
                 </filter>
               </filters>
 	      <relocations>
-		<!-- We don't relocate Apache classes because they often load classes from strings,
-                     and the relocator doesn't know to rewrite those strings. This applies to both
-                     Velocity and Commons. We also don't minimize Velocity for similar reasons. -->
+		<!-- We don't relocate Velocity classes because they often load classes from
+		     strings, and the relocator doesn't know to rewrite those strings.
+                     We also don't minimize it for similar reasons.
+		     You would expect that we could express this by relocating org.apache and
+		     excluding org.apache.velocity.**, but it turns out that doesn't work because
+		     the relocator for some reason feels the need to rewrite string constants that
+		     begin with org/apache even if they also begin with org/apache/velocity, and
+		     that throws resource name constants into the air. -->
+		<relocation>
+		  <pattern>org.apache.commons</pattern>
+		  <shadedPattern>autovalue.shaded.org.apache.commons</shadedPattern>
+		</relocation>
 		<relocation>
 		  <pattern>org.objectweb</pattern>
 		  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
