@@ -49,7 +49,7 @@ import javax.tools.ToolProvider;
  */
 public class CompilationErrorsTest extends TestCase {
 
-  // TODO(user): add tests for:
+  // TODO(emcmanus): add tests for:
   // - superclass in a different package with nonpublic abstract methods (this must fail but
   //   is it clean?)
 
@@ -76,7 +76,7 @@ public class CompilationErrorsTest extends TestCase {
   // temporary directory while this test is running and make you delete a bunch of unrelated stuff.
   // That's surely not much of a problem here, but just in case, we check that anything we're going
   // to delete is either a directory or ends with .java or .class.
-  // TODO(user): simplify now that we are only using this to test compilation failure.
+  // TODO(emcmanus): simplify now that we are only using this to test compilation failure.
   // It should be straightforward to know exactly what files will be generated.
   private boolean deleteDirectory(File dir) {
     File[] files = dir.listFiles();
