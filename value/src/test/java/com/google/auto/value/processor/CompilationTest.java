@@ -866,7 +866,8 @@ public class CompilationTest extends TestCase {
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
-        .withErrorContaining("Parameter type should be int")
+        .withErrorContaining(
+            "Parameter type of setter method should be int to match getter foo.bar.Baz.blim")
         .in(javaFileObject).onLine(12);
   }
 
@@ -893,7 +894,8 @@ public class CompilationTest extends TestCase {
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
-        .withErrorContaining("Parameter type should be int")
+        .withErrorContaining(
+            "Parameter type of setter method should be int to match getter foo.bar.Baz.getBlim")
         .in(javaFileObject).onLine(12);
   }
 
@@ -971,9 +973,7 @@ public class CompilationTest extends TestCase {
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
-        .withErrorContaining(
-            "Builder methods must either have no arguments and return foo.bar.Baz or have one"
-                + " argument and return foo.bar.Baz.Builder")
+        .withErrorContaining("Builder methods must have 0 or 1 parameters")
         .in(javaFileObject).onLine(11);
   }
 
@@ -1052,8 +1052,9 @@ public class CompilationTest extends TestCase {
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
-        .withErrorContaining("Builder must have a single no-argument method returning foo.bar.Baz")
-        .in(javaFileObject).onLine(10);
+        .withErrorContaining(
+            "Method without arguments should be a build method returning foo.bar.Baz")
+        .in(javaFileObject).onLine(12);
   }
 
   public void testAutoValueBuilderTypeParametersDontMatch1() {

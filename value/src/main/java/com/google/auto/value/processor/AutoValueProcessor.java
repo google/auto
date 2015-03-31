@@ -22,6 +22,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -408,7 +409,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
-    ImmutableMap<ExecutableElement, String> methodToPropertyName =
+    ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         methodToPropertyNameMap(propertyMethods);
     Map<ExecutableElement, String> methodToIdentifier =
         Maps.newLinkedHashMap(methodToPropertyName);
@@ -433,7 +434,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableMap<ExecutableElement, String> methodToPropertyNameMap(
+  private ImmutableBiMap<ExecutableElement, String> methodToPropertyNameMap(
       Iterable<ExecutableElement> propertyMethods) {
     ImmutableMap.Builder<ExecutableElement, String> builder = ImmutableMap.builder();
     boolean allGetters = allGetters(propertyMethods);
@@ -446,7 +447,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (allGetters) {
       checkDuplicateGetters(map);
     }
-    return map;
+    return ImmutableBiMap.copyOf(map);
   }
 
   private static boolean allGetters(Iterable<ExecutableElement> methods) {

@@ -18,31 +18,28 @@ package com.google.auto.value.processor;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import java.beans.Introspector;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -56,8 +53,6 @@ import javax.lang.model.util.Types;
  * @author Éamonn McManus
  */
 class BuilderSpec {
-  private static final Equivalence<TypeMirror> TYPE_EQUIVALENCE = MoreTypes.equivalence();
-
   private final TypeElement autoValueClass;
   private final Elements elementUtils;
   private final ErrorReporter errorReporter;
@@ -135,108 +130,13 @@ class BuilderSpec {
    */
   class Builder {
     private final TypeElement builderTypeElement;
-    private final ExecutableElement buildMethod;
-    private final ImmutableList<ExecutableElement> setters;
     private final Optional<ExecutableElement> validateMethod;
 
     Builder(
         TypeElement builderTypeElement,
-        ExecutableElement build,
-        List<ExecutableElement> setters,
         Optional<ExecutableElement> validateMethod) {
       this.builderTypeElement = builderTypeElement;
-      this.buildMethod = build;
-      this.setters = ImmutableList.copyOf(setters);
       this.validateMethod = validateMethod;
-    }
-
-    ExecutableElement buildMethod() {
-      return buildMethod;
-    }
-
-    /**
-     * Returns a map from property name to setter method. If the setter methods are invalid
-     * (for example not every getter has a setter, or some setters don't correspond to getters)
-     * then emits an error message and returns null.
-     *
-     * @param getterToPropertyName a map where the keys are getter methods, such as
-     *     {@code abstract String foo();} or {@code abstract String getFoo();}, and the values are
-     *     the corresponding properties, such as {@code foo}.
-     */
-    private Map<String, ExecutableElement> makeSetterMap(
-        Map<ExecutableElement, String> getterToPropertyName) {
-
-      // Map property names to types based on the getters.
-      Map<String, TypeMirror> getterMap = new TreeMap<String, TypeMirror>();
-      for (Map.Entry<ExecutableElement, String> entry : getterToPropertyName.entrySet()) {
-        getterMap.put(entry.getValue(), entry.getKey().getReturnType());
-      }
-
-      Map<String, ExecutableElement> noPrefixMap = Maps.newLinkedHashMap();
-      Map<String, ExecutableElement> prefixMap = Maps.newLinkedHashMap();
-
-      boolean ok = true;
-      // For each setter, check that its name and type correspond to a getter, and remove it from
-      // the map if so.
-      for (ExecutableElement setter : setters) {
-        Map<String, ExecutableElement> map = noPrefixMap;
-        String name = setter.getSimpleName().toString();
-        TypeMirror type = getterMap.get(name);
-        if (type == null && name.startsWith("set")) {
-          name = Introspector.decapitalize(name.substring(3));
-          type = getterMap.get(name);
-          map = prefixMap;
-        }
-        if (type == null) {
-          errorReporter.reportError(
-              "Method does not correspond to a property of " + autoValueClass, setter);
-          ok = false;
-        } else {
-          VariableElement parameter = Iterables.getOnlyElement(setter.getParameters());
-          if (TYPE_EQUIVALENCE.equivalent(type, parameter.asType())) {
-            getterMap.remove(name);
-            map.put(name, setter);
-          } else {
-            errorReporter.reportError("Parameter type should be " + type, parameter);
-            ok = false;
-          }
-        }
-      }
-      if (!ok) {
-        return null;
-      }
-
-      boolean prefixing = !prefixMap.isEmpty();
-      if (prefixing && !noPrefixMap.isEmpty()) {
-        errorReporter.reportError(
-            "If any setter methods use the setFoo convention then all must",
-            noPrefixMap.values().iterator().next());
-        return null;
-      }
-
-      // If there are any properties left in the map then we didn't see setters for them. Report
-      // an error for each one separately.
-      if (!getterMap.isEmpty()) {
-        for (Map.Entry<String, TypeMirror> entry : getterMap.entrySet()) {
-          String setterName = prefixing ? prefixWithSet(entry.getKey()) : entry.getKey();
-          String error = String.format(
-              "Expected a method with this signature: %s%s %s(%s)",
-              builderTypeElement,
-              TypeSimplifier.actualTypeParametersString(builderTypeElement),
-              setterName,
-              entry.getValue());
-          errorReporter.reportError(error, builderTypeElement);
-        }
-        return null;
-      }
-
-      return noPrefixMap.isEmpty() ? prefixMap : noPrefixMap;
-    }
-
-    private String prefixWithSet(String propertyName) {
-      // This is not internationalizationally correct, but it corresponds to what
-      // Introspector.decapitalize does.
-      return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
     }
 
     /**
@@ -295,11 +195,28 @@ class BuilderSpec {
     void defineVars(
         AutoValueTemplateVars vars,
         TypeSimplifier typeSimplifier,
-        Map<ExecutableElement, String> getterToPropertyName) {
-      Map<String, ExecutableElement> propertyNameToSetter = makeSetterMap(getterToPropertyName);
-      if (propertyNameToSetter == null) {
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
+      Optional<BuilderMethodClassifier> optionalClassifier = BuilderMethodClassifier.classify(
+          builderMethods, errorReporter, autoValueClass, builderTypeElement, getterToPropertyName);
+      if (!optionalClassifier.isPresent()) {
         return;
       }
+      BuilderMethodClassifier classifier = optionalClassifier.get();
+      Set<ExecutableElement> buildMethods = classifier.buildMethods();
+      if (buildMethods.size() != 1) {
+        Set<? extends Element> errorElements = buildMethods.isEmpty()
+            ? ImmutableSet.of(builderTypeElement)
+            : buildMethods;
+        for (Element buildMethod : errorElements) {
+          errorReporter.reportError(
+              "Builder must have a single no-argument method returning "
+                  + autoValueClass + typeParamsString(),
+              buildMethod);
+        }
+        return;
+      }
+      ExecutableElement buildMethod = Iterables.getOnlyElement(buildMethods);
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
@@ -311,7 +228,8 @@ class BuilderSpec {
         vars.validators = ImmutableSet.of();
       }
       ImmutableMap.Builder<String, String> setterNameBuilder = ImmutableMap.builder();
-      for (Map.Entry<String, ExecutableElement> entry : propertyNameToSetter.entrySet()) {
+      for (Map.Entry<String, ExecutableElement> entry :
+          classifier.propertyNameToSetter().entrySet()) {
         setterNameBuilder.put(entry.getKey(), entry.getValue().getSimpleName().toString());
       }
       vars.builderSetterNames = setterNameBuilder.build();
@@ -358,63 +276,7 @@ class BuilderSpec {
               + "type parameters of " + autoValueClass, builderTypeElement);
       return Optional.absent();
     }
-
-    String typeParams = TypeSimplifier.actualTypeParametersString(autoValueClass);
-
-    List<ExecutableElement> buildMethods = new ArrayList<ExecutableElement>();
-    List<ExecutableElement> setterMethods = new ArrayList<ExecutableElement>();
-    // For each abstract method (in builderTypeElement or inherited), check that it is either
-    // a setter method or a build method. A setter method has one argument and returns
-    // builderTypeElement. A build method has no arguments and returns the @AutoValue class.
-    // Record each method in one of the two lists.
-    for (ExecutableElement method : abstractMethods(builderTypeElement)) {
-      boolean thisOk = false;
-      int nParameters = method.getParameters().size();
-      if (nParameters == 0
-          && TYPE_EQUIVALENCE.equivalent(method.getReturnType(), autoValueClass.asType())) {
-        buildMethods.add(method);
-        thisOk = true;
-      } else if (nParameters == 1
-          && TYPE_EQUIVALENCE.equivalent(method.getReturnType(), builderTypeElement.asType())) {
-        setterMethods.add(method);
-        thisOk = true;
-      }
-      if (!thisOk) {
-        errorReporter.reportError(
-            "Builder methods must either have no arguments and return "
-                + autoValueClass + typeParams + " or have one argument and return "
-                + builderTypeElement + typeParams,
-            method);
-        ok = false;
-      }
-    }
-    if (buildMethods.isEmpty()) {
-      errorReporter.reportError(
-          "Builder must have a single no-argument method returning "
-              + autoValueClass + typeParams,
-          builderTypeElement);
-      ok = false;
-    } else if (buildMethods.size() > 1) {
-      // More than one eligible build method. Emit an error for each one, that is attached to
-      // that build method.
-      for (ExecutableElement buildMethod : buildMethods) {
-        errorReporter.reportError(
-            "Builder must have a single no-argument method returning "
-                + autoValueClass + typeParams,
-            buildMethod);
-      }
-      ok = false;
-    }
-
-    if (ok) {
-      return Optional.of(new Builder(
-          builderTypeElement,
-          Iterables.getOnlyElement(buildMethods),
-          setterMethods,
-          validateMethod));
-    } else {
-      return Optional.absent();
-    }
+    return Optional.of(new Builder(builderTypeElement, validateMethod));
   }
 
   // Return a list of all abstract methods in the given TypeElement or inherited from ancestors.
@@ -446,5 +308,9 @@ class BuilderSpec {
         abstractMethods.add(method);
       }
     }
+  }
+
+  private String typeParamsString() {
+    return TypeSimplifier.actualTypeParametersString(autoValueClass);
   }
 }
