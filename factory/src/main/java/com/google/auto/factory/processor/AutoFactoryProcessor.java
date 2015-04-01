@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
@@ -97,9 +98,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
     ImmutableListMultimap.Builder<String, FactoryMethodDescriptor> indexedMethods =
         ImmutableListMultimap.builder();
-    ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodDescriptors =
-        ImmutableSet.builder();
+    ImmutableSetMultimap.Builder<String, ImplementationMethodDescriptor> implementationMethodPerFactory =
+        ImmutableSetMultimap.builder();
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
+      ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodDescriptors =
+          ImmutableSet.builder();
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
         TypeElement extendingType = declaration.get().extendingType();
@@ -145,6 +148,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               return descriptor.factoryName();
             }
           }));
+
+      for (FactoryMethodDescriptor descriptor : descriptors) {
+        implementationMethodPerFactory.putAll(descriptor.factoryName(),implementationMethodDescriptors.build()        );
+      }
     }
 
     for (Entry<String, Collection<FactoryMethodDescriptor>> entry
@@ -171,17 +178,21 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
         }
       }
+
+      final ImmutableSetMultimap<String, ImplementationMethodDescriptor> implementationMethodsPerFactory =
+          implementationMethodPerFactory.build();
+
       if (!skipCreation) {
         try {
+          final String factoryName = entry.getKey();
           factoryWriter.writeFactory(
               new FactoryDescriptor(
-                  entry.getKey(),
+                  factoryName,
                   Iterables.getOnlyElement(extending.build()),
                   implementing.build(),
                   publicType,
                   ImmutableSet.copyOf(entry.getValue()),
-                  // TODO(gak): this needs to be indexed too
-                  implementationMethodDescriptors.build(),
+                  implementationMethodsPerFactory.get(factoryName),
                   allowSubclasses));
         } catch (IOException e) {
           messager.printMessage(Kind.ERROR, "failed");
