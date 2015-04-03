@@ -70,7 +70,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
-    Dagger_AutoFactoryProcessorComponent.builder()
+    DaggerAutoFactoryProcessorComponent.builder()
         .processorModule(new ProcessorModule(processingEnv))
         .build()
         .injectProcessor(this);
