@@ -522,6 +522,9 @@ public class CompilationTest extends TestCase {
         "    Builder<T> aByteArray(byte[] x);",
         "    Builder<T> aNullableIntArray(@Nullable int[] x);",
         "    Builder<T> aList(List<T> x);",
+        "",
+        "    List<T> aList();",
+        "",
         "    Baz<T> build();",
         "  }",
         "",
@@ -658,6 +661,14 @@ public class CompilationTest extends TestCase {
         "    public Baz.Builder<T> aList(List<T> aList) {",
         "      this.aList = aList;",
         "      return this;",
+        "    }",
+        "",
+        "    @Override",
+        "    public List<T> aList() {",
+        "      if (aList == null) {",
+        "        throw new IllegalStateException(\"Property \\\"aList\\\" has not been set\");",
+        "      }",
+        "      return aList;",
         "    }",
         "",
         "    @Override",
@@ -952,7 +963,90 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderAlienMethod() {
+  public void testAutoValueBuilderWrongTypeGetter() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  abstract T blim();",
+        "  abstract U blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    Builder<T, U> blim(T x);",
+        "    Builder<T, U> blam(U x);",
+        "    T blim();",
+        "    T blam();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Method matches a property of foo.bar.Baz but has return type T instead of U")
+        .in(javaFileObject).onLine(15);
+  }
+
+  public void testAutoValueBuilderAlienMethod0() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract String blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    Builder blam(String x);",
+        "    Builder whut();",
+        "    Baz build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Method without arguments should be a build method returning foo.bar.Baz"
+            + " or a getter method with the same name and type as a getter method of foo.bar.Baz")
+        .in(javaFileObject).onLine(12);
+  }
+
+  public void testAutoValueBuilderAlienMethod1() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract String blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    void whut(String x);",
+        "    Baz build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Method does not correspond to a property of foo.bar.Baz")
+        .in(javaFileObject).onLine(11);
+  }
+
+  public void testAutoValueBuilderAlienMethod2() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",

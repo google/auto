@@ -227,6 +227,8 @@ class BuilderSpec {
       } else {
         vars.validators = ImmutableSet.of();
       }
+      vars.propertiesWithBuilderGetters = classifier.propertiesWithBuilderGetters();
+
       ImmutableMap.Builder<String, String> setterNameBuilder = ImmutableMap.builder();
       for (Map.Entry<String, ExecutableElement> entry :
           classifier.propertyNameToSetter().entrySet()) {

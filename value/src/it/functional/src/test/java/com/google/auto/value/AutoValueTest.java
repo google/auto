@@ -1271,6 +1271,119 @@ public class AutoValueTest extends TestCase {
     assertEquals(17, instance3.getAnInt());
   }
 
+  @AutoValue
+  public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
+    public abstract ImmutableList<T> list();
+    @Nullable public abstract T t();
+    public abstract int[] ints();
+    public abstract int noGetter();
+
+    public static <T extends Comparable<T>> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithUnprefixedGetters.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Comparable<T>> {
+      Builder<T> setList(ImmutableList<T> list);
+      Builder<T> setT(T t);
+      Builder<T> setInts(int[] ints);
+      Builder<T> setNoGetter(int x);
+
+      ImmutableList<T> list();
+      T t();
+      int[] ints();
+
+      BuilderWithUnprefixedGetters<T> build();
+    }
+  }
+
+  public void testBuilderWithUnprefixedGetter() {
+    ImmutableList<String> names = ImmutableList.of("fred", "jim");
+    int[] ints = {6, 28, 496, 8128, 33550336};
+    int noGetter = -1;
+
+    BuilderWithUnprefixedGetters.Builder<String> builder = BuilderWithUnprefixedGetters.builder();
+    assertNull(builder.t());
+    try {
+      builder.list();
+      fail("Attempt to retrieve unset list property should have failed");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Property \"list\" has not been set");
+    }
+    try {
+      builder.ints();
+      fail("Attempt to retrieve unset ints property should have failed");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Property \"ints\" has not been set");
+    }
+
+    builder.setList(names);
+    assertThat(builder.list()).isSameAs(names);
+    builder.setInts(ints);
+    assertThat(builder.ints()).isEqualTo(ints);
+    ints[0] = 0;
+    assertThat(builder.ints()[0]).isEqualTo(6);
+    ints[0] = 6;
+
+    BuilderWithUnprefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
+    assertThat(instance.list()).isSameAs(names);
+    assertThat(instance.t()).isNull();
+    assertThat(instance.ints()).isEqualTo(ints);
+    assertThat(instance.noGetter()).isEqualTo(noGetter);
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
+    public abstract ImmutableList<T> getList();
+    public abstract T getT();
+    @Nullable public abstract int[] getInts();
+    public abstract int getNoGetter();
+
+    public static <T extends Comparable<T>> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithPrefixedGetters.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T extends Comparable<T>> {
+      public abstract Builder<T> setList(ImmutableList<T> list);
+      public abstract Builder<T> setT(T t);
+      public abstract Builder<T> setInts(int[] ints);
+      public abstract Builder<T> setNoGetter(int x);
+
+      abstract ImmutableList<T> getList();
+      abstract T getT();
+      abstract int[] getInts();
+
+      public abstract BuilderWithPrefixedGetters<T> build();
+    }
+  }
+
+  public void testBuilderWithPrefixedGetter() {
+    ImmutableList<String> names = ImmutableList.of("fred", "jim");
+    String name = "sheila";
+    int noGetter = -1;
+
+    BuilderWithPrefixedGetters.Builder<String> builder = BuilderWithPrefixedGetters.builder();
+    assertThat(builder.getInts()).isNull();
+    try {
+      builder.getList();
+      fail("Attempt to retrieve unset list property should have failed");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Property \"list\" has not been set");
+    }
+
+    builder.setList(names);
+    assertThat(builder.getList()).isSameAs(names);
+    builder.setT(name);
+    assertThat(builder.getInts()).isNull();
+
+    BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
+    assertThat(instance.getList()).isSameAs(names);
+    assertThat(instance.getT()).isEqualTo(name);
+    assertThat(instance.getInts()).isNull();
+    assertThat(instance.getNoGetter()).isEqualTo(noGetter);
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   @interface GwtCompatible {
     boolean funky() default false;

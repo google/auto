@@ -134,6 +134,11 @@ class AutoValueTemplateVars extends TemplateVars {
   Map<String, String> builderSetterNames = Collections.emptyMap();
 
   /**
+   * Properties that have getters in the builder.
+   */
+  Set<String> propertiesWithBuilderGetters = Collections.emptySet();
+
+  /**
    * The names of any {@code toBuilder()} methods, that is methods that return the builder type.
    */
   List<String> toBuilderMethods;

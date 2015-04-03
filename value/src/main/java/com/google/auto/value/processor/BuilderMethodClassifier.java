@@ -19,12 +19,15 @@ import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
 import java.beans.Introspector;
 import java.util.Map;
 import java.util.Set;
+
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -41,7 +44,10 @@ class BuilderMethodClassifier {
   private final TypeElement autoValueClass;
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
+  private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
+
   private final Set<ExecutableElement> buildMethods = Sets.newLinkedHashSet();
+  private final Set<String> propertiesWithBuilderGetters = Sets.newLinkedHashSet();
   private final Map<String, ExecutableElement> propertyNameToPrefixedSetter =
       Maps.newLinkedHashMap();
   private final Map<String, ExecutableElement> propertyNameToUnprefixedSetter =
@@ -57,6 +63,12 @@ class BuilderMethodClassifier {
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
+    ImmutableMap.Builder<String, ExecutableElement> getterToPropertyNameBuilder =
+        ImmutableMap.builder();
+    for (ExecutableElement getter : getterToPropertyName.keySet()) {
+      getterToPropertyNameBuilder.put(getter.getSimpleName().toString(), getter);
+    }
+    this.getterNameToGetter = getterToPropertyNameBuilder.build();
   }
 
   /**
@@ -94,7 +106,18 @@ class BuilderMethodClassifier {
    * {@code foo} or {@code setFoo}.
    */
   Map<String, ExecutableElement> propertyNameToSetter() {
-    return settersPrefixed ? propertyNameToPrefixedSetter : propertyNameToUnprefixedSetter;
+    return ImmutableMap.copyOf(
+        settersPrefixed ? propertyNameToPrefixedSetter : propertyNameToUnprefixedSetter);
+  }
+
+  /**
+   * Returns the set of properties that have getters in the builder. If a property is defined by
+   * an abstract method in the {@code @AutoValue} class called {@code foo()} or {@code getFoo()}
+   * then the name of the property is {@code foo}, If the builder also has a method of the same name
+   * ({@code foo()} or {@code getFoo()}) then the set returned here will contain {@code foo}.
+   */
+  ImmutableSet<String> propertiesWithBuilderGetters() {
+    return ImmutableSet.copyOf(propertiesWithBuilderGetters);
   }
 
   /**
@@ -173,15 +196,36 @@ class BuilderMethodClassifier {
   private boolean classifyMethodNoArgs(ExecutableElement method) {
     TypeMirror returnType = method.getReturnType();
 
+    ExecutableElement getter = getterNameToGetter.get(method.getSimpleName().toString());
+    if (getter != null) {
+      return classifyGetter(method, getter);
+    }
+
     if (TYPE_EQUIVALENCE.equivalent(returnType, autoValueClass.asType())) {
       buildMethods.add(method);
       return true;
     }
 
-    errorReporter.reportError(
-        "Method without arguments should be a build method returning "
-        + autoValueClass + typeParamsString(), method);
+    String error = String.format(
+        "Method without arguments should be a build method returning %1$s%2$s"
+            + " or a getter method with the same name and type as a getter method of %1$s",
+        autoValueClass, typeParamsString());
+    errorReporter.reportError(error, method);
     return false;
+  }
+
+  private boolean classifyGetter(
+      ExecutableElement builderGetter, ExecutableElement originalGetter) {
+    if (!TYPE_EQUIVALENCE.equivalent(
+        builderGetter.getReturnType(), originalGetter.getReturnType())) {
+      String error = String.format(
+          "Method matches a property of %s but has return type %s instead of %s",
+          autoValueClass, builderGetter.getReturnType(), originalGetter.getReturnType());
+      errorReporter.reportError(error, builderGetter);
+      return false;
+    }
+    propertiesWithBuilderGetters.add(getterToPropertyName.get(originalGetter));
+    return true;
   }
 
   /**

@@ -236,6 +236,8 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($p in $props)
 
+    ## Setter
+
     @Override
     public ${builderTypeName}${builderActualTypes} $builderSetterNames[$p.name]($p.type $p) {
     #if ($p.kind == "ARRAY")
@@ -257,6 +259,39 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
       return this;
     }
 
+    ## Getter
+
+    #if ($propertiesWithBuilderGetters.contains($p.name))
+
+    @Override
+    public $p.type ${p.getter}() {
+      #if (!$p.nullable)
+
+      if ($p == null) {
+        throw new IllegalStateException("Property \"$p.name\" has not been set");
+      }
+
+      #end
+
+      #if ($p.kind == "ARRAY")
+        #if ($p.nullable)
+
+      return ($p == null) ? null : ${p}.clone();
+
+        #else
+
+      return ${p}.clone();
+
+        #end
+      #else
+
+      return $p;
+
+      #end
+
+    }
+
+    #end
   #end
 
 #set ($requiredCount = 0)
