@@ -545,7 +545,7 @@ public class CompilationTest extends TestCase {
         "  private final List<T> aList;",
         "",
         "  private AutoValue_Baz("
-            + "int anInt, byte[] aByteArray, int[] aNullableIntArray, List<T> aList) {",
+            + "int anInt, byte[] aByteArray, @javax.annotation.Nullable int[] aNullableIntArray, List<T> aList) {",
         "    this.anInt = anInt;",
         "    if (aByteArray == null) {",
         "      throw new NullPointerException(\"Null aByteArray\");",

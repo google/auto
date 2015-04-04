@@ -174,6 +174,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     private final ExecutableElement method;
     private final String type;
     private final ImmutableList<String> annotations;
+    private final String nullableAnnotation;
 
     Property(
         String name,
@@ -186,6 +187,18 @@ public class AutoValueProcessor extends AbstractProcessor {
       this.method = method;
       this.type = type;
       this.annotations = buildAnnotations(typeSimplifier);
+      this.nullableAnnotation = buildNullableAnnotation(typeSimplifier);
+    }
+
+    private String buildNullableAnnotation(TypeSimplifier typeSimplifier) {
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
+        if (name.equals("Nullable")) {
+          AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
+          return annotationOutput.sourceFormForAnnotation(annotationMirror);
+        }
+      }
+      return null;
     }
 
     private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
@@ -257,13 +270,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public boolean isNullable() {
-      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
-        if (name.equals("Nullable")) {
-          return true;
-        }
-      }
-      return false;
+      return nullableAnnotation != null;
+    }
+    
+    public String getNullableAnnotation() {
+      return nullableAnnotation;
     }
 
     public String getAccess() {
