@@ -99,8 +99,15 @@ public class PropertyAnnotationsTest extends TestCase {
     return JavaFileObjects.forSourceLines("foo.bar.Baz", lines);
   }
 
-  private JavaFileObject expectedCode(List<String> annotations, String expectedConstructorParamAnnotation) {
-    String constructorParamPrefix = expectedConstructorParamAnnotation != null ? expectedConstructorParamAnnotation + " " : "";
+  private JavaFileObject expectedCode(
+      List<String> annotations,
+      String constructorParamAnnotation) {
+    String constructorParamPrefix;
+    if (constructorParamAnnotation == null) {
+      constructorParamPrefix = "";
+    } else {
+      constructorParamPrefix = constructorParamAnnotation + " ";
+    }
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
             "package foo.bar;",
@@ -111,7 +118,7 @@ public class PropertyAnnotationsTest extends TestCase {
             "final class AutoValue_Baz extends Baz {",
             "  private final int buh;",
             "",
-            "  AutoValue_Baz("+constructorParamPrefix+"int buh) {",
+            "  AutoValue_Baz(" + constructorParamPrefix + "int buh) {",
             "    this.buh = buh;",
             "  }",
             ""
@@ -157,7 +164,8 @@ public class PropertyAnnotationsTest extends TestCase {
   private void assertGeneratedMatches(
       List<String> imports,
       List<String> annotations,
-      List<String> expectedAnnotations, String expectedConstructorParamAnnotation) {
+      List<String> expectedAnnotations,
+      String expectedConstructorParamAnnotation) {
 
     JavaFileObject javaFileObject = sourceCode(imports, annotations);
     JavaFileObject expectedOutput = expectedCode(expectedAnnotations, expectedConstructorParamAnnotation);
@@ -182,8 +190,7 @@ public class PropertyAnnotationsTest extends TestCase {
         ImmutableList.of("import javax.annotation.Nullable;"),
         ImmutableList.of("@Nullable"),
         ImmutableList.of("@javax.annotation.Nullable"),
-        "@javax.annotation.Nullable"
-        );
+        "@javax.annotation.Nullable");
   }
 
   public void testSingleStringValueAnnotation() {
