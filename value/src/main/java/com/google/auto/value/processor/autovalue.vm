@@ -35,7 +35,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   $subclass(
 #foreach ($p in $props)
 
-      $p.type $p #if ($foreach.hasNext) , #end
+     #if ($p.nullable) ${p.nullableAnnotation} #end $p.type $p #if ($foreach.hasNext) , #end
 #end ) {
 #foreach ($p in $props)
   #if (!$p.kind.primitive && !$p.nullable)
