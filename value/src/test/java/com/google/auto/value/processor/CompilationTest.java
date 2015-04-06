@@ -1524,4 +1524,195 @@ public class CompilationTest extends TestCase {
         .processedWith(new AutoValueProcessor(), new FooProcessor())
         .compilesWithoutError();
   }
+
+    public void testId() {
+        JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+                "foo.bar.Baz",
+                "package foo.bar;",
+                "",
+                "import com.google.auto.value.AutoValue;",
+                "",
+                "@AutoValue",
+                "public abstract class Baz {",
+                "  public abstract String stringVar();",
+                " @AutoValue.Id public abstract String stringId();",
+
+
+                "}");
+        JavaFileObject expectedOutput = JavaFileObjects.forSourceString(
+                "foo.bar.AutoValue_Baz",
+                "package foo.bar;\n" +
+                        "\n" +
+                        "import javax.annotation.Generated;\n" +
+                        "\n" +
+                        "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")\n" +
+                        "final class AutoValue_Baz extends Baz {\n" +
+                        "\n" +
+                        "  private final String stringVar;\n" +
+                        "  private final String stringId;\n" +
+                        "\n" +
+                        "  AutoValue_Baz(\n" +
+                        "      String stringVar,\n" +
+                        "      String stringId) {\n" +
+                        "    if (stringVar == null) {\n" +
+                        "      throw new NullPointerException(\"Null stringVar\");\n" +
+                        "    }\n" +
+                        "    this.stringVar = stringVar;\n" +
+                        "    if (stringId == null) {\n" +
+                        "      throw new NullPointerException(\"Null stringId\");\n" +
+                        "    }\n" +
+                        "    this.stringId = stringId;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public String stringVar() {\n" +
+                        "    return stringVar;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @com.google.auto.value.AutoValue.Id\n" +
+                        "  @Override\n" +
+                        "  public String stringId() {\n" +
+                        "    return stringId;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public String toString() {\n" +
+                        "    return \"Baz{\"\n" +
+                        "        + \"stringVar=\" + stringVar + \", \"\n" +
+                        "        + \"stringId=\" + stringId\n" +
+                        "        + \"}\";\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public boolean equals(Object o) {\n" +
+                        "    if (o == this) {\n" +
+                        "      return true;\n" +
+                        "    }\n" +
+                        "    if (o instanceof Baz) {\n" +
+                        "      Baz that = (Baz) o;\n" +
+                        "      return (this.stringId.equals(that.stringId()));\n" +
+                        "    }\n" +
+                        "    return false;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public int hashCode() {\n" +
+                        "    int h = 1;\n" +
+                        "    h *= 1000003;\n" +
+                        "    h ^= stringId.hashCode();\n" +
+                        "    return h;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "}"
+        );
+        assertAbout(javaSource())
+                .that(javaFileObject)
+                .processedWith(new AutoValueProcessor())
+                .compilesWithoutError()
+                .and().generatesSources(expectedOutput);
+    }
+
+
+    public void testIds() {
+        JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+                "foo.bar.Baz",
+                "package foo.bar;",
+                "",
+                "import com.google.auto.value.AutoValue;",
+                "",
+                "@AutoValue",
+                "public abstract class Baz {",
+                "  public abstract String stringVar();",
+                " @AutoValue.Id public abstract String stringId();",
+                " @AutoValue.Id public abstract String stringId2();",
+
+                "}");
+        JavaFileObject expectedOutput = JavaFileObjects.forSourceString(
+                "foo.bar.AutoValue_Baz",
+                "package foo.bar;\n" +
+                        "\n" +
+                        "import javax.annotation.Generated;\n" +
+                        "\n" +
+                        "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")\n" +
+                        "final class AutoValue_Baz extends Baz {\n" +
+                        "\n" +
+                        "  private final String stringVar;\n" +
+                        "  private final String stringId;\n" +
+                        "  private final String stringId2;\n" +
+                        "\n" +
+                        "  AutoValue_Baz(\n" +
+                        "      String stringVar,\n" +
+                        "      String stringId,\n" +
+                        "      String stringId2) {\n" +
+                        "    if (stringVar == null) {\n" +
+                        "      throw new NullPointerException(\"Null stringVar\");\n" +
+                        "    }\n" +
+                        "    this.stringVar = stringVar;\n" +
+                        "    if (stringId == null) {\n" +
+                        "      throw new NullPointerException(\"Null stringId\");\n" +
+                        "    }\n" +
+                        "    this.stringId = stringId;\n" +
+                        "    if (stringId2 == null) {\n" +
+                        "      throw new NullPointerException(\"Null stringId2\");\n" +
+                        "    }\n" +
+                        "    this.stringId2 = stringId2;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public String stringVar() {\n" +
+                        "    return stringVar;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @com.google.auto.value.AutoValue.Id\n" +
+                        "  @Override\n" +
+                        "  public String stringId() {\n" +
+                        "    return stringId;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @com.google.auto.value.AutoValue.Id\n" +
+                        "  @Override\n" +
+                        "  public String stringId2() {\n" +
+                        "    return stringId2;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public String toString() {\n" +
+                        "    return \"Baz{\"\n" +
+                        "        + \"stringVar=\" + stringVar + \", \"\n" +
+                        "        + \"stringId=\" + stringId + \", \"\n" +
+                        "        + \"stringId2=\" + stringId2\n" +
+                        "        + \"}\";\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public boolean equals(Object o) {\n" +
+                        "    if (o == this) {\n" +
+                        "      return true;\n" +
+                        "    }\n" +
+                        "    if (o instanceof Baz) {\n" +
+                        "      Baz that = (Baz) o;\n" +
+                        "      return (this.stringId.equals(that.stringId()))\n" +
+                        "           && (this.stringId2.equals(that.stringId2()));\n" +
+                        "    }\n" +
+                        "    return false;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  @Override\n" +
+                        "  public int hashCode() {\n" +
+                        "    int h = 1;\n" +
+                        "    h *= 1000003;\n" +
+                        "    h ^= stringId.hashCode();\n" +
+                        "    h *= 1000003;\n" +
+                        "    h ^= stringId2.hashCode();\n" +
+                        "    return h;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "}"
+        );
+        assertAbout(javaSource())
+                .that(javaFileObject)
+                .processedWith(new AutoValueProcessor())
+                .compilesWithoutError()
+                .and().generatesSources(expectedOutput);
+    }
 }

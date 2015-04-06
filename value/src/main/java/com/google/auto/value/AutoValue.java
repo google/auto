@@ -85,4 +85,15 @@ public @interface AutoValue {
   @Retention(RetentionPolicy.SOURCE)
   @Target(ElementType.METHOD)
   public @interface Validate {}
+
+
+  /**
+   * Specifies that the annotated method is an id method. All methods containing this annotation
+   * will be used in the {@link Object#equals equals} and {@link Object#hashCode hashCode} implementation.
+   *
+   * @author Rafael Torres
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  public @interface Id {}
 }

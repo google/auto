@@ -36,6 +36,9 @@ class AutoValueTemplateVars extends TemplateVars {
   /** The properties defined by the parent class's abstract methods. */
   List<AutoValueProcessor.Property> props;
 
+  /** The properties of all methods marked as ids or a copy of props in case ids is empty*/
+  List<AutoValueProcessor.Property> ids;
+
   /** Whether to generate an equals(Object) method. */
   Boolean equals;
   /** Whether to generate a hashCode() method. */
@@ -145,6 +148,7 @@ class AutoValueTemplateVars extends TemplateVars {
   Set<String> validators = Collections.emptySet();
 
   private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
+
 
   @Override
   SimpleNode parsedTemplate() {

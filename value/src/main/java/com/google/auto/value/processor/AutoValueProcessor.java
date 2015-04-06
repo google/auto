@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Functions;
@@ -426,15 +427,24 @@ public class AutoValueProcessor extends AbstractProcessor {
         Maps.newLinkedHashMap(methodToPropertyName);
     fixReservedIdentifiers(methodToIdentifier);
     List<Property> props = new ArrayList<Property>();
+    List<Property> ids = new ArrayList<Property>();
     for (ExecutableElement method : propertyMethods) {
       String propertyType = typeSimplifier.simplify(method.getReturnType());
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
-      props.add(new Property(propertyName, identifier, method, propertyType, typeSimplifier));
+      Property p = new Property(propertyName, identifier, method, propertyType, typeSimplifier);
+      props.add(p);
+      if (MoreElements.isAnnotationPresent(method, AutoValue.Id.class)) {
+        ids.add(p);
+      }
+    }
+    if (ids.isEmpty()) {
+      ids.addAll(props);
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
     vars.props = props;
+    vars.ids = ids;
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
     vars.actualTypes = TypeSimplifier.actualTypeParametersString(type);
@@ -506,7 +516,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private String disambiguate(String name, Collection<String> existingNames) {
-    for (int i = 0; ; i++) {
+    for (int i = 0;; i++) {
       String candidate = name + i;
       if (!existingNames.contains(candidate)) {
         return candidate;
@@ -566,6 +576,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
     boolean errors = false;
     for (ExecutableElement method : methods) {
+      if (MoreElements.isAnnotationPresent(method, AutoValue.Id.class)
+              && method.getModifiers().contains(Modifier.STATIC)) {
+        errorReporter.reportError("@AutoValue.Id cannot apply to a static method", method);
+        errors = true;
+      }
       if (method.getModifiers().contains(Modifier.ABSTRACT)
           && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {

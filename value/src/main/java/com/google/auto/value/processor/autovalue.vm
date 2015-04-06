@@ -127,7 +127,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     }
     if (o instanceof $origClass) {
 
-  #if ($props.empty)
+  #if ($ids.empty)
 
       return true;
 
@@ -135,7 +135,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
       $origClass$wildcardTypes that = ($origClass$wildcardTypes) o;
       return ##
-           #foreach ($p in $props)
+           #foreach ($p in $ids)
            (#equalsThatExpression ($p))##
              #if ($foreach.hasNext)
 
@@ -174,7 +174,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   public int hashCode() {
     int h = 1;
 
-  #foreach ($p in $props)
+  #foreach ($p in $ids)
 
     h *= 1000003;
     h ^= #hashCodeExpression($p);
