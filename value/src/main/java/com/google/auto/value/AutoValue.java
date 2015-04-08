@@ -81,8 +81,24 @@ public @interface AutoValue {
    * no-argument method in an AutoValue class. It will be called by the {@code build()} method of
    * the {@link Builder @AutoValue.Builder} implementation, immediately after constructing the new
    * object. It can throw an exception if the new object fails validation checks.
+   *
+   * @deprecated This annotation will soon be deleted. Instead, please use this idiom:
+   * <pre>{@code
+   *   abstract static class Builder {
+   *     abstract Builder name(String x);
+   *     abstract Builder id(int x);
+   *     abstract Person autoBuild();
+   *     Person build() {
+   *       Person p = autoBuild();
+   *       if (p.name.isEmpty()) {
+   *         throw new IllegalStateException("Name cannot be empty");
+   *       }
+   *       return p;
+   *     }
+   *   }}</pre>
    */
   @Retention(RetentionPolicy.SOURCE)
   @Target(ElementType.METHOD)
+  @Deprecated
   public @interface Validate {}
 }
