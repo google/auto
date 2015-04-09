@@ -209,14 +209,13 @@ written using builders.
         abstract int numberOfLegs();
  
         @AutoValue.Builder
-        interface Builder {
-          Builder name(String s);
-          Builder numberOfLegs(int n);
-          Animal build();
+        abstract static class Builder {
+          abstract Builder name(String s);
+          abstract Builder numberOfLegs(int n);
+          abstract Animal build();
         }
       }
     }
-
 ```
 
 Now client code can look something like this:
@@ -260,7 +259,6 @@ how to define that animals have 4 legs by default:
         // ...remainder as before...
       }
     }
-
 ```
 
 ### Nullability
@@ -293,27 +291,36 @@ steps, insert the code to do so into your static factory method before
 invoking the generated constructor. Remember that null checks are
 already present in the generated constructor.
 
-When using builders, you can validate using a method annotated with
-`@AutoValue.Validate`. The method will be called immediately after a
-new instance is constructed by the build method and before that
-instance is returned to the client. It can throw an exception if
-validation fails. Here's how our example might be validated:
+When using builders, you can validate by implementing your own build()
+method that calls the generated build method, conventionally called
+autoBuild(). You can construct an object provisionally and inspect its
+properties before returning it. Here's how our example might be validated:
 
 ```java
     class Example {
       @AutoValue
       abstract static class Animal {
-        @AutoValue.Validate
-        void validate() {
-          if (numberOfLegs() < 0) {
-            throw new IllegalStateException("Negative legs");
+        ...
+        @AutoValue.Builder
+        abstract static class Builder {
+          abstract Builder name(String s);
+          abstract Builder numberOfLegs(int n);
+
+          abstract Animal autoBuild();
+          Animal build() {
+            Animal animal = autoBuild();
+            if (animal.numberOfLegs() < 0) {
+              throw new IllegalStateException("Negative legs");
+            }
+            return animal;
           }
         }
-        // ...remainder as before...
       }
     }
-
 ```
+
+If the Builder class is public, typically `build()` will be too but
+`autoBuild()` will be package-private.
 
 ### Custom implementations
 Don't like the `equals`, `hashCode` or `toString` method AutoValue
@@ -361,10 +368,10 @@ or
         return new AutoValue_MapEntry.Builder<K, V>();
       }
 
-      interface Builder<K extends Comparable<K>, V> {
-        Builder setKey(K key);
-        Builder setValue(V value);
-        MapEntry<K, V> build();
+      abstract static class Builder<K extends Comparable<K>, V> {
+        abstract Builder setKey(K key);
+        abstract Builder setValue(V value);
+        abstract MapEntry<K, V> build();
       }
       ...
     }
