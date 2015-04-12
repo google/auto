@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2015 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
  */
 package com.google.auto.factory;
 
+import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 
-@Module
-final class DaggerModule {
-  @Provides Dependency provideDependency(DependencyImpl impl) {
-    return impl;
-  }
+@Component(modules = DaggerModule.class)
+interface DaggerComponent {
+  FactoryGeneratedFactory factoryGeneratedFactory();
 }

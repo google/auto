@@ -36,7 +36,7 @@ import dagger.Provides;
  * @author Gregory Kick
  */
 // TODO(gak): move this some place more common so that it can be shared amongst processors
-@Module(library = true)
+@Module
 final class ProcessorModule {
   private final ProcessingEnvironment processingEnvironment;
 
