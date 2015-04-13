@@ -91,36 +91,9 @@ class BuilderSpec {
       }
     }
 
-    Optional<ExecutableElement> validateMethod = Optional.absent();
-    for (ExecutableElement containedMethod :
-        ElementFilter.methodsIn(autoValueClass.getEnclosedElements())) {
-      if (MoreElements.isAnnotationPresent(containedMethod, AutoValue.Validate.class)) {
-        if (containedMethod.getModifiers().contains(Modifier.STATIC)) {
-          errorReporter.reportError(
-              "@AutoValue.Validate cannot apply to a static method", containedMethod);
-        } else if (!containedMethod.getParameters().isEmpty()) {
-          errorReporter.reportError(
-              "@AutoValue.Validate method must not have parameters", containedMethod);
-        } else if (containedMethod.getReturnType().getKind() != TypeKind.VOID) {
-          errorReporter.reportError(
-              "Return type of @AutoValue.Validate method must be void", containedMethod);
-        } else if (validateMethod.isPresent()) {
-          errorReporter.reportError(
-              "There can only be one @AutoValue.Validate method", containedMethod);
-        } else {
-          validateMethod = Optional.of(containedMethod);
-        }
-      }
-    }
-
     if (builderTypeElement.isPresent()) {
-      return builderFrom(builderTypeElement.get(), validateMethod);
+      return builderFrom(builderTypeElement.get());
     } else {
-      if (validateMethod.isPresent()) {
-        errorReporter.reportError(
-            "@AutoValue.Validate is only meaningful if there is an @AutoValue.Builder",
-            validateMethod.get());
-      }
       return Optional.absent();
     }
   }
@@ -130,13 +103,9 @@ class BuilderSpec {
    */
   class Builder {
     private final TypeElement builderTypeElement;
-    private final Optional<ExecutableElement> validateMethod;
 
-    Builder(
-        TypeElement builderTypeElement,
-        Optional<ExecutableElement> validateMethod) {
+    Builder(TypeElement builderTypeElement) {
       this.builderTypeElement = builderTypeElement;
-      this.validateMethod = validateMethod;
     }
 
     /**
@@ -222,11 +191,6 @@ class BuilderSpec {
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethodName = buildMethod.getSimpleName().toString();
-      if (validateMethod.isPresent()) {
-        vars.validators = ImmutableSet.of(validateMethod.get().getSimpleName().toString());
-      } else {
-        vars.validators = ImmutableSet.of();
-      }
       vars.propertiesWithBuilderGetters = classifier.propertiesWithBuilderGetters();
 
       ImmutableMap.Builder<String, String> setterNameBuilder = ImmutableMap.builder();
@@ -243,8 +207,7 @@ class BuilderSpec {
    * class or interface has abstract methods that could not be part of any builder, emits error
    * messages and returns null.
    */
-  private Optional<Builder> builderFrom(
-      TypeElement builderTypeElement, Optional<ExecutableElement> validateMethod) {
+  private Optional<Builder> builderFrom(TypeElement builderTypeElement) {
 
     // We require the builder to have the same type parameters as the @AutoValue class, meaning the
     // same names and bounds. In principle the type parameters could have different names, but that
@@ -278,7 +241,7 @@ class BuilderSpec {
               + "type parameters of " + autoValueClass, builderTypeElement);
       return Optional.absent();
     }
-    return Optional.of(new Builder(builderTypeElement, validateMethod));
+    return Optional.of(new Builder(builderTypeElement));
   }
 
   // Return a list of all abstract methods in the given TypeElement or inherited from ancestors.

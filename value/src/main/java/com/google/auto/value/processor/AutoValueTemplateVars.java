@@ -143,12 +143,6 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   List<String> toBuilderMethods;
 
-  /**
-   * The simple names of validation methods (marked {@code @AutoValue.Validate}) in the AutoValue
-   * class. (Currently, this set is either empty or a singleton.)
-   */
-  Set<String> validators = Collections.emptySet();
-
   private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
   @Override

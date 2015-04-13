@@ -322,19 +322,11 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
       }
   #end
 
-      ${origClass}${actualTypes} result = new ${subclass}${actualTypes}(
+      return new ${subclass}${actualTypes}(
   #foreach ($p in $props)
 
           this.$p #if ($foreach.hasNext) , #end
   #end );
-
-  #foreach ($v in $validators)
-
-      result.${v}();
-
-  #end
-
-      return result;
     }
   }
 #end

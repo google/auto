@@ -44,8 +44,7 @@ import javax.tools.Diagnostic;
 public class AutoValueBuilderProcessor extends AbstractProcessor {
   @Override
   public Set<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(
-        AutoValue.Builder.class.getCanonicalName(), AutoValue.Validate.class.getCanonicalName());
+    return ImmutableSet.of(AutoValue.Builder.class.getCanonicalName());
   }
 
   @Override
@@ -69,19 +68,6 @@ public class AutoValueBuilderProcessor extends AbstractProcessor {
             annotatedType,
             "@AutoValue.Builder can only be applied to a class or interface inside an"
                 + " @AutoValue class");
-      }
-    }
-
-    Set<? extends Element> validateMethods =
-        roundEnv.getElementsAnnotatedWith(AutoValue.Validate.class);
-    if (!SuperficialValidation.validateElements(validateMethods)) {
-      return false;
-    }
-    for (Element annotatedMethod : validateMethods) {
-      if (isAnnotationPresent(annotatedMethod, AutoValue.Validate.class)) {
-        validate(
-            annotatedMethod,
-            "@AutoValue.Validate can only be applied to a method inside an @AutoValue class");
       }
     }
     return false;
