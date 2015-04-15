@@ -322,6 +322,40 @@ properties before returning it. Here's how our example might be validated:
 If the Builder class is public, typically `build()` will be too but
 `autoBuild()` will be package-private.
 
+Sometimes it may be more convenient to consult the value in the builder
+before calling `autoBuild()`. If the `Builder` class has an abstract method
+with the same name and type as one of the methods in the `@AutoValue` class,
+it will be implemented to return the value set on the builder, or throw an
+exception if no value has been set. Like `autoBuild()`, these getter methods
+will typically not be public.
+
+```java
+    class Example {
+      @AutoValue
+      abstract static class Animal {
+        abstract String name();
+        abstract int numberOfLegs();
+
+        ...
+
+        @AutoValue.Builder
+        abstract static class Builder {
+          abstract Builder name(String s);
+          abstract Builder numberOfLegs(int n);
+          abstract int numberOfLegs();
+
+          abstract Animal autoBuild();
+          Animal build() {
+            if (numberOfLegs() < 0) {
+              throw new IllegalStateException("Negative legs");
+            }
+            return autoBuild();
+          }
+        }
+      }
+    }
+```
+
 ### Custom implementations
 Don't like the `equals`, `hashCode` or `toString` method AutoValue
 generates? You can underride it! Just write your own, directly in your
