@@ -496,6 +496,7 @@ public class CompilationTest extends TestCase {
         "package foo.bar;",
         "",
         "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
         "",
         "import java.util.List;",
         "import javax.annotation.Nullable;",
@@ -506,6 +507,7 @@ public class CompilationTest extends TestCase {
         "  public abstract byte[] aByteArray();",
         "  @Nullable public abstract int[] aNullableIntArray();",
         "  public abstract List<T> aList();",
+        "  public abstract ImmutableList<T> anImmutableList();",
         "",
         "  public abstract Builder<T> toBuilder();",
         "",
@@ -515,8 +517,10 @@ public class CompilationTest extends TestCase {
         "    Builder<T> aByteArray(byte[] x);",
         "    Builder<T> aNullableIntArray(@Nullable int[] x);",
         "    Builder<T> aList(List<T> x);",
+        "    ImmutableList.Builder<T> anImmutableListBuilder();",
         "",
         "    List<T> aList();",
+        "    ImmutableList<T> anImmutableList();",
         "",
         "    Baz<T> build();",
         "  }",
@@ -529,6 +533,7 @@ public class CompilationTest extends TestCase {
         "foo.bar.AutoValue_Baz",
         "package foo.bar;",
         "",
+        "import com.google.common.collect.ImmutableList",
         "import java.util.Arrays;",
         "import java.util.List;",
         "import javax.annotation.Generated;",
@@ -539,9 +544,14 @@ public class CompilationTest extends TestCase {
         "  private final byte[] aByteArray;",
         "  private final int[] aNullableIntArray;",
         "  private final List<T> aList;",
+        "  private final ImmutableList<T> anImmutableList;",
         "",
-        "  private AutoValue_Baz("
-            + "int anInt, byte[] aByteArray, @javax.annotation.Nullable int[] aNullableIntArray, List<T> aList) {",
+        "  private AutoValue_Baz(",
+        "      int anInt,",
+        "      byte[] aByteArray,",
+        "      @javax.annotation.Nullable int[] aNullableIntArray,",
+        "      List<T> aList,",
+        "      ImmutableList<T> anImmutableList) {",
         "    this.anInt = anInt;",
         "    if (aByteArray == null) {",
         "      throw new NullPointerException(\"Null aByteArray\");",
@@ -552,6 +562,7 @@ public class CompilationTest extends TestCase {
         "      throw new NullPointerException(\"Null aList\");",
         "    }",
         "    this.aList = aList;",
+        "    this.anImmutableList = anImmutableList;",
         "  }",
         "",
         "  @Override public int anInt() {",
@@ -571,12 +582,17 @@ public class CompilationTest extends TestCase {
         "    return aList;",
         "  }",
         "",
+        "  @Override public ImmutableList<T> anImmutableList() {",
+        "    return anImmutableList;",
+        "  }",
+        "",
         "  @Override public String toString() {",
         "    return \"Baz{\"",
         "        + \"anInt=\" + anInt + \", \"",
         "        + \"aByteArray=\" + Arrays.toString(aByteArray) + \", \"",
         "        + \"aNullableIntArray=\" + Arrays.toString(aNullableIntArray) + \", \"",
-        "        + \"aList=\" + aList",
+        "        + \"aList=\" + aList + \", \"",
+        "        + \"anImmutableList=\" + anImmutableList",
         "        + \"}\";",
         "  }",
         "",
@@ -593,7 +609,8 @@ public class CompilationTest extends TestCase {
         "          && (Arrays.equals(this.aNullableIntArray, "
                     + "(that instanceof AutoValue_Baz) "
                         + "? ((AutoValue_Baz) that).aNullableIntArray : that.aNullableIntArray()))",
-        "          && (this.aList.equals(that.aList()));",
+        "          && (this.aList.equals(that.aList()))",
+        "          && (this.anImmutableList.equals(that.anImmutableList()));",
         "    }",
         "    return false;",
         "  }",
@@ -608,6 +625,8 @@ public class CompilationTest extends TestCase {
         "    h ^= Arrays.hashCode(aNullableIntArray);",
         "    h *= 1000003;",
         "    h ^= aList.hashCode();",
+        "    h *= 1000003;",
+        "    h ^= anImmutableList.hashCode();",
         "    return h;",
         "  }",
         "",
@@ -620,6 +639,7 @@ public class CompilationTest extends TestCase {
         "    private byte[] aByteArray;",
         "    private int[] aNullableIntArray;",
         "    private List<T> aList;",
+        "    private ImmutableList.Builder<T> anImmutableList = ImmutableList.builder();",
         "",
         "    Builder() {",
         "    }",
@@ -629,6 +649,7 @@ public class CompilationTest extends TestCase {
         "      aByteArray(source.aByteArray());",
         "      aNullableIntArray(source.aNullableIntArray());",
         "      aList(source.aList());",
+        "      anImmutableList.addAll(source.anImmutableList());",
         "    }",
         "",
         "    @Override",
@@ -665,6 +686,16 @@ public class CompilationTest extends TestCase {
         "    }",
         "",
         "    @Override",
+        "    public ImmutableList.Builder<T> anImmutableListBuilder() {",
+        "      return anImmutableList;",
+        "    }",
+        "",
+        "    @Override",
+        "    public ImmutableList<T> anImmutableList() {",
+        "      return anImmutableList.build();",
+        "    }",
+        "",
+        "    @Override",
         "    public Baz<T> build() {",
         "      String missing = \"\";",
         "      if (anInt == null) {",
@@ -680,7 +711,11 @@ public class CompilationTest extends TestCase {
         "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
         "      }",
         "      return new AutoValue_Baz<T>(",
-        "          this.anInt, this.aByteArray, this.aNullableIntArray, this.aList);",
+        "          this.anInt,",
+        "          this.aByteArray,",
+        "          this.aNullableIntArray,",
+        "          this.aList,",
+        "          this.anImmutableList.build());",
         "    }",
         "  }",
         "}");
@@ -982,6 +1017,146 @@ public class CompilationTest extends TestCase {
         .withErrorContaining(
             "Method matches a property of foo.bar.Baz but has return type T instead of U")
         .in(javaFileObject).onLine(15);
+  }
+
+  public void testAutoValueBuilderPropertyBuilderAndSetter() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableSet;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract ImmutableSet<String> blim();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    abstract ImmutableSet.Builder<String> blimBuilder();",
+        "    abstract Builder setBlim(ImmutableSet<String> blim);",
+        "    Baz build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Property blim cannot have both a setter and a builder")
+        .in(javaFileObject).onLine(11);
+  }
+
+  public void testAutoValueBuilderPropertyBuilderInvalidType() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  abstract String blim();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    StringBuilder blimBuilder();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Method looks like a property builder, but its return type is not a builder for an "
+                + "immutable type in com.google.common.collect")
+        .in(javaFileObject).onLine(11);
+  }
+
+  public void testAutoValueBuilderPropertyBuilderRawType() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  abstract ImmutableList blim();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    ImmutableList.Builder blimBuilder();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Property builder type cannot be raw (missing <...>)")
+        .in(javaFileObject).onLine(12);
+  }
+
+  public void testAutoValueBuilderPropertyBuilderWrongCollectionType() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "import com.google.common.collect.ImmutableSet;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  abstract ImmutableList<T> blim();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    ImmutableSet.Builder<T> blimBuilder();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Return type of property-builder method implies a property of type "
+                + "com.google.common.collect.ImmutableSet<T>, but property blim has type "
+                + "com.google.common.collect.ImmutableList<T>")
+        .in(javaFileObject).onLine(13);
+  }
+
+  public void testAutoValueBuilderPropertyBuilderWrongElementType() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableSet;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  abstract ImmutableSet<T> blim();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    ImmutableSet.Builder<U> blimBuilder();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Return type of property-builder method implies a property of type "
+                + "com.google.common.collect.ImmutableSet<U>, but property blim has type "
+                + "com.google.common.collect.ImmutableSet<T>")
+        .in(javaFileObject).onLine(12);
   }
 
   public void testAutoValueBuilderAlienMethod0() {

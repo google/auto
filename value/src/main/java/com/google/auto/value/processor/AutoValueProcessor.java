@@ -287,6 +287,16 @@ public class AutoValueProcessor extends AbstractProcessor {
         return "";
       }
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof Property && ((Property) obj).method.equals(method);
+    }
+
+    @Override
+    public int hashCode() {
+      return method.hashCode();
+    }
   }
 
   private static boolean isJavaLangObject(TypeElement type) {
@@ -434,7 +444,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
-    vars.props = props;
+    vars.props = ImmutableSet.copyOf(props);
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
     vars.actualTypes = TypeSimplifier.actualTypeParametersString(type);

@@ -21,6 +21,8 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
 
@@ -1335,6 +1337,143 @@ public class AutoValueTest extends TestCase {
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithPropertyBuilders<FooT extends Comparable<FooT>> {
+    public abstract ImmutableList<FooT> getFoos();
+    public abstract ImmutableSet<String> getStrings();
+
+    public abstract BuilderWithPropertyBuilders.Builder<FooT> toBuilder();
+
+    public static <FooT extends Comparable<FooT>> Builder<FooT> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithPropertyBuilders.Builder<FooT>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<FooT extends Comparable<FooT>> {
+      public abstract ImmutableList<FooT> getFoos();
+
+      public Builder<FooT> addFoos(Iterable<FooT> foos) {
+        foosBuilder().addAll(foos);
+        return this;
+      }
+
+      abstract ImmutableList.Builder<FooT> foosBuilder();
+
+      public Builder<FooT> addToTs(FooT element) {
+        foosBuilder().add(element);
+        return this;
+      }
+
+      abstract ImmutableSet.Builder<String> stringsBuilder();
+
+      public Builder<FooT> addToStrings(String element) {
+        stringsBuilder().add(element);
+        return this;
+      }
+
+      public abstract BuilderWithPropertyBuilders<FooT> build();
+    }
+  }
+
+  public void testBuilderWithPropertyBuilders() {
+    ImmutableList<Integer> numbers = ImmutableList.of(1, 1, 2, 6, 24);
+    ImmutableSet<String> names = ImmutableSet.of("one", "two", "six", "twenty-four");
+
+    BuilderWithPropertyBuilders<Integer> a = BuilderWithPropertyBuilders.<Integer>builder()
+        .addFoos(numbers)
+        .addToStrings("one")
+        .addToStrings("two")
+        .addToStrings("six")
+        .addToStrings("twenty-four")
+        .build();
+
+    assertEquals(numbers, a.getFoos());
+    assertEquals(names, a.getStrings());
+
+    BuilderWithPropertyBuilders.Builder<Integer> bBuilder = BuilderWithPropertyBuilders.builder();
+    bBuilder.stringsBuilder().addAll(names);
+    bBuilder.foosBuilder().addAll(numbers);
+
+    assertEquals(numbers, bBuilder.getFoos());
+
+    BuilderWithPropertyBuilders<Integer> b = bBuilder.build();
+    assertEquals(a, b);
+
+    BuilderWithPropertyBuilders.Builder<Integer> cBuilder = a.toBuilder();
+    cBuilder.addToStrings("one hundred and twenty");
+    cBuilder.addToTs(120);
+    BuilderWithPropertyBuilders<Integer> c = cBuilder.build();
+    assertEquals(ImmutableSet.of("one", "two", "six", "twenty-four", "one hundred and twenty"),
+        c.getStrings());
+    assertEquals(ImmutableList.of(1, 1, 2, 6, 24, 120), c.getFoos());
+
+    BuilderWithPropertyBuilders.Builder<Integer> dBuilder = a.toBuilder();
+    dBuilder.addFoos(ImmutableList.of(120, 720));
+    BuilderWithPropertyBuilders<Integer> d = dBuilder.build();
+    assertEquals(ImmutableList.of(1, 1, 2, 6, 24, 120, 720), d.getFoos());
+    assertEquals(names, d.getStrings());
+
+    BuilderWithPropertyBuilders<Integer> empty =
+        BuilderWithPropertyBuilders.<Integer>builder().build();
+    assertEquals(ImmutableList.of(), empty.getFoos());
+    assertEquals(ImmutableSet.of(), empty.getStrings());
+  }
+
+  @AutoValue
+  public abstract static class
+      BuilderWithExoticPropertyBuilders<K extends Number, V extends Comparable<K>> {
+    public abstract ImmutableMap<String, V> map();
+    public abstract ImmutableTable<String, K, V> table();
+
+    public static <K extends Number, V extends Comparable<K>> Builder<K, V> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithExoticPropertyBuilders.Builder<K, V>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<K extends Number, V extends Comparable<K>> {
+      public Builder<K, V> putAll(Map<String, V> map) {
+        mapBuilder().putAll(map);
+        return this;
+      }
+
+      public abstract ImmutableMap.Builder<String, V> mapBuilder();
+
+      public Builder<K, V> putAll(ImmutableTable<String, K, V> table) {
+        tableBuilder().putAll(table);
+        return this;
+      }
+
+      public abstract ImmutableTable.Builder<String, K, V> tableBuilder();
+
+      public abstract BuilderWithExoticPropertyBuilders<K, V> build();
+    }
+  }
+
+  public void testBuilderWithExoticPropertyBuilders() {
+    ImmutableMap<String, Integer> map = ImmutableMap.of("one", 1);
+    ImmutableTable<String, Integer, Integer> table = ImmutableTable.of("one", 1, -1);
+
+    BuilderWithExoticPropertyBuilders<Integer, Integer> a =
+        BuilderWithExoticPropertyBuilders.<Integer, Integer>builder()
+            .putAll(map)
+            .putAll(table)
+        .build();
+    assertEquals(map, a.map());
+    assertEquals(table, a.table());
+
+    BuilderWithExoticPropertyBuilders.Builder<Integer, Integer> bBuilder =
+        BuilderWithExoticPropertyBuilders.builder();
+    bBuilder.mapBuilder().putAll(map);
+    bBuilder.tableBuilder().putAll(table);
+    BuilderWithExoticPropertyBuilders<Integer, Integer> b = bBuilder.build();
+    assertEquals(a, b);
+
+    BuilderWithExoticPropertyBuilders<Integer, Integer> empty =
+        BuilderWithExoticPropertyBuilders.<Integer, Integer>builder().build();
+    assertEquals(ImmutableMap.of(), empty.map());
+    assertEquals(ImmutableTable.of(), empty.table());
   }
 
   @Retention(RetentionPolicy.RUNTIME)

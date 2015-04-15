@@ -78,7 +78,7 @@ class Reformatter {
   private static String compressSpace(String s) {
     // Remove extra spaces. An "extra" space is one that is not part of the indentation at the start
     // of a line, and where the next character is also a space or a right paren or a semicolon
-    // or a comma, or the preceding character is a left paren.
+    // or a dot or a comma, or the preceding character is a left paren.
     // TODO(emcmanus): consider merging all three passes using this tokenization approach.
     StringBuilder sb = new StringBuilder(s.length());
     Tokenizer tokenizer = new Tokenizer(s);
@@ -95,7 +95,7 @@ class Reformatter {
         // Since we ensure that the tokenized string ends with \n, and a whitespace token stops
         // at \n, it is safe to look at end.
         char nextC = s.charAt(end);
-        if (",;)".indexOf(nextC) >= 0) {
+        if (".,;)".indexOf(nextC) >= 0) {
           continue;
         }
         sb.append(' ');

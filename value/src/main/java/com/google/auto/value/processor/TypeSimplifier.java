@@ -20,14 +20,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableSortedSet;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
@@ -103,14 +102,14 @@ final class TypeSimplifier {
    * import java.util.Map.Entry and refer to the property as Entry. We could also import just
    * java.util.Map in this case and refer to Map.Entry, but currently we never do that.
    */
-  SortedSet<String> typesToImport() {
-    SortedSet<String> typesToImport = new TreeSet<String>();
+  ImmutableSortedSet<String> typesToImport() {
+    ImmutableSortedSet.Builder<String> typesToImport = ImmutableSortedSet.naturalOrder();
     for (Map.Entry<String, Spelling> entry : imports.entrySet()) {
       if (entry.getValue().importIt) {
         typesToImport.add(entry.getKey());
       }
     }
-    return typesToImport;
+    return typesToImport.build();
   }
 
   /**
