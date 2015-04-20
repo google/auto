@@ -4,8 +4,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.inject.Guice;
 
-import dagger.ObjectGraph;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -13,8 +11,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class DependencyInjectionIntegrationTest {
   @Test public void daggerInjectedFactory() {
-    FactoryGeneratedFactory factoryGeneratedFactory =
-        ObjectGraph.create(DaggerModule.class).get(FactoryGeneratedFactory.class);
+    FactoryGeneratedFactory factoryGeneratedFactory = DaggerFactoryComponent.create().factory();
     FactoryGenerated one = factoryGeneratedFactory.create("A");
     FactoryGenerated two = factoryGeneratedFactory.create("B");
     assertThat(one.name()).isEqualTo("A");

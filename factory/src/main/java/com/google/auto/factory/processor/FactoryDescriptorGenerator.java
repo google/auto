@@ -21,18 +21,6 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
-import javax.annotation.processing.Messager;
-import javax.inject.Inject;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Name;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.util.ElementKindVisitor6;
-import javax.lang.model.util.Elements;
-
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.common.base.Function;
@@ -44,6 +32,17 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 
+import javax.annotation.processing.Messager;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Name;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.util.ElementKindVisitor6;
+import javax.lang.model.util.Elements;
+
 /**
  * A service that traverses an element and returns the set of factory methods defined therein.
  *
@@ -54,7 +53,7 @@ final class FactoryDescriptorGenerator {
   private final Elements elements;
   private final AutoFactoryDeclaration.Factory declarationFactory;
 
-  @Inject FactoryDescriptorGenerator(Messager messager, Elements elements,
+  FactoryDescriptorGenerator(Messager messager, Elements elements,
       AutoFactoryDeclaration.Factory declarationFactory) {
     this.messager = messager;
     this.elements = elements;
