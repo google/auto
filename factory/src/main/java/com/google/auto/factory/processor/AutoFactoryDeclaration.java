@@ -21,10 +21,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import com.google.auto.factory.AutoFactory;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+
 import java.util.Map;
 
 import javax.annotation.processing.Messager;
-import javax.inject.Inject;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -34,15 +42,6 @@ import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
-
-import com.google.auto.factory.AutoFactory;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * This is a value object that mirrors the static declaration of an {@link AutoFactory} annotation.
@@ -116,7 +115,7 @@ final class AutoFactoryDeclaration {
     private final Elements elements;
     private final Messager messager;
 
-    @Inject Factory(Elements elements, Messager messager) {
+    Factory(Elements elements, Messager messager) {
       this.elements = elements;
       this.messager = messager;
     }

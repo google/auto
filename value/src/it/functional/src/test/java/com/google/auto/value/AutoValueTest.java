@@ -21,6 +21,8 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
 
@@ -1118,53 +1120,6 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  public abstract static class ValidationWithBuilder {
-    public abstract String string();
-    public abstract int integer();
-
-    public static Builder builder() {
-      return new AutoValue_AutoValueTest_ValidationWithBuilder.Builder();
-    }
-
-    @AutoValue.Validate
-    void validate() {
-      if (string().isEmpty()) {
-        throw new IllegalStateException("String is empty");
-      }
-      if (integer() < 0) {
-        throw new IllegalStateException("Integer is negative");
-      }
-    }
-
-    @AutoValue.Builder
-    public interface Builder {
-      Builder string(String string);
-      Builder integer(int integer);
-      ValidationWithBuilder build();
-    }
-  }
-
-  public void testValidation() {
-    ValidationWithBuilder ok = ValidationWithBuilder.builder().string("foo").integer(17).build();
-    assertEquals("foo", ok.string());
-    assertEquals(17, ok.integer());
-
-    try {
-      ValidationWithBuilder.builder().string("").integer(17).build();
-      fail("Expected IllegalStateException for empty string");
-    } catch (IllegalStateException expected) {
-      assertThat(expected).hasMessage("String is empty");
-    }
-
-    try {
-      ValidationWithBuilder.builder().string("foo").integer(-17).build();
-      fail("Expected IllegalStateException for negative integer");
-    } catch (IllegalStateException expected) {
-      assertThat(expected).hasMessage("Integer is negative");
-    }
-  }
-
-  @AutoValue
   public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
     public abstract List<T> list();
     public abstract U u();
@@ -1269,6 +1224,256 @@ public class AutoValueTest extends TestCase {
     BuilderWithSetAndGet instance3 = instance.toBuilder().setAnInt(17).build();
     assertEquals(integers, instance3.getAList());
     assertEquals(17, instance3.getAnInt());
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
+    public abstract ImmutableList<T> list();
+    @Nullable public abstract T t();
+    public abstract int[] ints();
+    public abstract int noGetter();
+
+    public static <T extends Comparable<T>> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithUnprefixedGetters.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Comparable<T>> {
+      Builder<T> setList(ImmutableList<T> list);
+      Builder<T> setT(T t);
+      Builder<T> setInts(int[] ints);
+      Builder<T> setNoGetter(int x);
+
+      ImmutableList<T> list();
+      T t();
+      int[] ints();
+
+      BuilderWithUnprefixedGetters<T> build();
+    }
+  }
+
+  public void testBuilderWithUnprefixedGetter() {
+    ImmutableList<String> names = ImmutableList.of("fred", "jim");
+    int[] ints = {6, 28, 496, 8128, 33550336};
+    int noGetter = -1;
+
+    BuilderWithUnprefixedGetters.Builder<String> builder = BuilderWithUnprefixedGetters.builder();
+    assertNull(builder.t());
+    try {
+      builder.list();
+      fail("Attempt to retrieve unset list property should have failed");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Property \"list\" has not been set");
+    }
+    try {
+      builder.ints();
+      fail("Attempt to retrieve unset ints property should have failed");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Property \"ints\" has not been set");
+    }
+
+    builder.setList(names);
+    assertThat(builder.list()).isSameAs(names);
+    builder.setInts(ints);
+    assertThat(builder.ints()).isEqualTo(ints);
+    ints[0] = 0;
+    assertThat(builder.ints()[0]).isEqualTo(6);
+    ints[0] = 6;
+
+    BuilderWithUnprefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
+    assertThat(instance.list()).isSameAs(names);
+    assertThat(instance.t()).isNull();
+    assertThat(instance.ints()).isEqualTo(ints);
+    assertThat(instance.noGetter()).isEqualTo(noGetter);
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
+    public abstract ImmutableList<T> getList();
+    public abstract T getT();
+    @Nullable public abstract int[] getInts();
+    public abstract int getNoGetter();
+
+    public static <T extends Comparable<T>> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithPrefixedGetters.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T extends Comparable<T>> {
+      public abstract Builder<T> setList(ImmutableList<T> list);
+      public abstract Builder<T> setT(T t);
+      public abstract Builder<T> setInts(int[] ints);
+      public abstract Builder<T> setNoGetter(int x);
+
+      abstract ImmutableList<T> getList();
+      abstract T getT();
+      abstract int[] getInts();
+
+      public abstract BuilderWithPrefixedGetters<T> build();
+    }
+  }
+
+  public void testBuilderWithPrefixedGetter() {
+    ImmutableList<String> names = ImmutableList.of("fred", "jim");
+    String name = "sheila";
+    int noGetter = -1;
+
+    BuilderWithPrefixedGetters.Builder<String> builder = BuilderWithPrefixedGetters.builder();
+    assertThat(builder.getInts()).isNull();
+    try {
+      builder.getList();
+      fail("Attempt to retrieve unset list property should have failed");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Property \"list\" has not been set");
+    }
+
+    builder.setList(names);
+    assertThat(builder.getList()).isSameAs(names);
+    builder.setT(name);
+    assertThat(builder.getInts()).isNull();
+
+    BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
+    assertThat(instance.getList()).isSameAs(names);
+    assertThat(instance.getT()).isEqualTo(name);
+    assertThat(instance.getInts()).isNull();
+    assertThat(instance.getNoGetter()).isEqualTo(noGetter);
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithPropertyBuilders<FooT extends Comparable<FooT>> {
+    public abstract ImmutableList<FooT> getFoos();
+    public abstract ImmutableSet<String> getStrings();
+
+    public abstract BuilderWithPropertyBuilders.Builder<FooT> toBuilder();
+
+    public static <FooT extends Comparable<FooT>> Builder<FooT> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithPropertyBuilders.Builder<FooT>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<FooT extends Comparable<FooT>> {
+      public abstract ImmutableList<FooT> getFoos();
+
+      public Builder<FooT> addFoos(Iterable<FooT> foos) {
+        foosBuilder().addAll(foos);
+        return this;
+      }
+
+      abstract ImmutableList.Builder<FooT> foosBuilder();
+
+      public Builder<FooT> addToTs(FooT element) {
+        foosBuilder().add(element);
+        return this;
+      }
+
+      abstract ImmutableSet.Builder<String> stringsBuilder();
+
+      public Builder<FooT> addToStrings(String element) {
+        stringsBuilder().add(element);
+        return this;
+      }
+
+      public abstract BuilderWithPropertyBuilders<FooT> build();
+    }
+  }
+
+  public void testBuilderWithPropertyBuilders() {
+    ImmutableList<Integer> numbers = ImmutableList.of(1, 1, 2, 6, 24);
+    ImmutableSet<String> names = ImmutableSet.of("one", "two", "six", "twenty-four");
+
+    BuilderWithPropertyBuilders<Integer> a = BuilderWithPropertyBuilders.<Integer>builder()
+        .addFoos(numbers)
+        .addToStrings("one")
+        .addToStrings("two")
+        .addToStrings("six")
+        .addToStrings("twenty-four")
+        .build();
+
+    assertEquals(numbers, a.getFoos());
+    assertEquals(names, a.getStrings());
+
+    BuilderWithPropertyBuilders.Builder<Integer> bBuilder = BuilderWithPropertyBuilders.builder();
+    bBuilder.stringsBuilder().addAll(names);
+    bBuilder.foosBuilder().addAll(numbers);
+
+    assertEquals(numbers, bBuilder.getFoos());
+
+    BuilderWithPropertyBuilders<Integer> b = bBuilder.build();
+    assertEquals(a, b);
+
+    BuilderWithPropertyBuilders.Builder<Integer> cBuilder = a.toBuilder();
+    cBuilder.addToStrings("one hundred and twenty");
+    cBuilder.addToTs(120);
+    BuilderWithPropertyBuilders<Integer> c = cBuilder.build();
+    assertEquals(ImmutableSet.of("one", "two", "six", "twenty-four", "one hundred and twenty"),
+        c.getStrings());
+    assertEquals(ImmutableList.of(1, 1, 2, 6, 24, 120), c.getFoos());
+
+    BuilderWithPropertyBuilders.Builder<Integer> dBuilder = a.toBuilder();
+    dBuilder.addFoos(ImmutableList.of(120, 720));
+    BuilderWithPropertyBuilders<Integer> d = dBuilder.build();
+    assertEquals(ImmutableList.of(1, 1, 2, 6, 24, 120, 720), d.getFoos());
+    assertEquals(names, d.getStrings());
+
+    BuilderWithPropertyBuilders<Integer> empty =
+        BuilderWithPropertyBuilders.<Integer>builder().build();
+    assertEquals(ImmutableList.of(), empty.getFoos());
+    assertEquals(ImmutableSet.of(), empty.getStrings());
+  }
+
+  @AutoValue
+  public abstract static class
+      BuilderWithExoticPropertyBuilders<K extends Number, V extends Comparable<K>> {
+    public abstract ImmutableMap<String, V> map();
+    public abstract ImmutableTable<String, K, V> table();
+
+    public static <K extends Number, V extends Comparable<K>> Builder<K, V> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithExoticPropertyBuilders.Builder<K, V>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<K extends Number, V extends Comparable<K>> {
+      public Builder<K, V> putAll(Map<String, V> map) {
+        mapBuilder().putAll(map);
+        return this;
+      }
+
+      public abstract ImmutableMap.Builder<String, V> mapBuilder();
+
+      public Builder<K, V> putAll(ImmutableTable<String, K, V> table) {
+        tableBuilder().putAll(table);
+        return this;
+      }
+
+      public abstract ImmutableTable.Builder<String, K, V> tableBuilder();
+
+      public abstract BuilderWithExoticPropertyBuilders<K, V> build();
+    }
+  }
+
+  public void testBuilderWithExoticPropertyBuilders() {
+    ImmutableMap<String, Integer> map = ImmutableMap.of("one", 1);
+    ImmutableTable<String, Integer, Integer> table = ImmutableTable.of("one", 1, -1);
+
+    BuilderWithExoticPropertyBuilders<Integer, Integer> a =
+        BuilderWithExoticPropertyBuilders.<Integer, Integer>builder()
+            .putAll(map)
+            .putAll(table)
+        .build();
+    assertEquals(map, a.map());
+    assertEquals(table, a.table());
+
+    BuilderWithExoticPropertyBuilders.Builder<Integer, Integer> bBuilder =
+        BuilderWithExoticPropertyBuilders.builder();
+    bBuilder.mapBuilder().putAll(map);
+    bBuilder.tableBuilder().putAll(table);
+    BuilderWithExoticPropertyBuilders<Integer, Integer> b = bBuilder.build();
+    assertEquals(a, b);
+
+    BuilderWithExoticPropertyBuilders<Integer, Integer> empty =
+        BuilderWithExoticPropertyBuilders.<Integer, Integer>builder().build();
+    assertEquals(ImmutableMap.of(), empty.map());
+    assertEquals(ImmutableTable.of(), empty.table());
   }
 
   @Retention(RetentionPolicy.RUNTIME)

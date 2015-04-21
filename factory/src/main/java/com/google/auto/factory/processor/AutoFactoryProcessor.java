@@ -15,30 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Messager;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.inject.Inject;
-import javax.lang.model.SourceVersion;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.ExecutableType;
-import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
-import javax.tools.Diagnostic.Kind;
-
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
@@ -52,6 +28,29 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.ExecutableType;
+import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
+import javax.tools.Diagnostic.Kind;
+
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
  *
@@ -59,27 +58,31 @@ import com.google.common.collect.Multimaps;
  */
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
-  @Inject FactoryDescriptorGenerator factoryDescriptorGenerator;
-  @Inject AutoFactoryDeclaration.Factory declarationFactory;
-  @Inject ProvidedChecker providedChecker;
-  @Inject Messager messager;
-  @Inject Elements elements;
-  @Inject Types types;
-  @Inject FactoryWriter factoryWriter;
+  private FactoryDescriptorGenerator factoryDescriptorGenerator;
+  private AutoFactoryDeclaration.Factory declarationFactory;
+  private ProvidedChecker providedChecker;
+  private Messager messager;
+  private Elements elements;
+  private Types types;
+  private FactoryWriter factoryWriter;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
-    Dagger_AutoFactoryProcessorComponent.builder()
-        .processorModule(new ProcessorModule(processingEnv))
-        .build()
-        .injectProcessor(this);
+    elements = processingEnv.getElementUtils();
+    types = processingEnv.getTypeUtils();
+    messager = processingEnv.getMessager();
+    factoryWriter = new FactoryWriter(processingEnv.getFiler());
+    providedChecker = new ProvidedChecker(messager);
+    declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
+    factoryDescriptorGenerator =
+        new FactoryDescriptorGenerator(messager, elements, declarationFactory);
   }
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     try {
-      doProcess(annotations, roundEnv);
+      doProcess(roundEnv);
     } catch (Throwable e) {
       messager.printMessage(Kind.ERROR, "Failed to process @AutoFactory annotations:\n"
           + Throwables.getStackTraceAsString(e));
@@ -87,7 +90,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     return false;
   }
 
-  private void doProcess(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  private void doProcess(RoundEnvironment roundEnv) {
     for (Element element : roundEnv.getElementsAnnotatedWith(Provided.class)) {
       providedChecker.checkProvidedParameter(element);
     }

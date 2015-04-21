@@ -18,20 +18,19 @@ package com.google.auto.factory.processor;
 import static com.google.common.base.Preconditions.checkArgument;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
+
 import javax.annotation.processing.Messager;
-import javax.inject.Inject;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
 
-import com.google.auto.factory.AutoFactory;
-import com.google.auto.factory.Provided;
-
 final class ProvidedChecker {
   private final Messager messager;
 
-  @Inject ProvidedChecker(Messager messager) {
+  ProvidedChecker(Messager messager) {
     this.messager = messager;
   }
 
