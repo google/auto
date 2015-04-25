@@ -29,7 +29,7 @@ Subprojects
 
   * [Common](https://github.com/google/auto/tree/master/common) - Helper utilities for writing annotation processors.
 
-    Latest version: `0.3`
+    Latest version: `0.4`
 
 License
 -------
