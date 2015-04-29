@@ -36,6 +36,8 @@ import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -1474,6 +1476,44 @@ public class AutoValueTest extends TestCase {
         BuilderWithExoticPropertyBuilders.<Integer, Integer>builder().build();
     assertEquals(ImmutableMap.of(), empty.map());
     assertEquals(ImmutableTable.of(), empty.table());
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithCopyingSetters<T extends Number> {
+    public abstract ImmutableSet<? extends T> things();
+    public abstract ImmutableList<String> strings();
+    public abstract ImmutableMap<String, T> map();
+
+    public static <T extends Number> Builder<T> builder(T value) {
+      return new AutoValue_AutoValueTest_BuilderWithCopyingSetters.Builder<T>()
+          .setStrings(ImmutableSet.of("foo", "bar"))
+          .setMap(Collections.singletonMap("foo", value));
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Number> {
+      Builder<T> setThings(ImmutableSet<T> things);
+      Builder<T> setThings(Iterable<? extends T> things);
+      Builder<T> setThings(T... things);
+      Builder<T> setStrings(Collection<String> strings);
+      Builder<T> setMap(Map<String, T> map);
+      BuilderWithCopyingSetters<T> build();
+    }
+  }
+
+  public void testBuilderWithCopyingSetters() {
+    BuilderWithCopyingSetters.Builder<Integer> builder = BuilderWithCopyingSetters.builder(23);
+
+    BuilderWithCopyingSetters<Integer> a = builder.setThings(ImmutableSet.of(1, 2)).build();
+    assertEquals(ImmutableSet.of(1, 2), a.things());
+    assertEquals(ImmutableList.of("foo", "bar"), a.strings());
+    assertEquals(ImmutableMap.of("foo", 23), a.map());
+
+    BuilderWithCopyingSetters<Integer> b = builder.setThings(Arrays.asList(1, 2)).build();
+    assertEquals(a, b);
+
+    BuilderWithCopyingSetters<Integer> c = builder.setThings(1, 2).build();
+    assertEquals(a, c);
   }
 
   @Retention(RetentionPolicy.RUNTIME)

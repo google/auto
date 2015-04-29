@@ -645,11 +645,11 @@ public class CompilationTest extends TestCase {
         "    }",
         "",
         "    Builder(Baz<T> source) {",
-        "      anInt(source.anInt());",
-        "      aByteArray(source.aByteArray());",
-        "      aNullableIntArray(source.aNullableIntArray());",
-        "      aList(source.aList());",
-        "      anImmutableList.addAll(source.anImmutableList());",
+        "      this.anInt = source.anInt();",
+        "      this.aByteArray = source.aByteArray();",
+        "      this.aNullableIntArray = source.aNullableIntArray();",
+        "      this.aList = source.aList();",
+        "      this.anImmutableList.addAll(source.anImmutableList());",
         "    }",
         "",
         "    @Override",
@@ -906,6 +906,72 @@ public class CompilationTest extends TestCase {
         .withErrorContaining(
             "Parameter type of setter method should be int to match getter foo.bar.Baz.blim")
         .in(javaFileObject).onLine(12);
+  }
+
+  public void testAutoValueBuilderWrongTypeSetterWithCopyOf() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract String blim();",
+        "  abstract ImmutableList<String> blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    Builder blim(String x);",
+        "    Builder blam(String x);",
+        "    Baz build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Parameter type of setter method should be "
+                + "com.google.common.collect.ImmutableList<java.lang.String> to match getter "
+                + "foo.bar.Baz.blam, or it should be a type that can be passed to "
+                + "ImmutableList.copyOf")
+        .in(javaFileObject).onLine(14);
+  }
+
+  public void testAutoValueBuilderWrongTypeSetterWithCopyOfGenericallyWrong() {
+    // This puts the finger on our insufficient error-detection logic for the case where the
+    // parameter would be compatible with copyOf were it not for generics. Currently, this leads to
+    // a compile error in the generated code. We don't want to suppose anything about the error
+    // message the compiler might come up with. It might be something like this for example:
+    //   incompatible types: inference variable E has incompatible bounds
+    //        equality constraints: java.lang.String
+    //        lower bounds: java.lang.Integer
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "import java.util.Collection;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract String blim();",
+        "  abstract ImmutableList<String> blam();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    Builder blim(String x);",
+        "    Builder blam(Collection<Integer> x);",
+        "    Baz build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile();
   }
 
   public void testAutoValueBuilderWrongTypeSetterWithGetPrefix() {

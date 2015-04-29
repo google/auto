@@ -232,14 +232,11 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
     #if ($builderPropertyBuilders[$p.name])
 
-      ${p}.${builderPropertyBuilders[$p.name].copyAll}(source.${p.getter}());
+      this.${p}.${builderPropertyBuilders[$p.name].copyAll}(source.${p.getter}());
 
     #else
 
-      $builderSetterNames[$p.name](source.${p.getter}());
-      ## We use the setter methods rather than assigning the fields directly so we don't have
-      ## to duplicate the logic for cloning arrays. Not cloning arrays would conceivably be
-      ## a security problem.
+      this.$p = source.${p.getter}();
 
     #end
 
@@ -251,16 +248,11 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
     ## Setter and/or property builder
 
-    #if ($builderSetterNames[$p.name])
+    #foreach ($setter in $builderSetters[$p.name])
 
     @Override
-    public ${builderTypeName}${builderActualTypes} $builderSetterNames[$p.name]($p.type $p) {
-      #if ($builderPropertyBuilders[$p.name])
-
-      this.$p = ${builderPropertyBuilders[$p.name].initializer};
-      this.$p.${builderPropertyBuilders[$p.name].copyAll}($p);
-
-      #elseif ($p.kind == "ARRAY")
+    public ${builderTypeName}${builderActualTypes} ${setter.name}($setter.parameterType $p) {
+      #if ($p.kind == "ARRAY")
         #if ($p.nullable)
 
       this.$p = ($p == null) ? null : ${p}.clone();
@@ -272,7 +264,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
         #end
       #else
 
-      this.$p = $p;
+      this.$p = ${setter.copy($p)};
 
       #end
 

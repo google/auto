@@ -26,6 +26,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -43,6 +44,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -163,6 +165,18 @@ class BuilderSpec {
       return builderMethods;
     }
 
+    Set<TypeMirror> referencedTypes() {
+      Set<TypeMirror> types = new TypeMirrorSet();
+      for (ExecutableElement method :
+          ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
+        types.add(method.getReturnType());
+        for (VariableElement parameter : method.getParameters()) {
+          types.add(parameter.asType());
+        }
+      }
+      return types;
+    }
+
     void defineVars(
         AutoValueTemplateVars vars,
         TypeSimplifier typeSimplifier,
@@ -200,12 +214,15 @@ class BuilderSpec {
       vars.buildMethodName = buildMethod.getSimpleName().toString();
       vars.propertiesWithBuilderGetters = classifier.propertiesWithBuilderGetters();
 
-      ImmutableMap.Builder<String, String> setterNameBuilder = ImmutableMap.builder();
+      ImmutableMultimap.Builder<String, PropertySetter> setterBuilder = ImmutableMultimap.builder();
       for (Map.Entry<String, ExecutableElement> entry :
-          classifier.propertyNameToSetter().entrySet()) {
-        setterNameBuilder.put(entry.getKey(), entry.getValue().getSimpleName().toString());
+          classifier.propertyNameToSetters().entries()) {
+        String property = entry.getKey();
+        ExecutableElement setter = entry.getValue();
+        TypeMirror propertyType = getterToPropertyName.inverse().get(property).getReturnType();
+        setterBuilder.put(property, new PropertySetter(setter, propertyType, typeSimplifier));
       }
-      vars.builderSetterNames = setterNameBuilder.build();
+      vars.builderSetters = setterBuilder.build();
 
       vars.builderPropertyBuilders =
           makeBuilderPropertyBuilderMap(classifier, typeSimplifier, getterToPropertyName);
@@ -234,6 +251,49 @@ class BuilderSpec {
         map.put(property, propertyBuilder);
       }
       return map.build();
+    }
+  }
+
+  /**
+   * Information about a property setter, referenced from the autovalue.vm template. A property
+   * called foo (defined by a method {@code T foo()} or {@code T getFoo()}) can have a setter
+   * method {@code foo(T)} or {@code setFoo(T)} that returns the builder type. Additionally, it
+   * can have a setter with a type that can be copied to {@code T} through a {@code copyOf} method;
+   * for example a property {@code foo} of type {@code ImmutableSet<String>} can be set with a
+   * method {@code setFoo(Collection<String> foos)}.
+   */
+  public class PropertySetter {
+    private final String name;
+    private final String parameterTypeString;
+    private final String copyFormat;
+
+    public PropertySetter(
+        ExecutableElement setter, TypeMirror propertyType, TypeSimplifier typeSimplifier) {
+      this.name = setter.getSimpleName().toString();
+      TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
+      String simplifiedParameterType = typeSimplifier.simplify(parameterType);
+      if (setter.isVarArgs()) {
+        simplifiedParameterType = simplifiedParameterType.replaceAll("\\[\\]$", "...");
+      }
+      this.parameterTypeString = simplifiedParameterType;
+      Types typeUtils = processingEnv.getTypeUtils();
+      TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
+      boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
+      this.copyFormat = sameType
+          ? "%s"
+          : typeSimplifier.simplifyRaw(erasedPropertyType) + ".copyOf(%s)";
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getParameterType() {
+      return parameterTypeString;
+    }
+
+    public String copy(AutoValueProcessor.Property property) {
+      return String.format(copyFormat, property);
     }
   }
 
