@@ -17,9 +17,11 @@ package com.google.auto.value.processor;
 
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValueExtension;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
@@ -34,13 +36,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
@@ -157,8 +153,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     return pkg + dot + prefix + name;
   }
 
-  private String generatedSubclassName(TypeElement type) {
-    return generatedClassName(type, "AutoValue_");
+  private String generatedSubclassName(TypeElement type, int depth) {
+    return generatedClassName(type, Strings.repeat("$", depth) + "AutoValue_");
   }
 
   /**
@@ -382,20 +378,61 @@ public class AutoValueProcessor extends AbstractProcessor {
       errorReporter.abortWithError("@AutoValue may not be used to implement an annotation"
           + " interface; try using @AutoAnnotation instead", type);
     }
+
+    ServiceLoader<AutoValueExtension> extensions = ServiceLoader.load(AutoValueExtension.class);
+    int extensionsApplied = 0;
+    AutoValueExtension.Context context = makeExtensionContext(type);
+    for (AutoValueExtension extension : extensions) {
+      if (extension.applicable(context)) {
+        String implClass = TypeSimplifier.classNameOf(type);
+        String extClass = generatedSubclassName(type, extensionsApplied);
+        String className = generatedSubclassName(type, extensionsApplied);
+        String text = extension.generateClass(context, className, extClass, implClass);
+        if (Strings.isNullOrEmpty(text)) {
+          text = Reformatter.fixup(text);
+          writeSourceFile(className, text, type);
+          extensionsApplied++;
+        }
+      }
+    }
+
+    String subclass = generatedSubclassName(type, extensionsApplied);
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
-    vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
+    vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.types = processingEnv.getTypeUtils();
     defineVarsForType(type, vars);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
     text = Reformatter.fixup(text);
-    writeSourceFile(generatedSubclassName(type), text, type);
+    writeSourceFile(subclass, text, type);
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
+  }
+
+  private AutoValueExtension.Context makeExtensionContext(final TypeElement type) {
+    return new AutoValueExtension.Context() {
+
+      @Override public ProcessingEnvironment processingEnvironment() {
+        return processingEnv;
+      }
+
+      @Override public String packageName() {
+        return TypeSimplifier.packageNameOf(type);
+      }
+
+      @Override public TypeElement autoValueClass() {
+        return type;
+      }
+
+      @Override public Map<String, ExecutableElement> properties() {
+        // TODO implement this
+        return null;
+      }
+    };
   }
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
