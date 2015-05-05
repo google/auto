@@ -99,7 +99,15 @@ public class PropertyAnnotationsTest extends TestCase {
     return JavaFileObjects.forSourceLines("foo.bar.Baz", lines);
   }
 
-  private JavaFileObject expectedCode(List<String> annotations) {
+  private JavaFileObject expectedCode(
+      List<String> annotations,
+      String constructorParamAnnotation) {
+    String constructorParamPrefix;
+    if (constructorParamAnnotation == null) {
+      constructorParamPrefix = "";
+    } else {
+      constructorParamPrefix = constructorParamAnnotation + " ";
+    }
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
             "package foo.bar;",
@@ -110,7 +118,7 @@ public class PropertyAnnotationsTest extends TestCase {
             "final class AutoValue_Baz extends Baz {",
             "  private final int buh;",
             "",
-            "  AutoValue_Baz(int buh) {",
+            "  AutoValue_Baz(" + constructorParamPrefix + "int buh) {",
             "    this.buh = buh;",
             "  }",
             ""
@@ -152,26 +160,37 @@ public class PropertyAnnotationsTest extends TestCase {
     return JavaFileObjects.forSourceLines("foo.bar.AutoValue_Baz", lines);
   }
 
+  
   private void assertGeneratedMatches(
       List<String> imports,
       List<String> annotations,
-      List<String> expectedAnnotations) {
+      List<String> expectedAnnotations,
+      String expectedConstructorParamAnnotation) {
 
     JavaFileObject javaFileObject = sourceCode(imports, annotations);
-    JavaFileObject expectedOutput = expectedCode(expectedAnnotations);
+    JavaFileObject expectedOutput = expectedCode(expectedAnnotations, expectedConstructorParamAnnotation);
 
     assert_().about(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and().generatesSources(expectedOutput);
+
+  }
+  
+  private void assertGeneratedMatches(
+      List<String> imports,
+      List<String> annotations,
+      List<String> expectedAnnotations) {
+    assertGeneratedMatches(imports, annotations, expectedAnnotations, null);
   }
 
   public void testSimpleAnnotation() {
     assertGeneratedMatches(
         ImmutableList.of("import javax.annotation.Nullable;"),
         ImmutableList.of("@Nullable"),
-        ImmutableList.of("@javax.annotation.Nullable"));
+        ImmutableList.of("@javax.annotation.Nullable"),
+        "@javax.annotation.Nullable");
   }
 
   public void testSingleStringValueAnnotation() {

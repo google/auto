@@ -75,14 +75,4 @@ public @interface AutoValue {
   @Retention(RetentionPolicy.SOURCE)
   @Target(ElementType.TYPE)
   public @interface Builder {}
-
-  /**
-   * Specifies that the annotated method is a validation method. The method should be a non-private
-   * no-argument method in an AutoValue class. It will be called by the {@code build()} method of
-   * the {@link Builder @AutoValue.Builder} implementation, immediately after constructing the new
-   * object. It can throw an exception if the new object fails validation checks.
-   */
-  @Retention(RetentionPolicy.SOURCE)
-  @Target(ElementType.METHOD)
-  public @interface Validate {}
 }

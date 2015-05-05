@@ -15,9 +15,12 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.processor.AutoValueProcessor.Property;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
@@ -44,7 +47,6 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 /**
@@ -54,7 +56,7 @@ import javax.lang.model.util.Types;
  */
 class BuilderSpec {
   private final TypeElement autoValueClass;
-  private final Elements elementUtils;
+  private final ProcessingEnvironment processingEnv;
   private final ErrorReporter errorReporter;
 
   BuilderSpec(
@@ -62,7 +64,7 @@ class BuilderSpec {
       ProcessingEnvironment processingEnv,
       ErrorReporter errorReporter) {
     this.autoValueClass = autoValueClass;
-    this.elementUtils = processingEnv.getElementUtils();
+    this.processingEnv = processingEnv;
     this.errorReporter = errorReporter;
   }
 
@@ -91,36 +93,9 @@ class BuilderSpec {
       }
     }
 
-    Optional<ExecutableElement> validateMethod = Optional.absent();
-    for (ExecutableElement containedMethod :
-        ElementFilter.methodsIn(autoValueClass.getEnclosedElements())) {
-      if (MoreElements.isAnnotationPresent(containedMethod, AutoValue.Validate.class)) {
-        if (containedMethod.getModifiers().contains(Modifier.STATIC)) {
-          errorReporter.reportError(
-              "@AutoValue.Validate cannot apply to a static method", containedMethod);
-        } else if (!containedMethod.getParameters().isEmpty()) {
-          errorReporter.reportError(
-              "@AutoValue.Validate method must not have parameters", containedMethod);
-        } else if (containedMethod.getReturnType().getKind() != TypeKind.VOID) {
-          errorReporter.reportError(
-              "Return type of @AutoValue.Validate method must be void", containedMethod);
-        } else if (validateMethod.isPresent()) {
-          errorReporter.reportError(
-              "There can only be one @AutoValue.Validate method", containedMethod);
-        } else {
-          validateMethod = Optional.of(containedMethod);
-        }
-      }
-    }
-
     if (builderTypeElement.isPresent()) {
-      return builderFrom(builderTypeElement.get(), validateMethod);
+      return builderFrom(builderTypeElement.get());
     } else {
-      if (validateMethod.isPresent()) {
-        errorReporter.reportError(
-            "@AutoValue.Validate is only meaningful if there is an @AutoValue.Builder",
-            validateMethod.get());
-      }
       return Optional.absent();
     }
   }
@@ -130,13 +105,9 @@ class BuilderSpec {
    */
   class Builder {
     private final TypeElement builderTypeElement;
-    private final Optional<ExecutableElement> validateMethod;
 
-    Builder(
-        TypeElement builderTypeElement,
-        Optional<ExecutableElement> validateMethod) {
+    Builder(TypeElement builderTypeElement) {
       this.builderTypeElement = builderTypeElement;
-      this.validateMethod = validateMethod;
     }
 
     /**
@@ -198,7 +169,12 @@ class BuilderSpec {
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
       Optional<BuilderMethodClassifier> optionalClassifier = BuilderMethodClassifier.classify(
-          builderMethods, errorReporter, autoValueClass, builderTypeElement, getterToPropertyName);
+          builderMethods,
+          errorReporter,
+          processingEnv,
+          autoValueClass,
+          builderTypeElement,
+          getterToPropertyName);
       if (!optionalClassifier.isPresent()) {
         return;
       }
@@ -222,17 +198,106 @@ class BuilderSpec {
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethodName = buildMethod.getSimpleName().toString();
-      if (validateMethod.isPresent()) {
-        vars.validators = ImmutableSet.of(validateMethod.get().getSimpleName().toString());
-      } else {
-        vars.validators = ImmutableSet.of();
-      }
+      vars.propertiesWithBuilderGetters = classifier.propertiesWithBuilderGetters();
+
       ImmutableMap.Builder<String, String> setterNameBuilder = ImmutableMap.builder();
       for (Map.Entry<String, ExecutableElement> entry :
           classifier.propertyNameToSetter().entrySet()) {
         setterNameBuilder.put(entry.getKey(), entry.getValue().getSimpleName().toString());
       }
       vars.builderSetterNames = setterNameBuilder.build();
+
+      vars.builderPropertyBuilders =
+          makeBuilderPropertyBuilderMap(classifier, typeSimplifier, getterToPropertyName);
+
+      Set<Property> required = Sets.newLinkedHashSet(vars.props);
+      for (Property property : vars.props) {
+        if (property.isNullable() || vars.builderPropertyBuilders.containsKey(property.getName())) {
+          required.remove(property);
+        }
+      }
+      vars.builderRequiredProperties = ImmutableSet.copyOf(required);
+    }
+
+    private ImmutableMap<String, PropertyBuilder> makeBuilderPropertyBuilderMap(
+        BuilderMethodClassifier classifier,
+        TypeSimplifier typeSimplifier,
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      ImmutableMap.Builder<String, PropertyBuilder> map = ImmutableMap.builder();
+      for (Map.Entry<String, ExecutableElement> entry :
+          classifier.propertyNameToPropertyBuilder().entrySet()) {
+        String property = entry.getKey();
+        ExecutableElement autoValuePropertyMethod = getterToPropertyName.inverse().get(property);
+        ExecutableElement propertyBuilderMethod = entry.getValue();
+        PropertyBuilder propertyBuilder = new PropertyBuilder(
+            autoValuePropertyMethod, propertyBuilderMethod, typeSimplifier);
+        map.put(property, propertyBuilder);
+      }
+      return map.build();
+    }
+  }
+
+  /**
+   * Information about a property builder, referenced from the autovalue.vm template. A property
+   * called foo (defined by a method foo() or getFoo()) can have a property builder called
+   * fooBuilder(). The type of foo must be an immutable Guava type, like ImmutableSet, and
+   * fooBuilder() must return the corresponding builder, like ImmutableSet.Builder.
+   */
+  public class PropertyBuilder {
+    private final String builderType;
+    private final String initializer;
+    private final String copyAll;
+
+    PropertyBuilder(
+        ExecutableElement autoValuePropertyMethod,
+        ExecutableElement propertyBuilderMethod,
+        TypeSimplifier typeSimplifier) {
+      String immutableType = typeSimplifier.simplify(autoValuePropertyMethod.getReturnType());
+      int typeParamIndex = immutableType.indexOf('<');
+      checkState(typeParamIndex > 0, immutableType);
+      String rawImmutableType = immutableType.substring(0, typeParamIndex);
+      this.builderType =
+          rawImmutableType + ".Builder" + immutableType.substring(typeParamIndex);
+      this.initializer = rawImmutableType + ".builder()";
+      // TODO(emcmanus): clean up TypeSimplifier and remove this hack.
+      // We want it to simplify com.google.common.collect.ImmutableSet.Builder<E>
+      // the same way it would simplify com.google.common.collect.ImmutableSet<E>.
+      // The issue is that getEnclosingElement tends to do the wrong thing in Eclipse
+      // so we end up with ImmutableSet<E>.Builder<E>.
+      TypeElement builderTypeElement = MoreElements.asType(
+          processingEnv.getTypeUtils().asElement(propertyBuilderMethod.getReturnType()));
+      Set<String> methodNames = Sets.newHashSet();
+      for (ExecutableElement builderMethod :
+          ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
+        methodNames.add(builderMethod.getSimpleName().toString());
+      }
+      if (methodNames.contains("addAll")) {
+        this.copyAll = "addAll";
+      } else if (methodNames.contains("putAll")) {
+        this.copyAll = "putAll";
+      } else {
+        throw new AssertionError("Builder contains neither addAll nor putAll: " + methodNames);
+      }
+    }
+
+    /** The type of the builder, for example {@code ImmutableSet.Builder<String>}. */
+    public String getBuilderType() {
+      return builderType;
+    }
+
+    /** An initializer for the builder field, for example {@code ImmutableSet.builder()}. */
+    public String getInitializer() {
+      return initializer;
+    }
+
+    /**
+     * The method to copy another immutable collection into this one. It is {@code copyAll} for
+     * one-dimensional collections like {@code ImmutableList} and {@code ImmutableSet}, and it is
+     * {@code putAll} for two-dimensional collections like {@code ImmutableMap} and
+     * {@code ImmutableTable}.
+     */
+    public String getCopyAll() {
+      return copyAll;
     }
   }
 
@@ -241,8 +306,7 @@ class BuilderSpec {
    * class or interface has abstract methods that could not be part of any builder, emits error
    * messages and returns null.
    */
-  private Optional<Builder> builderFrom(
-      TypeElement builderTypeElement, Optional<ExecutableElement> validateMethod) {
+  private Optional<Builder> builderFrom(TypeElement builderTypeElement) {
 
     // We require the builder to have the same type parameters as the @AutoValue class, meaning the
     // same names and bounds. In principle the type parameters could have different names, but that
@@ -276,7 +340,7 @@ class BuilderSpec {
               + "type parameters of " + autoValueClass, builderTypeElement);
       return Optional.absent();
     }
-    return Optional.of(new Builder(builderTypeElement, validateMethod));
+    return Optional.of(new Builder(builderTypeElement));
   }
 
   // Return a list of all abstract methods in the given TypeElement or inherited from ancestors.
@@ -300,7 +364,7 @@ class BuilderSpec {
     for (ExecutableElement method : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
       for (Iterator<ExecutableElement> it = abstractMethods.iterator(); it.hasNext(); ) {
         ExecutableElement maybeOverridden = it.next();
-        if (elementUtils.overrides(method, maybeOverridden, typeElement)) {
+        if (processingEnv.getElementUtils().overrides(method, maybeOverridden, typeElement)) {
           it.remove();
         }
       }

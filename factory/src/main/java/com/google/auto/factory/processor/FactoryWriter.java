@@ -19,6 +19,17 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
+
+import com.squareup.javawriter.JavaWriter;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -31,20 +42,10 @@ import javax.inject.Inject;
 import javax.lang.model.element.Modifier;
 import javax.tools.JavaFileObject;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
-import com.squareup.javawriter.JavaWriter;
-
 final class FactoryWriter {
   private final Filer filer;
 
-  @Inject FactoryWriter(Filer filer) {
+  FactoryWriter(Filer filer) {
     this.filer = filer;
   }
 

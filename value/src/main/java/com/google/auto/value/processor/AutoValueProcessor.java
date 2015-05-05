@@ -174,6 +174,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     private final ExecutableElement method;
     private final String type;
     private final ImmutableList<String> annotations;
+    private final String nullableAnnotation;
 
     Property(
         String name,
@@ -186,6 +187,18 @@ public class AutoValueProcessor extends AbstractProcessor {
       this.method = method;
       this.type = type;
       this.annotations = buildAnnotations(typeSimplifier);
+      this.nullableAnnotation = buildNullableAnnotation(typeSimplifier);
+    }
+
+    private String buildNullableAnnotation(TypeSimplifier typeSimplifier) {
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
+        if (name.equals("Nullable")) {
+          AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
+          return annotationOutput.sourceFormForAnnotation(annotationMirror);
+        }
+      }
+      return null;
     }
 
     private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
@@ -257,13 +270,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public boolean isNullable() {
-      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
-        if (name.equals("Nullable")) {
-          return true;
-        }
-      }
-      return false;
+      return nullableAnnotation != null;
+    }
+    
+    public String getNullableAnnotation() {
+      return nullableAnnotation;
     }
 
     public String getAccess() {
@@ -275,6 +286,16 @@ public class AutoValueProcessor extends AbstractProcessor {
       } else {
         return "";
       }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof Property && ((Property) obj).method.equals(method);
+    }
+
+    @Override
+    public int hashCode() {
+      return method.hashCode();
     }
   }
 
@@ -423,7 +444,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack().reorderProperties(props);
-    vars.props = props;
+    vars.props = ImmutableSet.copyOf(props);
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);
     vars.actualTypes = TypeSimplifier.actualTypeParametersString(type);

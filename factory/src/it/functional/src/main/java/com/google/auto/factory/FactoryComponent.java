@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2015 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory.processor;
+package com.google.auto.factory;
 
 import dagger.Component;
 
-/**
- * The Dagger component that declares all of the bindings for {@link AutoFactoryProcessor}.
- *
- * @author Gregory Kick
- */
-@Component(modules = ProcessorModule.class)
-interface AutoFactoryProcessorComponent {
-  void injectProcessor(AutoFactoryProcessor processor);
+/** A component to materialize the factory using Dagger 2 */
+@Component(modules = DaggerModule.class)
+interface FactoryComponent {
+  FactoryGeneratedFactory factory();
 }

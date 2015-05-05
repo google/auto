@@ -244,7 +244,7 @@ class GwtSerialization {
 
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
-  private String computeClassHash(List<AutoValueProcessor.Property> props) {
+  private String computeClassHash(Iterable<AutoValueProcessor.Property> props) {
     TypeSimplifier typeSimplifier = new TypeSimplifier(
         processingEnv.getTypeUtils(), "", new TypeMirrorSet(), null);
     CRC32 crc = new CRC32();

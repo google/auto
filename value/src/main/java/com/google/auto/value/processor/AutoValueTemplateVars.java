@@ -15,13 +15,15 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+
 import org.apache.velocity.runtime.parser.node.SimpleNode;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
@@ -33,8 +35,11 @@ import javax.lang.model.util.Types;
  */
 @SuppressWarnings("unused")  // the fields in this class are only read via reflection
 class AutoValueTemplateVars extends TemplateVars {
-  /** The properties defined by the parent class's abstract methods. */
-  List<AutoValueProcessor.Property> props;
+  /**
+   * The properties defined by the parent class's abstract methods. The elements of this set are
+   * in the same order as the original abstract method declarations in the AutoValue class.
+   */
+  ImmutableSet<AutoValueProcessor.Property> props;
 
   /** Whether to generate an equals(Object) method. */
   Boolean equals;
@@ -47,7 +52,7 @@ class AutoValueTemplateVars extends TemplateVars {
   Types types;
 
   /** The fully-qualified names of the classes to be imported in the generated class. */
-  SortedSet<String> imports;
+  ImmutableSortedSet<String> imports;
 
   /**
    * The spelling of the javax.annotation.Generated class: Generated or javax.annotation.Generated.
@@ -131,18 +136,33 @@ class AutoValueTemplateVars extends TemplateVars {
   /**
    * A map from property names (like foo) to the corresponding setter method names (foo or setFoo).
    */
-  Map<String, String> builderSetterNames = Collections.emptyMap();
+  ImmutableMap<String, String> builderSetterNames = ImmutableMap.of();
+
+  /**
+   * A map from property names to information about the associated property builder. A property
+   * called foo (defined by a method foo() or getFoo()) can have a property builder called
+   * fooBuilder(). The type of foo must be an immutable Guava type, like ImmutableSet, and
+   * fooBuilder() must return the corresponding builder, like ImmutableSet.Builder.
+   */
+  ImmutableMap<String, BuilderSpec.PropertyBuilder> builderPropertyBuilders =
+      ImmutableMap.of();
+
+  /**
+   * Properties that are required to be set. A property must be set explicitly unless it is either
+   * {@code @Nullable} (in which case it defaults to null), or has a property-builder method
+   * (in which case it defaults to empty).
+   */
+  ImmutableSet<AutoValueProcessor.Property> builderRequiredProperties = ImmutableSet.of();
+
+  /**
+   * Properties that have getters in the builder.
+   */
+  ImmutableSet<String> propertiesWithBuilderGetters = ImmutableSet.of();
 
   /**
    * The names of any {@code toBuilder()} methods, that is methods that return the builder type.
    */
-  List<String> toBuilderMethods;
-
-  /**
-   * The simple names of validation methods (marked {@code @AutoValue.Validate}) in the AutoValue
-   * class. (Currently, this set is either empty or a singleton.)
-   */
-  Set<String> validators = Collections.emptySet();
+  ImmutableList<String> toBuilderMethods;
 
   private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
 

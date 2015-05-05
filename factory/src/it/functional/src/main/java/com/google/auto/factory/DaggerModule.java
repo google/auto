@@ -18,7 +18,7 @@ package com.google.auto.factory;
 import dagger.Module;
 import dagger.Provides;
 
-@Module(injects = FactoryGeneratedFactory.class)
+@Module
 final class DaggerModule {
   @Provides Dependency provideDependency(DependencyImpl impl) {
     return impl;
