@@ -15,7 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.truth.Truth.assert_;
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
@@ -34,7 +34,7 @@ import javax.tools.JavaFileObject;
 @RunWith(JUnit4.class)
 public class AutoFactoryProcessorTest {
   @Test public void simpleClass() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClass.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -42,7 +42,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassNonFinal() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClassNonFinal.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -51,7 +51,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void publicClass() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/PublicClass.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -59,7 +59,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassCustomName() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClassCustomName.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -67,7 +67,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassMixedDeps() {
-    assert_().about(javaSources())
+    assertAbout(javaSources())
         .that(ImmutableSet.of(
             JavaFileObjects.forResource("good/SimpleClassMixedDeps.java"),
             JavaFileObjects.forResource("support/AQualifier.java")))
@@ -78,7 +78,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassPassedDeps() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClassPassedDeps.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -87,7 +87,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassProvidedDeps() {
-    assert_().about(javaSources())
+    assertAbout(javaSources())
         .that(ImmutableSet.of(
             JavaFileObjects.forResource("support/AQualifier.java"),
             JavaFileObjects.forResource("support/BQualifier.java"),
@@ -99,7 +99,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void constructorAnnotated() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/ConstructorAnnotated.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -108,7 +108,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void constructorAnnotatedNonFinal() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/ConstructorAnnotatedNonFinal.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -117,7 +117,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassImplementingMarker() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClassImplementingMarker.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -126,7 +126,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void simpleClassImplementingSimpleInterface() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/SimpleClassImplementingSimpleInterface.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -135,7 +135,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void mixedDepsImplementingInterfaces() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/MixedDepsImplementingInterfaces.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -145,31 +145,31 @@ public class AutoFactoryProcessorTest {
 
   @Test public void failsWithMixedFinals() {
     JavaFileObject file = JavaFileObjects.forResource("bad/MixedFinals.java");
-    assert_().about(javaSource())
-            .that(file)
-            .processedWith(new AutoFactoryProcessor())
-            .failsToCompile()
-            .withErrorContaining(
-                "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-                .in(file).onLine(25).atColumn(3)
-             .and().withErrorContaining(
-                "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-                .in(file).onLine(26).atColumn(3);
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
+            .in(file).onLine(25).atColumn(3)
+         .and().withErrorContaining(
+            "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
+            .in(file).onLine(26).atColumn(3);
   }
 
   @Test public void failsOnGenericClass() {
     JavaFileObject file = JavaFileObjects.forResource("bad/GenericClass.java");
-    assert_().about(javaSource())
-            .that(file)
-            .processedWith(new AutoFactoryProcessor())
-            .failsToCompile()
-            .withErrorContaining("AutoFactory does not support generic types")
-                .in(file).onLine(21).atColumn(14);
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining("AutoFactory does not support generic types")
+            .in(file).onLine(21).atColumn(14);
   }
 
   @Test public void providedButNoAutoFactory() {
     JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedButNoAutoFactory.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -180,7 +180,7 @@ public class AutoFactoryProcessorTest {
 
   @Test public void providedOnMethodParameter() {
     JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedOnMethodParameter.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -191,7 +191,7 @@ public class AutoFactoryProcessorTest {
 
   @Test public void invalidCustomName() {
     JavaFileObject file = JavaFileObjects.forResource("bad/InvalidCustomName.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -200,7 +200,7 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test public void factoryExtendingAbstractClass() {
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/FactoryExtendingAbstractClass.java"))
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
@@ -211,7 +211,7 @@ public class AutoFactoryProcessorTest {
   @Test public void factoryExtendingAbstractClass_withConstructorParams() {
     JavaFileObject file =
         JavaFileObjects.forResource("good/FactoryExtendingAbstractClassWithConstructorParams.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -225,7 +225,7 @@ public class AutoFactoryProcessorTest {
   @Test public void factoryExtendingAbstractClass_multipleConstructors() {
     JavaFileObject file = JavaFileObjects.forResource(
         "good/FactoryExtendingAbstractClassWithMultipleConstructors.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError();
@@ -233,7 +233,7 @@ public class AutoFactoryProcessorTest {
 
   @Test public void factoryExtendingInterface() {
     JavaFileObject file = JavaFileObjects.forResource("bad/InterfaceSupertype.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -244,7 +244,7 @@ public class AutoFactoryProcessorTest {
 
   @Test public void factoryExtendingEnum() {
     JavaFileObject file = JavaFileObjects.forResource("bad/EnumSupertype.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -256,7 +256,7 @@ public class AutoFactoryProcessorTest {
 
   @Test public void factoryExtendingFinalClass() {
     JavaFileObject file = JavaFileObjects.forResource("bad/FinalSupertype.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .failsToCompile()
@@ -268,11 +268,25 @@ public class AutoFactoryProcessorTest {
   @Test public void factoryImplementingGenericInterfaceExtension() {
     JavaFileObject file =
         JavaFileObjects.forResource("good/FactoryImplementingGenericInterfaceExtension.java");
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(file)
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource(
             "expected/FactoryImplementingGenericInterfaceExtension.java"));
+  }
+
+  @Test public void multipleFactoriesImpementingInterface() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("good/MultipleFactoriesImplementingInterface.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource(
+                "expected/MultipleFactoriesImplementingInterfaceAFactory.java"),
+            JavaFileObjects.forResource(
+                "expected/MultipleFactoriesImplementingInterfaceBFactory.java"));
   }
 }

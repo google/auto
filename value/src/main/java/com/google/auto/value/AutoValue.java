@@ -67,9 +67,6 @@ public @interface AutoValue {
    *     }
    *   }</pre>
    *
-   * <p><b>This API is provisional and subject to change.</b></p>
-   *
-   *
    * @author Éamonn McManus
    */
   @Retention(RetentionPolicy.SOURCE)

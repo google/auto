@@ -20,9 +20,14 @@ import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import java.beans.Introspector;
@@ -31,9 +36,12 @@ import java.util.Set;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 
 /**
@@ -53,10 +61,10 @@ class BuilderMethodClassifier {
 
   private final Set<ExecutableElement> buildMethods = Sets.newLinkedHashSet();
   private final Set<String> propertiesWithBuilderGetters = Sets.newLinkedHashSet();
-  private final Map<String, ExecutableElement> propertyNameToPrefixedSetter =
-      Maps.newLinkedHashMap();
-  private final Map<String, ExecutableElement> propertyNameToUnprefixedSetter =
-      Maps.newLinkedHashMap();
+  private final Multimap<String, ExecutableElement> propertyNameToPrefixedSetters =
+      LinkedListMultimap.create();
+  private final Multimap<String, ExecutableElement> propertyNameToUnprefixedSetters =
+      LinkedListMultimap.create();
   private final Map<String, ExecutableElement> propertyNameToPropertyBuilder =
       Maps.newLinkedHashMap();
   private boolean settersPrefixed;
@@ -81,7 +89,7 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Classify the given methods from a builder type and its ancestors.
+   * Classifies the given methods from a builder type and its ancestors.
    *
    * @param methods the methods in {@code builderType} and its ancestors.
    * @param errorReporter where to report errors.
@@ -109,15 +117,15 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Returns a map from the name of a property to the method that sets it. If the property is
+   * Returns a multimap from the name of a property to the methods that set it. If the property is
    * defined by an abstract method in the {@code @AutoValue} class called {@code foo()} or
    * {@code getFoo()} then the name of the property is {@code foo} and there will be an entry in
    * the map where the key is {@code "foo"} and the value is a method in the builder called
    * {@code foo} or {@code setFoo}.
    */
-  Map<String, ExecutableElement> propertyNameToSetter() {
-    return ImmutableMap.copyOf(
-        settersPrefixed ? propertyNameToPrefixedSetter : propertyNameToUnprefixedSetter);
+  ImmutableMultimap<String, ExecutableElement> propertyNameToSetters() {
+    return ImmutableMultimap.copyOf(
+        settersPrefixed ? propertyNameToPrefixedSetters : propertyNameToUnprefixedSetters);
   }
 
   Map<String, ExecutableElement> propertyNameToPropertyBuilder() {
@@ -154,17 +162,16 @@ class BuilderMethodClassifier {
     if (!ok) {
       return false;
     }
-    Map<String, ExecutableElement> propertyNameToSetter;
-    if (propertyNameToPrefixedSetter.isEmpty()) {
-      propertyNameToSetter = propertyNameToUnprefixedSetter;
+    Multimap<String, ExecutableElement> propertyNameToSetter;
+    if (propertyNameToPrefixedSetters.isEmpty()) {
+      propertyNameToSetter = propertyNameToUnprefixedSetters;
       this.settersPrefixed = false;
-    } else if (propertyNameToUnprefixedSetter.isEmpty()) {
-      propertyNameToSetter = propertyNameToPrefixedSetter;
+    } else if (propertyNameToUnprefixedSetters.isEmpty()) {
+      propertyNameToSetter = propertyNameToPrefixedSetters;
       this.settersPrefixed = true;
     } else {
-      errorReporter.reportError(
-          "If any setter methods use the setFoo convention then all must",
-          propertyNameToUnprefixedSetter.values().iterator().next());
+      errorReporter.reportError("If any setter methods use the setFoo convention then all must",
+          propertyNameToUnprefixedSetters.values().iterator().next());
       return false;
     }
     for (Map.Entry<ExecutableElement, String> getterEntry : getterToPropertyName.entrySet()) {
@@ -191,7 +198,7 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Classify a method and update the state of this object based on what is found.
+   * Classifies a method and update the state of this object based on what is found.
    *
    * @return true if the method was successfully classified, false if an error has been reported.
    */
@@ -208,7 +215,7 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Classify a method given that it has no arguments. Currently a method with no
+   * Classifies a method given that it has no arguments. Currently a method with no
    * arguments can only be a {@code build()} method, meaning that its return type must be the
    * {@code @AutoValue} class.
    *
@@ -300,7 +307,7 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Classify a method given that it has one argument. Currently, a method with one argument can
+   * Classifies a method given that it has one argument. Currently, a method with one argument can
    * only be a setter, meaning that it must look like {@code foo(T)} or {@code setFoo(T)}, where
    * the {@code AutoValue} class has a property called {@code foo} of type {@code T}.
    *
@@ -311,37 +318,139 @@ class BuilderMethodClassifier {
     Map<String, ExecutableElement> propertyNameToGetter = getterToPropertyName.inverse();
     String propertyName = null;
     ExecutableElement valueGetter = propertyNameToGetter.get(methodName);
-    Map<String, ExecutableElement> propertyNameToSetter = null;
+    Multimap<String, ExecutableElement> propertyNameToSetters = null;
     if (valueGetter != null) {
       propertyName = methodName;
-      propertyNameToSetter = propertyNameToUnprefixedSetter;
+      propertyNameToSetters = propertyNameToUnprefixedSetters;
     } else if (valueGetter == null && methodName.startsWith("set") && methodName.length() > 3) {
       propertyName = Introspector.decapitalize(methodName.substring(3));
-      propertyNameToSetter = propertyNameToPrefixedSetter;
+      propertyNameToSetters = propertyNameToPrefixedSetters;
       valueGetter = propertyNameToGetter.get(propertyName);
     }
-    if (valueGetter == null || propertyNameToSetter == null) {
+    if (valueGetter == null || propertyNameToSetters == null) {
       // The second disjunct isn't needed but convinces control-flow checkers that
-      // propertyNameToSetter can't be null when we call put on it below.
+      // propertyNameToSetters can't be null when we call put on it below.
       errorReporter.reportError(
           "Method does not correspond to a property of " + autoValueClass, method);
       return false;
     }
-    TypeMirror parameterType = method.getParameters().get(0).asType();
-    TypeMirror expectedType = valueGetter.getReturnType();
-    if (!TYPE_EQUIVALENCE.equivalent(parameterType, expectedType)) {
-      errorReporter.reportError(
-          "Parameter type of setter method should be " + expectedType + " to match getter "
-          + autoValueClass + "." + valueGetter.getSimpleName(), method);
+    if (!checkSetterParameter(valueGetter, method)) {
       return false;
     } else if (!TYPE_EQUIVALENCE.equivalent(method.getReturnType(), builderType.asType())) {
       errorReporter.reportError(
           "Setter methods must return " + builderType + typeParamsString(), method);
       return false;
     } else {
-      propertyNameToSetter.put(propertyName, method);
+      propertyNameToSetters.put(propertyName, method);
       return true;
     }
+  }
+
+  /**
+   * Checks that the given setter method has a parameter type that is compatible with the return
+   * type of the given getter. Compatible means either that it is the same, or that it is a type
+   * that can be copied using a method like {@code ImmutableList.copyOf}.
+   *
+   * @return true if the types correspond, false if an error has been reported.
+   */
+  private boolean checkSetterParameter(ExecutableElement valueGetter, ExecutableElement setter) {
+    TypeMirror targetType = valueGetter.getReturnType();
+    TypeMirror parameterType = setter.getParameters().get(0).asType();
+    if (TYPE_EQUIVALENCE.equivalent(parameterType, targetType)) {
+      return true;
+    }
+    ImmutableList<ExecutableElement> copyOfMethods = copyOfMethods(targetType);
+    if (!copyOfMethods.isEmpty()) {
+      return canMakeCopyUsing(copyOfMethods, valueGetter, setter);
+    }
+    String error = String.format(
+        "Parameter type of setter method should be %s to match getter %s.%s",
+        targetType, autoValueClass, valueGetter.getSimpleName());
+    errorReporter.reportError(error, setter);
+    return false;
+  }
+
+  /**
+   * Checks that the given setter method has a parameter type that can be copied to the return type
+   * of the given getter using one of the given {@code copyOf} methods.
+   *
+   * @return true if the copy can be made, false if an error has been reported.
+   */
+  private boolean canMakeCopyUsing(
+      ImmutableList<ExecutableElement> copyOfMethods,
+      ExecutableElement valueGetter,
+      ExecutableElement setter) {
+    TypeMirror targetType = valueGetter.getReturnType();
+    TypeMirror parameterType = setter.getParameters().get(0).asType();
+    for (ExecutableElement copyOfMethod : copyOfMethods) {
+      if (canMakeCopyUsing(copyOfMethod, targetType, parameterType)) {
+        return true;
+      }
+    }
+    DeclaredType targetDeclaredType = MoreTypes.asDeclared(targetType);
+    String targetTypeSimpleName = targetDeclaredType.asElement().getSimpleName().toString();
+    String error = String.format(
+        "Parameter type of setter method should be %s to match getter %s.%s, or it should be a "
+            + "type that can be passed to %s.copyOf",
+        targetType, autoValueClass, valueGetter.getSimpleName(), targetTypeSimpleName);
+    errorReporter.reportError(error, setter);
+    return false;
+  }
+
+  /**
+   * Returns true if {@code copyOfMethod} can be used to copy the {@code parameterType}
+   * to the {@code targetType}.
+   */
+  private boolean canMakeCopyUsing(
+      ExecutableElement copyOfMethod, TypeMirror targetType, TypeMirror parameterType) {
+    // We have a parameter type, for example Set<? extends T>, and we want to know if it can be
+    // passed to the given copyOf method, which might for example be one of these methods from
+    // ImmutableSet:
+    //    public static <E> ImmutableSet<E> copyOf(Collection<? extends E> elements)
+    //    public static <E> ImmutableSet<E> copyOf(E[] elements)
+    // Additionally, if it can indeed be passed to the method, we want to know whether the result
+    // (here ImmutableSet<? extends T>) is compatible with the property to be set, bearing in mind
+    // that the T in question is the one from the @AutoValue class and not the Builder class.
+    // The logic to do that properly would be quite complex, and we don't get much help from the
+    // annotation processing API, so for now we simply check that the erased types correspond.
+    // This means that an incorrect type will lead to a compilation error in the generated code,
+    // which is less than ideal.
+    // TODO(b/20691134): make this work properly
+    TypeMirror erasedParameterType = typeUtils.erasure(parameterType);
+    TypeMirror erasedCopyOfParameterType =
+        typeUtils.erasure(Iterables.getOnlyElement(copyOfMethod.getParameters()).asType());
+    // erasedParameterType is Set in the example and erasedCopyOfParameterType is Collection
+    if (!typeUtils.isAssignable(erasedParameterType, erasedCopyOfParameterType)) {
+      return false;
+    }
+    TypeMirror erasedCopyOfReturnType = typeUtils.erasure(copyOfMethod.getReturnType());
+    TypeMirror erasedTargetType = typeUtils.erasure(targetType);
+    // erasedCopyOfReturnType and erasedTargetType are both ImmutableSet in the example.
+    // In fact for Guava immutable collections the check could be for equality.
+    return typeUtils.isAssignable(erasedCopyOfReturnType, erasedTargetType);
+  }
+
+  /**
+   * Returns {@code copyOf} methods from the given type. These are static methods called
+   * {@code copyOf} with a single parameter. All of Guava's concrete immutable collection types have
+   * at least one such method, but we will also accept other classes with an appropriate method,
+   * such as {@link java.util.EnumSet}.
+   */
+  private ImmutableList<ExecutableElement> copyOfMethods(TypeMirror targetType) {
+    if (!targetType.getKind().equals(TypeKind.DECLARED)) {
+      return ImmutableList.of();
+    }
+    TypeElement immutableTargetType = MoreElements.asType(typeUtils.asElement(targetType));
+    ImmutableList.Builder<ExecutableElement> copyOfMethods = ImmutableList.builder();
+    for (ExecutableElement method :
+        ElementFilter.methodsIn(immutableTargetType.getEnclosedElements())) {
+      if (method.getSimpleName().contentEquals("copyOf")
+          && method.getParameters().size() == 1
+          && method.getModifiers().contains(Modifier.STATIC)) {
+        copyOfMethods.add(method);
+      }
+    }
+    return copyOfMethods.build();
   }
 
   private String prefixWithSet(String propertyName) {

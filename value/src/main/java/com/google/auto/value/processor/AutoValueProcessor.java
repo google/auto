@@ -419,6 +419,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableSet<ExecutableElement> toBuilderMethods;
     if (builder.isPresent()) {
       toBuilderMethods = builder.get().toBuilderMethods(typeUtils, methodsToImplement);
+      types.addAll(builder.get().referencedTypes());
     } else {
       toBuilderMethods = ImmutableSet.of();
     }

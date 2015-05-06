@@ -37,7 +37,7 @@ public final class $serializerClass {
 #if ($useBuilder)
     return (${subclass}${actualTypes}) new ${subclass}.Builder${actualTypes}()
   #foreach ($p in $props)
-        .$builderSetterNames[$p.name]($p)
+        .${builderSetters[$p.name].iterator().next().name}($p)
   #end
         .build();
 #else
