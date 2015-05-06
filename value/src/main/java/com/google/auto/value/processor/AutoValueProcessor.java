@@ -37,12 +37,10 @@ import java.io.Serializable;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Generated;
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -70,7 +68,13 @@ import javax.tools.JavaFileObject;
  */
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
-  public AutoValueProcessor() {}
+  public AutoValueProcessor() {
+    this(ServiceLoader.load(AutoValueExtension.class));
+  }
+
+  /* testing */ AutoValueProcessor(Iterable<AutoValueExtension> extensions) {
+    this.extensions = extensions;
+  }
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
@@ -89,6 +93,8 @@ public class AutoValueProcessor extends AbstractProcessor {
    * because we needed other types that they referenced and those other types were missing.
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
+
+  private final Iterable<AutoValueExtension> extensions;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -360,6 +366,8 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private void processType(TypeElement type) {
+    Messager messager = processingEnv.getMessager();
+    messager.printMessage(Diagnostic.Kind.NOTE, "Processing type: " + type);
     AutoValue autoValue = type.getAnnotation(AutoValue.class);
     if (autoValue == null) {
       // This shouldn't happen unless the compilation environment is buggy,
@@ -379,31 +387,43 @@ public class AutoValueProcessor extends AbstractProcessor {
           + " interface; try using @AutoAnnotation instead", type);
     }
 
-    ServiceLoader<AutoValueExtension> extensions = ServiceLoader.load(AutoValueExtension.class);
+    List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
+    findLocalAndInheritedMethods(type, methods);
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
+
+    messager.printMessage(Diagnostic.Kind.NOTE, "Found extensions: " + extensions);
+    String fqExtClass = TypeSimplifier.classNameOf(type);
     int extensionsApplied = 0;
-    AutoValueExtension.Context context = makeExtensionContext(type);
     for (AutoValueExtension extension : extensions) {
+      AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
+      messager.printMessage(Diagnostic.Kind.WARNING, "Checking extension: " + extension);
       if (extension.applicable(context)) {
+        String fqClassName = generatedSubclassName(type, extensionsApplied);
+
         String implClass = TypeSimplifier.classNameOf(type);
-        String extClass = generatedSubclassName(type, extensionsApplied);
-        String className = generatedSubclassName(type, extensionsApplied);
-        String text = extension.generateClass(context, className, extClass, implClass);
-        if (Strings.isNullOrEmpty(text)) {
-          text = Reformatter.fixup(text);
-          writeSourceFile(className, text, type);
-          extensionsApplied++;
+        String extClass = TypeSimplifier.simpleNameOf(fqExtClass);
+        String className = TypeSimplifier.simpleNameOf(fqClassName);
+        AutoValueExtension.GeneratedClass genClass = extension.generateClass(context, className, extClass, implClass);
+        if (genClass != null) {
+          String text = Reformatter.fixup(genClass.source());
+          writeSourceFile(fqClassName, text, type);
+
+          messager.printMessage(Diagnostic.Kind.NOTE, extension.getClass().getSimpleName() + " consumed " + genClass.consumedProperties().size());
+          fqExtClass = fqClassName;
+          methods.removeAll(genClass.consumedProperties());
+          ++extensionsApplied;
         }
       }
     }
 
-    String subclass = generatedSubclassName(type, extensionsApplied);
+    String subclass = generatedSubclassName(type, ++extensionsApplied);
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
-    vars.origClass = TypeSimplifier.classNameOf(type);
+    vars.origClass = fqExtClass;
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.types = processingEnv.getTypeUtils();
-    defineVarsForType(type, vars);
+    defineVarsForType(type, vars, methods);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
@@ -413,7 +433,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 
-  private AutoValueExtension.Context makeExtensionContext(final TypeElement type) {
+  private AutoValueExtension.Context makeExtensionContext(final TypeElement type, final Iterable<ExecutableElement> methods) {
     return new AutoValueExtension.Context() {
 
       @Override public ProcessingEnvironment processingEnvironment() {
@@ -429,22 +449,19 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
 
       @Override public Map<String, ExecutableElement> properties() {
-        // TODO implement this
-        return null;
+        return propertyNameToMethodMap(methods);
       }
     };
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars, List<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
-    List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    findLocalAndInheritedMethods(type, methods);
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(methodsToImplement));
-    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
-    types.add(javaxAnnotationGenerated);
+//    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
+//    types.add(javaxAnnotationGenerated);
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
       // If there are array properties then we will be referencing java.util.Arrays.
@@ -465,7 +482,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
-    vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
+    vars.generated = "";//typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         methodToPropertyNameMap(propertyMethods);
@@ -505,6 +522,19 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (allGetters) {
       checkDuplicateGetters(map);
     }
+    return ImmutableBiMap.copyOf(map);
+  }
+
+  private ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(
+      Iterable<ExecutableElement> propertyMethods) {
+    ImmutableMap.Builder<String, ExecutableElement> builder = ImmutableMap.builder();
+    boolean allGetters = allGetters(propertyMethods);
+    for (ExecutableElement method : propertyMethods) {
+      String methodName = method.getSimpleName().toString();
+      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
+      builder.put(name, method);
+    }
+    ImmutableMap<String, ExecutableElement> map = builder.build();
     return ImmutableBiMap.copyOf(map);
   }
 
@@ -622,13 +652,6 @@ public class AutoValueProcessor extends AbstractProcessor {
             errors = true;
           }
           toImplement.add(method);
-        } else {
-          // This could reasonably be an error, were it not for an Eclipse bug in
-          // ElementUtils.override that sometimes fails to recognize that one method overrides
-          // another, and therefore leaves us with both an abstract method and the subclass method
-          // that overrides it. This shows up in AutoValueTest.LukesBase for example.
-          errorReporter.reportWarning("@AutoValue classes cannot have abstract methods other than"
-              + " property getters and Builder converters", method);
         }
       }
     }

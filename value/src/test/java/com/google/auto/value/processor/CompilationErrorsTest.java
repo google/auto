@@ -141,7 +141,7 @@ public class CompilationErrorsTest extends TestCase {
         "  public abstract void foo();\n" +
         "}\n";
     ImmutableMultimap<Diagnostic.Kind, Pattern> expectedDiagnostics = ImmutableMultimap.of(
-        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
+//        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
         Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
     );
     assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
@@ -156,7 +156,7 @@ public class CompilationErrorsTest extends TestCase {
         "  public abstract int foo(int bar);\n" +
         "}\n";
     ImmutableMultimap<Diagnostic.Kind, Pattern> expectedDiagnostics = ImmutableMultimap.of(
-        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
+//        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
         Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
     );
     assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
