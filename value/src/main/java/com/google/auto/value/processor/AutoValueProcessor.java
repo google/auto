@@ -366,8 +366,6 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private void processType(TypeElement type) {
-    Messager messager = processingEnv.getMessager();
-    messager.printMessage(Diagnostic.Kind.NOTE, "Processing type: " + type);
     AutoValue autoValue = type.getAnnotation(AutoValue.class);
     if (autoValue == null) {
       // This shouldn't happen unless the compilation environment is buggy,
@@ -391,12 +389,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     findLocalAndInheritedMethods(type, methods);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
 
-    messager.printMessage(Diagnostic.Kind.NOTE, "Found extensions: " + extensions);
     String fqExtClass = TypeSimplifier.classNameOf(type);
     int extensionsApplied = 0;
     for (AutoValueExtension extension : extensions) {
       AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
-      messager.printMessage(Diagnostic.Kind.WARNING, "Checking extension: " + extension);
       if (extension.applicable(context)) {
         String fqClassName = generatedSubclassName(type, extensionsApplied);
 
@@ -408,7 +404,6 @@ public class AutoValueProcessor extends AbstractProcessor {
           String text = Reformatter.fixup(genClass.source());
           writeSourceFile(fqClassName, text, type);
 
-          messager.printMessage(Diagnostic.Kind.NOTE, extension.getClass().getSimpleName() + " consumed " + genClass.consumedProperties().size());
           fqExtClass = fqClassName;
           methods.removeAll(genClass.consumedProperties());
           ++extensionsApplied;
@@ -416,7 +411,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
 
-    String subclass = generatedSubclassName(type, ++extensionsApplied);
+    String subclass = generatedSubclassName(type, extensionsApplied);
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = fqExtClass;
