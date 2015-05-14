@@ -62,7 +62,7 @@ import javax.tools.JavaFileObject;
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
   public AutoValueProcessor() {
-    this(ServiceLoader.load(AutoValueExtension.class));
+    this(null);
   }
 
   /* testing */ AutoValueProcessor(Iterable<AutoValueExtension> extensions) {
@@ -92,11 +92,17 @@ public class AutoValueProcessor extends AbstractProcessor {
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
+    if (extensions == null) {
+      extensions = ServiceLoader.load(AutoValueExtension.class, getClass().getClassLoader());
+    }
     errorReporter = new ErrorReporter(processingEnv);
   }
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+
+    processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "AutoExtensions: " + extensions.iterator().hasNext());
+
     List<TypeElement> deferredTypes = new ArrayList<TypeElement>();
     for (String deferred : deferredTypeNames) {
       deferredTypes.add(processingEnv.getElementUtils().getTypeElement(deferred));
