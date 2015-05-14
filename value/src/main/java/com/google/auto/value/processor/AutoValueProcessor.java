@@ -100,9 +100,6 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-
-    processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "AutoExtensions: " + extensions.iterator().hasNext());
-
     List<TypeElement> deferredTypes = new ArrayList<TypeElement>();
     for (String deferred : deferredTypeNames) {
       deferredTypes.add(processingEnv.getElementUtils().getTypeElement(deferred));
