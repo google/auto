@@ -21,7 +21,10 @@ public interface AutoValueExtension {
   public interface GeneratedClass {
     String className();
     String source();
+    Collection<String> additionalImports();
     Collection<ExecutableElement> consumedProperties();
+    Collection<String> additionalInterfaces();
+    Collection<String> additionalCode();
   }
 
   boolean applicable(Context context);

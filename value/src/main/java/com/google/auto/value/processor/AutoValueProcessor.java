@@ -23,13 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 
 import java.beans.Introspector;
 import java.io.IOException;
@@ -37,7 +31,6 @@ import java.io.Serializable;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.*;
@@ -94,7 +87,7 @@ public class AutoValueProcessor extends AbstractProcessor {
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
 
-  private final Iterable<AutoValueExtension> extensions;
+  private Iterable<AutoValueExtension> extensions;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -386,9 +379,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
+    List<ExecutableElement> consumedMethods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
 
+    Set<String> additionalImports = new LinkedHashSet<String>();
+    Set<String> additionalInterfaces = new LinkedHashSet<String>();
+    Set<String> additionalCode = new LinkedHashSet<String>();
     String fqExtClass = TypeSimplifier.classNameOf(type);
     int extensionsApplied = 0;
     for (AutoValueExtension extension : extensions) {
@@ -401,12 +398,30 @@ public class AutoValueProcessor extends AbstractProcessor {
         String className = TypeSimplifier.simpleNameOf(fqClassName);
         AutoValueExtension.GeneratedClass genClass = extension.generateClass(context, className, extClass, implClass);
         if (genClass != null) {
-          String text = Reformatter.fixup(genClass.source());
-          writeSourceFile(fqClassName, text, type);
+          String source = genClass.source();
+          if (source != null && !source.isEmpty()) {
+            String text = Reformatter.fixup(genClass.source());
+            writeSourceFile(fqClassName, text, type);
+            fqExtClass = fqClassName;
+            ++extensionsApplied;
+          }
 
-          fqExtClass = fqClassName;
-          methods.removeAll(genClass.consumedProperties());
-          ++extensionsApplied;
+          if (genClass.consumedProperties() != null) {
+            consumedMethods.addAll(genClass.consumedProperties());
+            methods.removeAll(genClass.consumedProperties());
+          }
+
+          if (genClass.additionalImports() != null && !genClass.additionalImports().isEmpty()) {
+            additionalImports.addAll(genClass.additionalImports());
+          }
+
+          if (genClass.additionalInterfaces() != null && !genClass.additionalInterfaces().isEmpty()) {
+            additionalInterfaces.addAll(genClass.additionalInterfaces());
+          }
+
+          if (genClass.additionalCode() != null && !genClass.additionalCode().isEmpty()) {
+            additionalCode.addAll(genClass.additionalCode());
+          }
         }
       }
     }
@@ -418,7 +433,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.types = processingEnv.getTypeUtils();
-    defineVarsForType(type, vars, methods);
+    defineVarsForType(type, vars, methods, consumedMethods);
+    vars.interfaces = ImmutableSet.copyOf(additionalInterfaces);
+    vars.additionalCode = ImmutableSet.copyOf(additionalCode);
+    if (!additionalImports.isEmpty()) {
+      if (vars.imports != null) {
+        additionalImports.addAll(vars.imports);
+      }
+      vars.imports = ImmutableSortedSet.copyOf(additionalImports);
+    }
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
@@ -449,14 +472,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     };
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars, List<ExecutableElement> methods) {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars, List<ExecutableElement> methods,
+                                 List<ExecutableElement> consumedMethods) {
     Types typeUtils = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(methodsToImplement));
-//    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
-//    types.add(javaxAnnotationGenerated);
+    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
+    types.add(javaxAnnotationGenerated);
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
       // If there are array properties then we will be referencing java.util.Arrays.
@@ -477,7 +501,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
-    vars.generated = "";//typeSimplifier.simplify(javaxAnnotationGenerated);
+    vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         methodToPropertyNameMap(propertyMethods);
@@ -500,7 +524,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.wildcardTypes = wildcardTypeParametersString(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     if (builder.isPresent()) {
-      builder.get().defineVars(vars, typeSimplifier, methodToPropertyName);
+      builder.get().defineVars(vars, typeSimplifier, methodToPropertyName, consumedMethods);
     }
   }
 

@@ -166,8 +166,9 @@ class BuilderSpec {
     void defineVars(
         AutoValueTemplateVars vars,
         TypeSimplifier typeSimplifier,
-        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+        List<ExecutableElement> consumedMethods) {
+      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement, consumedMethods);
       Optional<BuilderMethodClassifier> optionalClassifier = BuilderMethodClassifier.classify(
           builderMethods,
           errorReporter,
@@ -344,22 +345,22 @@ class BuilderSpec {
   }
 
   // Return a list of all abstract methods in the given TypeElement or inherited from ancestors.
-  private List<ExecutableElement> abstractMethods(TypeElement typeElement) {
+  private List<ExecutableElement> abstractMethods(TypeElement typeElement, List<ExecutableElement> consumedMethods) {
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    addAbstractMethods(typeElement.asType(), methods);
+    addAbstractMethods(typeElement.asType(), methods, consumedMethods);
     return methods;
   }
 
   private void addAbstractMethods(
-      TypeMirror typeMirror, List<ExecutableElement> abstractMethods) {
+      TypeMirror typeMirror, List<ExecutableElement> abstractMethods, List<ExecutableElement> consumedMethods) {
     if (typeMirror.getKind() != TypeKind.DECLARED) {
       return;
     }
 
     TypeElement typeElement = MoreTypes.asTypeElement(typeMirror);
-    addAbstractMethods(typeElement.getSuperclass(), abstractMethods);
+    addAbstractMethods(typeElement.getSuperclass(), abstractMethods, consumedMethods);
     for (TypeMirror interfaceMirror : typeElement.getInterfaces()) {
-      addAbstractMethods(interfaceMirror, abstractMethods);
+      addAbstractMethods(interfaceMirror, abstractMethods, consumedMethods);
     }
     for (ExecutableElement method : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
       for (Iterator<ExecutableElement> it = abstractMethods.iterator(); it.hasNext(); ) {
@@ -368,7 +369,7 @@ class BuilderSpec {
           it.remove();
         }
       }
-      if (method.getModifiers().contains(Modifier.ABSTRACT)) {
+      if (!consumedMethods.contains(method) && method.getModifiers().contains(Modifier.ABSTRACT)) {
         abstractMethods.add(method);
       }
     }
