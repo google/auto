@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-
 import com.squareup.javawriter.JavaWriter;
 
 import java.io.IOException;
@@ -38,7 +37,6 @@ import java.util.Map.Entry;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
-import javax.inject.Inject;
 import javax.lang.model.element.Modifier;
 import javax.tools.JavaFileObject;
 
@@ -108,7 +106,7 @@ final class FactoryWriter {
 
     writer.emitAnnotation("Inject");
     writer.beginMethod(null, factoryName,
-        descriptor.publicType() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
+        EnumSet.noneOf(Modifier.class),
         constructorTokens.build().toArray(new String[0]));
 
     for (String providerName : descriptor.providerNames().values()) {

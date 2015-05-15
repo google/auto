@@ -20,7 +20,7 @@ import javax.inject.Inject;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 public final class PublicClassFactory {
-  @Inject public PublicClassFactory() {}
+  @Inject PublicClassFactory() {}
   
   public PublicClass create() {
     return new PublicClass();
