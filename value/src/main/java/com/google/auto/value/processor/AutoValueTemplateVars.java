@@ -17,13 +17,11 @@ package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 
 import org.apache.velocity.runtime.parser.node.SimpleNode;
-
-import java.util.Collections;
-import java.util.Set;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
@@ -134,9 +132,11 @@ class AutoValueTemplateVars extends TemplateVars {
   String buildMethodName = "";
 
   /**
-   * A map from property names (like foo) to the corresponding setter method names (foo or setFoo).
+   * A multimap from property names (like foo) to the corresponding setters. The same property may
+   * be set by more than one setter. For example, an ImmutableList might be set by
+   * {@code setFoo(ImmutableList<String>)} and {@code setFoo(String[])}.
    */
-  ImmutableMap<String, String> builderSetterNames = ImmutableMap.of();
+  ImmutableMultimap<String, BuilderSpec.PropertySetter> builderSetters = ImmutableMultimap.of();
 
   /**
    * A map from property names to information about the associated property builder. A property
