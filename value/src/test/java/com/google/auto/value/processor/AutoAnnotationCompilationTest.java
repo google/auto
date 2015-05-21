@@ -127,6 +127,97 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  public void testGwtSimple() {
+    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
+        "com.example.annotations.MyAnnotation",
+        "package com.example.annotations;",
+        "",
+        "import com.google.common.annotations.GwtCompatible;",
+        "",
+        "@GwtCompatible",
+        "public @interface MyAnnotation {",
+        "  int[] value();",
+        "}"
+    );
+    JavaFileObject gwtCompatibleJavaFile = JavaFileObjects.forSourceLines(
+        "com.google.common.annotations.GwtCompatible",
+        "package com.google.common.annotations;",
+        "",
+        "public @interface GwtCompatible {}"
+    );
+    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
+        "com.example.factories.AnnotationFactory",
+        "package com.example.factories;",
+        "",
+        "import com.google.auto.value.AutoAnnotation;",
+        "import com.example.annotations.MyAnnotation;",
+        "",
+        "public class AnnotationFactory {",
+        "  @AutoAnnotation",
+        "  public static MyAnnotation newMyAnnotation(int[] value) {",
+        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value);",
+        "  }",
+        "}");
+    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
+        "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation",
+        "package com.example.factories;",
+        "",
+        "import com.example.annotations.MyAnnotation;",
+        "import java.util.Arrays;",
+        "import javax.annotation.Generated;",
+        "",
+        "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
+        "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+        "  private final int[] value;",
+        "",
+        "  AutoAnnotation_AnnotationFactory_newMyAnnotation(int[] value) {",
+        "    if (value == null) {",
+        "      throw new NullPointerException(\"Null value\");",
+        "    }",
+        "    this.value = Arrays.copyOf(value, value.length);",
+        "  }",
+        "",
+        "  @Override public Class<? extends MyAnnotation> annotationType() {",
+        "    return MyAnnotation.class;",
+        "  }",
+        "",
+        "  @Override public int[] value() {",
+        "    return Arrays.copyOf(value, value.length);",
+        "  }",
+        "",
+        "  @Override public String toString() {",
+        "    StringBuilder sb = new StringBuilder(\"@com.example.annotations.MyAnnotation(\");",
+        "    sb.append(Arrays.toString(value));",
+        "    return sb.append(')').toString();",
+        "  }",
+        "",
+        "  @Override public boolean equals(Object o) {",
+        "    if (o == this) {",
+        "      return true;",
+        "    }",
+        "    if (o instanceof MyAnnotation) {",
+        "      MyAnnotation that = (MyAnnotation) o;",
+        "      return (Arrays.equals(value,",
+        "          (that instanceof AutoAnnotation_AnnotationFactory_newMyAnnotation)",
+        "              ? ((AutoAnnotation_AnnotationFactory_newMyAnnotation) that).value",
+        "              : that.value()));",
+        "    }",
+        "    return false;",
+        "  }",
+        "",
+        "  @Override public int hashCode() {",
+        "    return ((127 * " + "value".hashCode() + ") ^ (Arrays.hashCode(value)));",
+        "  }",
+        "}"
+    );
+    assert_().about(javaSources())
+        .that(ImmutableList.of(
+            annotationFactoryJavaFile, myAnnotationJavaFile, gwtCompatibleJavaFile))
+        .processedWith(new AutoAnnotationProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(expectedOutput);
+  }
+
   public void testCollectionsForArrays() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",

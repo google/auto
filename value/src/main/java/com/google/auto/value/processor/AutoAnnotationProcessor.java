@@ -39,6 +39,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -171,6 +172,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.params = parameters;
     vars.pkg = pkg;
     vars.wrapperTypesUsedInCollections = wrapperTypesUsedInCollections;
+    vars.gwtCompatible = isGwtCompatible(annotationElement);
     String text = vars.toText();
     text = Reformatter.fixup(text);
     writeSourceFile(pkg + "." + generatedClassName, text, methodClass);
@@ -396,6 +398,16 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   private static boolean containsArrayType(Set<TypeMirror> types) {
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ARRAY) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isGwtCompatible(TypeElement annotationElement) {
+    for (AnnotationMirror annotationMirror : annotationElement.getAnnotationMirrors()) {
+      String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
+      if (name.equals("GwtCompatible")) {
         return true;
       }
     }

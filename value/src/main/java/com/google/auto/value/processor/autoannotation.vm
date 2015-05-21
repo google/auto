@@ -9,6 +9,14 @@
 ##
 ## A post-processing step will remove unwanted spaces and blank lines, but will not join two lines.
 
+#macro (cloneArray $a)
+  #if ($gwtCompatible)
+    ${arrays}.copyOf($a, ${a}.length)
+  #else
+    ${a}.clone()
+  #end
+#end
+
 #if (!$pkg.empty)
 package $pkg;
 #end
@@ -53,7 +61,7 @@ final class $className implements $annotationName {
   #if ($members[$p].kind == "ARRAY")
     #if ($params[$p].kind == "ARRAY")
 
-    this.$p = ${p}.clone();
+    this.$p = #cloneArray(${p});
 
     #elseif ($members[$p].typeMirror.componentType.kind.primitive)
 
@@ -89,7 +97,7 @@ final class $className implements $annotationName {
 
   #if ($m.kind == "ARRAY")
 
-    return ${m}.clone();
+    return #cloneArray(${m});
 
   #else
 
