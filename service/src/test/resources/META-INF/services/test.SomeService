@@ -1,3 +1,4 @@
 test.Enclosing$NestedSomeServiceProvider
+test.SomeAnotherServiceProvider
 test.SomeServiceProvider1
 test.SomeServiceProvider2
