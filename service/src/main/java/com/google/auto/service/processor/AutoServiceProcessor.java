@@ -269,7 +269,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     final List<Type> result = new LinkedList<Type>();
 
     for (Object declaredType : (List<?>)value) {
-      result.add(((Attribute.Class)declaredType).classType);
+      result.add(((Attribute.Class)declaredType).getValue());
     }
 
     return result;
