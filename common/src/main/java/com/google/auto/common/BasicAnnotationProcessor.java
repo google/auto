@@ -42,6 +42,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ErrorType;
@@ -257,6 +258,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> builder) {
     for (Element enclosedElement : element.getEnclosedElements()) {
       findAnnotatedElements(enclosedElement, annotationClasses, builder);
+    }
+    // element.getEnclosedElements() does NOT return parameter elements
+    if (element instanceof ExecutableElement) {
+      for (Element parameterElement : ((ExecutableElement) element).getParameters()) {
+        findAnnotatedElements(parameterElement, annotationClasses, builder);
+      }
     }
     for (Class<? extends Annotation> annotationClass : annotationClasses) {
       if (MoreElements.isAnnotationPresent(element, annotationClass)) {

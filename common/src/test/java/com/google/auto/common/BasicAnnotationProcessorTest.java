@@ -167,6 +167,30 @@ public class BasicAnnotationProcessorTest {
     assertThat(requiresGeneratedCodeProcessor.processed).isTrue();
   }
 
+  @Test public void properlyDefersProcessing_argumentElement() {
+    JavaFileObject classAFileObject = JavaFileObjects.forSourceLines("test.ClassA",
+        "package test;",
+        "",
+        "public class ClassA {",
+        "  SomeGeneratedClass sgc;",
+        "  public void myMethod(@" + RequiresGeneratedCode.class.getCanonicalName() + " int myInt)",
+        "  {}",
+        "}");
+    JavaFileObject classBFileObject = JavaFileObjects.forSourceLines("test.ClassB",
+        "package test;",
+        "",
+        "public class ClassB {",
+        "  public void myMethod(@" + GeneratesCode.class.getCanonicalName() + " int myInt) {}",
+        "}");
+    RequiresGeneratedCodeProcessor requiresGeneratedCodeProcessor =
+        new RequiresGeneratedCodeProcessor();
+    assertAbout(javaSources())
+        .that(ImmutableList.of(classAFileObject, classBFileObject))
+        .processedWith(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
+        .compilesWithoutError();
+    assertThat(requiresGeneratedCodeProcessor.processed).isTrue();
+  }
+
   @Test public void reportsMissingType() {
     JavaFileObject classAFileObject = JavaFileObjects.forSourceLines("test.ClassA",
         "package test;",
