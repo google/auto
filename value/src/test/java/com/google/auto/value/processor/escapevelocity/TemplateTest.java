@@ -193,17 +193,17 @@ public class TemplateTest {
 
   @Test
   public void variableNameCantStartWithNonAscii() {
-    compare("<$Éamonn>", ImmutableMap.of());
+    compare("<$Éamonn>", ImmutableMap.<String, Object>of());
   }
 
   @Test
   public void variableNamesAreAscii() {
-    compare("<$Pádraig>", ImmutableMap.of("P", "(P)"));
+    compare("<$Pádraig>", ImmutableMap.of("P", (Object) "(P)"));
   }
 
   @Test
   public void variableNameCharacters() {
-    compare("<AZaz-foo_bar23>", ImmutableMap.of("AZaz-foo_bar23", "(P)"));
+    compare("<AZaz-foo_bar23>", ImmutableMap.of("AZaz-foo_bar23", (Object) "(P)"));
   }
 
   public static class Indexable {
