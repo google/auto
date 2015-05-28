@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -138,7 +139,7 @@ final class FactoryDescriptorGenerator {
             new Predicate<VariableElement>() {
               @Override
               public boolean apply(VariableElement parameter) {
-                return parameter.getAnnotation(Provided.class) != null;
+                return isAnnotationPresent(parameter, Provided.class);
               }
             }));
     ImmutableSet<Parameter> providedParameters = Parameter.forParameterList(parameterMap.get(true));

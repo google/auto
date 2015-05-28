@@ -289,4 +289,15 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource(
                 "expected/MultipleFactoriesImplementingInterfaceBFactory.java"));
   }
+
+  @Test public void classUsingQualifierWithArgs() {
+    assertAbout(javaSources())
+        .that(ImmutableSet.of(
+            JavaFileObjects.forResource("support/QualifierWithArgs.java"),
+            JavaFileObjects.forResource("good/ClassUsingQualifierWithArgs.java")))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/ClassUsingQualifierWithArgsFactory.java"));
+  }
 }
