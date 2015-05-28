@@ -15,16 +15,8 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import java.util.List;
 import java.util.Set;
@@ -35,18 +27,25 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 final class Parameter {
-  private final Optional<AnnotationMirror> qualifier;
+  private final Optional<String> qualifier;
   private final String type;
   private final String name;
 
-  private Parameter(Optional<AnnotationMirror> qualifier, String type, String name) {
+  private Parameter(Optional<String> qualifier, String type, String name) {
     this.qualifier = checkNotNull(qualifier);
     this.type = checkNotNull(type);
     this.name = checkNotNull(name);
   }
 
-  Optional<AnnotationMirror> qualifier() {
+  Optional<String> qualifier() {
     return qualifier;
   }
 
@@ -70,7 +69,7 @@ final class Parameter {
       Parameter that = (Parameter) obj;
       return this.type.equals(that.type)
           && this.name.equals(that.name)
-          && this.qualifier.toString().equals(that.qualifier.toString());
+          && this.qualifier.equals(that.qualifier);
     } else {
       return false;
     }
@@ -78,7 +77,7 @@ final class Parameter {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(type, name, qualifier.toString());
+    return Objects.hashCode(type, name, qualifier);
   }
 
   @Override
@@ -92,11 +91,11 @@ final class Parameter {
   }
 
   static Parameter forVariableElement(VariableElement variable, TypeMirror type) {
-    ImmutableSet.Builder<AnnotationMirror> qualifiers = ImmutableSet.builder();
+    ImmutableSet.Builder<String> qualifiers = ImmutableSet.builder();
     for (AnnotationMirror annotationMirror : variable.getAnnotationMirrors()) {
       DeclaredType annotationType = annotationMirror.getAnnotationType();
-      if (isAnnotationPresent(annotationType.asElement(), Qualifier.class)) {
-        qualifiers.add(annotationMirror);
+      if (annotationType.asElement().getAnnotation(Qualifier.class) != null) {
+        qualifiers.add(Mirrors.getQualifiedName(annotationType).toString());
       }
     }
     // TODO(gak): check for only one qualifier rather than using the first
