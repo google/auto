@@ -38,7 +38,7 @@ import java.util.Map.Entry;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
-import javax.inject.Inject;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Modifier;
 import javax.tools.JavaFileObject;
 
@@ -101,8 +101,8 @@ final class FactoryWriter {
       Key key = entry.getKey();
       String providerName = entry.getValue();
       writer.emitField("Provider<" + key.getType() + ">", providerName, EnumSet.of(PRIVATE, FINAL));
-      Optional<String> qualifier = key.getQualifier();
-      String qualifierPrefix = qualifier.isPresent() ? "@" + qualifier.get() + " " : "";
+      Optional<AnnotationMirror> qualifier = key.getQualifier();
+      String qualifierPrefix = qualifier.isPresent() ? qualifier.get() + " " : "";
       constructorTokens.add(qualifierPrefix + "Provider<" + key.getType() + ">").add(providerName);
     }
 
