@@ -32,18 +32,27 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
+import com.google.auto.value.processor.escapevelocity.DirectiveNode.SetNode;
+import com.google.auto.value.processor.escapevelocity.ExpressionNode.BinaryExpressionNode;
+import com.google.auto.value.processor.escapevelocity.ExpressionNode.NotExpressionNode;
 import com.google.auto.value.processor.escapevelocity.Node.EofNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.IndexReferenceNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.MemberReferenceNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.MethodReferenceNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.PlainReferenceNode;
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Chars;
 import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Reader;
+import java.util.List;
 
 /**
  * A parser that reads input from the given {@link Reader} and parses it to produce a
@@ -174,8 +183,48 @@ class Parser {
     }
   }
 
+  /**
+   * Parses a single directive token from the reader. Directives can be spelled with or without
+   * braces, for example {@code #if} or {@code #{if}}. We omit the brace spelling in the productions
+   * here: <pre>{@code
+   * <directive> -> <set-token> |
+   *                <comment>
+   * }</pre>
+   */
   private Node parseDirective() throws IOException {
-    throw parseException("# directives not yet supported");
+    String directive;
+    if (c == '{') {
+      next();
+      directive = parseId("Directive inside #{...}");
+      expect('}');
+    } else {
+      directive = parseId("Directive");
+    }
+    if (directive.equals("set")) {
+      Node node = parseSet();
+      // Velocity skips a newline after any directive.
+      if (c == '\n') {
+        next();
+      }
+      return node;
+    } else {
+      throw parseException("Unsupported directive: #" + directive);
+    }
+  }
+
+  /**
+   * Parses a {@code #set} token from the reader. <pre>{@code
+   * <set-token> -> #set ( $<id> = <expression>)
+   * }</pre>
+   */
+  private Node parseSet() throws IOException {
+    expect('(');
+    expect('$');
+    String var = parseId("#set variable");
+    expect('=');
+    ExpressionNode expression = parseExpression();
+    expect(')');
+    return new SetNode(var, expression);
   }
 
   /**
@@ -349,14 +398,178 @@ class Parser {
     return parseReferenceSuffix(reference);
   }
 
+  enum Operator {
+    /**
+     * A dummy operator with low precedence. When parsing subexpressions, we always stop when we
+     * reach an operator of lower precedence than the "current precedence". For example, when
+     * parsing {@code 1 + 2 * 3 + 4}, we'll stop parsing the subexpression {@code * 3 + 4} when
+     * we reach the {@code +} because it has lower precedence than {@code *}. This dummy operator,
+     * then, behaves like {@code +} when the minimum precedence is {@code *}. We also return it
+     * if we're looking for an operator and don't find one. If this operator is {@code ⊙}, it's as
+     * if our expressions are bracketed with it, like {@code ⊙ 1 + 2 * 3 + 4 ⊙}.
+     */
+    STOP("", 0),
+    OR("||", 1),
+    AND("&&", 2),
+    EQUAL("==", 3), NOT_EQUAL("!=", 3),
+    LESS("<", 4), LESS_OR_EQUAL("<=", 4), GREATER(">", 4), GREATER_OR_EQUAL(">=", 4),
+    PLUS("+", 5), MINUS("-", 5),
+    TIMES("*", 6), DIVIDE("/", 6), REMAINDER("%", 6);
+
+    final String symbol;
+    final int precedence;
+
+    Operator(String symbol, int precedence) {
+      this.symbol = symbol;
+      this.precedence = precedence;
+    }
+
+    @Override
+    public String toString() {
+      return symbol;
+    }
+  }
+
   /**
-   * Parses an expression, which can only occur within a directive like {@code #if} or {@code #set}.
-   * This version only supports references, like {@code $x} or {@code $x.foo[$y]}, and literals,
-   * like {@code 5} or {@code "hello"}, as expressions.
+   * Maps a code point to the operators that begin with that code point. For example, maps
+   * {@code <} to {@code LESS} and {@code LESS_OR_EQUAL}.
+   */
+  private static final ImmutableListMultimap<Integer, Operator> CODE_POINT_TO_OPERATORS;
+  static {
+    ImmutableListMultimap.Builder<Integer, Operator> builder = ImmutableListMultimap.builder();
+    for (Operator operator : Operator.values()) {
+      if (operator != Operator.STOP) {
+        builder.put((int) operator.symbol.charAt(0), operator);
+      }
+    }
+    CODE_POINT_TO_OPERATORS = builder.build();
+  }
+
+  /**
+   * Parses an expression, which can occur within a directive like {@code #if} or {@code #set},
+   * or within a reference like {@code $x[$a + $b]} or {@code $x.m($a + $b)}.
+   * <pre>{@code
+   * <expression> -> <and-expression> |
+   *                 <expression> || <and-expression>
+   * <and-expression> -> <relational-expression> |
+   *                     <and-expression> && <relational-expression>
+   * <equality-exression> -> <relational-expression> |
+   *                         <equality-expression> <equality-op> <relational-expression>
+   * <equality-op> -> == | !=
+   * <relational-expression> -> <additive-expression> |
+   *                            <relational-expression> <relation> <additive-expression>
+   * <relation> -> < | <= | > | >=
+   * <additive-expression> -> <multiplicative-expression> |
+   *                          <additive-expression> <add-op> <multiplicative-expression>
+   * <add-op> -> + | -
+   * <multiplicative-expression> -> <unary-expression> |
+   *                                <multiplicative-expression> <mult-op> <unary-expression>
+   * <mult-op> -> * | / | %
+   * }</pre>
    */
   private ExpressionNode parseExpression() throws IOException {
+    ExpressionNode lhs = parseUnaryExpression();
+    return new OperatorParser().parse(lhs, 1);
+  }
+
+  /**
+   * An operator-precedence parser for the binary operations we understand. It implements an
+   * <a href="http://en.wikipedia.org/wiki/Operator-precedence_parser">algorithm</a> from Wikipedia
+   * that uses recursion rather than having an explicit stack of operators and values.
+   */
+  private class OperatorParser {
+    /**
+     * The operator we have just scanned, in the same way that {@link #c} is the character we have
+     * just read. If we were not able to scan an operator, this will be {@link Operator#STOP}.
+     */
+    private Operator currentOperator;
+
+    OperatorParser() throws IOException {
+      nextOperator();
+    }
+
+    /**
+     * Parse a subexpression whose left-hand side is {@code lhs} and where we only consider
+     * operators with precedence at least {@code minPrecedence}.
+     *
+     * @return the parsed subexpression
+     */
+    ExpressionNode parse(ExpressionNode lhs, int minPrecedence) throws IOException {
+      while (currentOperator.precedence >= minPrecedence) {
+        Operator operator = currentOperator;
+        ExpressionNode rhs = parseUnaryExpression();
+        nextOperator();
+        while (currentOperator.precedence > operator.precedence) {
+          rhs = parse(rhs, currentOperator.precedence);
+        }
+        lhs = new BinaryExpressionNode(lhs, operator, rhs);
+      }
+      return lhs;
+    }
+
+    /**
+     * Updates {@link #currentOperator} to be an operator read from the input,
+     * or {@link Operator#STOP} if there is none.
+     */
+    private void nextOperator() throws IOException {
+      skipSpace();
+      ImmutableList<Operator> possibleOperators = CODE_POINT_TO_OPERATORS.get(c);
+      if (possibleOperators.isEmpty()) {
+        currentOperator = Operator.STOP;
+        return;
+      }
+      char firstChar = Chars.checkedCast(c);
+      next();
+      Operator singleCharOperator = null;
+      Operator twoCharOperator = null;
+      for (Operator possibleOperator : possibleOperators) {
+        if (possibleOperator.symbol.length() == 1) {
+          Preconditions.checkState(singleCharOperator == null);
+          singleCharOperator = possibleOperator;
+        } else if (possibleOperator.symbol.charAt(1) == c) {
+          next();
+          Preconditions.checkState(twoCharOperator == null);
+          twoCharOperator = possibleOperator;
+        }
+      }
+      Operator operator;
+      if (twoCharOperator != null) {
+        operator = twoCharOperator;
+      } else if (singleCharOperator != null) {
+        operator = singleCharOperator;
+      } else {
+        throw parseException(
+            "Expected " + Iterables.getOnlyElement(possibleOperators) + ", not just " + firstChar);
+      }
+      currentOperator = operator;
+    }
+  }
+
+  /**
+   * Parses an expression not containing any operators (except inside parentheses).
+   * <pre>{@code
+   * <unary-expression> -> <primary> |
+   *                       ( <expression> ) |
+   *                       ! <unary-expression>
+   * }</pre>
+   */
+  private ExpressionNode parseUnaryExpression() throws IOException {
     skipSpace();
-    return parsePrimary();
+    ExpressionNode node;
+    if (c == '(') {
+      nextNonSpace();
+      node = parseExpression();
+      expect(')');
+      skipSpace();
+      return node;
+    } else if (c == '!') {
+      next();
+      node = new NotExpressionNode(parseUnaryExpression());
+      skipSpace();
+      return node;
+    } else {
+      return parsePrimary();
+    }
   }
 
   /**
@@ -478,7 +691,7 @@ class Parser {
    * {@code _}.
    */
   private String parseId(String what) throws IOException {
-    if (!isAsciiLetter(what.charAt(0))) {
+    if (!isAsciiLetter(c)) {
       throw parseException(what + " should start with an ASCII letter");
     }
     StringBuilder id = new StringBuilder();

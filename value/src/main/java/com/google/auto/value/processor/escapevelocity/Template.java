@@ -37,7 +37,6 @@ import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * A template expressed in EscapeVelocity, a subset of the Velocity Template Language (VTL) from
@@ -72,8 +71,7 @@ public class Template {
    * @return the string result of evaluating the template.
    */
   public String evaluate(Map<String, Object> vars) {
-    Map<String, Object> varsCopy = new TreeMap<String, Object>(vars);
-    EvaluationContext evaluationContext = new EvaluationContext(varsCopy);
+    EvaluationContext evaluationContext = new EvaluationContext(vars);
     return String.valueOf(root.evaluate(evaluationContext));
   }
 }

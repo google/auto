@@ -32,32 +32,39 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
-import java.util.Map;
-import java.util.TreeMap;
-
 /**
- * The context of a template evaluation. This consists of the template variables. Those variables
- * start with the values supplied by the evaluation call, and can be changed by {@code #set}
- * directives and during the execution of {@code #foreach} and macro calls.
+ * A node in the parse tree that is a directive such as {@code #set ($x = $y)}
+ * or {@code #if ($x) y #end}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-class EvaluationContext {
-  private final Map<String, Object> vars;
-
-  EvaluationContext(Map<String, Object> vars) {
-    this.vars = new TreeMap<String, Object>(vars);
+abstract class DirectiveNode extends Node {
+  DirectiveNode(int lineNumber) {
+    super(lineNumber);
   }
 
-  Object getVar(String var) {
-    return vars.get(var);
-  }
+  /**
+   * A node in the parse tree representing a {@code #set} construct. Evaluating
+   * {@code #set ($x = 23)} will set {@code $x} to the value 23. It does not in itself produce
+   * any text in the output.
+   *
+   * <p>Velocity supports setting values within arrays or collections, with for example
+   * {@code $set ($x[$i] = $y)}. That is not currently supported here.
+   */
+  static class SetNode extends DirectiveNode {
+    private final String var;
+    private final Node expression;
 
-  boolean varIsDefined(String var) {
-    return vars.containsKey(var);
-  }
+    SetNode(String var, Node expression) {
+      super(expression.lineNumber);
+      this.var = var;
+      this.expression = expression;
+    }
 
-  void setVar(String var, Object value) {
-    vars.put(var, value);
+    @Override
+    Object evaluate(EvaluationContext context) {
+      context.setVar(var, expression.evaluate(context));
+      return "";
+    }
   }
 }

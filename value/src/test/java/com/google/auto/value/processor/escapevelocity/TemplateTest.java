@@ -37,8 +37,6 @@ import org.junit.runners.JUnit4;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -216,5 +214,112 @@ public class TemplateTest {
   public void substituteExoticIndex() {
     // Any class with a get(X) method can be used with $x[i]
     compare("<$x[\"foo\"]>", ImmutableMap.of("x", (Object) new Indexable()));
+  }
+
+  @Test
+  public void simpleSet() {
+    compare("$x#set ($x = 17)#set ($y = 23) ($x, $y)", ImmutableMap.of("x", (Object) 1));
+  }
+
+  @Test
+  public void newlineAfterSet() {
+    compare("foo #set ($x = 17)\nbar", ImmutableMap.<String, Object>of());
+  }
+
+  @Test
+  public void expressions() {
+    compare("#set ($x = 1 + 1) $x");
+    compare("#set ($x = 1 + 2 * 3) $x");
+    compare("#set ($x = (1 + 1 == 2)) $x");
+    compare("#set ($x = (1 + 1 != 2)) $x");
+    compare("#set ($x = 22 - 7) $x");
+    compare("#set ($x = 22 / 7) $x");
+    compare("#set ($x = 22 % 7) $x");
+  }
+
+  @Test
+  public void associativity() {
+    compare("#set ($x = 3 - 2 - 1) $x");
+    compare("#set ($x = 16 / 4 / 4) $x");
+  }
+
+  @Test
+  public void precedence() {
+    compare("#set ($x = 1 + 2 + 3 * 4 * 5 + 6) $x");
+    compare("#set($x=1+2+3*4*5+6)$x");
+    compare("#set ($x = 1 + 2 * 3 == 3 * 2 + 1) $x");
+  }
+
+  @Test
+  public void and() {
+    compare("#set ($x = false && false) $x");
+    compare("#set ($x = false && true) $x");
+    compare("#set ($x = true && false) $x");
+    compare("#set ($x = true && true) $x");
+  }
+
+  @Test
+  public void or() {
+    compare("#set ($x = false || false) $x");
+    compare("#set ($x = false || true) $x");
+    compare("#set ($x = true || false) $x");
+    compare("#set ($x = true || true) $x");
+  }
+
+  @Test
+  public void not() {
+    compare("#set ($x = !true) $x");
+    compare("#set ($x = !false) $x");
+  }
+
+  @Test
+  public void truthValues() {
+    compare("#set ($x = $true && true) $x", ImmutableMap.of("true", (Object) true));
+    compare("#set ($x = $false && true) $x", ImmutableMap.of("false", (Object) false));
+    compare("#set ($x = $emptyCollection && true) $x",
+        ImmutableMap.of("emptyCollection", (Object) ImmutableList.of()));
+    compare("#set ($x = $emptyString && true) $x", ImmutableMap.of("emptyString", (Object) ""));
+  }
+
+  @Test
+  public void numbers() {
+    compare("#set ($x = 0) $x");
+    compare("#set ($x = -1) $x");
+    compare("#set ($x = " + Integer.MAX_VALUE + ") $x");
+    compare("#set ($x = " + Integer.MIN_VALUE + ") $x");
+  }
+
+  private static final String[] RELATIONS = {"==", "!=", "<", ">", "<=", ">="};
+
+  @Test
+  public void intRelations() {
+    int[] numbers = {-1, 0, 1, 17};
+    for (String relation : RELATIONS) {
+      for (int a : numbers) {
+        for (int b : numbers) {
+          compare("#set ($x = $a " + relation + " $b) $x",
+              ImmutableMap.<String, Object>of("a", a, "b", b));
+        }
+      }
+    }
+  }
+
+  @Test
+  public void relationPrecedence() {
+    compare("#set ($x = 1 < 2 == 2 < 1) $x");
+    compare("#set ($x = 2 < 1 == 2 < 1) $x");
+  }
+
+  /**
+   * Tests the surprising definition of equality mentioned in
+   * {@link ExpressionNode.EqualsExpressionNode}.
+   */
+  @Test
+  public void funkyEquals() {
+    compare("#set ($t = (123 == \"123\")) $t");
+    compare("#set ($f = (123 == \"1234\")) $f");
+    compare("#set ($x = ($sb1 == $sb2)) $x", ImmutableMap.of(
+        "sb1", (Object) new StringBuilder("123"),
+        "sb2", (Object) new StringBuilder("123")));
   }
 }
