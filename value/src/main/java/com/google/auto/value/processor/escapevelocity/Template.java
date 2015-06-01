@@ -32,8 +32,6 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
-import com.google.common.collect.ImmutableList;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Map;
@@ -57,8 +55,8 @@ public class Template {
     return new Parser(reader).parse();
   }
 
-  Template(ImmutableList<Node> nodes) {
-    this.root = Node.cons(1, nodes);
+  Template(Node root) {
+    this.root = root;
   }
 
   /**
@@ -70,7 +68,7 @@ public class Template {
    *
    * @return the string result of evaluating the template.
    */
-  public String evaluate(Map<String, Object> vars) {
+  public String evaluate(Map<String, ?> vars) {
     EvaluationContext evaluationContext = new EvaluationContext(vars);
     return String.valueOf(root.evaluate(evaluationContext));
   }

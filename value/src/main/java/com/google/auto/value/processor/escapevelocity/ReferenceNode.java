@@ -75,6 +75,15 @@ abstract class ReferenceNode extends ExpressionNode {
         throw new EvaluationException("Undefined reference $" + id);
       }
     }
+
+    @Override
+    boolean isDefinedAndTrue(EvaluationContext context) {
+      if (context.varIsDefined(id)) {
+        return isTrue(context);
+      } else {
+        return false;
+      }
+    }
   }
 
   /**

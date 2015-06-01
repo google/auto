@@ -72,21 +72,6 @@ abstract class Node {
   }
 
   /**
-   * A synthetic node that represents the end of the input. This node is the last one in the
-   * initial token string and also the last one in the parse tree.
-   */
-  static final class EofNode extends Node {
-    EofNode(int lineNumber) {
-      super(lineNumber);
-    }
-
-    @Override
-    Object evaluate(EvaluationContext context) {
-      return "";
-    }
-  }
-
-  /**
    * Create a new parse tree node that is the concatenation of the given ones. Evaluating the
    * new node produces the same string as evaluating each of the given nodes and concatenating the
    * result.

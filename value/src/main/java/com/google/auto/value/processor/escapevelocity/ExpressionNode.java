@@ -67,6 +67,17 @@ abstract class ExpressionNode extends Node {
   }
 
   /**
+   * True if this is a defined value and it evaluates to true. This is the same as {@link #isTrue}
+   * except that it is allowed for this to be undefined variable, in which it evaluates to false.
+   * The method is overridden for plain references so that undefined is the same as false.
+   * The reason is to support Velocity's idiom {@code #if ($var)}, where it is not an error
+   * if {@code $var} is undefined.
+   */
+  boolean isDefinedAndTrue(EvaluationContext context) {
+    return isTrue(context);
+  }
+
+  /**
    * The integer result of evaluating this expression.
    *
    * @throws EvaluationException if evaluating the expression produces an exception, or if it

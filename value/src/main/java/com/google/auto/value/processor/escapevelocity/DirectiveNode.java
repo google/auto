@@ -32,6 +32,10 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+
 /**
  * A node in the parse tree that is a directive such as {@code #set ($x = $y)}
  * or {@code #if ($x) y #end}.
@@ -65,6 +69,95 @@ abstract class DirectiveNode extends Node {
     Object evaluate(EvaluationContext context) {
       context.setVar(var, expression.evaluate(context));
       return "";
+    }
+  }
+
+  /**
+   * A node in the parse tree representing an {@code #if} construct. All instances of this class
+   * have a <i>true</i> subtree and a <i>false</i> subtree. For a plain {@code #if (cond) body
+   * #end}, the false subtree will be empty. For {@code #if (cond1) body1 #elseif (cond2) body2
+   * #else body3 #end}, the false subtree will contain a nested {@code IfNode}, as if {@code #else
+   * #if} had been used instead of {@code #elseif}.
+   */
+  static class IfNode extends DirectiveNode {
+    private final ExpressionNode condition;
+    private final Node truePart;
+    private final Node falsePart;
+
+    IfNode(int lineNumber, ExpressionNode condition, Node trueNode, Node falseNode) {
+      super(lineNumber);
+      this.condition = condition;
+      this.truePart = trueNode;
+      this.falsePart = falseNode;
+    }
+
+    @Override Object evaluate(EvaluationContext context) {
+      Node branch = condition.isDefinedAndTrue(context) ? truePart : falsePart;
+      return branch.evaluate(context);
+    }
+  }
+
+  /**
+   * A node in the parse tree representing a {@code #foreach} construct. While evaluating
+   * {@code #foreach ($x in $things)}, {$code $x} will be set to each element of {@code $things} in
+   * turn. Once the loop completes, {@code $x} will go back to whatever value it had before, which
+   * might be undefined. During loop execution, the variable {@code $foreach} is also defined.
+   * Velocity defines a number of properties in this variable, but here we only support
+   * {@code $foreach.hasNext}.
+   */
+  static class ForEachNode extends DirectiveNode {
+    private final String var;
+    private final ExpressionNode collection;
+    private final Node body;
+
+    ForEachNode(int lineNumber, String var, ExpressionNode in, Node body) {
+      super(lineNumber);
+      this.var = var;
+      this.collection = in;
+      this.body = body;
+    }
+
+    @Override
+    Object evaluate(EvaluationContext context) {
+      Object collectionValue = collection.evaluate(context);
+      Iterable<?> iterable;
+      if (collectionValue instanceof Iterable<?>) {
+        iterable = (Iterable<?>) collectionValue;
+      } else if (collectionValue instanceof Object[]) {
+        iterable = Arrays.asList((Object[]) collectionValue);
+      } else if (collectionValue instanceof Map<?, ?>) {
+        iterable = ((Map<?, ?>) collectionValue).values();
+      } else {
+        throw new EvaluationException("Not iterable: " + collectionValue);
+      }
+      Runnable undo = context.setVar(var, null);
+      StringBuilder sb = new StringBuilder();
+      Iterator<?> it = iterable.iterator();
+      Runnable undoForEach = context.setVar("foreach", new ForEachVar(it));
+      while (it.hasNext()) {
+        context.setVar(var, it.next());
+        sb.append(body.evaluate(context));
+      }
+      undoForEach.run();
+      undo.run();
+      return sb.toString();
+    }
+
+    /**
+     *  This class is the type of the variable {@code $foreach} that is defined within
+     * {@code #foreach} loops. Its {@link #getHasNext()} method means that we can write
+     * {@code #if ($foreach.hasNext)}.
+     */
+    private static class ForEachVar {
+      private final Iterator<?> iterator;
+
+      ForEachVar(Iterator<?> iterator) {
+        this.iterator = iterator;
+      }
+
+      public boolean getHasNext() {
+        return iterator.hasNext();
+      }
     }
   }
 }

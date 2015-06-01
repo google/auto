@@ -35,24 +35,28 @@ package com.google.auto.value.processor.escapevelocity;
 import com.google.auto.value.processor.escapevelocity.DirectiveNode.SetNode;
 import com.google.auto.value.processor.escapevelocity.ExpressionNode.BinaryExpressionNode;
 import com.google.auto.value.processor.escapevelocity.ExpressionNode.NotExpressionNode;
-import com.google.auto.value.processor.escapevelocity.Node.EofNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.IndexReferenceNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.MemberReferenceNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.MethodReferenceNode;
 import com.google.auto.value.processor.escapevelocity.ReferenceNode.PlainReferenceNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.CommentTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.ElseIfTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.ElseTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.EndTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.EofNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.ForEachTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.IfTokenNode;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Preconditions;
+import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Chars;
 import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Reader;
-import java.util.List;
 
 /**
  * A parser that reads input from the given {@link Reader} and parses it to produce a
@@ -81,15 +85,46 @@ class Parser {
 
   /**
    * Parse the input completely to produce a {@link Template}.
+   *
+   * <p>Parsing happens in two phases. First, we parse a sequence of "tokens", where tokens include
+   * entire references such as <pre>
+   *    ${x.foo()[23]}
+   * </pre>or entire directives such as<pre>
+   *    #set ($x = $y + $z)
+   * </pre>But tokens do not span complex constructs. For example,<pre>
+   *    #if ($x == $y) something #end
+   * </pre>is three tokens:<pre>
+   *    #if ($x == $y)
+   *    (literal text " something ")
+   *   #end
+   * </pre>
+   *
+   * <p>The second phase then takes the sequence of tokens and constructs a parse tree out of it.
+   * Some nodes in the parse tree will be unchanged from the token sequence, such as the <pre>
+   *    ${x.foo()[23]}
+   *    #set ($x = $y + $z)
+   * </pre> examples above. But a construct such as the {@code #if ... #end} mentioned above will
+   * become a single IfNode in the parse tree in the second phase.
+   *
+   * <p>The main reason for this approach is that Velocity has two kinds of lexical contexts. At the
+   * top level, there can be arbitrary literal text; references like <code>${x.foo()}</code>; and
+   * directives like {@code #if} or {@code #set}. Inside the parentheses of a directive, however,
+   * neither arbitrary text nor directives can appear, but expressions can, so we need to tokenize
+   * the inside of <pre>
+   *    #if ($x == $a + $b)
+   * </pre> as the five tokens "$x", "==", "$a", "+", "$b". Rather than having a classical
+   * parser/lexer combination, where the lexer would need to switch between these two modes, we
+   * replace the lexer with an ad-hoc parser that is the first phase described above, and we
+   * define a simple parser over the resultant tokens that is the second phase.
    */
   Template parse() throws IOException {
-    ImmutableList.Builder<Node> nodes = ImmutableList.builder();
-    Node node;
+    ImmutableList.Builder<Node> tokens = ImmutableList.builder();
+    Node token;
     do {
-      node = parseNode();
-      nodes.add(node);
-    } while (!(node instanceof EofNode));
-    return new Template(nodes.build());
+      token = parseNode();
+      tokens.add(token);
+    } while (!(token instanceof EofNode));
+    return new Reparser(tokens.build()).reparse();
   }
 
   private int lineNumber() {
@@ -187,7 +222,14 @@ class Parser {
    * Parses a single directive token from the reader. Directives can be spelled with or without
    * braces, for example {@code #if} or {@code #{if}}. We omit the brace spelling in the productions
    * here: <pre>{@code
-   * <directive> -> <set-token> |
+   * <directive> -> <if-token> |
+   *                <else-token> |
+   *                <elseif-token> |
+   *                <end-token> |
+   *                <foreach-token> |
+   *                <set-token> |
+   *                <macro-token> |
+   *                <macro-call> |
    *                <comment>
    * }</pre>
    */
@@ -200,16 +242,72 @@ class Parser {
     } else {
       directive = parseId("Directive");
     }
-    if (directive.equals("set")) {
-      Node node = parseSet();
-      // Velocity skips a newline after any directive.
-      if (c == '\n') {
-        next();
-      }
-      return node;
+    Node node;
+    if (directive.equals("end")) {
+      node = new EndTokenNode(lineNumber());
+    } else if (directive.equals("if") || directive.equals("elseif")) {
+      node = parseIfOrElseIf(directive);
+    } else if (directive.equals("else")) {
+      node = new ElseTokenNode(lineNumber());
+    } else if (directive.equals("foreach")) {
+      node = parseForEach();
+    } else if (directive.equals("set")) {
+      node = parseSet();
+    } else if (directive.equals("macro")) {
+      node = parseMacroDefinition();
     } else {
-      throw parseException("Unsupported directive: #" + directive);
+      node = parsePossibleMacroCall(directive);
     }
+    // Velocity skips a newline after any directive.
+    // TODO(emcmanus): in fact it also skips space before the newline, which should be implemented.
+    if (c == '\n') {
+      next();
+    }
+    return node;
+  }
+
+  /**
+   * Parses the condition following {@code #if} or {@code #elseif}.
+   * <pre>{@code
+   * <if-token> -> #if ( <condition> )
+   * <elseif-token> -> #elseif ( <condition> )
+   * }</pre>
+   *
+   * @param directive either {@code "if"} or {@code "elseif"}.
+   */
+  private Node parseIfOrElseIf(String directive) throws IOException {
+    expect('(');
+    ExpressionNode condition = parseExpression();
+    expect(')');
+    return directive.equals("if") ? new IfTokenNode(condition) : new ElseIfTokenNode(condition);
+  }
+
+  /**
+   * Parses a {@code #foreach} token from the reader. <pre>{@code
+   * <foreach-token> -> #foreach ( $<id> in <expression> )
+   * }</pre>
+   */
+  private Node parseForEach() throws IOException {
+    expect('(');
+    expect('$');
+    String var = parseId("For-each variable");
+    skipSpace();
+    boolean bad = false;
+    if (c != 'i') {
+      bad = true;
+    } else {
+      next();
+      if (c != 'n') {
+        bad = true;
+      }
+    }
+    if (bad) {
+      throw parseException("Expected 'in' for #foreach");
+    }
+    next();
+    ExpressionNode collection = parseExpression();
+    expect(')');
+    return new ForEachTokenNode(var, collection);
   }
 
   /**
@@ -227,16 +325,26 @@ class Parser {
     return new SetNode(var, expression);
   }
 
+  private Node parseMacroDefinition() throws IOException {
+    throw parseException("#macro not yet supported");
+  }
+
+  private Node parsePossibleMacroCall(String directive) throws IOException {
+    throw parseException(
+        "#" + directive + " is either an unknown directive or a macro call; "
+            + "macro calls are not yet supported");
+  }
   /**
    * Parses and discards a comment, which is {@code ##} followed by any number of characters up to
    * and including the next newline.
    */
   private Node parseComment() throws IOException {
+    int lineNumber = lineNumber();
     while (c != '\n' && c != EOF) {
       next();
     }
     next();
-    return Node.emptyNode(lineNumber());
+    return new CommentTokenNode(lineNumber);
   }
 
   /**
@@ -409,6 +517,9 @@ class Parser {
      * if our expressions are bracketed with it, like {@code ⊙ 1 + 2 * 3 + 4 ⊙}.
      */
     STOP("", 0),
+
+    // If a one-character operator is a prefix of a two-character operator, like < and <=, then
+    // the one-character operator must come first.
     OR("||", 1),
     AND("&&", 2),
     EQUAL("==", 3), NOT_EQUAL("!=", 3),
@@ -520,24 +631,17 @@ class Parser {
       }
       char firstChar = Chars.checkedCast(c);
       next();
-      Operator singleCharOperator = null;
-      Operator twoCharOperator = null;
+      Operator operator = null;
       for (Operator possibleOperator : possibleOperators) {
         if (possibleOperator.symbol.length() == 1) {
-          Preconditions.checkState(singleCharOperator == null);
-          singleCharOperator = possibleOperator;
+          Verify.verify(operator == null);
+          operator = possibleOperator;
         } else if (possibleOperator.symbol.charAt(1) == c) {
           next();
-          Preconditions.checkState(twoCharOperator == null);
-          twoCharOperator = possibleOperator;
+          operator = possibleOperator;
         }
       }
-      Operator operator;
-      if (twoCharOperator != null) {
-        operator = twoCharOperator;
-      } else if (singleCharOperator != null) {
-        operator = singleCharOperator;
-      } else {
+      if (operator == null) {
         throw parseException(
             "Expected " + Iterables.getOnlyElement(possibleOperators) + ", not just " + firstChar);
       }

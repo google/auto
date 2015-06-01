@@ -45,7 +45,7 @@ import java.util.TreeMap;
 class EvaluationContext {
   private final Map<String, Object> vars;
 
-  EvaluationContext(Map<String, Object> vars) {
+  EvaluationContext(Map<String, ?> vars) {
     this.vars = new TreeMap<String, Object>(vars);
   }
 
@@ -57,7 +57,30 @@ class EvaluationContext {
     return vars.containsKey(var);
   }
 
-  void setVar(String var, Object value) {
+  /**
+   * Sets the given variable to the given value.
+   *
+   * @return a Runnable that will restore the variable to the value it had before. If the variable
+   *     was undefined before this method was executed, the Runnable will make it undefined again.
+   *     This allows us to restore the state of {@code $x} after {@code #foreach ($x in ...)}.
+   */
+  Runnable setVar(final String var, Object value) {
+    Runnable undo;
+    if (vars.containsKey(var)) {
+      final Object oldValue = vars.get(var);
+      undo = new Runnable() {
+        @Override public void run() {
+          vars.put(var, oldValue);
+        }
+      };
+    } else {
+      undo = new Runnable() {
+        @Override public void run() {
+          vars.remove(var);
+        }
+      };
+    }
     vars.put(var, value);
+    return undo;
   }
 }
