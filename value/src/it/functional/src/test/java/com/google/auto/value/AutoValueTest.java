@@ -1595,4 +1595,41 @@ public class AutoValueTest extends TestCase {
         methodInSuperclass.getAnnotation(HairyAnnotation.class);
     assertEquals(annotationInSuperclass, annotationInSubclass);
   }
+
+  public interface BuilderInterface{
+    public ImmutableList<String> baseStrings();
+
+    public interface Builder<T extends Builder<T>> {
+      T baseStrings(ImmutableList<String> baseStrings);
+    }
+  }
+
+  @AutoValue
+  public static abstract class BuilderWithInterface implements BuilderInterface{
+    public abstract ImmutableList<String> childStrings();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_BuilderWithInterface.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder extends BuilderInterface.Builder<Builder> {
+      Builder childStrings(ImmutableList<String> childStrings);
+      BuilderWithInterface build();
+    }
+  }
+
+  public void testBuilderWithInterface() {
+    BuilderWithInterface.Builder builder = BuilderWithInterface.builder();
+
+    BuilderWithInterface a = builder.baseStrings(ImmutableList.of("foo"))
+            .childStrings(ImmutableList.of("bar"))
+            .build();
+    BuilderWithInterface b = builder.childStrings(ImmutableList.of("baz")).build();
+
+    assertThat(a).isNotEqualTo(b);
+    assertThat(a.baseStrings()).isEqualTo(b.baseStrings());
+    assertThat(a.childStrings()).containsExactly("bar");
+    assertThat(b.childStrings()).containsExactly("baz");
+  }
 }

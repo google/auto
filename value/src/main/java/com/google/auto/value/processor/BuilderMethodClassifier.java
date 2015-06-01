@@ -41,7 +41,9 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 /**
@@ -54,8 +56,10 @@ class BuilderMethodClassifier {
 
   private final ErrorReporter errorReporter;
   private final Types typeUtils;
+  private final Elements elementUtils;
   private final TypeElement autoValueClass;
   private final TypeElement builderType;
+  private final WildcardType wildcardTypeNull;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
 
@@ -67,6 +71,8 @@ class BuilderMethodClassifier {
       LinkedListMultimap.create();
   private final Map<String, ExecutableElement> propertyNameToPropertyBuilder =
       Maps.newLinkedHashMap();
+  private final Map<String,DeclaredType> cachedParentTypes =
+      Maps.newLinkedHashMap();
   private boolean settersPrefixed;
 
   private BuilderMethodClassifier(
@@ -77,6 +83,8 @@ class BuilderMethodClassifier {
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
+    this.elementUtils = processingEnv.getElementUtils();
+    this.wildcardTypeNull = typeUtils.getWildcardType(null, null);
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
@@ -336,7 +344,7 @@ class BuilderMethodClassifier {
     }
     if (!checkSetterParameter(valueGetter, method)) {
       return false;
-    } else if (!TYPE_EQUIVALENCE.equivalent(method.getReturnType(), builderType.asType())) {
+    } else if (!isAssignableTo(builderType.asType(), method.getReturnType())) {
       errorReporter.reportError(
           "Setter methods must return " + builderType + typeParamsString(), method);
       return false;
@@ -344,6 +352,47 @@ class BuilderMethodClassifier {
       propertyNameToSetters.put(propertyName, method);
       return true;
     }
+  }
+
+  /**
+   * Returns true if the {@code superType} is the same as or a super type
+   * of {@code type}, meaning that {@code type} would be assignable to {@code superType}
+   *
+   * This code was largely borrowed from a Stack Overflow post:
+   * @see <a href="http://stackoverflow.com/a/12763005/1714599"/>
+   * @return true if {@code type} can be assigned to the {@code superType}
+   */
+  private boolean isAssignableTo(TypeMirror type, TypeMirror superType) {
+    // Check first for type equivalence
+    if(TYPE_EQUIVALENCE.equivalent(type, superType)) {
+      return true;
+    }
+
+    // Get the type using the cast target's erasure to sidestep generics
+    String superName = typeUtils.erasure(superType).toString();
+    TypeElement typeElement = elementUtils.getTypeElement(superName);
+
+    // Have we used this type before?
+    DeclaredType parentType = cachedParentTypes.get(typeElement.getQualifiedName().toString());
+    if (parentType == null) {
+      // How many generic type parameters does this typeElement require?
+      int genericsCount = typeElement.getTypeParameters().size();
+
+      // Fill the right number of types with nulls
+      TypeMirror[] types = new TypeMirror[genericsCount];
+      for (int i = 0; i < genericsCount; i++) {
+        types[i] = wildcardTypeNull;
+      }
+
+      // Locate the correct DeclaredType to match with the type
+      parentType = typeUtils.getDeclaredType(typeElement, types);
+
+      // Remember this DeclaredType
+      cachedParentTypes.put(typeElement.getQualifiedName().toString(), parentType);
+    }
+
+    // Is the given type able to be assigned as the typeElement?
+    return typeUtils.isAssignable(type, parentType);
   }
 
   /**
