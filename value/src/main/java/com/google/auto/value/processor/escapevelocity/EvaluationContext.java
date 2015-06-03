@@ -36,26 +36,17 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * The context of a template evaluation. This consists of the template variables. Those variables
- * start with the values supplied by the evaluation call, and can be changed by {@code #set}
- * directives and during the execution of {@code #foreach} and macro calls.
+ * The context of a template evaluation. This consists of the template variables and the template
+ * macros. The template variables start with the values supplied by the evaluation call, and can
+ * be changed by {@code #set} directives and during the execution of {@code #foreach} and macro
+ * calls. The macros are extracted from the template during parsing and never change thereafter.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-class EvaluationContext {
-  private final Map<String, Object> vars;
+interface EvaluationContext {
+  Object getVar(String var);
 
-  EvaluationContext(Map<String, ?> vars) {
-    this.vars = new TreeMap<String, Object>(vars);
-  }
-
-  Object getVar(String var) {
-    return vars.get(var);
-  }
-
-  boolean varIsDefined(String var) {
-    return vars.containsKey(var);
-  }
+  boolean varIsDefined(String var);
 
   /**
    * Sets the given variable to the given value.
@@ -64,23 +55,44 @@ class EvaluationContext {
    *     was undefined before this method was executed, the Runnable will make it undefined again.
    *     This allows us to restore the state of {@code $x} after {@code #foreach ($x in ...)}.
    */
-  Runnable setVar(final String var, Object value) {
-    Runnable undo;
-    if (vars.containsKey(var)) {
-      final Object oldValue = vars.get(var);
-      undo = new Runnable() {
-        @Override public void run() {
-          vars.put(var, oldValue);
-        }
-      };
-    } else {
-      undo = new Runnable() {
-        @Override public void run() {
-          vars.remove(var);
-        }
-      };
+  Runnable setVar(final String var, Object value);
+
+  class PlainEvaluationContext implements EvaluationContext {
+    private final Map<String, Object> vars;
+
+    PlainEvaluationContext(Map<String, ?> vars) {
+      this.vars = new TreeMap<String, Object>(vars);
     }
-    vars.put(var, value);
-    return undo;
+
+    @Override
+    public Object getVar(String var) {
+      return vars.get(var);
+    }
+
+    @Override
+    public boolean varIsDefined(String var) {
+      return vars.containsKey(var);
+    }
+
+    @Override
+    public Runnable setVar(final String var, Object value) {
+      Runnable undo;
+      if (vars.containsKey(var)) {
+        final Object oldValue = vars.get(var);
+        undo = new Runnable() {
+          @Override public void run() {
+            vars.put(var, oldValue);
+          }
+        };
+      } else {
+        undo = new Runnable() {
+          @Override public void run() {
+            vars.remove(var);
+          }
+        };
+      }
+      vars.put(var, value);
+      return undo;
+    }
   }
 }

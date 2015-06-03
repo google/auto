@@ -32,6 +32,8 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
+import com.google.auto.value.processor.escapevelocity.EvaluationContext.PlainEvaluationContext;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Map;
@@ -69,7 +71,7 @@ public class Template {
    * @return the string result of evaluating the template.
    */
   public String evaluate(Map<String, ?> vars) {
-    EvaluationContext evaluationContext = new EvaluationContext(vars);
+    EvaluationContext evaluationContext = new PlainEvaluationContext(vars);
     return String.valueOf(root.evaluate(evaluationContext));
   }
 }

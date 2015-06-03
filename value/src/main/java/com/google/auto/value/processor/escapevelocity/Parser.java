@@ -46,6 +46,7 @@ import com.google.auto.value.processor.escapevelocity.TokenNode.EndTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.EofNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.ForEachTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.IfTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.MacroDefinitionTokenNode;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
@@ -325,15 +326,70 @@ class Parser {
     return new SetNode(var, expression);
   }
 
+  /**
+   * Parses a {@code #macro} token from the reader. <pre>{@code
+   * <macro-token> -> #macro ( <id> <macro-parameter-list> )
+   * <macro-parameter-list> -> <empty> |
+   *                           $<id> <macro-parameter-list>
+   * }</pre>
+   *
+   * <p>Macro parameters are not separated by commas, though method-reference parameters are.
+   */
   private Node parseMacroDefinition() throws IOException {
-    throw parseException("#macro not yet supported");
+    expect('(');
+    skipSpace();
+    String name = parseId("Macro name");
+    ImmutableList.Builder<String> parameterNames = ImmutableList.builder();
+    while (true) {
+      skipSpace();
+      if (c == ')') {
+        next();
+        break;
+      }
+      if (c != '$') {
+        throw parseException("Macro parameters should look like $name");
+      }
+      next();
+      parameterNames.add(parseId("Macro parameter name"));
+    }
+    return new MacroDefinitionTokenNode(lineNumber(), name, parameterNames.build());
   }
 
+  /**
+   * Parses an identifier after {@code #} that is not one of the standard directives. The assumption
+   * is that it is a call of a macro that is defined in the template. Macro definitions are
+   * extracted from the template during the second parsing phase (and not during evaluation of the
+   * template as you might expect). This means that a macro can be called before it is defined.
+   * <pre>{@code
+   * <macro-call> -> # <id> ( <expression-list> )
+   * <expression-list> -> <empty> |
+   *                      <expression> <optional-comma> <expression-list>
+   * <optional-comma> -> <empty> | ,
+   * }</pre>
+   */
   private Node parsePossibleMacroCall(String directive) throws IOException {
-    throw parseException(
-        "#" + directive + " is either an unknown directive or a macro call; "
-            + "macro calls are not yet supported");
+    skipSpace();
+    if (c != '(') {
+      throw parseException("Unrecognized directive #" + directive);
+    }
+    next();
+    ImmutableList.Builder<Node> parameterNodes = ImmutableList.builder();
+    while (true) {
+      skipSpace();
+      if (c == ')') {
+        next();
+        break;
+      }
+      parameterNodes.add(parsePrimary());
+      if (c == ',') {
+        // The documentation doesn't say so, but you can apparently have an optional comma in
+        // macro calls.
+        next();
+      }
+    }
+    return new DirectiveNode.MacroCallNode(lineNumber(), directive, parameterNodes.build());
   }
+
   /**
    * Parses and discards a comment, which is {@code ##} followed by any number of characters up to
    * and including the next newline.

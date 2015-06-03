@@ -32,6 +32,10 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
+
 /**
  * A parsing node that will be deleted during the construction of the parse tree, to be replaced
  * by a higher-level construct such as {@link DirectiveNode.IfNode}. See {@link Parser#parse()}
@@ -149,6 +153,21 @@ abstract class TokenNode extends Node {
 
     @Override String name() {
       return "#foreach";
+    }
+  }
+
+  static final class MacroDefinitionTokenNode extends TokenNode {
+    final String name;
+    final ImmutableList<String> parameterNames;
+
+    MacroDefinitionTokenNode(int lineNumber, String name, List<String> parameterNames) {
+      super(lineNumber);
+      this.name = name;
+      this.parameterNames = ImmutableList.copyOf(parameterNames);
+    }
+
+    @Override String name() {
+      return "#macro(" + name + ")";
     }
   }
 }

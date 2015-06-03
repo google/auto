@@ -32,6 +32,9 @@
  */
 package com.google.auto.value.processor.escapevelocity;
 
+import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableList;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -158,6 +161,46 @@ abstract class DirectiveNode extends Node {
       public boolean getHasNext() {
         return iterator.hasNext();
       }
+    }
+  }
+
+  /**
+   * A node in the parse tree representing a macro call. If the template contains a definition like
+   * {@code #macro (mymacro $x $y) ... #end}, then a call of that macro looks like
+   * {@code #mymacro (xvalue yvalue)}. The call is represented by an instance of this class. The
+   * definition itself does not appear in the parse tree.
+   *
+   * <p>Evaluating a macro involves temporarily setting the parameter variables ({@code $x $y} in
+   * the example) to thunks representing the argument expressions, evaluating the macro body, and
+   * restoring any previous values that the parameter variables had.
+   */
+  static class MacroCallNode extends DirectiveNode {
+    private final String name;
+    private final ImmutableList<Node> thunks;
+    private Macro macro;
+
+    MacroCallNode(int lineNumber, String name, ImmutableList<Node> argumentNodes) {
+      super(lineNumber);
+      this.name = name;
+      this.thunks = argumentNodes;
+    }
+
+    String name() {
+      return name;
+    }
+
+    int argumentCount() {
+      return thunks.size();
+    }
+
+    void setMacro(Macro macro) {
+      this.macro = macro;
+    }
+
+    @Override
+    Object evaluate(EvaluationContext context) {
+      Verify.verifyNotNull(macro, "Macro #%s should have been linked", name);
+      return macro.evaluate(context, thunks);
     }
   }
 }

@@ -36,6 +36,7 @@ import static com.google.auto.value.processor.escapevelocity.Node.emptyNode;
 
 import com.google.auto.value.processor.escapevelocity.DirectiveNode.ForEachNode;
 import com.google.auto.value.processor.escapevelocity.DirectiveNode.IfNode;
+import com.google.auto.value.processor.escapevelocity.DirectiveNode.MacroCallNode;
 import com.google.auto.value.processor.escapevelocity.DirectiveNode.SetNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.CommentTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.ElseIfTokenNode;
@@ -45,11 +46,14 @@ import com.google.auto.value.processor.escapevelocity.TokenNode.EofNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.ForEachTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.IfOrElseIfTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.IfTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.MacroDefinitionTokenNode;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -78,13 +82,22 @@ class Reparser {
    */
   private int nodeIndex;
 
+  /**
+   * Macros are removed from the input as they are found. They do not appear in the output parse
+   * tree. Macro definitions are not executed in place but are all applied before template rendering
+   * starts. This means that a macro can be referenced before it is defined.
+   */
+  private final Map<String, Macro> macros;
+
   Reparser(ImmutableList<Node> nodes) {
     this.nodes = removeSpaceBeforeSet(nodes);
     this.nodeIndex = 0;
+    this.macros = Maps.newTreeMap();
   }
 
   Template reparse() {
     Node root = parseTo(EOF_SET, new EofNode(1));
+    linkMacroCalls();
     return new Template(root);
   }
 
@@ -115,7 +128,8 @@ class Reparser {
   private static boolean shouldDeleteSpaceBetweenThisAndSet(Node node) {
     return node instanceof CommentTokenNode
         || node instanceof ReferenceNode
-        || node instanceof SetNode;
+        || node instanceof SetNode
+        || node instanceof MacroDefinitionTokenNode;
   }
 
   private static boolean isWhitespaceLiteral(Node node) {
@@ -186,6 +200,8 @@ class Reparser {
       return parseIfOrElseIf((IfTokenNode) tokenNode);
     } else if (tokenNode instanceof ForEachTokenNode) {
       return parseForEach((ForEachTokenNode) tokenNode);
+    } else if (tokenNode instanceof MacroDefinitionTokenNode) {
+      return parseMacroDefinition((MacroDefinitionTokenNode) tokenNode);
     } else {
       throw new IllegalArgumentException(
           "Unexpected token: " + tokenNode.name() + " on line " + tokenNode.lineNumber);
@@ -218,5 +234,42 @@ class Reparser {
       throw new AssertionError(currentNode());
     }
     return new IfNode(ifOrElseIf.lineNumber, ifOrElseIf.condition, truePart, falsePart);
+  }
+
+  private Node parseMacroDefinition(MacroDefinitionTokenNode macroDefinition) {
+    Node body = parseTo(END_SET, macroDefinition);
+    nextNode();  // Skip #end
+    if (!macros.containsKey(macroDefinition.name)) {
+      Macro macro = new Macro(
+          macroDefinition.lineNumber, macroDefinition.name, macroDefinition.parameterNames, body);
+      macros.put(macroDefinition.name, macro);
+    }
+    return emptyNode(macroDefinition.lineNumber);
+  }
+
+  private void linkMacroCalls() {
+    for (Node node : nodes) {
+      if (node instanceof MacroCallNode) {
+        linkMacroCall((MacroCallNode) node);
+      }
+    }
+  }
+
+  private void linkMacroCall(MacroCallNode macroCall) {
+    Macro macro = macros.get(macroCall.name());
+    if (macro == null) {
+      throw new ParseException(
+          "#" + macroCall.name()
+              + " is neither a standard directive nor a macro that has been defined",
+          macroCall.lineNumber);
+    }
+    if (macro.parameterCount() != macroCall.argumentCount()) {
+      throw new ParseException(
+          "Wrong number of arguments to #" + macroCall.name()
+              + ": expected " + macro.parameterCount()
+              + ", got " + macroCall.argumentCount(),
+          macroCall.lineNumber);
+    }
+    macroCall.setMacro(macro);
   }
 }
