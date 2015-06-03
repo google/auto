@@ -132,19 +132,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     checkState(messager != null);
     checkState(steps != null);
 
-    // First, collect all of the deferred elements and clear out the state from the previous rounds
-    ImmutableMap.Builder<String, Optional<? extends Element>> deferredElementsBuilder =
-        ImmutableMap.builder();
-    for (String deferredTypeName : deferredTypeNames) {
-      deferredElementsBuilder.put(deferredTypeName,
-          Optional.fromNullable(elements.getTypeElement(deferredTypeName)));
-    }
-    for (String deferredPackageName : deferredPackageNames) {
-      deferredElementsBuilder.put(deferredPackageName,
-          Optional.fromNullable(elements.getPackageElement(deferredPackageName)));
-    }
-    ImmutableMap<String, Optional<? extends Element>> deferredElements =
-        deferredElementsBuilder.build();
+    ImmutableMap<String, Optional<? extends Element>> deferredElements = deferredElements();
 
     deferredTypeNames.clear();
     deferredPackageNames.clear();
@@ -155,8 +143,66 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       return false;
     }
 
-    // For all of the elements that were deferred, find the annotated elements therein.  If we don't
-    // find any, something is messed up and we just defer them again.
+    process(validElements(deferredElements, roundEnv));
+
+    postProcess();
+
+    return false;
+  }
+
+  /**
+   * Returns the previously deferred elements.
+   */
+  private ImmutableMap<String, Optional<? extends Element>> deferredElements() {
+    ImmutableMap.Builder<String, Optional<? extends Element>> deferredElements =
+        ImmutableMap.builder();
+    for (String deferredTypeName : deferredTypeNames) {
+      deferredElements.put(
+          deferredTypeName, Optional.fromNullable(elements.getTypeElement(deferredTypeName)));
+    }
+
+    for (String deferredPackageName : deferredPackageNames) {
+      deferredElements.put(
+          deferredPackageName,
+          Optional.fromNullable(elements.getPackageElement(deferredPackageName)));
+    }
+
+    return deferredElements.build();
+  }
+
+  private void reportMissingElements(
+      Map<String, ? extends Optional<? extends Element>> missingElements) {
+    for (Entry<String, ? extends Optional<? extends Element>> missingElementEntry :
+        missingElements.entrySet()) {
+      Optional<? extends Element> missingElement = missingElementEntry.getValue();
+      if (missingElement.isPresent()) {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                ERROR,
+                String.format(
+                    INVALID_ELEMENT_MESSAGE_FORMAT,
+                    processorName,
+                    "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
+                missingElement.get());
+      } else {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                ERROR,
+                String.format(
+                    INVALID_ELEMENT_MESSAGE_FORMAT, processorName, missingElementEntry.getKey()));
+      }
+    }
+  }
+
+  /**
+   * Returns the valid annotated elements contained in all of the deferred elements. If none are
+   * found for a deferred element, defers it again.
+   */
+  private ImmutableSetMultimap<Class<? extends Annotation>, Element> validElements(
+      ImmutableMap<String, Optional<? extends Element>> deferredElements,
+      RoundEnvironment roundEnv) {
     ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element>
         deferredElementsByAnnotationBuilder = ImmutableSetMultimap.builder();
     for (Entry<String, Optional<? extends Element>> deferredTypeElementEntry :
@@ -173,7 +219,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap<Class<? extends Annotation>, Element> deferredElementsByAnnotation =
         deferredElementsByAnnotationBuilder.build();
 
-    ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> elementsByAnnotationBuilder =
+    ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> validElements =
         ImmutableSetMultimap.builder();
 
     Set<String> validPackageNames = Sets.newLinkedHashSet();
@@ -184,20 +230,21 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       // This should just call roundEnv.getElementsAnnotatedWith(Class) directly, but there is a bug
       // in some versions of eclipse that cause that method to crash.
       TypeElement annotationType = elements.getTypeElement(annotationClass.getCanonicalName());
-      Set<? extends Element> elementsAnnotatedWith = (annotationType == null)
-          ? ImmutableSet.<Element>of()
-          : roundEnv.getElementsAnnotatedWith(annotationType);
-      for (Element annotatedElement : Sets.union(
-          elementsAnnotatedWith,
-          deferredElementsByAnnotation.get(annotationClass))) {
+      Set<? extends Element> elementsAnnotatedWith =
+          (annotationType == null)
+              ? ImmutableSet.<Element>of()
+              : roundEnv.getElementsAnnotatedWith(annotationType);
+      for (Element annotatedElement :
+          Sets.union(elementsAnnotatedWith, deferredElementsByAnnotation.get(annotationClass))) {
         if (annotatedElement.getKind().equals(PACKAGE)) {
           PackageElement annotatedPackageElement = (PackageElement) annotatedElement;
           String annotatedPackageName = annotatedPackageElement.getQualifiedName().toString();
-          boolean validPackage = validPackageNames.contains(annotatedPackageName)
-              || (!deferredPackageNames.contains(annotatedPackageName)
-                  && validateElement(annotatedPackageElement));
+          boolean validPackage =
+              validPackageNames.contains(annotatedPackageName)
+                  || (!deferredPackageNames.contains(annotatedPackageName)
+                      && validateElement(annotatedPackageElement));
           if (validPackage) {
-            elementsByAnnotationBuilder.put(annotationClass, annotatedPackageElement);
+            validElements.put(annotationClass, annotatedPackageElement);
             validPackageNames.add(annotatedPackageName);
           } else {
             deferredPackageNames.add(annotatedPackageName);
@@ -205,11 +252,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         } else {
           TypeElement enclosingType = getEnclosingType(annotatedElement);
           String enclosingTypeName = enclosingType.getQualifiedName().toString();
-          boolean validEnclosingType = validTypeNames.contains(enclosingTypeName)
-              || (!deferredTypeNames.contains(enclosingTypeName)
-                  && validateElement(enclosingType));
+          boolean validEnclosingType =
+              validTypeNames.contains(enclosingTypeName)
+                  || (!deferredTypeNames.contains(enclosingTypeName)
+                      && validateElement(enclosingType));
           if (validEnclosingType) {
-            elementsByAnnotationBuilder.put(annotationClass, annotatedElement);
+            validElements.put(annotationClass, annotatedElement);
             validTypeNames.add(enclosingTypeName);
           } else {
             deferredTypeNames.add(enclosingTypeName);
@@ -218,37 +266,16 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       }
     }
 
-    ImmutableSetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation =
-        elementsByAnnotationBuilder.build();
-
-    // Finally, process the valid elements
-    for (ProcessingStep step : steps) {
-      SetMultimap<Class<? extends Annotation>, Element> filteredMap =
-          Multimaps.filterKeys(elementsByAnnotation, Predicates.in(step.annotations()));
-      if (!filteredMap.isEmpty()) {
-        step.process(filteredMap);
-      }
-    }
-
-    postProcess();
-
-    return false;
+    return validElements.build();
   }
 
-  private void reportMissingElements(
-      Map<String, ? extends Optional<? extends Element>> missingElements) {
-    for (Entry<String, ? extends Optional<? extends Element>> missingElementEntry :
-        missingElements.entrySet()) {
-      Optional<? extends Element> missingElement = missingElementEntry.getValue();
-      if (missingElement.isPresent()) {
-        processingEnv.getMessager().printMessage(ERROR,
-            String.format(INVALID_ELEMENT_MESSAGE_FORMAT, processorName,
-                "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
-                missingElement.get());
-      } else {
-        processingEnv.getMessager().printMessage(ERROR,
-            String.format(INVALID_ELEMENT_MESSAGE_FORMAT, processorName,
-                missingElementEntry.getKey()));
+  /** Processes the valid elements. */
+  private void process(ImmutableSetMultimap<Class<? extends Annotation>, Element> validElements) {
+    for (ProcessingStep step : steps) {
+      SetMultimap<Class<? extends Annotation>, Element> filteredMap =
+          Multimaps.filterKeys(validElements, Predicates.in(step.annotations()));
+      if (!filteredMap.isEmpty()) {
+        step.process(filteredMap);
       }
     }
   }
