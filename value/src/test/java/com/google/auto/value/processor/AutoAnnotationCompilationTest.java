@@ -24,6 +24,8 @@ import com.google.testing.compile.JavaFileObjects;
 
 import junit.framework.TestCase;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
@@ -349,7 +351,18 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
-  public void testMissingClass() {
+  public void testMissingClass() throws IOException {
+    File tempDir = File.createTempFile("AutoAnnotationCompilationTest", "");
+    assertTrue(tempDir.delete());
+    assertTrue(tempDir.mkdir());
+    try {
+      doTestMissingClass(tempDir);
+    } finally {
+      removeDirectory(tempDir);
+    }
+  }
+
+  private void doTestMissingClass(File tempDir) {
     // Test that referring to an undefined annotation does not trigger @AutoAnnotation processing.
     // The class Erroneous references an undefined annotation @NotAutoAnnotation. If we didn't have
     // any special treatment of undefined types then we could run into a compiler bug where
@@ -374,8 +387,12 @@ public class AutoAnnotationCompilationTest extends TestCase {
     DiagnosticCollector<JavaFileObject> diagnosticCollector =
         new DiagnosticCollector<JavaFileObject>();
     JavaCompiler.CompilationTask compilationTask = javaCompiler.getTask(
-        (Writer) null, (JavaFileManager) null, diagnosticCollector, (Iterable<String>) null,
-        (Iterable<String>) null, ImmutableList.of(erroneousJavaFileObject));
+        (Writer) null,
+        (JavaFileManager) null,
+        diagnosticCollector,
+        ImmutableList.of("-d", tempDir.toString()),
+        (Iterable<String>) null,
+        ImmutableList.of(erroneousJavaFileObject));
     compilationTask.setProcessors(ImmutableList.of(new AutoAnnotationProcessor()));
     boolean result = compilationTask.call();
     assertThat(result).isFalse();
@@ -383,5 +400,16 @@ public class AutoAnnotationCompilationTest extends TestCase {
     assertThat(diagnostics).isNotEmpty();
     assertThat(diagnostics.get(0).getMessage(null)).contains("NotAutoAnnotation");
     assertThat(diagnostics.get(0).getMessage(null)).doesNotContain("static");
+  }
+
+  private static void removeDirectory(File dir) {
+    for (File file : dir.listFiles()) {
+      if (file.isDirectory()) {
+        removeDirectory(file);
+      } else {
+        assertTrue(file.delete());
+      }
+    }
+    assertTrue(dir.delete());
   }
 }
