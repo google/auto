@@ -18,16 +18,17 @@ public interface AutoValueExtension {
     Map<String, ExecutableElement> properties();
   }
 
-  public interface GeneratedClass {
-    String className();
-    String source();
-    Collection<String> additionalImports();
-    Collection<ExecutableElement> consumedProperties();
-    Collection<String> additionalInterfaces();
-    Collection<String> additionalCode();
-  }
-
   boolean applicable(Context context);
 
-  GeneratedClass generateClass(Context context, String className, String classToExtend, String classToImplement);
+  boolean mustBeAtEnd();
+
+  /**
+   * Generates
+   * @param context
+   * @param className
+   * @param classToExtend
+   * @param classToImplement
+   * @return
+   */
+  String generateClass(Context context, String className, String classToExtend, String classToImplement);
 }

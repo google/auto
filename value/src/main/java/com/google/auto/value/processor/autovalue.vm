@@ -19,7 +19,7 @@ import $i;
 
 ${gwtCompatibleAnnotation}
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
-final class $subclass$formalTypes extends $origClass$actualTypes #if (!$interfaces.empty) implements #foreach ($i in $interfaces) $i #if ($foreach.hasNext) , #end #end #end {
+class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Fields
 
@@ -359,11 +359,4 @@ final class $subclass$formalTypes extends $origClass$actualTypes #if (!$interfac
   }
 #end
 
-#if (!$additionalCode.empty)
-#foreach ($code in $additionalCode)
-
-$code
-
-#end
-#end
 }

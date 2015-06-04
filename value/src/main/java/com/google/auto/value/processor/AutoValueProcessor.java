@@ -382,69 +382,30 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    List<ExecutableElement> consumedMethods = new ArrayList<ExecutableElement>();
     findLocalAndInheritedMethods(type, methods);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
 
-    Set<String> additionalImports = new LinkedHashSet<String>();
-    Set<String> additionalInterfaces = new LinkedHashSet<String>();
-    Set<String> additionalCode = new LinkedHashSet<String>();
     String fqExtClass = TypeSimplifier.classNameOf(type);
-    int extensionsApplied = 0;
+    List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
+    AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
     for (AutoValueExtension extension : extensions) {
-      AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
       if (extension.applicable(context)) {
-        String fqClassName = generatedSubclassName(type, extensionsApplied);
-
-        String implClass = TypeSimplifier.classNameOf(type);
-        String extClass = TypeSimplifier.simpleNameOf(fqExtClass);
-        String className = TypeSimplifier.simpleNameOf(fqClassName);
-        AutoValueExtension.GeneratedClass genClass = extension.generateClass(context, className, extClass, implClass);
-        if (genClass != null) {
-          String source = genClass.source();
-          if (source != null && !source.isEmpty()) {
-            String text = Reformatter.fixup(genClass.source());
-            writeSourceFile(fqClassName, text, type);
-            fqExtClass = fqClassName;
-            ++extensionsApplied;
-          }
-
-          if (genClass.consumedProperties() != null) {
-            consumedMethods.addAll(genClass.consumedProperties());
-            methods.removeAll(genClass.consumedProperties());
-          }
-
-          if (genClass.additionalImports() != null && !genClass.additionalImports().isEmpty()) {
-            additionalImports.addAll(genClass.additionalImports());
-          }
-
-          if (genClass.additionalInterfaces() != null && !genClass.additionalInterfaces().isEmpty()) {
-            additionalInterfaces.addAll(genClass.additionalInterfaces());
-          }
-
-          if (genClass.additionalCode() != null && !genClass.additionalCode().isEmpty()) {
-            additionalCode.addAll(genClass.additionalCode());
-          }
+        if (extension.mustBeAtEnd()) {
+          appliedExtensions.add(0, extension);
+        } else {
+          appliedExtensions.add(extension);
         }
       }
     }
 
-    String subclass = generatedSubclassName(type, extensionsApplied);
+    String subclass = generatedSubclassName(type, appliedExtensions.size());
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = fqExtClass;
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.types = processingEnv.getTypeUtils();
-    defineVarsForType(type, vars, methods, consumedMethods);
-    vars.interfaces = ImmutableSet.copyOf(additionalInterfaces);
-    vars.additionalCode = ImmutableSet.copyOf(additionalCode);
-    if (!additionalImports.isEmpty()) {
-      if (vars.imports != null) {
-        additionalImports.addAll(vars.imports);
-      }
-      vars.imports = ImmutableSortedSet.copyOf(additionalImports);
-    }
+    defineVarsForType(type, vars, methods);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
@@ -452,6 +413,21 @@ public class AutoValueProcessor extends AbstractProcessor {
     writeSourceFile(subclass, text, type);
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
+
+    for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
+      AutoValueExtension extension = appliedExtensions.remove(i);
+      String fqClassName = generatedSubclassName(type, i);
+      String implClass = TypeSimplifier.classNameOf(type);
+      String extClass = TypeSimplifier.simpleNameOf(fqExtClass);
+      String className = TypeSimplifier.simpleNameOf(fqClassName);
+      String source = extension.generateClass(context, className, extClass, implClass);
+      if (source == null || source.isEmpty()) {
+        errorReporter.reportError("Extension returned no source code.", type);
+        return;
+      }
+      source = Reformatter.fixup(source);
+      writeSourceFile(fqClassName, source, type);
+    }
   }
 
   private AutoValueExtension.Context makeExtensionContext(final TypeElement type, final Iterable<ExecutableElement> methods) {
@@ -475,8 +451,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     };
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars, List<ExecutableElement> methods,
-                                 List<ExecutableElement> consumedMethods) {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars, List<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
@@ -527,7 +502,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.wildcardTypes = wildcardTypeParametersString(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     if (builder.isPresent()) {
-      builder.get().defineVars(vars, typeSimplifier, methodToPropertyName, consumedMethods);
+      builder.get().defineVars(vars, typeSimplifier, methodToPropertyName);
     }
   }
 

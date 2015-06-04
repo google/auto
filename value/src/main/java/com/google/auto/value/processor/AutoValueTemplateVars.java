@@ -85,11 +85,6 @@ class AutoValueTemplateVars extends TemplateVars {
   String simpleClassName;
   /** The simple name of the generated subclass. */
   String subclass;
-  /** The interfaces that the generated subclass implements. */
-  ImmutableSet<String> interfaces;
-
-  /** The extra code that should be appended to the generated class. */
-  ImmutableSet<String> additionalCode;
 
   /**
    * The formal generic signature of the class with the {@code @AutoValue} annotation and its
