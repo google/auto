@@ -33,12 +33,13 @@ import com.google.common.collect.Iterables;
  * @author Gregory Kick
  */
 final class FactoryDescriptor {
-  private static final CharMatcher identifierMatcher = new CharMatcher() {
-    @Override
-    public boolean matches(char c) {
-      return Character.isJavaIdentifierPart(c);
-    }
-  };
+  private static final CharMatcher invalidIdentifierCharacters =
+      new CharMatcher() {
+        @Override
+        public boolean matches(char c) {
+          return !Character.isJavaIdentifierPart(c);
+        }
+      };
 
   private final String name;
   private final String extendingType;
@@ -76,8 +77,8 @@ final class FactoryDescriptor {
           providersBuilder.put(key, Iterables.getOnlyElement(entry.getValue()) + "Provider");
           break;
         default:
-          providersBuilder.put(key,
-              identifierMatcher.replaceFrom(key.toString(), '_') + "Provider");
+          providersBuilder.put(
+              key, invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider");
           break;
       }
     }

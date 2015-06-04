@@ -25,6 +25,11 @@ public final class FactoryGenerated {
     this.dependency = dependency;
   }
 
+  // Generates second factory method with a different name for the Dependency dependency.
+  FactoryGenerated(Object name, @Provided Dependency dependency2) {
+    this(name.toString(), dependency2);
+  }
+
   String name() {
     return name;
   }
