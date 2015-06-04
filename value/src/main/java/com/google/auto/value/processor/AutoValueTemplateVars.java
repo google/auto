@@ -15,13 +15,12 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-
-import org.apache.velocity.runtime.parser.node.SimpleNode;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
@@ -164,10 +163,10 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   ImmutableList<String> toBuilderMethods;
 
-  private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
+  private static final Template TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
   @Override
-  SimpleNode parsedTemplate() {
+  Template parsedTemplate() {
     return TEMPLATE;
   }
 }

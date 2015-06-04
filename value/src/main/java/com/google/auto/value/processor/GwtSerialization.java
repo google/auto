@@ -15,10 +15,9 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.base.Optional;
 import com.google.common.collect.Multimap;
-
-import org.apache.velocity.runtime.parser.node.SimpleNode;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -219,10 +218,10 @@ class GwtSerialization {
     /** A string that should change if any salient details of the serialized class change. */
     String classHashString;
 
-    private static final SimpleNode TEMPLATE = parsedTemplateForResource("gwtserializer.vm");
+    private static final Template TEMPLATE = parsedTemplateForResource("gwtserializer.vm");
 
     @Override
-    SimpleNode parsedTemplate() {
+    Template parsedTemplate() {
       return TEMPLATE;
     }
   }

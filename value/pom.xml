@@ -60,12 +60,13 @@
       <artifactId>asm</artifactId>
       <version>4.1</version>
     </dependency>
+    <!-- test dependencies -->
     <dependency>
       <groupId>org.apache.velocity</groupId>
       <artifactId>velocity</artifactId>
       <version>1.7</version>
+      <scope>test</scope>
     </dependency>
-    <!-- test dependencies -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
@@ -128,53 +129,33 @@
         </executions>
       </plugin>
       <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-shade-plugin</artifactId>
-	<version>2.3</version>
-	<executions>
-	  <execution>
-	    <phase>package</phase>
-	    <goals>
-	      <goal>shade</goal>
-	    </goals>
-	    <configuration>
-	      <minimizeJar>true</minimizeJar>
-              <filters>
-                <filter>
-                   <artifact>org.apache.velocity:*</artifact>
-                   <includes>
-                       <include>**</include>
-                   </includes>
-                </filter>
-              </filters>
-	      <relocations>
-		<!-- We don't relocate Velocity classes because they often load classes from
-		     strings, and the relocator doesn't know to rewrite those strings.
-                     We also don't minimize it for similar reasons.
-		     You would expect that we could express this by relocating org.apache and
-		     excluding org.apache.velocity.**, but it turns out that doesn't work because
-		     the relocator for some reason feels the need to rewrite string constants that
-		     begin with org/apache even if they also begin with org/apache/velocity, and
-		     that throws resource name constants into the air. -->
-		<relocation>
-		  <pattern>org.apache.commons</pattern>
-		  <shadedPattern>autovalue.shaded.org.apache.commons</shadedPattern>
-		</relocation>
-		<relocation>
-		  <pattern>org.objectweb</pattern>
-		  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
-		</relocation>
-		<relocation>
-		  <pattern>com.google</pattern>
-		  <shadedPattern>autovalue.shaded.com.google.common</shadedPattern>
-		  <excludes>
-		    <exclude>com.google.auto.value.**</exclude>
-		  </excludes>
-		</relocation>
-	      </relocations>
-	    </configuration>
-	  </execution>
-	</executions>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <minimizeJar>true</minimizeJar>
+              <relocations>
+                <relocation>
+                  <pattern>org.objectweb</pattern>
+                  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google</pattern>
+                  <shadedPattern>autovalue.shaded.com.google.common</shadedPattern>
+                  <excludes>
+                    <exclude>com.google.auto.value.**</exclude>
+                  </excludes>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
