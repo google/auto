@@ -98,6 +98,21 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource("expected/SimpleClassProvidedDepsFactory.java"));
   }
 
+  @Test
+  public void simpleClassProvidedProviderDeps() {
+    assertAbout(javaSources())
+        .that(
+            ImmutableSet.of(
+                JavaFileObjects.forResource("support/AQualifier.java"),
+                JavaFileObjects.forResource("support/BQualifier.java"),
+                JavaFileObjects.forResource("good/SimpleClassProvidedProviderDeps.java")))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(
+            JavaFileObjects.forResource("expected/SimpleClassProvidedProviderDepsFactory.java"));
+  }
+
   @Test public void constructorAnnotated() {
     assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/ConstructorAnnotated.java"))

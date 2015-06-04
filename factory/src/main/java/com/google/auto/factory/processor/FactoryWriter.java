@@ -118,19 +118,29 @@ final class FactoryWriter {
     writer.endMethod();
 
     for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
-      writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),
+      writer.beginMethod(
+          methodDescriptor.returnType(),
+          methodDescriptor.name(),
           methodDescriptor.publicMethod() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
           parameterTokens(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.creationParameters())
-              .transform(new Function<Parameter, String>() {
-                @Override public String apply(Parameter parameter) {
-                  return methodDescriptor.passedParameters().contains(parameter)
-                      ? parameter.name()
-                      : descriptor.providerNames().get(parameter.asKey()) + ".get()";
-                }
-              });
-      writer.emitStatement("return new %s(%s)", writer.compressType(methodDescriptor.returnType()),
+              .transform(
+                  new Function<Parameter, String>() {
+                    @Override
+                    public String apply(Parameter parameter) {
+                      if (methodDescriptor.passedParameters().contains(parameter)) {
+                        return parameter.name();
+                      } else if (parameter.providerOfType()) {
+                        return descriptor.providerNames().get(parameter.asKey());
+                      } else {
+                        return descriptor.providerNames().get(parameter.asKey()) + ".get()";
+                      }
+                    }
+                  });
+      writer.emitStatement(
+          "return new %s(%s)",
+          writer.compressType(methodDescriptor.returnType()),
           argumentJoiner.join(creationParameterNames));
       writer.endMethod();
     }

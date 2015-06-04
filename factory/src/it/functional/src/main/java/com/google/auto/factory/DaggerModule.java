@@ -23,4 +23,10 @@ final class DaggerModule {
   @Provides Dependency provideDependency(DependencyImpl impl) {
     return impl;
   }
+
+  @Provides
+  @Qualifier
+  Dependency provideQualifiedDependency(QualifiedDependencyImpl impl) {
+    return impl;
+  }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2015 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  */
 package com.google.auto.factory;
 
-import com.google.inject.AbstractModule;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-public class GuiceModule extends AbstractModule {
-  @Override protected void configure() {
-    bind(Dependency.class).to(DependencyImpl.class);
-    bind(Dependency.class).annotatedWith(Qualifier.class).to(QualifiedDependencyImpl.class);
-  }
-}
+@javax.inject.Qualifier
+@Retention(RetentionPolicy.RUNTIME)
+@interface Qualifier {}

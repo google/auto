@@ -15,11 +15,9 @@
  */
 package com.google.auto.factory;
 
-import com.google.inject.AbstractModule;
+import javax.inject.Inject;
 
-public class GuiceModule extends AbstractModule {
-  @Override protected void configure() {
-    bind(Dependency.class).to(DependencyImpl.class);
-    bind(Dependency.class).annotatedWith(Qualifier.class).to(QualifiedDependencyImpl.class);
-  }
+public class QualifiedDependencyImpl implements Dependency {
+  @Inject
+  QualifiedDependencyImpl() {}
 }

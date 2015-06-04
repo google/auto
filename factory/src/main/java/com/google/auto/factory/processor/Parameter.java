@@ -19,6 +19,7 @@ import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.auto.common.MoreTypes;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
@@ -29,6 +30,7 @@ import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Set;
 
+import javax.inject.Provider;
 import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
@@ -39,11 +41,14 @@ final class Parameter {
   private final Optional<AnnotationMirror> qualifier;
   private final String type;
   private final String name;
+  private final boolean providerOfType;
 
-  private Parameter(Optional<AnnotationMirror> qualifier, String type, String name) {
+  private Parameter(
+      Optional<AnnotationMirror> qualifier, String type, String name, boolean providerOfType) {
     this.qualifier = checkNotNull(qualifier);
     this.type = checkNotNull(type);
     this.name = checkNotNull(name);
+    this.providerOfType = providerOfType;
   }
 
   Optional<AnnotationMirror> qualifier() {
@@ -62,15 +67,20 @@ final class Parameter {
     return name;
   }
 
+  boolean providerOfType() {
+    return providerOfType;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj instanceof  Parameter) {
+    } else if (obj instanceof Parameter) {
       Parameter that = (Parameter) obj;
       return this.type.equals(that.type)
           && this.name.equals(that.name)
-          && this.qualifier.toString().equals(that.qualifier.toString());
+          && this.qualifier.toString().equals(that.qualifier.toString())
+          && this.providerOfType == that.providerOfType;
     } else {
       return false;
     }
@@ -78,7 +88,7 @@ final class Parameter {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(type, name, qualifier.toString());
+    return Objects.hashCode(type, name, qualifier.toString(), providerOfType);
   }
 
   @Override
@@ -87,7 +97,14 @@ final class Parameter {
     if (qualifier.isPresent()) {
       builder.append(qualifier.get()).append(' ');
     }
-    builder.append(type).append(' ').append(name).append('\'');
+    if (providerOfType) {
+      builder.append("Provider<");
+    }
+    builder.append(type);
+    if (providerOfType) {
+      builder.append('>');
+    }
+    builder.append(' ').append(name).append('\'');
     return builder.toString();
   }
 
@@ -99,10 +116,17 @@ final class Parameter {
         qualifiers.add(annotationMirror);
       }
     }
-    // TODO(gak): check for only one qualifier rather than using the first
-    return new Parameter(FluentIterable.from(qualifiers.build()).first(),
-        type.toString(),
-        variable.getSimpleName().toString());
+
+    boolean provider = MoreTypes.isType(type) && MoreTypes.isTypeOf(Provider.class, type);
+    TypeMirror providedType =
+        provider ? MoreTypes.asDeclared(type).getTypeArguments().get(0) : type;
+
+    return new Parameter(
+        // TODO(gak): check for only one qualifier rather than using the first
+        FluentIterable.from(qualifiers.build()).first(),
+        providedType.toString(),
+        variable.getSimpleName().toString(),
+        provider);
   }
 
   static ImmutableSet<Parameter> forParameterList(
