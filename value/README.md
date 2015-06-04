@@ -163,7 +163,7 @@ add the following to your Maven configuration:
     <dependency>
       <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value</artifactId>
-      <version>1.0</version>
+      <version>1.1</version>
       <scope>provided</scope>
     </dependency>
 ```
@@ -186,6 +186,7 @@ They just invoke your provided factory method and get a
 well-behaved instance back.
 
 ### Builders
+*(since 1.1)*
 
 You may prefer to construct some objects through _builders_. If there
 is a nested interface or abstract class that is annotated with

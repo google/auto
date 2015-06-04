@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Multimap;
 
 import org.apache.velocity.runtime.parser.node.SimpleNode;
 
@@ -90,7 +91,7 @@ class GwtSerialization {
       vars.formalTypes = autoVars.formalTypes;
       vars.actualTypes = autoVars.actualTypes;
       vars.useBuilder = !autoVars.builderTypeName.isEmpty();
-      vars.builderSetterNames = autoVars.builderSetterNames;
+      vars.builderSetters = autoVars.builderSetters;
       vars.generated = autoVars.generated;
       String className = (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass
           + "_CustomFieldSerializer";
@@ -201,10 +202,10 @@ class GwtSerialization {
     Boolean useBuilder;
 
     /**
-     * A map from property names (like foo) to the corresponding setter method names
+     * A multimap from property names (like foo) to the corresponding setter methods
      * (foo or setFoo).
      */
-    Map<String, String> builderSetterNames;
+    Multimap<String, BuilderSpec.PropertySetter> builderSetters;
 
     /** The simple name of the generated GWT serializer class. */
     String serializerClass;
