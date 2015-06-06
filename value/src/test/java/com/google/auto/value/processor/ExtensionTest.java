@@ -8,6 +8,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.tools.JavaFileObject;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
@@ -35,7 +36,7 @@ public class ExtensionTest extends TestCase {
         "import javax.annotation.Generated;",
         "",
         "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
-        "final class $AutoValue_Baz extends Baz {",
+        "abstract class $AutoValue_Baz extends Baz {",
         "",
         "  private final String foo;",
         "",
@@ -84,7 +85,10 @@ public class ExtensionTest extends TestCase {
         "foo.bar.AutoValue_Baz",
         "package foo.bar;",
         "",
-        "abstract class AutoValue_Baz extends Baz {",
+        "final class AutoValue_Baz extends $AutoValue_Baz {",
+        "  public AutoValue_Baz(String foo) {",
+        "    super(foo);",
+        "  }",
         "  @Override public String foo() {",
         "    return \"foo\";",
         "  }",
@@ -119,7 +123,7 @@ public class ExtensionTest extends TestCase {
         "import javax.annotation.Generated;",
         "",
         "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
-        "final class $AutoValue_Baz extends Baz {",
+        "abstract class $AutoValue_Baz extends Baz {",
         "",
         "  private final String foo;",
         "  private final String bar;",
@@ -184,7 +188,10 @@ public class ExtensionTest extends TestCase {
         "foo.bar.AutoValue_Baz",
         "package foo.bar;",
         "",
-        "abstract class AutoValue_Baz extends Baz {",
+        "final class AutoValue_Baz extends $AutoValue_Baz {",
+        "  public AutoValue_Baz(String foo, String bar) {",
+        "    super(foo, bar);",
+        "  }",
         "  @Override public String foo() {",
         "    return \"foo\";",
         "  }",
@@ -210,14 +217,49 @@ public class ExtensionTest extends TestCase {
     }
 
     @Override
-    public String generateClass(final Context context, final String className, final String classToExtend, String classToImplement) {
+    public String generateClass(final Context context, final String className, final String classToExtend, boolean isFinal) {
+      StringBuilder constructor = new StringBuilder()
+          .append("  public ")
+          .append(className)
+          .append("(");
+
+      boolean first = true;
+      for (Map.Entry<String, ExecutableElement> el : context.properties().entrySet()) {
+        if (first) {
+          first = false;
+        } else {
+          constructor.append(", ");
+        }
+
+        // TODO How are we going to handle the constructor?
+        constructor.append("String " + el.getKey());
+      }
+
+      constructor.append(") {\n");
+      constructor.append("    super(");
+
+      first = true;
+      for (Map.Entry<String, ExecutableElement> el : context.properties().entrySet()) {
+        if (first) {
+          first = false;
+        } else {
+          constructor.append(", ");
+        }
+
+        // TODO How are we going to handle the constructor?
+        constructor.append(el.getKey());
+      }
+      constructor.append(");\n");
+      constructor.append("  }\n");
+
       return String.format("package %s;\n" +
           "\n" +
-          "abstract class %s extends %s {\n" +
+          "%s class %s extends %s {\n" +
+          constructor +
           "  @Override public String foo() {\n" +
           "    return \"foo\";\n" +
           "  }\n" +
-          "}", context.packageName(), className, classToExtend);
+          "}", context.packageName(), isFinal ? "final" : "abstract", className, classToExtend);
     }
   }
 }

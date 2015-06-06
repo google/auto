@@ -404,6 +404,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.origClass = fqExtClass;
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
+    vars.isFinal = appliedExtensions.isEmpty();
     vars.types = processingEnv.getTypeUtils();
     defineVarsForType(type, vars, methods);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
@@ -414,19 +415,21 @@ public class AutoValueProcessor extends AbstractProcessor {
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
 
+    String extClass = TypeSimplifier.simpleNameOf(subclass);
     for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
       AutoValueExtension extension = appliedExtensions.remove(i);
       String fqClassName = generatedSubclassName(type, i);
-      String implClass = TypeSimplifier.classNameOf(type);
-      String extClass = TypeSimplifier.simpleNameOf(fqExtClass);
       String className = TypeSimplifier.simpleNameOf(fqClassName);
-      String source = extension.generateClass(context, className, extClass, implClass);
+      boolean isFinal = (i == 0);
+      String source = extension.generateClass(context, className, extClass, isFinal);
       if (source == null || source.isEmpty()) {
         errorReporter.reportError("Extension returned no source code.", type);
         return;
       }
       source = Reformatter.fixup(source);
       writeSourceFile(fqClassName, source, type);
+
+      extClass = className;
     }
   }
 
@@ -650,6 +653,13 @@ public class AutoValueProcessor extends AbstractProcessor {
             errors = true;
           }
           toImplement.add(method);
+        } else {
+          // This could reasonably be an error, were it not for an Eclipse bug in
+          // ElementUtils.override that sometimes fails to recognize that one method overrides
+          // another, and therefore leaves us with both an abstract method and the subclass method
+          // that overrides it. This shows up in AutoValueTest.LukesBase for example.
+          errorReporter.reportWarning("@AutoValue classes cannot have abstract methods other than"
+              + " property getters and Builder converters", method);
         }
       }
     }
