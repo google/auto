@@ -406,8 +406,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(methodsToImplement));
-    TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
-    types.add(javaxAnnotationGenerated);
+    TypeElement generatedTypeElement =
+        processingEnv.getElementUtils().getTypeElement(Generated.class.getName());
+    if (generatedTypeElement != null) {
+      types.add(generatedTypeElement.asType());
+    }
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
     if (containsArrayType(types)) {
       // If there are array properties then we will be referencing java.util.Arrays.
@@ -429,7 +432,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
-    vars.generated = typeSimplifier.simplify(javaxAnnotationGenerated);
+    vars.generated = generatedTypeElement == null
+        ? ""
+        : typeSimplifier.simplify(generatedTypeElement.asType());
     vars.arrays = typeSimplifier.simplify(javaUtilArrays);
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         methodToPropertyNameMap(propertyMethods);
