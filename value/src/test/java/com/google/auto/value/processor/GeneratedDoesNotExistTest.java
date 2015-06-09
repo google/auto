@@ -13,15 +13,11 @@ import org.junit.runners.JUnit4;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Generated;
-import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
@@ -34,95 +30,98 @@ import javax.tools.JavaFileObject;
  */
 @RunWith(JUnit4.class)
 public class GeneratedDoesNotExistTest {
-  private static class ElementsInvocationHandler implements InvocationHandler {
-    private final Elements realElements;
-    private final AtomicBoolean ignoredGenerated;
+  // The classes here are basically just rigmarole to ensure that
+  // Types.getTypeElement("javax.annotation.Generated") returns null, and to check that something
+  // called that. We want a Processor that forwards everything to AutoValueProcessor, except that
+  // the init(ProcessingEnvironment) method should forward a ProcessingEnvironment that filters
+  // out the Generated class. So that ProcessingEnvironment forwards everything to the real
+  // ProcessingEnvironment, except the ProcessingEnvironment.getElementUtils() method. That method
+  // returns an Elements object that forwards everything to the real Elements except
+  // getTypeElement("javax.annotation.Generated").
 
-    ElementsInvocationHandler(Elements realElements, AtomicBoolean ignoredGenerated) {
-      this.realElements = realElements;
-      this.ignoredGenerated = ignoredGenerated;
+  /**
+   * InvocationHandler that forwards every method to an original object, except methods where
+   * there is an implementation in this class with the same signature. So for example in the
+   * subclass {@link ElementsHandler} there is a method
+   * {@link ElementsHandler#getTypeElement(CharSequence)}, which means that a call of
+   * {@link Elements#getTypeElement(CharSequence)} on the proxy with this invocation handler will
+   * end up calling that method, but a call of any of the other methods of {@code Elements} will
+   * end up calling the method on the original object.
+   */
+  private abstract static class OverridableInvocationHandler<T> implements InvocationHandler {
+    final T original;
+
+    OverridableInvocationHandler(T original) {
+      this.original = original;
     }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-      if (method.getName().equals("getTypeElement")) {
-        assertThat(args).hasLength(1);
-        return getTypeElement((CharSequence) args[0]);
-      } else {
-        return method.invoke(realElements, args);
+      try {
+        Method override = getClass().getMethod(method.getName(), method.getParameterTypes());
+        if (override.getDeclaringClass() == getClass()) {
+          return override.invoke(this, args);
+        }
+      } catch (NoSuchMethodException ignored) {
+        // OK: we don't have an override for this method, so just invoke the original method.
       }
+      return method.invoke(original, args);
+    }
+  }
+
+  private static <T> T partialProxy(Class<T> type, OverridableInvocationHandler<T> handler) {
+    return Reflection.newProxy(type, handler);
+  }
+
+  private static class ElementsHandler extends OverridableInvocationHandler<Elements> {
+    private final AtomicBoolean ignoredGenerated;
+
+    ElementsHandler(Elements original, AtomicBoolean ignoredGenerated) {
+      super(original);
+      this.ignoredGenerated = ignoredGenerated;
     }
 
-    private TypeElement getTypeElement(CharSequence name) {
+    public TypeElement getTypeElement(CharSequence name) {
       if (name.toString().equals(Generated.class.getName())) {
         ignoredGenerated.set(true);
         return null;
       } else {
-        return realElements.getTypeElement(name);
+        return original.getTypeElement(name);
       }
     }
   }
 
-  private static class ProcessingEnvironmentInvocationHandler implements InvocationHandler {
-    private final ProcessingEnvironment realProcessingEnvironment;
-    private final Elements elements;
+  private static class ProcessingEnvironmentHandler
+      extends OverridableInvocationHandler<ProcessingEnvironment> {
+    private final Elements noGeneratedElements;
 
-    ProcessingEnvironmentInvocationHandler(
-        ProcessingEnvironment realProcessingEnvironment, AtomicBoolean ignoredGenerated) {
-      this.realProcessingEnvironment = realProcessingEnvironment;
-      InvocationHandler elementsInvocationHandler = new ElementsInvocationHandler(
-          realProcessingEnvironment.getElementUtils(), ignoredGenerated);
-      this.elements = Reflection.newProxy(Elements.class, elementsInvocationHandler);
+    ProcessingEnvironmentHandler(
+        ProcessingEnvironment original, AtomicBoolean ignoredGenerated) {
+      super(original);
+      ElementsHandler elementsHandler =
+          new ElementsHandler(original.getElementUtils(), ignoredGenerated);
+      this.noGeneratedElements = partialProxy(Elements.class, elementsHandler);
     }
 
-    @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-      if (method.getName().equals("getElementUtils")) {
-        // Remember that the stupid InvocationHandler API passes null instead of an empty array.
-        assertThat(args).isNull();
-        return elements;
-      } else {
-        return method.invoke(realProcessingEnvironment, args);
-      }
+    public Elements getElementUtils() {
+      return noGeneratedElements;
     }
   }
 
-  private static class NoGeneratedProcessor extends AbstractProcessor {
-    private final Processor realProcessor;
+  private static class ProcessorHandler extends OverridableInvocationHandler<Processor> {
     private final AtomicBoolean ignoredGenerated;
 
-    NoGeneratedProcessor(Processor realProcessor, AtomicBoolean ignoredGenerated) {
-      this.realProcessor = realProcessor;
+    ProcessorHandler(Processor original, AtomicBoolean ignoredGenerated) {
+      super(original);
       this.ignoredGenerated = ignoredGenerated;
     }
 
-    @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-      return realProcessor.process(annotations, roundEnv);
-    }
-
-    @Override
-    public Set<String> getSupportedAnnotationTypes() {
-      return realProcessor.getSupportedAnnotationTypes();
-    }
-
-    @Override
-    public Set<String> getSupportedOptions() {
-      return realProcessor.getSupportedOptions();
-    }
-
-    @Override
-    public SourceVersion getSupportedSourceVersion() {
-      return realProcessor.getSupportedSourceVersion();
-    }
-
-    @Override
-    public void init(ProcessingEnvironment realProcessingEnvironment) {
-      InvocationHandler processingEnvironmentInvocationHandler =
-          new ProcessingEnvironmentInvocationHandler(realProcessingEnvironment, ignoredGenerated);
-      ProcessingEnvironment processingEnvironment = Reflection.newProxy(
-          ProcessingEnvironment.class, processingEnvironmentInvocationHandler);
-      realProcessor.init(processingEnvironment);
+    public void init(ProcessingEnvironment processingEnv) {
+      ProcessingEnvironmentHandler processingEnvironmentHandler =
+          new ProcessingEnvironmentHandler(processingEnv, ignoredGenerated);
+      ProcessingEnvironment noGeneratedProcessingEnvironment =
+          partialProxy(ProcessingEnvironment.class, processingEnvironmentHandler);
+      original.init(noGeneratedProcessingEnvironment);
     }
   }
 
@@ -171,7 +170,8 @@ public class GeneratedDoesNotExistTest {
     );
     AtomicBoolean ignoredGenerated = new AtomicBoolean();
     Processor autoValueProcessor = new AutoValueProcessor();
-    Processor noGeneratedProcessor = new NoGeneratedProcessor(autoValueProcessor, ignoredGenerated);
+    ProcessorHandler handler = new ProcessorHandler(autoValueProcessor, ignoredGenerated);
+    Processor noGeneratedProcessor = partialProxy(Processor.class, handler);
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(noGeneratedProcessor)
