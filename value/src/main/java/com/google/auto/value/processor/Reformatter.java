@@ -106,14 +106,15 @@ class Reformatter {
     return sb.toString();
   }
 
-  // A simplistic Java tokenizer. This is different from the one in JavaTokenizer (which is only
-  // needed for EclipseHack). The needs of the two tokenizers are very different: JavaTokenizer is
-  // only needed to scan through an existing source file to find abstract method declarations, so
-  // it can discard everything that isn't needed for that, including comments and string literals
-  // for example. Meanwhile, this Tokenizer needs to return a sequence of tokens that can be used
-  // to reconstruct the source code. JavaTokenizer also operates on a Reader (which in practice is
-  // coming from a file), while here we already have the source code in a String, which means that
-  // we can just return token boundaries rather than the tokens themselves.
+  // A simplistic Java tokenizer. This is different from the one in EclipseHackTokenizer
+  // (which is only needed for EclipseHack). The needs of the two tokenizers are very
+  // different: EclipseHackTokenizer is only needed to scan through an existing source file to
+  // find abstract method declarations, so it can discard everything that isn't needed for that,
+  // including comments and string literals for example. Meanwhile, this Tokenizer needs to return a
+  // sequence of tokens that can be used to reconstruct the source code. EclipseHackTokenizer also
+  // operates on a Reader (which in practice is coming from a file), while here we already have the
+  // source code in a String, which means that we can just return token boundaries rather than the
+  // tokens themselves.
   //
   // We are not dealing with arbitrary user code so we can assume there are no exotic things like
   // tabs or Unicode escapes that resolve into quotes. The purpose of the tokenizer here is to
