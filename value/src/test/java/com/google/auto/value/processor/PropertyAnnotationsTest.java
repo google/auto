@@ -149,7 +149,7 @@ public class PropertyAnnotationsTest extends TestCase {
             "  @Override public int hashCode() {",
             "    int h = 1;",
             "    h *= 1000003;",
-            "    h ^= buh;",
+            "    h ^= this.buh;",
             "    return h;",
             "  }",
             "}"
