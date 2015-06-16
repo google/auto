@@ -81,7 +81,7 @@ class Reformatter {
     // or a dot or a comma, or the preceding character is a left paren.
     // TODO(emcmanus): consider merging all three passes using this tokenization approach.
     StringBuilder sb = new StringBuilder(s.length());
-    Tokenizer tokenizer = new Tokenizer(s);
+    JavaScanner tokenizer = new JavaScanner(s);
     int len = s.length();
     int end;
     for (int start = 0; start < len; start = end) {
@@ -104,96 +104,5 @@ class Reformatter {
       }
     }
     return sb.toString();
-  }
-
-  // A simplistic Java tokenizer. This is different from the one in EclipseHackTokenizer
-  // (which is only needed for EclipseHack). The needs of the two tokenizers are very
-  // different: EclipseHackTokenizer is only needed to scan through an existing source file to
-  // find abstract method declarations, so it can discard everything that isn't needed for that,
-  // including comments and string literals for example. Meanwhile, this Tokenizer needs to return a
-  // sequence of tokens that can be used to reconstruct the source code. EclipseHackTokenizer also
-  // operates on a Reader (which in practice is coming from a file), while here we already have the
-  // source code in a String, which means that we can just return token boundaries rather than the
-  // tokens themselves.
-  //
-  // We are not dealing with arbitrary user code so we can assume there are no exotic things like
-  // tabs or Unicode escapes that resolve into quotes. The purpose of the tokenizer here is to
-  // return a sequence of offsets that split the string up in a way that allows us to work with
-  // spaces without having to worry whether they are inside strings or comments. The particular
-  // properties we use are that every string and character literal and every comment is a single
-  // token; every newline plus all following indentation is a single token; and every other string
-  // of consecutive spaces outside a comment or literal is a single token. That means that we can
-  // safely compress a token that starts with a space into a single space, without falsely removing
-  // indentation or changing the contents of strings.
-  private static class Tokenizer {
-    private final String s;
-
-    Tokenizer(String s) {
-      if (!s.endsWith("\n")) {
-        s += "\n";
-        // This allows us to avoid checking for the end of the string in most cases.
-      }
-      this.s = s;
-    }
-
-    int tokenEnd(int start) {
-      if (start >= s.length()) {
-        return s.length();
-      }
-      switch (s.charAt(start)) {
-        case ' ':
-        case '\n':
-          return spaceEnd(start);
-        case '/':
-          if (s.charAt(start + 1) == '*') {
-            return blockCommentEnd(start);
-          } else if (s.charAt(start + 1) == '/') {
-            return lineCommentEnd(start);
-          } else {
-            return start + 1;
-          }
-        case '\'':
-        case '"':
-          return quoteEnd(start);
-        default:
-          // Every other character is considered to be its own token.
-          return start + 1;
-      }
-    }
-
-    int spaceEnd(int start) {
-      assert s.charAt(start) == ' ' || s.charAt(start) == '\n';
-      int i;
-      for (i = start + 1; i < s.length() && s.charAt(i) == ' '; i++) {
-      }
-      return i;
-    }
-
-    int blockCommentEnd(int start) {
-      assert s.charAt(start) == '/' && s.charAt(start + 1) == '*';
-      int i;
-      for (i = start + 1; s.charAt(i) != '*' || s.charAt(i + 1) != '/'; i++) {
-      }
-      return i;
-    }
-
-    int lineCommentEnd(int start) {
-      assert s.charAt(start) == '/' && s.charAt(start + 1) == '/';
-      int end = s.indexOf('\n', start + 2);
-      assert end > 0;
-      return end;
-    }
-
-    int quoteEnd(int start) {
-      char quote = s.charAt(start);
-      assert quote == '\'' || quote == '"';
-      int i;
-      for (i = start + 1; s.charAt(i) != quote; i++) {
-        if (s.charAt(i) == '\\') {
-          i++;
-        }
-      }
-      return i + 1;
-    }
   }
 }
