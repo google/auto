@@ -28,14 +28,12 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -77,7 +75,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =
-        new FactoryDescriptorGenerator(messager, elements, declarationFactory);
+        new FactoryDescriptorGenerator(messager, elements, types, declarationFactory);
   }
 
   @Override
@@ -114,13 +112,16 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
           if (supertypeMethod.getModifiers().contains(Modifier.ABSTRACT)) {
             ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
                 types, supertypeMethod, extendingType);
-            implementationMethodDescriptorsBuilder.put(factoryName,
+            ImmutableSet<Parameter> passedParameters =
+                Parameter.forParameterList(
+                    supertypeMethod.getParameters(), methodType.getParameterTypes(), types);
+            implementationMethodDescriptorsBuilder.put(
+                factoryName,
                 new ImplementationMethodDescriptor.Builder()
                     .name(supertypeMethod.getSimpleName().toString())
                     .returnType(getAnnotatedType(element).getQualifiedName().toString())
                     .publicMethod()
-                    .passedParameters(Parameter.forParameterList(
-                        supertypeMethod.getParameters(), methodType.getParameterTypes()))
+                    .passedParameters(passedParameters)
                     .build());
           }
         }
@@ -131,13 +132,16 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
             if (interfaceMethod.getModifiers().contains(Modifier.ABSTRACT)) {
               ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
                   types, interfaceMethod, implementingType);
-              implementationMethodDescriptorsBuilder.put(factoryName,
+              ImmutableSet<Parameter> passedParameters =
+                  Parameter.forParameterList(
+                      interfaceMethod.getParameters(), methodType.getParameterTypes(), types);
+              implementationMethodDescriptorsBuilder.put(
+                  factoryName,
                   new ImplementationMethodDescriptor.Builder()
                       .name(interfaceMethod.getSimpleName().toString())
                       .returnType(getAnnotatedType(element).getQualifiedName().toString())
                       .publicMethod()
-                      .passedParameters(Parameter.forParameterList(
-                          interfaceMethod.getParameters(), methodType.getParameterTypes()))
+                      .passedParameters(passedParameters)
                       .build());
             }
           }

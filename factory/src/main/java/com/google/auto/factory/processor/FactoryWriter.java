@@ -132,9 +132,9 @@ final class FactoryWriter {
                       if (methodDescriptor.passedParameters().contains(parameter)) {
                         return parameter.name();
                       } else if (parameter.providerOfType()) {
-                        return descriptor.providerNames().get(parameter.asKey());
+                        return descriptor.providerNames().get(parameter.key());
                       } else {
-                        return descriptor.providerNames().get(parameter.asKey()) + ".get()";
+                        return descriptor.providerNames().get(parameter.key()) + ".get()";
                       }
                     }
                   });

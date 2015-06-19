@@ -32,7 +32,6 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
-
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -43,6 +42,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 
 /**
  * A service that traverses an element and returns the set of factory methods defined therein.
@@ -52,12 +52,17 @@ import javax.lang.model.util.Elements;
 final class FactoryDescriptorGenerator {
   private final Messager messager;
   private final Elements elements;
+  private final Types types;
   private final AutoFactoryDeclaration.Factory declarationFactory;
 
-  FactoryDescriptorGenerator(Messager messager, Elements elements,
+  FactoryDescriptorGenerator(
+      Messager messager,
+      Elements elements,
+      Types types,
       AutoFactoryDeclaration.Factory declarationFactory) {
     this.messager = messager;
     this.elements = elements;
+    this.types = types;
     this.declarationFactory = declarationFactory;
   }
 
@@ -142,8 +147,10 @@ final class FactoryDescriptorGenerator {
                 return isAnnotationPresent(parameter, Provided.class);
               }
             }));
-    ImmutableSet<Parameter> providedParameters = Parameter.forParameterList(parameterMap.get(true));
-    ImmutableSet<Parameter> passedParameters = Parameter.forParameterList(parameterMap.get(false));
+    ImmutableSet<Parameter> providedParameters =
+        Parameter.forParameterList(parameterMap.get(true), types);
+    ImmutableSet<Parameter> passedParameters =
+        Parameter.forParameterList(parameterMap.get(false), types);
     return new FactoryMethodDescriptor.Builder(declaration)
         .factoryName(declaration.getFactoryName(
             elements.getPackageOf(constructor).getQualifiedName(), classElement.getSimpleName()))
@@ -152,7 +159,7 @@ final class FactoryDescriptorGenerator {
         .publicMethod(constructor.getEnclosingElement().getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
-        .creationParameters(Parameter.forParameterList(constructor.getParameters()))
+        .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
         .build();
   }
 

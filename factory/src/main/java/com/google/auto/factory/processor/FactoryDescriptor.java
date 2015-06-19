@@ -17,15 +17,14 @@ package com.google.auto.factory.processor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Collection;
-import java.util.Map.Entry;
-
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import java.util.Collection;
+import java.util.Map.Entry;
 
 /**
  * A value object representing a factory to be generated.
@@ -64,7 +63,7 @@ final class FactoryDescriptor {
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
-        providerNamesBuilder.putAll(parameter.asKey(), parameter.name());
+        providerNamesBuilder.put(parameter.key(), parameter.name());
       }
     }
     ImmutableMap.Builder<Key, String> providersBuilder = ImmutableMap.builder();

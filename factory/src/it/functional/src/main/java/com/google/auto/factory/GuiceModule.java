@@ -21,5 +21,7 @@ public class GuiceModule extends AbstractModule {
   @Override protected void configure() {
     bind(Dependency.class).to(DependencyImpl.class);
     bind(Dependency.class).annotatedWith(Qualifier.class).to(QualifiedDependencyImpl.class);
+    bind(Integer.class).toInstance(1);
+    bind(Integer.class).annotatedWith(Qualifier.class).toInstance(2);
   }
 }

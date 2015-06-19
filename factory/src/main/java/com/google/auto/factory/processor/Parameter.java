@@ -26,41 +26,36 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import java.util.List;
 import java.util.Set;
-
 import javax.inject.Provider;
 import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Types;
 
+// TODO(cgruber): AutoValue
 final class Parameter {
-  private final Optional<AnnotationMirror> qualifier;
   private final String type;
   private final String name;
   private final boolean providerOfType;
+  private final Key key;
 
-  private Parameter(
-      Optional<AnnotationMirror> qualifier, String type, String name, boolean providerOfType) {
-    this.qualifier = checkNotNull(qualifier);
+  private Parameter(String type, Key key, String name, boolean providerOfType) {
     this.type = checkNotNull(type);
+    this.key = checkNotNull(key);
     this.name = checkNotNull(name);
     this.providerOfType = providerOfType;
-  }
-
-  Optional<AnnotationMirror> qualifier() {
-    return qualifier;
   }
 
   String type() {
     return type;
   }
 
-  Key asKey() {
-    return new Key(qualifier, type);
+  Key key() {
+    return key;
   }
 
   String name() {
@@ -78,8 +73,8 @@ final class Parameter {
     } else if (obj instanceof Parameter) {
       Parameter that = (Parameter) obj;
       return this.type.equals(that.type)
+          && this.key.equals(that.key)
           && this.name.equals(that.name)
-          && this.qualifier.toString().equals(that.qualifier.toString())
           && this.providerOfType == that.providerOfType;
     } else {
       return false;
@@ -88,14 +83,14 @@ final class Parameter {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(type, name, qualifier.toString(), providerOfType);
+    return Objects.hashCode(type, key, name, providerOfType);
   }
 
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder().append('\'');
-    if (qualifier.isPresent()) {
-      builder.append(qualifier.get()).append(' ');
+    if (key.getQualifier().isPresent()) {
+      builder.append(key.getQualifier().get()).append(' ');
     }
     if (providerOfType) {
       builder.append("Provider<");
@@ -108,7 +103,7 @@ final class Parameter {
     return builder.toString();
   }
 
-  static Parameter forVariableElement(VariableElement variable, TypeMirror type) {
+  static Parameter forVariableElement(VariableElement variable, TypeMirror type, Types types) {
     ImmutableSet.Builder<AnnotationMirror> qualifiers = ImmutableSet.builder();
     for (AnnotationMirror annotationMirror : variable.getAnnotationMirrors()) {
       DeclaredType annotationType = annotationMirror.getAnnotationType();
@@ -121,21 +116,33 @@ final class Parameter {
     TypeMirror providedType =
         provider ? MoreTypes.asDeclared(type).getTypeArguments().get(0) : type;
 
+    // TODO(gak): check for only one qualifier rather than using the first
+    Optional<AnnotationMirror> qualifier = FluentIterable.from(qualifiers.build()).first();
+    Key key = new Key(qualifier, boxedType(providedType, types).toString());
+
     return new Parameter(
-        // TODO(gak): check for only one qualifier rather than using the first
-        FluentIterable.from(qualifiers.build()).first(),
-        providedType.toString(),
-        variable.getSimpleName().toString(),
-        provider);
+        providedType.toString(), key, variable.getSimpleName().toString(), provider);
+  }
+
+  /**
+   * If {@code type} is a primitive type, returns the boxed equivalent; otherwise returns
+   * {@code type}.
+   */
+  private static TypeMirror boxedType(TypeMirror type, Types types) {
+    return type.getKind().isPrimitive()
+        ? types.boxedClass(MoreTypes.asPrimitiveType(type)).asType()
+        : type;
   }
 
   static ImmutableSet<Parameter> forParameterList(
-      List<? extends VariableElement> variables, List<? extends TypeMirror> variableTypes) {
+      List<? extends VariableElement> variables,
+      List<? extends TypeMirror> variableTypes,
+      Types types) {
     checkArgument(variables.size() == variableTypes.size());
     ImmutableSet.Builder<Parameter> builder = ImmutableSet.builder();
     Set<String> names = Sets.newHashSetWithExpectedSize(variables.size());
     for (int i = 0; i < variables.size(); i++) {
-      Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i));
+      Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i), types);
       checkArgument(names.add(parameter.name));
       builder.add(parameter);
     }
@@ -144,11 +151,12 @@ final class Parameter {
     return parameters;
   }
 
-  static ImmutableSet<Parameter> forParameterList(List<? extends VariableElement> variables) {
+  static ImmutableSet<Parameter> forParameterList(
+      List<? extends VariableElement> variables, Types types) {
     List<TypeMirror> variableTypes = Lists.newArrayListWithExpectedSize(variables.size());
     for (VariableElement var : variables) {
       variableTypes.add(var.asType());
     }
-    return forParameterList(variables, variableTypes);
+    return forParameterList(variables, variableTypes, types);
   }
 }
