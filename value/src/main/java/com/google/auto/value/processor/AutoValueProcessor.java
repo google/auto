@@ -390,7 +390,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
     for (AutoValueExtension extension : extensions) {
       if (extension.applicable(context)) {
-        if (extension.mustBeAtEnd()) {
+        if (extension.mustBeAtEnd(context)) {
           appliedExtensions.add(0, extension);
         } else {
           appliedExtensions.add(extension);
