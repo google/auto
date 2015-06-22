@@ -154,19 +154,19 @@ ${gwtCompatibleAnnotation}
 #if ($hashCode)
   #macro (hashCodeExpression $p)
     #if ($p.kind == "BYTE" || $p.kind == "SHORT" || $p.kind == "CHAR" || $p.kind == "INT")
-      $p ##
+      this.$p ##
     #elseif ($p.kind == "LONG")
-      ($p >>> 32) ^ $p ##
+      (this.$p >>> 32) ^ this.$p ##
     #elseif ($p.kind == "FLOAT")
-      Float.floatToIntBits($p) ##
+      Float.floatToIntBits(this.$p) ##
     #elseif ($p.kind == "DOUBLE")
-      (Double.doubleToLongBits($p) >>> 32) ^ Double.doubleToLongBits($p) ##
+      (Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p) ##
     #elseif ($p.kind == "BOOLEAN")
-      $p ? 1231 : 1237 ##
+      this.$p ? 1231 : 1237 ##
     #elseif ($p.kind == "ARRAY")
-      ${arrays}.hashCode($p) ##
+      ${arrays}.hashCode(this.$p) ##
     #else
-      #if ($p.nullable) ($p == null) ? 0 : #end ${p}.hashCode() ##
+      #if ($p.nullable) ($p == null) ? 0 : #end this.${p}.hashCode() ##
     #end
   #end
 
