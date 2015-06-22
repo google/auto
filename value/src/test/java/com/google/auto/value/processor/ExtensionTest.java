@@ -212,7 +212,7 @@ public class ExtensionTest extends TestCase {
     }
 
     @Override
-    public boolean mustBeAtEnd() {
+    public boolean mustBeAtEnd(Context context) {
       return true;
     }
 
