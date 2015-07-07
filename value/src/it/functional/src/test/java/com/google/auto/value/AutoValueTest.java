@@ -32,6 +32,7 @@ import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -381,11 +382,23 @@ public class AutoValueTest extends TestCase {
     }
   }
 
-  public void testNullablePropertiesCanBeNull() throws Exception {
+  public void testNullablePropertiesCanBeNull() {
     NullableProperties instance = NullableProperties.create(null, 23);
     assertNull(instance.nullableString());
     assertEquals(23, instance.randomInt());
     assertEquals("NullableProperties{nullableString=null, randomInt=23}", instance.toString());
+  }
+
+  @AutoAnnotation
+  static Nullable nullable() {
+    return new AutoAnnotation_AutoValueTest_nullable();
+  }
+
+  public void testNullablePropertyConstructorParameterIsNullable() throws NoSuchMethodException {
+    Constructor<?> constructor =
+        AutoValue_AutoValueTest_NullableProperties.class.getDeclaredConstructor(
+            String.class, int.class);
+    assertThat(constructor.getParameterAnnotations()[0]).asList().contains(nullable());
   }
 
   @AutoValue

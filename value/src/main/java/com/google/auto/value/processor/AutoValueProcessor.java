@@ -212,7 +212,6 @@ public class AutoValueProcessor extends AbstractProcessor {
           // implementation.
           continue;
         }
-        // TODO(emcmanus): we should import this type if it is not already imported
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
@@ -269,12 +268,22 @@ public class AutoValueProcessor extends AbstractProcessor {
       return annotations;
     }
 
-    public boolean isNullable() {
-      return nullableAnnotation != null;
-    }
-    
+    /**
+     * Returns the string to use as an annotation to indicate the nullability of this property.
+     * It is either the empty string, if the property is not nullable, or an annotation string
+     * with a trailing space, such as {@code "@Nullable "} or {@code "@javax.annotation.Nullable "}.
+     */
     public String getNullableAnnotation() {
-      return nullableAnnotation;
+      for (String annotationString : annotations) {
+        if (annotationString.equals("@Nullable") || annotationString.endsWith(".Nullable")) {
+          return annotationString + " ";
+        }
+      }
+      return "";
+    }
+
+    public boolean isNullable() {
+      return !getNullableAnnotation().isEmpty();
     }
 
     public String getAccess() {
@@ -426,6 +435,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.toBuilderMethods =
         FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
     Set<ExecutableElement> propertyMethods = Sets.difference(methodsToImplement, toBuilderMethods);
+    types.addAll(allMethodAnnotationTypes(propertyMethods));
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
@@ -484,6 +494,16 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
     return true;
+  }
+
+  private Set<TypeMirror> allMethodAnnotationTypes(Iterable<ExecutableElement> methods) {
+    Set<TypeMirror> annotationTypes = new TypeMirrorSet();
+    for (ExecutableElement method : methods) {
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        annotationTypes.add(annotationMirror.getAnnotationType());
+      }
+    }
+    return annotationTypes;
   }
 
   private String nameWithoutPrefix(String name) {

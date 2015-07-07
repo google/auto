@@ -35,7 +35,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   $subclass(
 #foreach ($p in $props)
 
-     #if ($p.nullable) ${p.nullableAnnotation} #end $p.type $p #if ($foreach.hasNext) , #end
+      ${p.nullableAnnotation}$p.type $p #if ($foreach.hasNext) , #end
 #end ) {
 #foreach ($p in $props)
   #if (!$p.kind.primitive && !$p.nullable && !$builderPropertyBuilders[$p.name])
@@ -251,7 +251,8 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     #foreach ($setter in $builderSetters[$p.name])
 
     @Override
-    public ${builderTypeName}${builderActualTypes} ${setter.name}($setter.parameterType $p) {
+    public ${builderTypeName}${builderActualTypes} ##
+        ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
       #if ($p.kind == "ARRAY")
         #if ($p.nullable)
 
@@ -287,7 +288,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     #if ($propertiesWithBuilderGetters.contains($p.name))
 
     @Override
-    public $p.type ${p.getter}() {
+    ${p.nullableAnnotation}public $p.type ${p.getter}() {
       #if ($builderRequiredProperties.contains($p))
 
       if ($p == null) {
