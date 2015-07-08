@@ -10,16 +10,16 @@ import java.util.Map;
  * An AutoValueExtension allows for extra functionality to be created during the generation
  * of an AutoValue class.
  *
- * Extensions are discovered at compile time using the {@link java.util.ServiceLoader} APIs,
+ * <p>Extensions are discovered at compile time using the {@link java.util.ServiceLoader} APIs,
  * allowing them to run without any additional annotations.
  *
- * Extensions can extend the AutoValue implementation by generating subclasses of the AutoValue
+ * <p>Extensions can extend the AutoValue implementation by generating subclasses of the AutoValue
  * generated class. It's not guaranteed that an Extension's generated class will be the final
  * class in the inheritance hierarchy, unless it's {@link #mustBeAtEnd} method returns true,
  * and only one Extension at a time can return true for a given context.  Only generated classes
  * that will be the final class in the inheritance hierarchy can be final.
  *
- * Each Extension must also be sure to generate a constructor with arguments corresponding to
+ * <p>Each Extension must also be sure to generate a constructor with arguments corresponding to
  * all properties in {@link com.google.auto.value.AutoValueExtension.Context#properties()}, in
  * order.  This constructor must have at least package visibility.
  */
@@ -33,7 +33,7 @@ public interface AutoValueExtension {
     /**
      * The processing environment of this generation cycle.
      *
-     * @return The {@link javax.annotation.processing.ProcessingEnvironment} of this generation cycle.
+     * @return The ProcessingEnvironment of this generation cycle.
      */
     ProcessingEnvironment processingEnvironment();
 
@@ -46,6 +46,8 @@ public interface AutoValueExtension {
 
     /**
      * The annotated class that this generation cycle is based on.
+     *
+     * Given {@code @AutoValue public class Foo {...}}, this will be {@code Foo}.
      *
      * @return The annotated class.
      */
@@ -62,8 +64,7 @@ public interface AutoValueExtension {
   /**
    * Determines whether this extension applies to the given context.
    *
-   * @param context The {@link com.google.auto.value.AutoValueExtension.Context} of the code
-   *                generation for this class.
+   * @param context The Context of the code generation for this class.
    * @return True if this extension should be applied in the given context.
    */
   boolean applicable(Context context);
