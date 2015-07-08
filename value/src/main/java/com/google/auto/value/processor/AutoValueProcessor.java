@@ -77,7 +77,7 @@ import java.util.Set;
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
   public AutoValueProcessor() {
-    this(null);
+    this(ServiceLoader.load(AutoValueExtension.class, AutoValueProcessor.class.getClassLoader()));
   }
 
   /* testing */ AutoValueProcessor(Iterable<AutoValueExtension> extensions) {
@@ -107,9 +107,6 @@ public class AutoValueProcessor extends AbstractProcessor {
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
-    if (extensions == null) {
-      extensions = ServiceLoader.load(AutoValueExtension.class, getClass().getClassLoader());
-    }
     errorReporter = new ErrorReporter(processingEnv);
   }
 
@@ -448,7 +445,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private AutoValueExtension.Context makeExtensionContext(final TypeElement type, final Iterable<ExecutableElement> methods) {
+  private AutoValueExtension.Context makeExtensionContext(
+      final TypeElement type, final Iterable<ExecutableElement> methods) {
     return new AutoValueExtension.Context() {
 
       @Override public ProcessingEnvironment processingEnvironment() {
@@ -469,7 +467,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     };
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars, List<ExecutableElement> methods) {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars,
+                                 List<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);

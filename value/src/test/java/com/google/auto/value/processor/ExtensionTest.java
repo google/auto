@@ -230,8 +230,6 @@ public class ExtensionTest extends TestCase {
         } else {
           constructor.append(", ");
         }
-
-        // TODO How are we going to handle the constructor?
         constructor.append("String " + el.getKey());
       }
 
@@ -245,8 +243,6 @@ public class ExtensionTest extends TestCase {
         } else {
           constructor.append(", ");
         }
-
-        // TODO How are we going to handle the constructor?
         constructor.append(el.getKey());
       }
       constructor.append(");\n");
