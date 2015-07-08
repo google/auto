@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Google, Inc.
+ * Copyright (C) 2013 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,11 @@ package tests;
 
 import com.google.auto.factory.AutoFactory;
 
-class MultipleFactoriesImplementingInterface {  
-  static interface Base {
-    static interface Factory {
-      public abstract Base abstractNonDefaultCreate();
-    }
-  }
+final class NestedClasses {
 
-  @AutoFactory(implementing = Base.Factory.class)
-  static class ClassA implements Base { }
+  @AutoFactory
+  static final class SimpleNestedClass {}
 
-  @AutoFactory(implementing = Base.Factory.class)
-  static class ClassB implements Base {}
-}  
+  @AutoFactory(className = "CustomNamedFactory")
+  static final class SimpleNestedClassWithCustomFactory {}
+}

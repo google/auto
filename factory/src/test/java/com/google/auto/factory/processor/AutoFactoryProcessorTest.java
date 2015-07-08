@@ -15,18 +15,16 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.truth.Truth.assertAbout;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
-
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
-
+import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import javax.tools.JavaFileObject;
+import static com.google.common.truth.Truth.assertAbout;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 /**
  * Functional tests for the {@link AutoFactoryProcessor}.
@@ -39,6 +37,18 @@ public class AutoFactoryProcessorTest {
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource("expected/SimpleClassFactory.java"));
+  }
+
+  @Test
+  public void nestedClasses() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/NestedClasses.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(
+            JavaFileObjects.forResource("expected/NestedClasses_SimpleNestedClassFactory.java"),
+            JavaFileObjects.forResource("expected/NestedClasses_CustomNamedFactory.java"));
   }
 
   @Test public void simpleClassNonFinal() {
@@ -300,9 +310,9 @@ public class AutoFactoryProcessorTest {
         .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource(
-                "expected/MultipleFactoriesImplementingInterfaceAFactory.java"),
+                "expected/MultipleFactoriesImplementingInterface_ClassAFactory.java"),
             JavaFileObjects.forResource(
-                "expected/MultipleFactoriesImplementingInterfaceBFactory.java"));
+                "expected/MultipleFactoriesImplementingInterface_ClassBFactory.java"));
   }
 
   @Test public void classUsingQualifierWithArgs() {

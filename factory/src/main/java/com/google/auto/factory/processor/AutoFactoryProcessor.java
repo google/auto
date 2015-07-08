@@ -75,7 +75,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =
-        new FactoryDescriptorGenerator(messager, elements, types, declarationFactory);
+        new FactoryDescriptorGenerator(messager, types, declarationFactory);
   }
 
   @Override
@@ -101,10 +101,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
-        String factoryName = declaration.get().getFactoryName(
-            elements.getPackageOf(element).getQualifiedName(), 
-            getAnnotatedType(element).getSimpleName());
-
+        String factoryName = declaration.get().getFactoryName();
         TypeElement extendingType = declaration.get().extendingType();
         List<ExecutableElement> supertypeMethods =
             ElementFilter.methodsIn(elements.getAllMembers(extendingType));

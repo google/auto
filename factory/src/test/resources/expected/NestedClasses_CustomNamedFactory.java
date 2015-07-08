@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Google, Inc.
+ * Copyright (C) 2013 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,14 @@
  */
 package tests;
 
-import com.google.auto.factory.AutoFactory;
+import javax.annotation.Generated;
+import javax.inject.Inject;
 
-class MultipleFactoriesImplementingInterface {  
-  static interface Base {
-    static interface Factory {
-      public abstract Base abstractNonDefaultCreate();
-    }
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+final class NestedClasses_CustomNamedFactory {
+  @Inject NestedClasses_CustomNamedFactory() {}
+  
+  NestedClasses.SimpleNestedClassWithCustomFactory create() {
+    return new NestedClasses.SimpleNestedClassWithCustomFactory();
   }
-
-  @AutoFactory(implementing = Base.Factory.class)
-  static class ClassA implements Base { }
-
-  @AutoFactory(implementing = Base.Factory.class)
-  static class ClassB implements Base {}
-}  
+}

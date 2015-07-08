@@ -15,16 +15,15 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
 import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * A value object representing a factory method to be generated.
@@ -33,7 +32,6 @@ import java.util.Set;
  */
 final class FactoryMethodDescriptor {
   private final AutoFactoryDeclaration declaration;
-  private final String factoryName;
   private final String name;
   private final String returnType;
   private final boolean publicMethod;
@@ -44,7 +42,6 @@ final class FactoryMethodDescriptor {
 
   private FactoryMethodDescriptor(Builder builder) {
     this.declaration = builder.declaration;
-    this.factoryName = builder.factoryName.get();
     this.name = builder.name.get();
     this.returnType = builder.returnType.get();
     this.publicMethod = builder.publicMethod;
@@ -60,7 +57,7 @@ final class FactoryMethodDescriptor {
   }
 
   String factoryName() {
-    return factoryName;
+    return declaration.getFactoryName();
   }
 
   String name() {
@@ -93,8 +90,8 @@ final class FactoryMethodDescriptor {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
-        .add("factoryName", factoryName)
+    return MoreObjects.toStringHelper(this)
+        .add("factoryName", factoryName())
         .add("name", name)
         .add("returnType", returnType)
         .add("passed", passedParameters)
@@ -104,7 +101,6 @@ final class FactoryMethodDescriptor {
 
   static final class Builder {
     private final AutoFactoryDeclaration declaration;
-    private Optional<String> factoryName = Optional.absent();
     private Optional<String> name = Optional.absent();
     private Optional<String> returnType = Optional.absent();
     private boolean publicMethod = false;
@@ -115,11 +111,6 @@ final class FactoryMethodDescriptor {
 
     Builder(AutoFactoryDeclaration declaration) {
       this.declaration = checkNotNull(declaration);
-    }
-
-    Builder factoryName(String factoryName) {
-      this.factoryName = Optional.of(factoryName);
-      return this;
     }
 
     Builder name(String name) {

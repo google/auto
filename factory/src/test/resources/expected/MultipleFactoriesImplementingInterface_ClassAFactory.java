@@ -15,18 +15,21 @@
  */
 package tests;
 
-import com.google.auto.factory.AutoFactory;
+import javax.annotation.Generated;
+import javax.inject.Inject;
+import tests.MultipleFactoriesImplementingInterface.Base.Factory;
 
-class MultipleFactoriesImplementingInterface {  
-  static interface Base {
-    static interface Factory {
-      public abstract Base abstractNonDefaultCreate();
-    }
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+final class MultipleFactoriesImplementingInterface_ClassAFactory implements Factory {
+  @Inject
+  MultipleFactoriesImplementingInterface_ClassAFactory() {}
+
+  MultipleFactoriesImplementingInterface.ClassA create() {
+    return new MultipleFactoriesImplementingInterface.ClassA();
   }
 
-  @AutoFactory(implementing = Base.Factory.class)
-  static class ClassA implements Base { }
-
-  @AutoFactory(implementing = Base.Factory.class)
-  static class ClassB implements Base {}
-}  
+  @Override
+  public MultipleFactoriesImplementingInterface.ClassA abstractNonDefaultCreate() {
+    return create();
+  }
+}
