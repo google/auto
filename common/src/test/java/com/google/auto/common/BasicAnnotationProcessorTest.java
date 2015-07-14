@@ -233,12 +233,17 @@ public class BasicAnnotationProcessorTest {
   }
 
   private static void generateClass(Filer filer, String generatedClassName) {
-    try (PrintWriter writer =
-            new PrintWriter(filer.createSourceFile("test." + generatedClassName).openWriter())) {
+    PrintWriter writer = null;
+    try {
+      writer = new PrintWriter(filer.createSourceFile("test." + generatedClassName).openWriter());
       writer.println("package test;");
       writer.println("public class " + generatedClassName + " {}");
     } catch (IOException e) {
       throw new RuntimeException(e);
+    } finally {
+      if (writer != null) {
+        writer.close();
+      }
     }
   }
 }

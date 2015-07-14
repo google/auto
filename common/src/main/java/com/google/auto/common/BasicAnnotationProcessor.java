@@ -101,7 +101,7 @@ import static javax.tools.Diagnostic.Kind.ERROR;
  */
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
-  private final Set<ElementName> deferredElementNames = new LinkedHashSet<>();
+  private final Set<ElementName> deferredElementNames = new LinkedHashSet<ElementName>();
   private final SetMultimap<ProcessingStep, ElementName> elementsDeferredBySteps =
       LinkedHashMultimap.create();
   private final String processorName = getClass().getCanonicalName();
@@ -253,7 +253,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> validElements =
         ImmutableSetMultimap.builder();
 
-    Set<ElementName> validElementNames = new LinkedHashSet<>();
+    Set<ElementName> validElementNames = new LinkedHashSet<ElementName>();
 
     // Look at the elements we've found and the new elements from this round and validate them.
     for (Class<? extends Annotation> annotationClass : getSupportedAnnotationClasses()) {
