@@ -29,7 +29,7 @@ ${gwtCompatibleAnnotation}
 
 ## Constructor
 
-#if ($builderTypeName != "")
+#if ($isFinal && $builderTypeName != "")
   private ##
 #end
   $subclass(
@@ -340,7 +340,7 @@ ${gwtCompatibleAnnotation}
       }
   #end
 
-      return new ${subclass}${actualTypes}(
+      return new ${finalSubclass}${actualTypes}(
   #foreach ($p in $props)
 
           this.$p ##

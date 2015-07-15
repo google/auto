@@ -62,6 +62,11 @@ public class ExtensionTest extends TestCase {
         "  abstract String foo();",
         "  abstract String bar();",
         "",
+        "  @AutoValue.Builder public static abstract class Builder {",
+        "    public abstract Builder foo(String foo);",
+        "    public abstract Builder bar(String bar);",
+        "    public abstract Baz build();",
+        "  }",
         "}");
     JavaFileObject expectedExtensionOutput = JavaFileObjects.forSourceLines(
         "foo.bar.AutoValue_Baz",

@@ -410,12 +410,14 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
     }
 
+    String finalSubclass = generatedSubclassName(type, 0);
     String subclass = generatedSubclassName(type, appliedExtensions.size());
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = fqExtClass;
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
+    vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.isFinal = appliedExtensions.isEmpty();
     vars.types = processingEnv.getTypeUtils();
     defineVarsForType(type, vars, methods);
