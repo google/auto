@@ -15,6 +15,9 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
+import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Functions;
@@ -26,7 +29,9 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 
 import java.beans.Introspector;
@@ -37,7 +42,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +58,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
@@ -336,38 +342,77 @@ public class AutoValueProcessor extends AbstractProcessor {
     return ObjectMethodToOverride.NONE;
   }
 
-  private void findLocalAndInheritedMethods(TypeElement type, List<ExecutableElement> methods) {
-    Types typeUtils = processingEnv.getTypeUtils();
-    Elements elementUtils = processingEnv.getElementUtils();
+  // Returns the set of all methods from `type` that are visible to code in its package. This
+  // includes methods that `type` inherits, but not those that are overridden. So if `type` defines
+  // `public String toString()`, the returned set will contain that method, but not the `toString()`
+  // method defined by `Object`.
+  static Set<ExecutableElement> findLocalAndInheritedMethods(
+      TypeElement type, Elements elementUtils) {
+    SetMultimap<String, ExecutableElement> methodMap = LinkedHashMultimap.create();
+    findPackageVisibleMethods(MoreElements.getPackage(type), type, methodMap);
+    // Find methods that are overridden. We do this using `Elements.overrides`, which means
+    // that it is inherently a quadratic operation, since we have to compare every method against
+    // every other method. We reduce the performance impact by (a) grouping methods by name, since
+    // a method cannot override another method with a different name, and (b) making sure that
+    // methods in ancestor types precede those in descendant types, which means we only have to
+    // check a method against the ones that follow it in that order.
+    Set<ExecutableElement> overridden = new LinkedHashSet<ExecutableElement>();
+    for (String methodName : methodMap.keySet()) {
+      List<ExecutableElement> methodList = ImmutableList.copyOf(methodMap.get(methodName));
+      for (int i = 0; i < methodList.size(); i++) {
+        ExecutableElement methodI = methodList.get(i);
+        for (int j = i + 1; j < methodList.size(); j++) {
+          ExecutableElement methodJ = methodList.get(j);
+          if (elementUtils.overrides(methodJ, methodI, type)) {
+            overridden.add(methodI);
+          }
+        }
+      }
+    }
+    Set<ExecutableElement> methods = new LinkedHashSet<ExecutableElement>(methodMap.values());
+    methods.removeAll(overridden);
+    return methods;
+  }
+
+  // Add to `methods` the instance methods from `type` that are visible to code in the
+  // package `pkg`. This means all the instance methods from `type` itself and all instance methods
+  // it inherits from its ancestors, except private methods and package-private methods in other
+  // packages. This method does not take overriding into account, so it will add both an ancestor
+  // method and a descendant method that overrides it.
+  // `methods` is a multimap from a method name to all of the methods with that name, including
+  // methods that override or overload one another. Within those methods, those in ancestor types
+  // always precede those in descendant types.
+  private static void findPackageVisibleMethods(
+      PackageElement pkg, TypeElement type, SetMultimap<String, ExecutableElement> methods) {
     for (TypeMirror superInterface : type.getInterfaces()) {
-      findLocalAndInheritedMethods((TypeElement) typeUtils.asElement(superInterface), methods);
+      findPackageVisibleMethods(pkg, MoreTypes.asTypeElement(superInterface), methods);
     }
     if (type.getSuperclass().getKind() != TypeKind.NONE) {
       // Visit the superclass after superinterfaces so we will always see the implementation of a
       // method after any interfaces that declared it.
-      findLocalAndInheritedMethods(
-          (TypeElement) typeUtils.asElement(type.getSuperclass()), methods);
+      findPackageVisibleMethods(pkg, MoreTypes.asTypeElement(type.getSuperclass()), methods);
     }
-    // Add each method of this class, and in so doing remove any inherited method it overrides.
-    // This algorithm is quadratic in the number of methods but it's hard to see how to improve
-    // that while still using Elements.overrides.
-    List<ExecutableElement> theseMethods = ElementFilter.methodsIn(type.getEnclosedElements());
-    for (ExecutableElement method : theseMethods) {
-      if (!method.getModifiers().contains(Modifier.PRIVATE)) {
-        boolean alreadySeen = false;
-        for (Iterator<ExecutableElement> methodIter = methods.iterator(); methodIter.hasNext();) {
-          ExecutableElement otherMethod = methodIter.next();
-          if (elementUtils.overrides(method, otherMethod, type)) {
-            methodIter.remove();
-          } else if (method.getSimpleName().equals(otherMethod.getSimpleName())
-              && method.getParameters().equals(otherMethod.getParameters())) {
-            // If we inherit this method on more than one path, we don't want to add it twice.
-            alreadySeen = true;
-          }
-        }
-        if (!alreadySeen) {
-          methods.add(method);
-        }
+    for (ExecutableElement method : ElementFilter.methodsIn(type.getEnclosedElements())) {
+      if (method.getModifiers().contains(Modifier.STATIC)) {
+        continue;
+      }
+      // We use Visibility.ofElement rather than .effectiveVisibilityOfElement because it doesn't
+      // really matter whether the containing class is visible. If you inherit a public method
+      // then you have a public method, regardless of whether you inherit it from a public class.
+      Visibility visibility = Visibility.ofElement(method);
+      boolean visible;
+      switch (visibility) {
+        case PRIVATE:
+          visible = false;
+          break;
+        case DEFAULT:
+          visible = MoreElements.getPackage(method).equals(pkg);
+          break;
+        default:
+          visible = true;
+      }
+      if (visible) {
+        methods.put(method.getSimpleName().toString(), method);
       }
     }
   }
@@ -409,8 +454,8 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
     Types typeUtils = processingEnv.getTypeUtils();
-    List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    findLocalAndInheritedMethods(type, methods);
+    Set<ExecutableElement> methods =
+        findLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
@@ -567,7 +612,7 @@ public class AutoValueProcessor extends AbstractProcessor {
    * toString fields of vars according as the corresponding methods should be generated.
    */
   private static void determineObjectMethodsToGenerate(
-      List<ExecutableElement> methods, AutoValueTemplateVars vars) {
+      Set<ExecutableElement> methods, AutoValueTemplateVars vars) {
     // The defaults here only come into play when an ancestor class doesn't exist.
     // Compilation will fail in that case, but we don't want it to crash the compiler with
     // an exception before it does. If all ancestors do exist then we will definitely find
@@ -593,7 +638,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableSet<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
+  private ImmutableSet<ExecutableElement> methodsToImplement(Set<ExecutableElement> methods) {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
     boolean errors = false;
     for (ExecutableElement method : methods) {

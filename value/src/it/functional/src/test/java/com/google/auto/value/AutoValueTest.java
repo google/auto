@@ -35,12 +35,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
 
@@ -938,6 +940,63 @@ public class AutoValueTest extends TestCase {
     ComplexInheritance complex = ComplexInheritance.create("fred");
     assertEquals("fred", complex.name());
     assertEquals(42, complex.answer());
+  }
+
+  // This tests the case where we inherit abstract methods on more than one path. AbstractList
+  // extends AbstractCollection, which implements Collection; and AbstractList also implements List,
+  // which extends Collection. So the class here inherits the methods of Collection on more than
+  // one path. In an earlier version of the logic for handling inheritance, this confused us into
+  // thinking that the methods from Collection were still abstract and therefore candidates for
+  // implementation, even though we inherit concrete implementations of them from AbstractList.
+  @AutoValue
+  public static class MoreComplexInheritance extends AbstractList<String> {
+    @Override
+    public String get(int index) {
+      throw new NoSuchElementException(String.valueOf(index));
+    }
+
+    @Override
+    public int size() {
+      return 0;
+    }
+
+    public static MoreComplexInheritance create() {
+      return new AutoValue_AutoValueTest_MoreComplexInheritance();
+    }
+  }
+
+  public void testMoreComplexInheritance() {
+    MoreComplexInheritance instance1 = MoreComplexInheritance.create();
+    MoreComplexInheritance instance2 = MoreComplexInheritance.create();
+    assertThat(instance1).isEqualTo(instance2);
+    assertThat(instance1).isNotSameAs(instance2);
+  }
+
+  // Test that we are not misled by the privateness of an ancestor into thinking that its methods
+  // are invisible to descendants.
+  public abstract static class PublicGrandparent {
+    public abstract String foo();
+  }
+
+  private static class PrivateParent extends PublicGrandparent {
+    @Override
+    public String foo() {
+      return "foo";
+    }
+  }
+
+  @AutoValue
+  static class EffectiveVisibility extends PrivateParent {
+    static EffectiveVisibility create() {
+      return new AutoValue_AutoValueTest_EffectiveVisibility();
+    }
+  }
+
+  public void testEffectiveVisibility() {
+    EffectiveVisibility instance1 = EffectiveVisibility.create();
+    EffectiveVisibility instance2 = EffectiveVisibility.create();
+    assertThat(instance1).isEqualTo(instance2);
+    assertThat(instance1).isNotSameAs(instance2);
   }
 
   @AutoValue
