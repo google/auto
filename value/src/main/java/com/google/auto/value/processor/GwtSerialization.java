@@ -60,7 +60,7 @@ class GwtSerialization {
     if (optionalGwtCompatible.isPresent()) {
       AnnotationMirror gwtCompatible = optionalGwtCompatible.get();
       for (Map.Entry<ExecutableElement, AnnotationValue> entry :
-          Collections.unmodifiableMap(gwtCompatible.getElementValues()).entrySet()) {
+          GwtCompatibility.getElementValues(gwtCompatible).entrySet()) {
         if (entry.getKey().getSimpleName().contentEquals("serializable")
             && entry.getValue().getValue().equals(true)) {
           return true;
