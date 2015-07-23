@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.auto.common.MoreElements;
@@ -402,7 +403,7 @@ class BuilderSpec {
 
   // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
   private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
-    Set<ExecutableElement> methods = AutoValueProcessor.findLocalAndInheritedMethods(
+    Set<ExecutableElement> methods = getLocalAndInheritedMethods(
         typeElement, processingEnv.getElementUtils());
     ImmutableSet.Builder<ExecutableElement> abstractMethods = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
