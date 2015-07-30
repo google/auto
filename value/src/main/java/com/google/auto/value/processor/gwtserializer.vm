@@ -17,14 +17,13 @@ package $pkg;
 #foreach ($i in $imports)
 import $i;
 #end
+import com.google.gwt.user.client.rpc.CustomFieldSerializer;
 import com.google.gwt.user.client.rpc.SerializationException;
 import com.google.gwt.user.client.rpc.SerializationStreamReader;
 import com.google.gwt.user.client.rpc.SerializationStreamWriter;
 
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
-public final class $serializerClass {
-  // There are no instances of this class.
-  private ${serializerClass}() {}
+public final class $serializerClass$formalTypes extends CustomFieldSerializer<$subclass$actualTypes> {
 
   public static $formalTypes $subclass$actualTypes instantiate(
       SerializationStreamReader streamReader) throws SerializationException {
@@ -65,4 +64,29 @@ public final class $serializerClass {
   // based on the fields of the serializer rather than the class itself.
   @SuppressWarnings("unused")
   private int dummy_$classHashString;
+
+  @Override
+  public void deserializeInstance(
+      SerializationStreamReader streamReader,
+      $subclass$actualTypes instance) {
+    deserialize(streamReader, instance);
+  }
+
+  @Override
+  public boolean hasCustomInstantiateInstance() {
+    return true;
+  }
+
+  @Override
+  public $subclass$actualTypes instantiateInstance(
+      SerializationStreamReader streamReader) throws SerializationException {
+    return instantiate(streamReader);
+  }
+
+  @Override
+  public void serializeInstance(
+    SerializationStreamWriter streamWriter,
+    $subclass$actualTypes instance) throws SerializationException {
+    serialize(streamWriter, instance);
+  }
 }

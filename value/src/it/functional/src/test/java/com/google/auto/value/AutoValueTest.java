@@ -1595,4 +1595,17 @@ public class AutoValueTest extends TestCase {
         methodInSuperclass.getAnnotation(HairyAnnotation.class);
     assertEquals(annotationInSuperclass, annotationInSubclass);
   }
+
+  @AutoValue
+  abstract static class HProperty {
+    public abstract Object h();
+    public static HProperty create(Object h) {
+      return new AutoValue_AutoValueTest_HProperty(h);
+    }
+  }
+  public void testHProperty() throws Exception {
+    // Checks that we can have a property called `h`. The generated hashCode() method has
+    // a local variable of that name and can cause the error `int cannot be dereferenced`
+    HProperty.create(new Object());
+  }
 }
