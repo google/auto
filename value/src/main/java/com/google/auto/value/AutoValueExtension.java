@@ -10,11 +10,13 @@ import java.util.Map;
  * An AutoValueExtension allows for extra functionality to be created during the generation
  * of an AutoValue class.
  *
+ * <p>NOTE: The design of this interface is not final and subject to change.
+ *
  * <p>Extensions are discovered at compile time using the {@link java.util.ServiceLoader} APIs,
  * allowing them to run without any additional annotations.
  *
  * <p>Extensions can extend the AutoValue implementation by generating subclasses of the AutoValue
- * generated class. It's not guaranteed that an Extension's generated class will be the final
+ * generated class. Its not guaranteed that an Extension's generated class will be the final
  * class in the inheritance hierarchy, unless it's {@link #mustBeAtEnd} method returns true,
  * and only one Extension at a time can return true for a given context.  Only generated classes
  * that will be the final class in the inheritance hierarchy can be final.
