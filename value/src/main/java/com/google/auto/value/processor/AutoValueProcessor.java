@@ -15,6 +15,9 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+
+import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.AutoValueExtension;
@@ -30,6 +33,18 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import java.beans.Introspector;
+import java.io.IOException;
+import java.io.Serializable;
+import java.io.Writer;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
@@ -49,7 +64,6 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -222,7 +236,6 @@ public class AutoValueProcessor extends AbstractProcessor {
           // implementation.
           continue;
         }
-        // TODO(emcmanus): we should import this type if it is not already imported
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
@@ -279,12 +292,22 @@ public class AutoValueProcessor extends AbstractProcessor {
       return annotations;
     }
 
-    public boolean isNullable() {
-      return nullableAnnotation != null;
-    }
-    
+    /**
+     * Returns the string to use as an annotation to indicate the nullability of this property.
+     * It is either the empty string, if the property is not nullable, or an annotation string
+     * with a trailing space, such as {@code "@Nullable "} or {@code "@javax.annotation.Nullable "}.
+     */
     public String getNullableAnnotation() {
-      return nullableAnnotation;
+      for (String annotationString : annotations) {
+        if (annotationString.equals("@Nullable") || annotationString.endsWith(".Nullable")) {
+          return annotationString + " ";
+        }
+      }
+      return "";
+    }
+
+    public boolean isNullable() {
+      return !getNullableAnnotation().isEmpty();
     }
 
     public String getAccess() {
@@ -337,42 +360,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     return ObjectMethodToOverride.NONE;
   }
 
-  private void findLocalAndInheritedMethods(TypeElement type, List<ExecutableElement> methods) {
-    Types typeUtils = processingEnv.getTypeUtils();
-    Elements elementUtils = processingEnv.getElementUtils();
-    for (TypeMirror superInterface : type.getInterfaces()) {
-      findLocalAndInheritedMethods((TypeElement) typeUtils.asElement(superInterface), methods);
-    }
-    if (type.getSuperclass().getKind() != TypeKind.NONE) {
-      // Visit the superclass after superinterfaces so we will always see the implementation of a
-      // method after any interfaces that declared it.
-      findLocalAndInheritedMethods(
-          (TypeElement) typeUtils.asElement(type.getSuperclass()), methods);
-    }
-    // Add each method of this class, and in so doing remove any inherited method it overrides.
-    // This algorithm is quadratic in the number of methods but it's hard to see how to improve
-    // that while still using Elements.overrides.
-    List<ExecutableElement> theseMethods = ElementFilter.methodsIn(type.getEnclosedElements());
-    for (ExecutableElement method : theseMethods) {
-      if (!method.getModifiers().contains(Modifier.PRIVATE)) {
-        boolean alreadySeen = false;
-        for (Iterator<ExecutableElement> methodIter = methods.iterator(); methodIter.hasNext();) {
-          ExecutableElement otherMethod = methodIter.next();
-          if (elementUtils.overrides(method, otherMethod, type)) {
-            methodIter.remove();
-          } else if (method.getSimpleName().equals(otherMethod.getSimpleName())
-              && method.getParameters().equals(otherMethod.getParameters())) {
-            // If we inherit this method on more than one path, we don't want to add it twice.
-            alreadySeen = true;
-          }
-        }
-        if (!alreadySeen) {
-          methods.add(method);
-        }
-      }
-    }
-  }
-
   private void processType(TypeElement type) {
     AutoValue autoValue = type.getAnnotation(AutoValue.class);
     if (autoValue == null) {
@@ -393,8 +380,7 @@ public class AutoValueProcessor extends AbstractProcessor {
           + " interface; try using @AutoAnnotation instead", type);
     }
 
-    List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    findLocalAndInheritedMethods(type, methods);
+    ImmutableSet<ExecutableElement> methods = getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
 
     String fqExtClass = TypeSimplifier.classNameOf(type);
@@ -470,7 +456,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars,
-                                 List<ExecutableElement> methods) {
+                                 Set<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
@@ -496,6 +482,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.toBuilderMethods =
         FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
     Set<ExecutableElement> propertyMethods = Sets.difference(methodsToImplement, toBuilderMethods);
+    types.addAll(allMethodAnnotationTypes(propertyMethods));
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
     vars.imports = typeSimplifier.typesToImport();
@@ -569,6 +556,16 @@ public class AutoValueProcessor extends AbstractProcessor {
     return true;
   }
 
+  private Set<TypeMirror> allMethodAnnotationTypes(Iterable<ExecutableElement> methods) {
+    Set<TypeMirror> annotationTypes = new TypeMirrorSet();
+    for (ExecutableElement method : methods) {
+      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        annotationTypes.add(annotationMirror.getAnnotationType());
+      }
+    }
+    return annotationTypes;
+  }
+
   private String nameWithoutPrefix(String name) {
     if (name.startsWith("get")) {
       name = name.substring(3);
@@ -630,7 +627,7 @@ public class AutoValueProcessor extends AbstractProcessor {
    * toString fields of vars according as the corresponding methods should be generated.
    */
   private static void determineObjectMethodsToGenerate(
-      List<ExecutableElement> methods, AutoValueTemplateVars vars) {
+      Set<ExecutableElement> methods, AutoValueTemplateVars vars) {
     // The defaults here only come into play when an ancestor class doesn't exist.
     // Compilation will fail in that case, but we don't want it to crash the compiler with
     // an exception before it does. If all ancestors do exist then we will definitely find
@@ -656,7 +653,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableSet<ExecutableElement> methodsToImplement(List<ExecutableElement> methods) {
+  private ImmutableSet<ExecutableElement> methodsToImplement(Set<ExecutableElement> methods) {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
     boolean errors = false;
     for (ExecutableElement method : methods) {
@@ -701,7 +698,13 @@ public class AutoValueProcessor extends AbstractProcessor {
         writer.close();
       }
     } catch (IOException e) {
-      processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+      // This should really be an error, but we make it a warning in the hope of resisting Eclipse
+      // bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=367599. If that bug manifests, we may get
+      // invoked more than once for the same file, so ignoring the ability to overwrite it is the
+      // right thing to do. If we are unable to write for some other reason, we should get a compile
+      // error later because user code will have a reference to the code we were supposed to
+      // generate (new AutoValue_Foo() or whatever) and that reference will be undefined.
+      processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
           "Could not write generated class " + className + ": " + e);
     }
   }

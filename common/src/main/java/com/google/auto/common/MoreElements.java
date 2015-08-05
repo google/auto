@@ -19,9 +19,14 @@ package com.google.auto.common;
 import com.google.common.annotations.Beta;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.SetMultimap;
 
 import java.lang.annotation.Annotation;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.lang.model.element.AnnotationMirror;
@@ -32,6 +37,9 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
 
@@ -229,6 +237,87 @@ public final class MoreElements {
         return input.getModifiers().containsAll(modifiers);
       }
     };
+  }
+
+  /**
+   * Returns the set of all non-private methods from {@code type}, including methods that it
+   * inherits from its ancestors. Inherited methods that are overridden are not included in the
+   * result. So if {@code type} defines {@code public String toString()}, the returned set will
+   * contain that method, but not the {@code toString()} method defined by {@code Object}.
+   *
+   * @param type the type whose own and inherited methods are to be returned
+   * @param elementUtils an {@link Elements} object, typically returned by
+   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getElementUtils()
+   *     getElementUtils()}
+   */
+  public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
+      TypeElement type, Elements elementUtils) {
+    SetMultimap<String, ExecutableElement> methodMap = LinkedHashMultimap.create();
+    getLocalAndInheritedMethods(getPackage(type), type, methodMap);
+    // Find methods that are overridden. We do this using `Elements.overrides`, which means
+    // that it is inherently a quadratic operation, since we have to compare every method against
+    // every other method. We reduce the performance impact by (a) grouping methods by name, since
+    // a method cannot override another method with a different name, and (b) making sure that
+    // methods in ancestor types precede those in descendant types, which means we only have to
+    // check a method against the ones that follow it in that order.
+    Set<ExecutableElement> overridden = new LinkedHashSet<ExecutableElement>();
+    for (String methodName : methodMap.keySet()) {
+      List<ExecutableElement> methodList = ImmutableList.copyOf(methodMap.get(methodName));
+      for (int i = 0; i < methodList.size(); i++) {
+        ExecutableElement methodI = methodList.get(i);
+        for (int j = i + 1; j < methodList.size(); j++) {
+          ExecutableElement methodJ = methodList.get(j);
+          if (elementUtils.overrides(methodJ, methodI, type)) {
+            overridden.add(methodI);
+          }
+        }
+      }
+    }
+    Set<ExecutableElement> methods = new LinkedHashSet<ExecutableElement>(methodMap.values());
+    methods.removeAll(overridden);
+    return ImmutableSet.copyOf(methods);
+  }
+
+  // Add to `methods` the instance methods from `type` that are visible to code in the
+  // package `pkg`. This means all the instance methods from `type` itself and all instance methods
+  // it inherits from its ancestors, except private methods and package-private methods in other
+  // packages. This method does not take overriding into account, so it will add both an ancestor
+  // method and a descendant method that overrides it.
+  // `methods` is a multimap from a method name to all of the methods with that name, including
+  // methods that override or overload one another. Within those methods, those in ancestor types
+  // always precede those in descendant types.
+  private static void getLocalAndInheritedMethods(
+      PackageElement pkg, TypeElement type, SetMultimap<String, ExecutableElement> methods) {
+    for (TypeMirror superInterface : type.getInterfaces()) {
+      getLocalAndInheritedMethods(pkg, MoreTypes.asTypeElement(superInterface), methods);
+    }
+    if (type.getSuperclass().getKind() != TypeKind.NONE) {
+      // Visit the superclass after superinterfaces so we will always see the implementation of a
+      // method after any interfaces that declared it.
+      getLocalAndInheritedMethods(pkg, MoreTypes.asTypeElement(type.getSuperclass()), methods);
+    }
+    for (ExecutableElement method : ElementFilter.methodsIn(type.getEnclosedElements())) {
+      if (!method.getModifiers().contains(Modifier.STATIC)
+          && methodVisibleFromPackage(method, pkg)) {
+        methods.put(method.getSimpleName().toString(), method);
+      }
+    }
+  }
+
+  private static boolean methodVisibleFromPackage(ExecutableElement method, PackageElement pkg) {
+    // We use Visibility.ofElement rather than .effectiveVisibilityOfElement because it doesn't
+    // really matter whether the containing class is visible. If you inherit a public method
+    // then you have a public method, regardless of whether you inherit it from a public class.
+    Visibility visibility = Visibility.ofElement(method);
+    switch (visibility) {
+      case PRIVATE:
+        return false;
+      case DEFAULT:
+        return getPackage(method).equals(pkg);
+      default:
+        return true;
+    }
   }
 
   private MoreElements() {}

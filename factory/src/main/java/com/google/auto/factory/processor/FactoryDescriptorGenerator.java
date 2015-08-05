@@ -15,12 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.PUBLIC;
-import static javax.tools.Diagnostic.Kind.ERROR;
-
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.common.base.Function;
@@ -31,7 +25,6 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
-
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -41,7 +34,14 @@ import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
-import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
+
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * A service that traverses an element and returns the set of factory methods defined therein.
@@ -50,13 +50,15 @@ import javax.lang.model.util.Elements;
  */
 final class FactoryDescriptorGenerator {
   private final Messager messager;
-  private final Elements elements;
+  private final Types types;
   private final AutoFactoryDeclaration.Factory declarationFactory;
 
-  FactoryDescriptorGenerator(Messager messager, Elements elements,
+  FactoryDescriptorGenerator(
+      Messager messager,
+      Types types,
       AutoFactoryDeclaration.Factory declarationFactory) {
     this.messager = messager;
-    this.elements = elements;
+    this.types = types;
     this.declarationFactory = declarationFactory;
   }
 
@@ -138,28 +140,26 @@ final class FactoryDescriptorGenerator {
             new Predicate<VariableElement>() {
               @Override
               public boolean apply(VariableElement parameter) {
-                return parameter.getAnnotation(Provided.class) != null;
+                return isAnnotationPresent(parameter, Provided.class);
               }
             }));
-    ImmutableSet<Parameter> providedParameters = Parameter.forParameterList(parameterMap.get(true));
-    ImmutableSet<Parameter> passedParameters = Parameter.forParameterList(parameterMap.get(false));
+    ImmutableSet<Parameter> providedParameters =
+        Parameter.forParameterList(parameterMap.get(true), types);
+    ImmutableSet<Parameter> passedParameters =
+        Parameter.forParameterList(parameterMap.get(false), types);
     return new FactoryMethodDescriptor.Builder(declaration)
-        .factoryName(declaration.getFactoryName(
-            elements.getPackageOf(constructor).getQualifiedName(), classElement.getSimpleName()))
         .name("create")
         .returnType(returnType.toString())
         .publicMethod(constructor.getEnclosingElement().getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
-        .creationParameters(Parameter.forParameterList(constructor.getParameters()))
+        .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
         .build();
   }
 
   private ImmutableSet<FactoryMethodDescriptor> generateDescriptorForDefaultConstructor(
       AutoFactoryDeclaration declaration, TypeElement type) {
     return ImmutableSet.of(new FactoryMethodDescriptor.Builder(declaration)
-        .factoryName(declaration.getFactoryName(
-            elements.getPackageOf(type).getQualifiedName(), type.getSimpleName()))
         .name("create")
         .returnType(type.getQualifiedName().toString())
         .publicMethod(type.getModifiers().contains(PUBLIC))

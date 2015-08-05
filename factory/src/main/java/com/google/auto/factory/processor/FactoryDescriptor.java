@@ -17,15 +17,14 @@ package com.google.auto.factory.processor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Collection;
-import java.util.Map.Entry;
-
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import java.util.Collection;
+import java.util.Map.Entry;
 
 /**
  * A value object representing a factory to be generated.
@@ -33,12 +32,13 @@ import com.google.common.collect.Iterables;
  * @author Gregory Kick
  */
 final class FactoryDescriptor {
-  private static final CharMatcher identifierMatcher = new CharMatcher() {
-    @Override
-    public boolean matches(char c) {
-      return Character.isJavaIdentifierPart(c);
-    }
-  };
+  private static final CharMatcher invalidIdentifierCharacters =
+      new CharMatcher() {
+        @Override
+        public boolean matches(char c) {
+          return !Character.isJavaIdentifierPart(c);
+        }
+      };
 
   private final String name;
   private final String extendingType;
@@ -63,7 +63,7 @@ final class FactoryDescriptor {
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
-        providerNamesBuilder.putAll(parameter.asKey(), parameter.name());
+        providerNamesBuilder.put(parameter.key(), parameter.name());
       }
     }
     ImmutableMap.Builder<Key, String> providersBuilder = ImmutableMap.builder();
@@ -76,8 +76,8 @@ final class FactoryDescriptor {
           providersBuilder.put(key, Iterables.getOnlyElement(entry.getValue()) + "Provider");
           break;
         default:
-          providersBuilder.put(key,
-              identifierMatcher.replaceFrom(key.toString(), '_') + "Provider");
+          providersBuilder.put(
+              key, invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider");
           break;
       }
     }

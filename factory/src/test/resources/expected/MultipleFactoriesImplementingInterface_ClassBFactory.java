@@ -20,17 +20,16 @@ import javax.inject.Inject;
 import tests.MultipleFactoriesImplementingInterface.Base.Factory;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class MultipleFactoriesImplementingInterfaceAFactory implements Factory {
+final class MultipleFactoriesImplementingInterface_ClassBFactory implements Factory {
   @Inject
-  MultipleFactoriesImplementingInterfaceAFactory() {}
-  
-  MultipleFactoriesImplementingInterface.MultipleFactoriesImplementingInterfaceA create() {
-    return new MultipleFactoriesImplementingInterface.MultipleFactoriesImplementingInterfaceA();
+  MultipleFactoriesImplementingInterface_ClassBFactory() {}
+
+  MultipleFactoriesImplementingInterface.ClassB create() {
+    return new MultipleFactoriesImplementingInterface.ClassB();
   }
-  
+
   @Override
-  public MultipleFactoriesImplementingInterface.MultipleFactoriesImplementingInterfaceA
-      abstractNonDefaultCreate() {
+  public MultipleFactoriesImplementingInterface.ClassB abstractNonDefaultCreate() {
     return create();
   }
 }

@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import org.apache.velocity.runtime.parser.node.SimpleNode;
+import com.google.auto.value.processor.escapevelocity.Template;
 
 import java.util.Map;
 import java.util.Set;
@@ -79,10 +79,16 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   Set<Class<?>> wrapperTypesUsedInCollections;
 
-  private static final SimpleNode TEMPLATE = parsedTemplateForResource("autoannotation.vm");
+  /**
+   * True if this annotation is marked {@code @GwtCompatible}. That means that we can't use
+   * {@code clone()} to make a copy of an array.
+   */
+  Boolean gwtCompatible;
+
+  private static final Template TEMPLATE = parsedTemplateForResource("autoannotation.vm");
 
   @Override
-  SimpleNode parsedTemplate() {
+  Template parsedTemplate() {
     return TEMPLATE;
   }
 }

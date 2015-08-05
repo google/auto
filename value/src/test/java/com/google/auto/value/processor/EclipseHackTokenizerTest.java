@@ -5,11 +5,11 @@ import junit.framework.TestCase;
 import java.io.StringReader;
 
 /**
- * Unit tests for {@link JavaTokenizer}.
+ * Unit tests for {@link EclipseHackTokenizer}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class JavaTokenizerTest extends TestCase {
+public class EclipseHackTokenizerTest extends TestCase {
   public void testSimple() {
     // Construct a string containing the tokens produced from this source code, with a space after
     // each one, and compare it with what we expect from the tokenization.
@@ -47,7 +47,7 @@ public class JavaTokenizerTest extends TestCase {
         + "return new AutoValue_Foo ( bar ) ; "
         + "} "
         + "} ";
-    JavaTokenizer tokenizer = new JavaTokenizer(new StringReader(source));
+    EclipseHackTokenizer tokenizer = new EclipseHackTokenizer(new StringReader(source));
     StringBuilder tokenStringBuilder = new StringBuilder();
     String token;
     while ((token = tokenizer.nextToken()) != null) {

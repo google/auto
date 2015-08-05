@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.auto.common.MoreElements;
@@ -31,9 +32,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -402,35 +400,18 @@ class BuilderSpec {
     }
     return Optional.of(new Builder(builderTypeElement));
   }
-
-  // Return a list of all abstract methods in the given TypeElement or inherited from ancestors.
-  private List<ExecutableElement> abstractMethods(TypeElement typeElement) {
-    List<ExecutableElement> methods = new ArrayList<ExecutableElement>();
-    addAbstractMethods(typeElement.asType(), methods);
-    return methods;
-  }
-
-  private void addAbstractMethods(TypeMirror typeMirror, List<ExecutableElement> abstractMethods) {
-    if (typeMirror.getKind() != TypeKind.DECLARED) {
-      return;
-    }
-
-    TypeElement typeElement = MoreTypes.asTypeElement(typeMirror);
-    addAbstractMethods(typeElement.getSuperclass(), abstractMethods);
-    for (TypeMirror interfaceMirror : typeElement.getInterfaces()) {
-      addAbstractMethods(interfaceMirror, abstractMethods);
-    }
-    for (ExecutableElement method : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
-      for (Iterator<ExecutableElement> it = abstractMethods.iterator(); it.hasNext(); ) {
-        ExecutableElement maybeOverridden = it.next();
-        if (processingEnv.getElementUtils().overrides(method, maybeOverridden, typeElement)) {
-          it.remove();
-        }
-      }
+  
+  // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
+  private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
+    Set<ExecutableElement> methods = getLocalAndInheritedMethods(
+        typeElement, processingEnv.getElementUtils());
+    ImmutableSet.Builder<ExecutableElement> abstractMethods = ImmutableSet.builder();
+    for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)) {
         abstractMethods.add(method);
       }
     }
+    return abstractMethods.build();
   }
 
   private String typeParamsString() {

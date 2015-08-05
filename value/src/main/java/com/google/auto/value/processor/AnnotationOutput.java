@@ -159,7 +159,8 @@ class AnnotationOutput {
     @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
       sb.append('@').append(typeSimplifier.simplify(a.getAnnotationType()));
-      Map<ExecutableElement, AnnotationValue> map = ImmutableMap.copyOf(a.getElementValues());
+      Map<ExecutableElement, AnnotationValue> map =
+          ImmutableMap.<ExecutableElement, AnnotationValue>copyOf(a.getElementValues());
       if (!map.isEmpty()) {
         sb.append('(');
         String sep = "";

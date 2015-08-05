@@ -38,7 +38,7 @@ import java.util.Map.Entry;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
-import javax.inject.Inject;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Modifier;
 import javax.tools.JavaFileObject;
 
@@ -101,8 +101,8 @@ final class FactoryWriter {
       Key key = entry.getKey();
       String providerName = entry.getValue();
       writer.emitField("Provider<" + key.getType() + ">", providerName, EnumSet.of(PRIVATE, FINAL));
-      Optional<String> qualifier = key.getQualifier();
-      String qualifierPrefix = qualifier.isPresent() ? "@" + qualifier.get() + " " : "";
+      Optional<AnnotationMirror> qualifier = key.getQualifier();
+      String qualifierPrefix = qualifier.isPresent() ? qualifier.get() + " " : "";
       constructorTokens.add(qualifierPrefix + "Provider<" + key.getType() + ">").add(providerName);
     }
 
@@ -118,19 +118,29 @@ final class FactoryWriter {
     writer.endMethod();
 
     for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
-      writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),
+      writer.beginMethod(
+          methodDescriptor.returnType(),
+          methodDescriptor.name(),
           methodDescriptor.publicMethod() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
           parameterTokens(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.creationParameters())
-              .transform(new Function<Parameter, String>() {
-                @Override public String apply(Parameter parameter) {
-                  return methodDescriptor.passedParameters().contains(parameter)
-                      ? parameter.name()
-                      : descriptor.providerNames().get(parameter.asKey()) + ".get()";
-                }
-              });
-      writer.emitStatement("return new %s(%s)", writer.compressType(methodDescriptor.returnType()),
+              .transform(
+                  new Function<Parameter, String>() {
+                    @Override
+                    public String apply(Parameter parameter) {
+                      if (methodDescriptor.passedParameters().contains(parameter)) {
+                        return parameter.name();
+                      } else if (parameter.providerOfType()) {
+                        return descriptor.providerNames().get(parameter.key());
+                      } else {
+                        return descriptor.providerNames().get(parameter.key()) + ".get()";
+                      }
+                    }
+                  });
+      writer.emitStatement(
+          "return new %s(%s)",
+          writer.compressType(methodDescriptor.returnType()),
           argumentJoiner.join(creationParameterNames));
       writer.endMethod();
     }
