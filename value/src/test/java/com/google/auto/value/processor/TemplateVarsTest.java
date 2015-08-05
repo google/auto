@@ -1,12 +1,11 @@
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 
 import junit.framework.TestCase;
-import org.apache.velocity.runtime.RuntimeSingleton;
-import org.apache.velocity.runtime.parser.ParseException;
-import org.apache.velocity.runtime.parser.node.SimpleNode;
 
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.List;
@@ -23,16 +22,16 @@ public class TemplateVarsTest extends TestCase {
     List<Integer> list;
     private static final String IGNORED_STATIC_FINAL = "hatstand";
 
-    @Override SimpleNode parsedTemplate() {
+    @Override Template parsedTemplate() {
       return parsedTemplateForString("integer=$integer string=$string list=$list");
     }
   }
 
-  static SimpleNode parsedTemplateForString(String string) {
+  static Template parsedTemplateForString(String string) {
     try {
       Reader reader = new StringReader(string);
-      return RuntimeSingleton.parse(reader, string);
-    } catch (ParseException e) {
+      return Template.parseFrom(reader);
+    } catch (IOException e) {
       throw new AssertionError(e);
     }
   }
@@ -73,7 +72,7 @@ public class TemplateVarsTest extends TestCase {
     Integer integer;
     private String string;
 
-    @Override SimpleNode parsedTemplate() {
+    @Override Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -90,7 +89,7 @@ public class TemplateVarsTest extends TestCase {
     Integer integer;
     static String string;
 
-    @Override SimpleNode parsedTemplate() {
+    @Override Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -107,7 +106,7 @@ public class TemplateVarsTest extends TestCase {
     int integer;
     String string;
 
-    @Override SimpleNode parsedTemplate() {
+    @Override Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }

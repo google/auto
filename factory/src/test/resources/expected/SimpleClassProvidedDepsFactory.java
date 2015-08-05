@@ -21,17 +21,28 @@ import javax.inject.Provider;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class SimpleClassProvidedDepsFactory {
+  private final Provider<Integer> providedPrimitiveAProvider;
+  private final Provider<Integer> providedPrimitiveBProvider;
   private final Provider<String> providedDepAProvider;
   private final Provider<String> providedDepBProvider;
   
-  @Inject SimpleClassProvidedDepsFactory(
+  @Inject
+  SimpleClassProvidedDepsFactory(
+      @AQualifier Provider<Integer> providedPrimitiveAProvider,
+      @BQualifier Provider<Integer> providedPrimitiveBProvider,
       @AQualifier Provider<String> providedDepAProvider,
       @BQualifier Provider<String> providedDepBProvider) {
+    this.providedPrimitiveAProvider = providedPrimitiveAProvider;
+    this.providedPrimitiveBProvider = providedPrimitiveBProvider;
     this.providedDepAProvider = providedDepAProvider;
     this.providedDepBProvider = providedDepBProvider;
   }
   
   SimpleClassProvidedDeps create() {
-    return new SimpleClassProvidedDeps(providedDepAProvider.get(), providedDepBProvider.get());
+    return new SimpleClassProvidedDeps(
+        providedPrimitiveAProvider.get(),
+        providedPrimitiveBProvider.get(),
+        providedDepAProvider.get(),
+        providedDepBProvider.get());
   }
 }

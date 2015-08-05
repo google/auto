@@ -15,24 +15,20 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.runtime.log.NullLogChute;
-import org.apache.velocity.runtime.RuntimeConstants;
-import org.apache.velocity.runtime.RuntimeInstance;
-import org.apache.velocity.runtime.log.NullLogChute;
-import org.apache.velocity.runtime.parser.ParseException;
-import org.apache.velocity.runtime.parser.node.SimpleNode;
-
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import org.apache.velocity.runtime.resource.ResourceCacheImpl;
+import java.util.Map;
 
 /**
  * A template and a set of variables to be substituted into that template. A concrete subclass of
@@ -49,35 +45,7 @@ import org.apache.velocity.runtime.resource.ResourceCacheImpl;
  * @author Éamonn McManus
  */
 abstract class TemplateVars {
-  abstract SimpleNode parsedTemplate();
-
-  private static final RuntimeInstance velocityRuntimeInstance = new RuntimeInstance();
-  static {
-    // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-        new NullLogChute());
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RESOURCE_MANAGER_CACHE_CLASS,
-        ResourceCacheImpl.class.getName());
-    // Setting ResourceCacheImpl is should not be necessary since that is the default value, but
-    // ensures that Maven shading sees that Apache Commons classes referenced from ResourceCacheImpl
-    // are indeed referenced and cannot be removed during minimization.
-
-    // Disable any logging that Velocity might otherwise see fit to do.
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM, new NullLogChute());
-
-    // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
-    // context class loader. If that loader can see another copy of Velocity then that will lead
-    // to hard-to-diagnose exceptions during initialization.
-    Thread currentThread = Thread.currentThread();
-    ClassLoader oldContextLoader = currentThread.getContextClassLoader();
-    try {
-      currentThread.setContextClassLoader(TemplateVars.class.getClassLoader());
-      velocityRuntimeInstance.init();
-    } finally {
-      currentThread.setContextClassLoader(oldContextLoader);
-    }
-  }
+  abstract Template parsedTemplate();
 
   private final ImmutableList<Field> fields;
 
@@ -110,44 +78,36 @@ abstract class TemplateVars {
    * (a concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
    */
   String toText() {
-    VelocityContext velocityContext = toVelocityContext();
-    StringWriter writer = new StringWriter();
-    SimpleNode parsedTemplate = parsedTemplate();
-    boolean rendered = velocityRuntimeInstance.render(
-        velocityContext, writer, parsedTemplate.getTemplateName(), parsedTemplate);
-    if (!rendered) {
-      // I don't know when this happens. Usually you get an exception during rendering.
-      throw new IllegalArgumentException("Template rendering failed");
-    }
-    return writer.toString();
+    Map<String, Object> vars = toVars();
+    return parsedTemplate().evaluate(vars);
   }
 
-  private VelocityContext toVelocityContext() {
-    VelocityContext velocityContext = new VelocityContext();
+  private Map<String, Object> toVars() {
+    Map<String, Object> vars = Maps.newTreeMap();
     for (Field field : fields) {
       Object value = fieldValue(field, this);
       if (value == null) {
         throw new IllegalArgumentException("Field cannot be null (was it set?): " + field);
       }
-      Object old = velocityContext.put(field.getName(), value);
+      Object old = vars.put(field.getName(), value);
       if (old != null) {
         throw new IllegalArgumentException("Two fields called " + field.getName() + "?!");
       }
     }
-    return velocityContext;
+    return ImmutableMap.copyOf(vars);
   }
 
-  static SimpleNode parsedTemplateForResource(String resourceName) {
+  static Template parsedTemplateForResource(String resourceName) {
     InputStream in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
     if (in == null) {
       throw new IllegalArgumentException("Could not find resource: " + resourceName);
     }
     try {
-      Reader reader = new InputStreamReader(in, "UTF-8");
-      return velocityRuntimeInstance.parse(reader, resourceName);
+      Reader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+      return Template.parseFrom(reader);
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);
-    } catch (ParseException e) {
+    } catch (IOException e) {
       throw new AssertionError(e);
     }
   }
