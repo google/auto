@@ -213,7 +213,7 @@ class EclipseHack {
         String packageName = TypeSimplifier.packageNameOf(type);
         String className = type.getQualifiedName().toString();
         AbstractMethodExtractor extractor = new AbstractMethodExtractor();
-        JavaTokenizer tokenizer = new JavaTokenizer(sourceReader);
+        EclipseHackTokenizer tokenizer = new EclipseHackTokenizer(sourceReader);
         ImmutableListMultimap<String, String> methodOrders =
             extractor.abstractMethods(tokenizer, packageName);
         return methodOrders.get(className);

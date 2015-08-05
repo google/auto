@@ -48,6 +48,13 @@ class GwtCompatibility {
     return gwtCompatibleAnnotation;
   }
 
+  // Get rid of the misconceived <? extends ExecutableElement, ? extends AnnotationValue>
+  // in the return type of getElementValues().
+  static Map<ExecutableElement, AnnotationValue> getElementValues(AnnotationMirror annotation) {
+    return Collections.<ExecutableElement, AnnotationValue>unmodifiableMap(
+        annotation.getElementValues());
+  }
+
   String gwtCompatibleAnnotationString() {
     if (gwtCompatibleAnnotation.isPresent()) {
       AnnotationMirror annotation = gwtCompatibleAnnotation.get();
@@ -58,7 +65,7 @@ class GwtCompatibility {
       } else {
         List<String> elements = Lists.newArrayList();
         for (Map.Entry<ExecutableElement, AnnotationValue> entry :
-            Collections.unmodifiableMap(annotation.getElementValues()).entrySet()) {
+             getElementValues(annotation).entrySet()) {
           elements.add(entry.getKey().getSimpleName() + " = " + entry.getValue());
         }
         annotationArguments = "(" + Joiner.on(", ").join(elements) + ")";

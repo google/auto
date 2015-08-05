@@ -25,8 +25,8 @@ class MultipleFactoriesImplementingInterface {
   }
 
   @AutoFactory(implementing = Base.Factory.class)
-  static class MultipleFactoriesImplementingInterfaceA implements Base { }
+  static class ClassA implements Base { }
 
   @AutoFactory(implementing = Base.Factory.class)
-  static class MultipleFactoriesImplementingInterfaceB implements Base {}
+  static class ClassB implements Base {}
 }  

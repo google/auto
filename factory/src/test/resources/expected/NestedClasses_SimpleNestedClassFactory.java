@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Google, Inc.
+ * Copyright (C) 2013 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,12 @@ package tests;
 
 import javax.annotation.Generated;
 import javax.inject.Inject;
-import tests.MultipleFactoriesImplementingInterface.Base.Factory;
 
 @Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
-final class MultipleFactoriesImplementingInterfaceBFactory implements Factory {
-  @Inject
-  MultipleFactoriesImplementingInterfaceBFactory() {}
+final class NestedClasses_SimpleNestedClassFactory {
+  @Inject NestedClasses_SimpleNestedClassFactory() {}
   
-  MultipleFactoriesImplementingInterface.MultipleFactoriesImplementingInterfaceB create() {
-    return new MultipleFactoriesImplementingInterface.MultipleFactoriesImplementingInterfaceB();
-  }
-  
-  @Override
-  public MultipleFactoriesImplementingInterface.MultipleFactoriesImplementingInterfaceB
-      abstractNonDefaultCreate() {
-    return create();
+  NestedClasses.SimpleNestedClass create() {
+    return new NestedClasses.SimpleNestedClass();
   }
 }

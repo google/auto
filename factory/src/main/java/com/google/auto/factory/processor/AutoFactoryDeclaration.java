@@ -15,33 +15,34 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static javax.tools.Diagnostic.Kind.ERROR;
-
 import com.google.auto.factory.AutoFactory;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-
 import javax.annotation.processing.Messager;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
+
+import static com.google.auto.common.MoreElements.getPackage;
+import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Iterables.getOnlyElement;
+import static javax.lang.model.util.ElementFilter.typesIn;
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * This is a value object that mirrors the static declaration of an {@link AutoFactory} annotation.
@@ -49,6 +50,7 @@ import javax.lang.model.util.Elements;
  * @author Gregory Kick
  */
 final class AutoFactoryDeclaration {
+  private final TypeElement targetType;
   private final Element target;
   private final Optional<String> className;
   private final TypeElement extendingType;
@@ -57,10 +59,16 @@ final class AutoFactoryDeclaration {
   private final AnnotationMirror mirror;
   private final ImmutableMap<String, AnnotationValue> valuesMap;
 
-  private AutoFactoryDeclaration(Element target, Optional<String> className,
-      TypeElement extendingType, ImmutableSet<TypeElement> implementingTypes,
-      boolean allowSubclasses, AnnotationMirror mirror,
+  private AutoFactoryDeclaration(
+      TypeElement targetType,
+      Element target,
+      Optional<String> className,
+      TypeElement extendingType,
+      ImmutableSet<TypeElement> implementingTypes,
+      boolean allowSubclasses,
+      AnnotationMirror mirror,
       Map<String, AnnotationValue> valuesMap) {
+    this.targetType = targetType;
     this.target = target;
     this.className = className;
     this.extendingType = extendingType;
@@ -70,17 +78,31 @@ final class AutoFactoryDeclaration {
     this.valuesMap = ImmutableMap.copyOf(valuesMap);
   }
 
-  String getFactoryName(Name packageName, Name targetType) {
+  String getFactoryName() {
+    CharSequence packageName = getPackage(targetType).getQualifiedName();
     StringBuilder builder = new StringBuilder(packageName);
     if (packageName.length() > 0) {
       builder.append('.');
     }
+    for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
+      builder.append(enclosingSimpleName).append('_');
+    }
     if (className.isPresent()) {
       builder.append(className.get());
     } else {
-      builder.append(targetType).append("Factory");
+      builder.append(targetType.getSimpleName()).append("Factory");
     }
     return builder.toString();
+  }
+
+  private ImmutableList<String> targetEnclosingSimpleNames() {
+    ImmutableList.Builder<String> simpleNames = ImmutableList.builder();
+    for (Element element = targetType.getEnclosingElement();
+        element.getEnclosingElement() != null;
+        element = element.getEnclosingElement()) {
+      simpleNames.add(element.getSimpleName().toString());
+    }
+    return simpleNames.build().reverse();
   }
 
   Element target() {
@@ -183,13 +205,25 @@ final class AutoFactoryDeclaration {
       AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
       boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
 
-      return Optional.of(new AutoFactoryDeclaration(element,
-          className.isEmpty() ? Optional.<String>absent() : Optional.of(className),
-          extendingType,
-          implementingTypes,
-          allowSubclasses,
-          mirror,
-          values));
+      return Optional.of(
+          new AutoFactoryDeclaration(
+              getAnnotatedType(element),
+              element,
+              className.isEmpty() ? Optional.<String>absent() : Optional.of(className),
+              extendingType,
+              implementingTypes,
+              allowSubclasses,
+              mirror,
+              values));
+    }
+
+    private static TypeElement getAnnotatedType(Element element) {
+      List<TypeElement> types = ImmutableList.of();
+      while (types.isEmpty()) {
+        types = typesIn(Arrays.asList(element));
+        element = element.getEnclosingElement();
+      }
+      return getOnlyElement(types);
     }
 
     static boolean isValidIdentifier(String identifier) {

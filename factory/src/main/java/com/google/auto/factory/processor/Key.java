@@ -18,6 +18,8 @@ package com.google.auto.factory.processor;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 
+import javax.lang.model.element.AnnotationMirror;
+
 /**
  * A value object for types and qualifiers.
  *
@@ -25,14 +27,14 @@ import com.google.common.base.Optional;
  */
 final class Key {
   private final String type;
-  private final Optional<String> qualifier;
+  private final Optional<AnnotationMirror> qualifier;
 
-  Key(Optional<String> qualifier, String type) {
+  Key(Optional<AnnotationMirror> qualifier, String type) {
     this.qualifier = qualifier;
     this.type = type;
   }
 
-  Optional<String> getQualifier() {
+  Optional<AnnotationMirror> getQualifier() {
     return qualifier;
   }
 
@@ -47,20 +49,20 @@ final class Key {
     } else if (obj instanceof Key) {
       Key that = (Key) obj;
       return this.type.equals(that.type)
-          && this.qualifier.equals(that.qualifier);
+          && this.qualifier.toString().equals(that.qualifier.toString());
     }
     return super.equals(obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(qualifier, type);
+    return Objects.hashCode(qualifier.toString(), type);
   }
 
   @Override
   public String toString() {
     return qualifier.isPresent()
-        ? qualifier.get() + '/' + type
+        ? qualifier.get().toString() + '/' + type
         : type;
   }
 }
