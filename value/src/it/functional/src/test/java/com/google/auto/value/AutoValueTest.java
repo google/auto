@@ -135,6 +135,7 @@ public class AutoValueTest extends TestCase {
   @AutoValue
   abstract static class GettersAndConcreteNonGetters {
     abstract int getFoo();
+    @SuppressWarnings("mutable")
     abstract byte[] getBytes();
 
     boolean hasNoBytes() {
@@ -741,7 +742,9 @@ public class AutoValueTest extends TestCase {
 
   @AutoValue
   abstract static class PrimitiveArrays {
+    @SuppressWarnings("mutable")
     abstract boolean[] booleans();
+    @SuppressWarnings("mutable")
     @Nullable abstract int[] ints();
 
     static PrimitiveArrays create(boolean[] booleans, int[] ints) {
@@ -768,9 +771,7 @@ public class AutoValueTest extends TestCase {
         + "ints=" + Arrays.toString(ints) + "}";
     assertEquals(expectedString, object1.toString());
 
-    // Check that getters clone the arrays so callers can't change them.
-    object1.ints()[0]++;
-    assertTrue(Arrays.equals(ints, object1.ints()));
+    assertThat(object1.ints()).isSameAs(object1.ints());
   }
 
   public void testNullablePrimitiveArrays() {
@@ -787,8 +788,10 @@ public class AutoValueTest extends TestCase {
         + "ints=null}";
     assertEquals(expectedString, object1.toString());
 
+    assertThat(object1.booleans()).isSameAs(object1.booleans());
+    assertThat(object1.booleans()).isEqualTo(booleans);
     object1.booleans()[0] ^= true;
-    assertTrue(Arrays.equals(booleans, object1.booleans()));
+    assertThat(object1.booleans()).isNotEqualTo(booleans);
   }
 
   public void testNotNullablePrimitiveArrays() {
@@ -808,6 +811,7 @@ public class AutoValueTest extends TestCase {
     static class Arrays {}
 
     abstract Arrays arrays();
+    @SuppressWarnings("mutable")
     abstract int[] ints();
 
     static AmbiguousArrays create(Arrays arrays, int[] ints) {
@@ -1304,6 +1308,7 @@ public class AutoValueTest extends TestCase {
   public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> list();
     @Nullable public abstract T t();
+    @SuppressWarnings("mutable")
     public abstract int[] ints();
     public abstract int noGetter();
 
@@ -1350,8 +1355,9 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.list()).isSameAs(names);
     builder.setInts(ints);
     assertThat(builder.ints()).isEqualTo(ints);
+    // The array is not cloned by the getter, so the client can modify it (but shouldn't).
     ints[0] = 0;
-    assertThat(builder.ints()[0]).isEqualTo(6);
+    assertThat(builder.ints()[0]).isEqualTo(0);
     ints[0] = 6;
 
     BuilderWithUnprefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
@@ -1365,6 +1371,7 @@ public class AutoValueTest extends TestCase {
   public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> getList();
     public abstract T getT();
+    @SuppressWarnings("mutable")
     @Nullable public abstract int[] getInts();
     public abstract int getNoGetter();
 

@@ -61,25 +61,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   @Override
   ${p.access}${p.type} ${p.getter}() {
-
-  #if ($p.kind == "ARRAY")
-
-    #if ($p.nullable)
-
-    return $p == null ? null : ${p}.clone();
-
-    #else
-
-    return ${p}.clone();
-
-    #end
-
-  #else
-
     return $p;
-
-  #end
-
   }
 
 #end
@@ -253,22 +235,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     @Override
     public ${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
-
-      this.$p = ($p == null) ? null : ${p}.clone();
-
-        #else
-
-      this.$p = ${p}.clone();
-
-        #end
-      #else
-
       this.$p = ${setter.copy($p)};
-
-      #end
-
       return this;
     }
 
@@ -297,17 +264,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
       #end
 
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
-
-      return ($p == null) ? null : ${p}.clone();
-
-        #else
-
-      return ${p}.clone();
-
-        #end
-      #elseif ($builderPropertyBuilders[$p.name])
+      #if ($builderPropertyBuilders[$p.name])
 
       return ${p}.build();
 

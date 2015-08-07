@@ -377,7 +377,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     Set<ExecutableElement> methods =
         getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     determineObjectMethodsToGenerate(methods, vars);
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(methodsToImplement));
     TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
@@ -558,18 +558,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableSet<ExecutableElement> methodsToImplement(Set<ExecutableElement> methods) {
+  private ImmutableSet<ExecutableElement> methodsToImplement(
+      TypeElement autoValueClass, Set<ExecutableElement> methods) {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
-    boolean errors = false;
+    boolean ok = true;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
           && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
-          if (isReferenceArrayType(method.getReturnType())) {
-            errorReporter.reportError("An @AutoValue class cannot define an array-valued property"
-                + " unless it is a primitive array", method);
-            errors = true;
-          }
+          ok &= checkReturnType(autoValueClass, method);
           toImplement.add(method);
         } else {
           // This could reasonably be an error, were it not for an Eclipse bug in
@@ -581,15 +578,53 @@ public class AutoValueProcessor extends AbstractProcessor {
         }
       }
     }
-    if (errors) {
+    if (!ok) {
       throw new AbortProcessingException();
     }
     return toImplement.build();
   }
 
-  private static boolean isReferenceArrayType(TypeMirror type) {
-    return type.getKind() == TypeKind.ARRAY
-        && !((ArrayType) type).getComponentType().getKind().isPrimitive();
+  private boolean checkReturnType(TypeElement autoValueClass, ExecutableElement getter) {
+    TypeMirror type = getter.getReturnType();
+    if (type.getKind() == TypeKind.ARRAY) {
+      TypeMirror componentType = ((ArrayType) type).getComponentType();
+      if (componentType.getKind().isPrimitive()) {
+        warnAboutPrimitiveArrays(autoValueClass, getter);
+        return true;
+      } else {
+        errorReporter.reportError("An @AutoValue class cannot define an array-valued property"
+            + " unless it is a primitive array", getter);
+        return false;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  private void warnAboutPrimitiveArrays(TypeElement autoValueClass, ExecutableElement getter) {
+    SuppressWarnings suppressWarnings = getter.getAnnotation(SuppressWarnings.class);
+    if (suppressWarnings == null || !Arrays.asList(suppressWarnings.value()).contains("mutable")) {
+      // If the primitive-array property method is defined directly inside the @AutoValue class,
+      // then our error message should point directly to it. But if it is inherited, we don't
+      // want to try to make the error message point to the inherited definition, since that would
+      // be confusing (there is nothing wrong with the definition itself), and won't work if the
+      // inherited class is not being recompiled. Instead, in this case we point to the @AutoValue
+      // class itself, and we include extra text in the error message that shows the full name of
+      // the inherited method.
+      String warning =
+          "An @AutoValue property that is a primitive array returns the original array, "
+              + "which can therefore be modified by the caller. If this OK, you can "
+              + "suppress this warning with @SuppressWarnings(\"mutable\"). Otherwise, you "
+              + "should replace the property with an immutable type, perhaps a simple wrapper "
+              + "around the original array.";
+      boolean sameClass = getter.getEnclosingElement().equals(autoValueClass);
+      if (sameClass) {
+        errorReporter.reportWarning(warning, getter);
+      } else {
+        errorReporter.reportWarning(
+            warning + " Method: " + getter.getEnclosingElement() + "." + getter, autoValueClass);
+      }
+    }
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
