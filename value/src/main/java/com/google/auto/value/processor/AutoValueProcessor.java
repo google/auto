@@ -380,8 +380,9 @@ public class AutoValueProcessor extends AbstractProcessor {
           + " interface; try using @AutoAnnotation instead", type);
     }
 
-    ImmutableSet<ExecutableElement> methods = getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
+    ImmutableSet<ExecutableElement> methods =
+        getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
 
     String fqExtClass = TypeSimplifier.classNameOf(type);
     List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
