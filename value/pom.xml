@@ -129,9 +129,9 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
+        <groupId>org.immutables.tools</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
+        <version>3</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -143,11 +143,11 @@
               <relocations>
                 <relocation>
                   <pattern>org.objectweb</pattern>
-                  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
+                  <shadedPattern>autovalue.shaded.org.objectweb$</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.google</pattern>
-                  <shadedPattern>autovalue.shaded.com.google.common</shadedPattern>
+                  <shadedPattern>autovalue.shaded.com.google.common$</shadedPattern>
                   <excludes>
                     <exclude>com.google.auto.value.**</exclude>
                   </excludes>
