@@ -15,13 +15,15 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.Table;
 import com.google.common.io.Files;
 
 import junit.framework.TestCase;
@@ -95,16 +97,16 @@ public class CompilationErrorsTest extends TestCase {
 
   // Ensure that assertCompilationFails does in fact throw AssertionError when compilation succeeds.
   public void testAssertCompilationFails() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract int integer();\n" +
-        "  public static Baz create(int integer) {\n" +
-        "    return new AutoValue_Baz(integer);\n" +
-        "  }\n" +
-        "}\n";
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract int integer();",
+        "  public static Baz create(int integer) {",
+        "    return new AutoValue_Baz(integer);",
+        "  }\n",
+        "}\n");
     boolean compiled = false;
     try {
       assertCompilationFails(ImmutableList.of(testSourceCode));
@@ -115,17 +117,17 @@ public class CompilationErrorsTest extends TestCase {
   }
 
   public void testNoWarningsFromGenerics() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz<T extends Number, U extends T> {\n" +
-        "  public abstract T t();\n" +
-        "  public abstract U u();\n" +
-        "  public static <T extends Number, U extends T> Baz<T, U> create(T t, U u) {\n" +
-        "    return new AutoValue_Baz<T, U>(t, u);\n" +
-        "  }\n" +
-        "}\n";
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz<T extends Number, U extends T> {",
+        "  public abstract T t();",
+        "  public abstract U u();",
+        "  public static <T extends Number, U extends T> Baz<T, U> create(T t, U u) {",
+        "    return new AutoValue_Baz<T, U>(t, u);",
+        "  }",
+        "}");
     assertCompilationSucceedsWithoutWarning(ImmutableList.of(testSourceCode));
   }
 
@@ -133,35 +135,93 @@ public class CompilationErrorsTest extends TestCase {
       "@AutoValue classes cannot have abstract methods other than property getters");
 
   public void testAbstractVoid() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract void foo();\n" +
-        "}\n";
-    ImmutableMultimap<Diagnostic.Kind, Pattern> expectedDiagnostics = ImmutableMultimap.of(
-        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
-        Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
-    );
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract void foo();",
+        "}");
+    ImmutableTable<Diagnostic.Kind, Integer, Pattern> expectedDiagnostics =
+        new ImmutableTable.Builder<Diagnostic.Kind, Integer, Pattern>()
+        .put(Diagnostic.Kind.WARNING, 5, CANNOT_HAVE_NON_PROPERTIES)
+        .put(Diagnostic.Kind.ERROR, 0, Pattern.compile("AutoValue_Baz"))
+        .build();
     assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
   }
 
   public void testAbstractWithParams() throws Exception {
-    String testSourceCode =
-        "package foo.bar;\n" +
-        "import com.google.auto.value.AutoValue;\n" +
-        "@AutoValue\n" +
-        "public abstract class Baz {\n" +
-        "  public abstract int foo(int bar);\n" +
-        "}\n";
-    ImmutableMultimap<Diagnostic.Kind, Pattern> expectedDiagnostics = ImmutableMultimap.of(
-        Diagnostic.Kind.WARNING, CANNOT_HAVE_NON_PROPERTIES,
-        Diagnostic.Kind.ERROR, Pattern.compile("AutoValue_Baz")
-    );
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract int foo(int bar);",
+        "}");
+    ImmutableTable<Diagnostic.Kind, Integer, Pattern> expectedDiagnostics =
+        new ImmutableTable.Builder<Diagnostic.Kind, Integer, Pattern>()
+        .put(Diagnostic.Kind.WARNING, 5, CANNOT_HAVE_NON_PROPERTIES)
+        .put(Diagnostic.Kind.ERROR, 0, Pattern.compile("AutoValue_Baz"))
+        .build();
     assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
   }
 
+  public void testPrimitiveArrayWarning() throws Exception {
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract byte[] bytes();",
+        "  public static Baz create(byte[] bytes) {",
+        "    return new AutoValue_Baz(bytes);",
+        "  }",
+        "}");
+    Pattern warningPattern = Pattern.compile(
+        "An @AutoValue property that is a primitive array returns the original array");
+    ImmutableTable<Diagnostic.Kind, Integer, Pattern> expectedDiagnostics = ImmutableTable.of(
+        Diagnostic.Kind.WARNING, 5, warningPattern);
+    assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
+  }
+
+  public void testPrimitiveArrayWarningFromParent() throws Exception {
+    // If the array-valued property is defined by an ancestor then we shouldn't try to attach
+    // the warning to the method that defined it, but rather to the @AutoValue class itself.
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "public abstract class Baz {",
+        "  public abstract byte[] bytes();",
+        "",
+        "  @AutoValue",
+        "  public abstract static class BazChild extends Baz {",
+        "    public static BazChild create(byte[] bytes) {",
+        "      return new AutoValue_Baz_BazChild(bytes);",
+        "    }",
+        "  }",
+        "}");
+    Pattern warningPattern = Pattern.compile(
+        "An @AutoValue property that is a primitive array returns the original array"
+        + ".*foo\\.bar\\.Baz\\.bytes");
+    ImmutableTable<Diagnostic.Kind, Integer, Pattern> expectedDiagnostics = ImmutableTable.of(
+        Diagnostic.Kind.WARNING, 7, warningPattern);
+    assertCompilationResultIs(expectedDiagnostics, ImmutableList.of(testSourceCode));
+  }
+
+  public void testPrimitiveArrayWarningSuppressed() throws Exception {
+    String testSourceCode = Joiner.on('\n').join(
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  @SuppressWarnings(\"mutable\")",
+        "  public abstract byte[] bytes();",
+        "  public static Baz create(byte[] bytes) {",
+        "    return new AutoValue_Baz(bytes);",
+        "  }",
+        "}");
+    assertCompilationSucceedsWithoutWarning(ImmutableList.of(testSourceCode));
+  }
   // We compile the test classes by writing the source out to our temporary directory and invoking
   // the compiler on them. An earlier version of this test used an in-memory JavaFileManager, but
   // that is probably overkill, and in any case led to a problem that I gave up trying to fix,
@@ -172,17 +232,25 @@ public class CompilationErrorsTest extends TestCase {
   // explain what I saw other than as a bug in the JDK and the simplest fix was just to use
   // the standard JavaFileManager.
   private void assertCompilationFails(List<String> testSourceCode) throws IOException {
-    assertCompilationResultIs(ImmutableMultimap.of(Diagnostic.Kind.ERROR, Pattern.compile("")),
+    assertCompilationResultIs(ImmutableTable.of(Diagnostic.Kind.ERROR, 0, Pattern.compile("")),
         testSourceCode);
   }
 
   private void assertCompilationSucceedsWithoutWarning(List<String> testSourceCode)
       throws IOException {
-    assertCompilationResultIs(ImmutableMultimap.<Diagnostic.Kind, Pattern>of(), testSourceCode);
+    assertCompilationResultIs(ImmutableTable.<Diagnostic.Kind, Integer, Pattern>of(),
+        testSourceCode);
   }
 
+  /**
+   * Assert that the result of compiling the source file whose lines are {@code testSourceCode}
+   * corresponds to the diagnostics in {@code expectedDiagnostics}. Each row of
+   * {@expectedDiagnostics} specifies a diagnostic kind (such as warning or error), a line number
+   * on which the diagnostic is expected, and a Pattern that is expected to match the diagnostic
+   * text. If the line number is 0 it is not checked.
+   */
   private void assertCompilationResultIs(
-      Multimap<Diagnostic.Kind, Pattern> expectedDiagnostics,
+      Table<Diagnostic.Kind, Integer, Pattern> expectedDiagnostics,
       List<String> testSourceCode) throws IOException {
     assertFalse(testSourceCode.isEmpty());
 
@@ -222,23 +290,38 @@ public class CompilationErrorsTest extends TestCase {
     // Check that there were no compilation errors unless we were expecting there to be.
     // We ignore "notes", typically debugging output from the annotation processor
     // when that is enabled.
-    Multimap<Diagnostic.Kind, String> diagnostics = ArrayListMultimap.create();
+    Table<Diagnostic.Kind, Integer, String> diagnostics = HashBasedTable.create();
     for (Diagnostic<?> diagnostic : diagnosticCollector.getDiagnostics()) {
       boolean ignore = (diagnostic.getKind() == Diagnostic.Kind.NOTE
           || (diagnostic.getKind() == Diagnostic.Kind.WARNING
               && diagnostic.getMessage(null).contains(
                   "No processor claimed any of these annotations")));
       if (!ignore) {
-        diagnostics.put(diagnostic.getKind(), diagnostic.getMessage(null));
+        diagnostics.put(
+            diagnostic.getKind(), (int) diagnostic.getLineNumber(), diagnostic.getMessage(null));
       }
     }
-    assertEquals(diagnostics.containsKey(Diagnostic.Kind.ERROR), !compiledOk);
+    assertEquals(diagnostics.containsRow(Diagnostic.Kind.ERROR), !compiledOk);
     assertEquals("Diagnostic kinds should match: " + diagnostics,
-        expectedDiagnostics.keySet(), diagnostics.keySet());
-    for (Map.Entry<Diagnostic.Kind, Pattern> expectedDiagnostic : expectedDiagnostics.entries()) {
-      Collection<String> actualDiagnostics = diagnostics.get(expectedDiagnostic.getKey());
-      assertTrue("Diagnostics should contain " + expectedDiagnostic + ": " + diagnostics,
-          Iterables.any(actualDiagnostics, Predicates.contains(expectedDiagnostic.getValue())));
+        expectedDiagnostics.rowKeySet(), diagnostics.rowKeySet());
+    for (Table.Cell<Diagnostic.Kind, Integer, Pattern> expectedDiagnostic :
+             expectedDiagnostics.cellSet()) {
+      boolean match = false;
+      for (Table.Cell<Diagnostic.Kind, Integer, String> diagnostic : diagnostics.cellSet()) {
+        if (expectedDiagnostic.getValue().matcher(diagnostic.getValue()).find()) {
+          int expectedLine = expectedDiagnostic.getColumnKey();
+          if (expectedLine != 0) {
+            int actualLine = diagnostic.getColumnKey();
+            if (actualLine != expectedLine) {
+              fail("Diagnostic matched pattern but on line " + actualLine
+                  + " not line " + expectedLine + ": " + diagnostic.getValue());
+            }
+          }
+          match = true;
+          break;
+        }
+      }
+      assertTrue("Diagnostics should contain " + expectedDiagnostic + ": " + diagnostics, match);
     }
   }
 

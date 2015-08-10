@@ -75,7 +75,7 @@ final class AbstractMethodExtractor {
   // error if there are abstract methods with parameters, since the @AutoValue processor doesn't
   // know how to implement them in the concrete subclass it generates.
   ImmutableListMultimap<String, String> abstractMethods(
-      JavaTokenizer tokenizer, String packageName) {
+      EclipseHackTokenizer tokenizer, String packageName) {
     ImmutableListMultimap.Builder<String, String> abstractMethods = ImmutableListMultimap.builder();
     Deque<String> classStack = new ArrayDeque<String>();
     classStack.addLast(packageName);

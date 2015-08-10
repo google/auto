@@ -15,13 +15,12 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-
-import org.apache.velocity.runtime.parser.node.SimpleNode;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
@@ -83,6 +82,18 @@ class AutoValueTemplateVars extends TemplateVars {
   String simpleClassName;
   /** The simple name of the generated subclass. */
   String subclass;
+  /**
+   * The simple name of the final generated subclass.
+   * For {@code @AutoValue public static class Foo {}} this should always be "AutoValue_Foo".
+   */
+  String finalSubclass;
+
+
+  /**
+   * True if the generated class should be final (there are no extensions that
+   * will generate subclasses)
+   */
+  Boolean isFinal = false;
 
   /**
    * The formal generic signature of the class with the {@code @AutoValue} annotation and its
@@ -164,10 +175,10 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   ImmutableList<String> toBuilderMethods;
 
-  private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
+  private static final Template TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
   @Override
-  SimpleNode parsedTemplate() {
+  Template parsedTemplate() {
     return TEMPLATE;
   }
 }

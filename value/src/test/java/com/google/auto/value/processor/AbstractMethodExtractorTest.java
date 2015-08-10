@@ -25,7 +25,7 @@ public class AbstractMethodExtractorTest extends TestCase {
         + "  abstract String two();\n"
         + "  abstract Map<String, String> three();\n"
         + "}\n";
-    JavaTokenizer tokenizer = new JavaTokenizer(new StringReader(source));
+    EclipseHackTokenizer tokenizer = new EclipseHackTokenizer(new StringReader(source));
     AbstractMethodExtractor extractor = new AbstractMethodExtractor();
     ImmutableMultimap<String, String> expected = ImmutableMultimap.of(
         "com.example.Foo", "one",
@@ -60,7 +60,7 @@ public class AbstractMethodExtractorTest extends TestCase {
         + "    void distraction() {}\n"
         + "  }\n"
         + "}\n";
-    JavaTokenizer tokenizer = new JavaTokenizer(new StringReader(source));
+    EclipseHackTokenizer tokenizer = new EclipseHackTokenizer(new StringReader(source));
     AbstractMethodExtractor extractor = new AbstractMethodExtractor();
     ImmutableMultimap<String, String> expected = ImmutableMultimap.of(
         "com.example.Foo.Baz", "complicated",
@@ -93,7 +93,7 @@ public class AbstractMethodExtractorTest extends TestCase {
         + "    abstract ImmutableSet<Key<?>> all();\n"
         + "  }\n"
         + "}";
-    JavaTokenizer tokenizer = new JavaTokenizer(new StringReader(source));
+    EclipseHackTokenizer tokenizer = new EclipseHackTokenizer(new StringReader(source));
     AbstractMethodExtractor extractor = new AbstractMethodExtractor();
     ImmutableMultimap<String, String> expected = ImmutableMultimap.of(
         "com.example.ProducerMetadata.SourcedKeySet", "unknownSource",

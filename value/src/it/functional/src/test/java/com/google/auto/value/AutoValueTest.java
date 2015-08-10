@@ -32,14 +32,17 @@ import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
 
@@ -132,6 +135,7 @@ public class AutoValueTest extends TestCase {
   @AutoValue
   abstract static class GettersAndConcreteNonGetters {
     abstract int getFoo();
+    @SuppressWarnings("mutable")
     abstract byte[] getBytes();
 
     boolean hasNoBytes() {
@@ -381,11 +385,23 @@ public class AutoValueTest extends TestCase {
     }
   }
 
-  public void testNullablePropertiesCanBeNull() throws Exception {
+  public void testNullablePropertiesCanBeNull() {
     NullableProperties instance = NullableProperties.create(null, 23);
     assertNull(instance.nullableString());
     assertEquals(23, instance.randomInt());
     assertEquals("NullableProperties{nullableString=null, randomInt=23}", instance.toString());
+  }
+
+  @AutoAnnotation
+  static Nullable nullable() {
+    return new AutoAnnotation_AutoValueTest_nullable();
+  }
+
+  public void testNullablePropertyConstructorParameterIsNullable() throws NoSuchMethodException {
+    Constructor<?> constructor =
+        AutoValue_AutoValueTest_NullableProperties.class.getDeclaredConstructor(
+            String.class, int.class);
+    assertThat(constructor.getParameterAnnotations()[0]).asList().contains(nullable());
   }
 
   @AutoValue
@@ -726,7 +742,9 @@ public class AutoValueTest extends TestCase {
 
   @AutoValue
   abstract static class PrimitiveArrays {
+    @SuppressWarnings("mutable")
     abstract boolean[] booleans();
+    @SuppressWarnings("mutable")
     @Nullable abstract int[] ints();
 
     static PrimitiveArrays create(boolean[] booleans, int[] ints) {
@@ -753,9 +771,7 @@ public class AutoValueTest extends TestCase {
         + "ints=" + Arrays.toString(ints) + "}";
     assertEquals(expectedString, object1.toString());
 
-    // Check that getters clone the arrays so callers can't change them.
-    object1.ints()[0]++;
-    assertTrue(Arrays.equals(ints, object1.ints()));
+    assertThat(object1.ints()).isSameAs(object1.ints());
   }
 
   public void testNullablePrimitiveArrays() {
@@ -772,8 +788,10 @@ public class AutoValueTest extends TestCase {
         + "ints=null}";
     assertEquals(expectedString, object1.toString());
 
+    assertThat(object1.booleans()).isSameAs(object1.booleans());
+    assertThat(object1.booleans()).isEqualTo(booleans);
     object1.booleans()[0] ^= true;
-    assertTrue(Arrays.equals(booleans, object1.booleans()));
+    assertThat(object1.booleans()).isNotEqualTo(booleans);
   }
 
   public void testNotNullablePrimitiveArrays() {
@@ -793,6 +811,7 @@ public class AutoValueTest extends TestCase {
     static class Arrays {}
 
     abstract Arrays arrays();
+    @SuppressWarnings("mutable")
     abstract int[] ints();
 
     static AmbiguousArrays create(Arrays arrays, int[] ints) {
@@ -925,6 +944,63 @@ public class AutoValueTest extends TestCase {
     ComplexInheritance complex = ComplexInheritance.create("fred");
     assertEquals("fred", complex.name());
     assertEquals(42, complex.answer());
+  }
+
+  // This tests the case where we inherit abstract methods on more than one path. AbstractList
+  // extends AbstractCollection, which implements Collection; and AbstractList also implements List,
+  // which extends Collection. So the class here inherits the methods of Collection on more than
+  // one path. In an earlier version of the logic for handling inheritance, this confused us into
+  // thinking that the methods from Collection were still abstract and therefore candidates for
+  // implementation, even though we inherit concrete implementations of them from AbstractList.
+  @AutoValue
+  public static class MoreComplexInheritance extends AbstractList<String> {
+    @Override
+    public String get(int index) {
+      throw new NoSuchElementException(String.valueOf(index));
+    }
+
+    @Override
+    public int size() {
+      return 0;
+    }
+
+    public static MoreComplexInheritance create() {
+      return new AutoValue_AutoValueTest_MoreComplexInheritance();
+    }
+  }
+
+  public void testMoreComplexInheritance() {
+    MoreComplexInheritance instance1 = MoreComplexInheritance.create();
+    MoreComplexInheritance instance2 = MoreComplexInheritance.create();
+    assertThat(instance1).isEqualTo(instance2);
+    assertThat(instance1).isNotSameAs(instance2);
+  }
+
+  // Test that we are not misled by the privateness of an ancestor into thinking that its methods
+  // are invisible to descendants.
+  public abstract static class PublicGrandparent {
+    public abstract String foo();
+  }
+
+  private static class PrivateParent extends PublicGrandparent {
+    @Override
+    public String foo() {
+      return "foo";
+    }
+  }
+
+  @AutoValue
+  static class EffectiveVisibility extends PrivateParent {
+    static EffectiveVisibility create() {
+      return new AutoValue_AutoValueTest_EffectiveVisibility();
+    }
+  }
+
+  public void testEffectiveVisibility() {
+    EffectiveVisibility instance1 = EffectiveVisibility.create();
+    EffectiveVisibility instance2 = EffectiveVisibility.create();
+    assertThat(instance1).isEqualTo(instance2);
+    assertThat(instance1).isNotSameAs(instance2);
   }
 
   @AutoValue
@@ -1232,6 +1308,7 @@ public class AutoValueTest extends TestCase {
   public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> list();
     @Nullable public abstract T t();
+    @SuppressWarnings("mutable")
     public abstract int[] ints();
     public abstract int noGetter();
 
@@ -1278,8 +1355,9 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.list()).isSameAs(names);
     builder.setInts(ints);
     assertThat(builder.ints()).isEqualTo(ints);
+    // The array is not cloned by the getter, so the client can modify it (but shouldn't).
     ints[0] = 0;
-    assertThat(builder.ints()[0]).isEqualTo(6);
+    assertThat(builder.ints()[0]).isEqualTo(0);
     ints[0] = 6;
 
     BuilderWithUnprefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
@@ -1293,6 +1371,7 @@ public class AutoValueTest extends TestCase {
   public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> getList();
     public abstract T getT();
+    @SuppressWarnings("mutable")
     @Nullable public abstract int[] getInts();
     public abstract int getNoGetter();
 

@@ -29,12 +29,12 @@ import java.io.Reader;
  *
  * @author Éamonn McManus
  */
-class JavaTokenizer {
+class EclipseHackTokenizer {
   private final Reader reader;
   private char c;
   private static final char EOF = 0xffff;  // This is a noncharacter in the Unicode standard.
 
-  JavaTokenizer(Reader reader) {
+  EclipseHackTokenizer(Reader reader) {
     this.reader = reader;
     next();
   }
