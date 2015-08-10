@@ -19,7 +19,7 @@ import $i;
 
 ${gwtCompatibleAnnotation}
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
-final class $subclass$formalTypes extends $origClass$actualTypes {
+#if ($isFinal) final #else abstract #end class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Fields
 
@@ -29,7 +29,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Constructor
 
-#if ($builderTypeName != "")
+#if ($isFinal && $builderTypeName != "")
   private ##
 #end
   $subclass(
@@ -61,25 +61,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   @Override
   ${p.access}${p.type} ${p.getter}() {
-
-  #if ($p.kind == "ARRAY")
-
-    #if ($p.nullable)
-
-    return $p == null ? null : ${p}.clone();
-
-    #else
-
-    return ${p}.clone();
-
-    #end
-
-  #else
-
     return $p;
-
-  #end
-
   }
 
 #end
@@ -253,22 +235,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     @Override
     public ${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
-
-      this.$p = ($p == null) ? null : ${p}.clone();
-
-        #else
-
-      this.$p = ${p}.clone();
-
-        #end
-      #else
-
       this.$p = ${setter.copy($p)};
-
-      #end
-
       return this;
     }
 
@@ -297,17 +264,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
       #end
 
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
-
-      return ($p == null) ? null : ${p}.clone();
-
-        #else
-
-      return ${p}.clone();
-
-        #end
-      #elseif ($builderPropertyBuilders[$p.name])
+      #if ($builderPropertyBuilders[$p.name])
 
       return ${p}.build();
 
@@ -341,7 +298,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
       }
   #end
 
-      return new ${subclass}${actualTypes}(
+      return new ${finalSubclass}${actualTypes}(
   #foreach ($p in $props)
 
           this.$p ##
@@ -351,4 +308,5 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
     }
   }
 #end
+
 }

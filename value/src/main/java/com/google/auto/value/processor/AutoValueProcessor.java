@@ -20,9 +20,11 @@ import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValueExtension;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
@@ -65,6 +67,19 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
+import java.beans.Introspector;
+import java.io.IOException;
+import java.io.Serializable;
+import java.io.Writer;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.Set;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -75,7 +90,13 @@ import javax.tools.JavaFileObject;
  */
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
-  public AutoValueProcessor() {}
+  public AutoValueProcessor() {
+    this(ServiceLoader.load(AutoValueExtension.class, AutoValueProcessor.class.getClassLoader()));
+  }
+
+  /* testing */ AutoValueProcessor(Iterable<AutoValueExtension> extensions) {
+    this.extensions = extensions;
+  }
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
@@ -94,6 +115,8 @@ public class AutoValueProcessor extends AbstractProcessor {
    * because we needed other types that they referenced and those other types were missing.
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
+
+  private Iterable<AutoValueExtension> extensions;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -158,8 +181,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     return pkg + dot + prefix + name;
   }
 
-  private String generatedSubclassName(TypeElement type) {
-    return generatedClassName(type, "AutoValue_");
+  private String generatedSubclassName(TypeElement type, int depth) {
+    return generatedClassName(type, Strings.repeat("$", depth) + "AutoValue_");
   }
 
   /**
@@ -356,28 +379,88 @@ public class AutoValueProcessor extends AbstractProcessor {
       errorReporter.abortWithError("@AutoValue may not be used to implement an annotation"
           + " interface; try using @AutoAnnotation instead", type);
     }
+
+    ImmutableSet<ExecutableElement> methods =
+        getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
+
+    String fqExtClass = TypeSimplifier.classNameOf(type);
+    List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
+    AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
+    for (AutoValueExtension extension : extensions) {
+      if (extension.applicable(context)) {
+        if (extension.mustBeAtEnd(context)) {
+          appliedExtensions.add(0, extension);
+        } else {
+          appliedExtensions.add(extension);
+        }
+      }
+    }
+
+    String finalSubclass = generatedSubclassName(type, 0);
+    String subclass = generatedSubclassName(type, appliedExtensions.size());
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
-    vars.origClass = TypeSimplifier.classNameOf(type);
+    vars.origClass = fqExtClass;
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
-    vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
+    vars.subclass = TypeSimplifier.simpleNameOf(subclass);
+    vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
+    vars.isFinal = appliedExtensions.isEmpty();
     vars.types = processingEnv.getTypeUtils();
-    defineVarsForType(type, vars);
+    defineVarsForType(type, vars, methods);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
     text = Reformatter.fixup(text);
-    writeSourceFile(generatedSubclassName(type), text, type);
+    writeSourceFile(subclass, text, type);
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
+
+    String extClass = TypeSimplifier.simpleNameOf(subclass);
+    for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
+      AutoValueExtension extension = appliedExtensions.remove(i);
+      String fqClassName = generatedSubclassName(type, i);
+      String className = TypeSimplifier.simpleNameOf(fqClassName);
+      boolean isFinal = (i == 0);
+      String source = extension.generateClass(context, className, extClass, isFinal);
+      if (source == null || source.isEmpty()) {
+        errorReporter.reportError("Extension returned no source code.", type);
+        return;
+      }
+      source = Reformatter.fixup(source);
+      writeSourceFile(fqClassName, source, type);
+
+      extClass = className;
+    }
   }
 
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
+  private AutoValueExtension.Context makeExtensionContext(
+      final TypeElement type, final Iterable<ExecutableElement> methods) {
+    return new AutoValueExtension.Context() {
+
+      @Override public ProcessingEnvironment processingEnvironment() {
+        return processingEnv;
+      }
+
+      @Override public String packageName() {
+        return TypeSimplifier.packageNameOf(type);
+      }
+
+      @Override public TypeElement autoValueClass() {
+        return type;
+      }
+
+      @Override public Map<String, ExecutableElement> properties() {
+        return propertyNameToMethodMap(methods);
+      }
+    };
+  }
+
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars,
+                                 Set<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
-    Set<ExecutableElement> methods =
-        getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     determineObjectMethodsToGenerate(methods, vars);
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(methodsToImplement));
     TypeMirror javaxAnnotationGenerated = getTypeMirror(Generated.class);
@@ -444,6 +527,19 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (allGetters) {
       checkDuplicateGetters(map);
     }
+    return ImmutableBiMap.copyOf(map);
+  }
+
+  private ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(
+      Iterable<ExecutableElement> propertyMethods) {
+    ImmutableMap.Builder<String, ExecutableElement> builder = ImmutableMap.builder();
+    boolean allGetters = allGetters(propertyMethods);
+    for (ExecutableElement method : propertyMethods) {
+      String methodName = method.getSimpleName().toString();
+      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
+      builder.put(name, method);
+    }
+    ImmutableMap<String, ExecutableElement> map = builder.build();
     return ImmutableBiMap.copyOf(map);
   }
 
@@ -558,18 +654,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableSet<ExecutableElement> methodsToImplement(Set<ExecutableElement> methods) {
+  private ImmutableSet<ExecutableElement> methodsToImplement(
+      TypeElement autoValueClass, Set<ExecutableElement> methods) {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
-    boolean errors = false;
+    boolean ok = true;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
           && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
-          if (isReferenceArrayType(method.getReturnType())) {
-            errorReporter.reportError("An @AutoValue class cannot define an array-valued property"
-                + " unless it is a primitive array", method);
-            errors = true;
-          }
+          ok &= checkReturnType(autoValueClass, method);
           toImplement.add(method);
         } else {
           // This could reasonably be an error, were it not for an Eclipse bug in
@@ -581,15 +674,53 @@ public class AutoValueProcessor extends AbstractProcessor {
         }
       }
     }
-    if (errors) {
+    if (!ok) {
       throw new AbortProcessingException();
     }
     return toImplement.build();
   }
 
-  private static boolean isReferenceArrayType(TypeMirror type) {
-    return type.getKind() == TypeKind.ARRAY
-        && !((ArrayType) type).getComponentType().getKind().isPrimitive();
+  private boolean checkReturnType(TypeElement autoValueClass, ExecutableElement getter) {
+    TypeMirror type = getter.getReturnType();
+    if (type.getKind() == TypeKind.ARRAY) {
+      TypeMirror componentType = ((ArrayType) type).getComponentType();
+      if (componentType.getKind().isPrimitive()) {
+        warnAboutPrimitiveArrays(autoValueClass, getter);
+        return true;
+      } else {
+        errorReporter.reportError("An @AutoValue class cannot define an array-valued property"
+            + " unless it is a primitive array", getter);
+        return false;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  private void warnAboutPrimitiveArrays(TypeElement autoValueClass, ExecutableElement getter) {
+    SuppressWarnings suppressWarnings = getter.getAnnotation(SuppressWarnings.class);
+    if (suppressWarnings == null || !Arrays.asList(suppressWarnings.value()).contains("mutable")) {
+      // If the primitive-array property method is defined directly inside the @AutoValue class,
+      // then our error message should point directly to it. But if it is inherited, we don't
+      // want to try to make the error message point to the inherited definition, since that would
+      // be confusing (there is nothing wrong with the definition itself), and won't work if the
+      // inherited class is not being recompiled. Instead, in this case we point to the @AutoValue
+      // class itself, and we include extra text in the error message that shows the full name of
+      // the inherited method.
+      String warning =
+          "An @AutoValue property that is a primitive array returns the original array, "
+              + "which can therefore be modified by the caller. If this OK, you can "
+              + "suppress this warning with @SuppressWarnings(\"mutable\"). Otherwise, you "
+              + "should replace the property with an immutable type, perhaps a simple wrapper "
+              + "around the original array.";
+      boolean sameClass = getter.getEnclosingElement().equals(autoValueClass);
+      if (sameClass) {
+        errorReporter.reportWarning(warning, getter);
+      } else {
+        errorReporter.reportWarning(
+            warning + " Method: " + getter.getEnclosingElement() + "." + getter, autoValueClass);
+      }
+    }
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
