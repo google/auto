@@ -15,8 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
@@ -24,6 +22,7 @@ import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
@@ -33,7 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
@@ -46,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -69,6 +66,8 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
+
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -359,17 +358,36 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableSet<ExecutableElement> methods =
         getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
+    ImmutableBiMap<String, ExecutableElement> properties =
+        propertyNameToMethodMap(methodsToImplement);
 
     String fqExtClass = TypeSimplifier.classNameOf(type);
     List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
-    AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
+    ExtensionContext context = new ExtensionContext(processingEnv, type, properties);
     for (AutoValueExtension extension : extensions) {
       if (extension.applicable(context)) {
-        if (extension.mustBeAtEnd(context)) {
+        if (extension.mustBeFinal(context)) {
           appliedExtensions.add(0, extension);
         } else {
           appliedExtensions.add(extension);
         }
+      }
+    }
+
+    if (appliedExtensions.size() > 0) {
+      final Set<String> methodsToRemove = Sets.newHashSet();
+      for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
+        AutoValueExtension extension = appliedExtensions.get(i);
+        methodsToRemove.addAll(extension.consumeProperties(context));
+      }
+      if (methodsToRemove.size() > 0) {
+        context.setProperties(newImmutableBiMapRemovingKeys(properties, methodsToRemove));
+        methods = newFilteredImmutableSet(methods, new Predicate<ExecutableElement>() {
+          @Override
+          public boolean apply(ExecutableElement executableElement) {
+            return !methodsToRemove.contains(executableElement.getSimpleName().toString());
+          }
+        });
       }
     }
 
@@ -410,30 +428,28 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private AutoValueExtension.Context makeExtensionContext(
-      final TypeElement type, final Iterable<ExecutableElement> methods) {
-    return new AutoValueExtension.Context() {
+  private static <T> ImmutableSet<T> newFilteredImmutableSet(ImmutableSet<T> original,
+      Predicate<T> predicate) {
+    ImmutableSet.Builder<T> builder = ImmutableSet.builder();
+    for (T item : original) {
+      if (predicate.apply(item)) builder.add(item);
+    }
+    return builder.build();
+  }
 
-      @Override public ProcessingEnvironment processingEnvironment() {
-        return processingEnv;
+  private static <K, V> ImmutableBiMap<K, V> newImmutableBiMapRemovingKeys(ImmutableBiMap<K, V> original,
+      Set<K> keysToRemove) {
+    ImmutableBiMap.Builder<K, V> builder = ImmutableBiMap.builder();
+    for (Map.Entry<K, V> property : original.entrySet()) {
+      if (!keysToRemove.contains(property.getKey())) {
+        builder.put(property);
       }
-
-      @Override public String packageName() {
-        return TypeSimplifier.packageNameOf(type);
-      }
-
-      @Override public TypeElement autoValueClass() {
-        return type;
-      }
-
-      @Override public Map<String, ExecutableElement> properties() {
-        return propertyNameToMethodMap(methods);
-      }
-    };
+    }
+    return builder.build();
   }
 
   private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars,
-                                 Set<ExecutableElement> methods) {
+      Set<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
@@ -513,15 +529,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(
       Iterable<ExecutableElement> propertyMethods) {
-    ImmutableMap.Builder<String, ExecutableElement> builder = ImmutableMap.builder();
-    boolean allGetters = allGetters(propertyMethods);
-    for (ExecutableElement method : propertyMethods) {
-      String methodName = method.getSimpleName().toString();
-      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
-      builder.put(name, method);
-    }
-    ImmutableMap<String, ExecutableElement> map = builder.build();
-    return ImmutableBiMap.copyOf(map);
+    return methodToPropertyNameMap(propertyMethods).inverse();
   }
 
   private static boolean allGetters(Iterable<ExecutableElement> methods) {
@@ -646,7 +654,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
           ok &= checkReturnType(autoValueClass, method);
           if (toImplementNames.add(method.getSimpleName())) {
-            // If an abstract method with the same signature is inherited on more than one path,
+            // If an abstract method with the same signature is inherited in more than one path,
             // we only add it once.
             toImplement.add(method);
           }
