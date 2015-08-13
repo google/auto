@@ -21,7 +21,7 @@ ${gwtCompatibleAnnotation}
 #if ($generated != "")
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
 #end
-#if ($isFinal) final #else abstract #end class $subclass$formalTypes extends $origClass$actualTypes {
+final class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Fields
 
@@ -31,7 +31,7 @@ ${gwtCompatibleAnnotation}
 
 ## Constructor
 
-#if ($isFinal && $builderTypeName != "")
+#if ($builderTypeName != "")
   private ##
 #end
   $subclass(
@@ -300,7 +300,7 @@ ${gwtCompatibleAnnotation}
       }
   #end
 
-      return new ${finalSubclass}${actualTypes}(
+      return new ${subclass}${actualTypes}(
   #foreach ($p in $props)
 
           this.$p ##
@@ -310,5 +310,4 @@ ${gwtCompatibleAnnotation}
     }
   }
 #end
-
 }

@@ -20,11 +20,9 @@ import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
-import com.google.auto.value.AutoValueExtension;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
@@ -67,19 +65,6 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import java.beans.Introspector;
-import java.io.IOException;
-import java.io.Serializable;
-import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
-import java.util.Set;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -90,13 +75,7 @@ import java.util.Set;
  */
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
-  public AutoValueProcessor() {
-    this(ServiceLoader.load(AutoValueExtension.class, AutoValueProcessor.class.getClassLoader()));
-  }
-
-  /* testing */ AutoValueProcessor(Iterable<AutoValueExtension> extensions) {
-    this.extensions = extensions;
-  }
+  public AutoValueProcessor() {}
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
@@ -115,8 +94,6 @@ public class AutoValueProcessor extends AbstractProcessor {
    * because we needed other types that they referenced and those other types were missing.
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
-
-  private Iterable<AutoValueExtension> extensions;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -181,8 +158,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     return pkg + dot + prefix + name;
   }
 
-  private String generatedSubclassName(TypeElement type, int depth) {
-    return generatedClassName(type, Strings.repeat("$", depth) + "AutoValue_");
+  private String generatedSubclassName(TypeElement type) {
+    return generatedClassName(type, "AutoValue_");
   }
 
   /**
@@ -198,7 +175,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     private final ExecutableElement method;
     private final String type;
     private final ImmutableList<String> annotations;
-    private final String nullableAnnotation;
 
     Property(
         String name,
@@ -211,18 +187,6 @@ public class AutoValueProcessor extends AbstractProcessor {
       this.method = method;
       this.type = type;
       this.annotations = buildAnnotations(typeSimplifier);
-      this.nullableAnnotation = buildNullableAnnotation(typeSimplifier);
-    }
-
-    private String buildNullableAnnotation(TypeSimplifier typeSimplifier) {
-      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
-        if (name.equals("Nullable")) {
-          AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
-          return annotationOutput.sourceFormForAnnotation(annotationMirror);
-        }
-      }
-      return null;
     }
 
     private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
@@ -379,86 +343,26 @@ public class AutoValueProcessor extends AbstractProcessor {
       errorReporter.abortWithError("@AutoValue may not be used to implement an annotation"
           + " interface; try using @AutoAnnotation instead", type);
     }
-
-    ImmutableSet<ExecutableElement> methods =
-        getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
-
-    String fqExtClass = TypeSimplifier.classNameOf(type);
-    List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
-    AutoValueExtension.Context context = makeExtensionContext(type, methodsToImplement);
-    for (AutoValueExtension extension : extensions) {
-      if (extension.applicable(context)) {
-        if (extension.mustBeAtEnd(context)) {
-          appliedExtensions.add(0, extension);
-        } else {
-          appliedExtensions.add(extension);
-        }
-      }
-    }
-
-    String finalSubclass = generatedSubclassName(type, 0);
-    String subclass = generatedSubclassName(type, appliedExtensions.size());
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
-    vars.origClass = fqExtClass;
+    vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
-    vars.subclass = TypeSimplifier.simpleNameOf(subclass);
-    vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
-    vars.isFinal = appliedExtensions.isEmpty();
+    vars.subclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type));
     vars.types = processingEnv.getTypeUtils();
-    defineVarsForType(type, vars, methods);
+    defineVarsForType(type, vars);
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
     text = Reformatter.fixup(text);
-    writeSourceFile(subclass, text, type);
+    writeSourceFile(generatedSubclassName(type), text, type);
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
-
-    String extClass = TypeSimplifier.simpleNameOf(subclass);
-    for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
-      AutoValueExtension extension = appliedExtensions.remove(i);
-      String fqClassName = generatedSubclassName(type, i);
-      String className = TypeSimplifier.simpleNameOf(fqClassName);
-      boolean isFinal = (i == 0);
-      String source = extension.generateClass(context, className, extClass, isFinal);
-      if (source == null || source.isEmpty()) {
-        errorReporter.reportError("Extension returned no source code.", type);
-        return;
-      }
-      source = Reformatter.fixup(source);
-      writeSourceFile(fqClassName, source, type);
-
-      extClass = className;
-    }
   }
 
-  private AutoValueExtension.Context makeExtensionContext(
-      final TypeElement type, final Iterable<ExecutableElement> methods) {
-    return new AutoValueExtension.Context() {
-
-      @Override public ProcessingEnvironment processingEnvironment() {
-        return processingEnv;
-      }
-
-      @Override public String packageName() {
-        return TypeSimplifier.packageNameOf(type);
-      }
-
-      @Override public TypeElement autoValueClass() {
-        return type;
-      }
-
-      @Override public Map<String, ExecutableElement> properties() {
-        return propertyNameToMethodMap(methods);
-      }
-    };
-  }
-
-  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars,
-                                 Set<ExecutableElement> methods) {
+  private void defineVarsForType(TypeElement type, AutoValueTemplateVars vars) {
     Types typeUtils = processingEnv.getTypeUtils();
+    Set<ExecutableElement> methods =
+        getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     determineObjectMethodsToGenerate(methods, vars);
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
     Set<TypeMirror> types = new TypeMirrorSet();
@@ -532,19 +436,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (allGetters) {
       checkDuplicateGetters(map);
     }
-    return ImmutableBiMap.copyOf(map);
-  }
-
-  private ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(
-      Iterable<ExecutableElement> propertyMethods) {
-    ImmutableMap.Builder<String, ExecutableElement> builder = ImmutableMap.builder();
-    boolean allGetters = allGetters(propertyMethods);
-    for (ExecutableElement method : propertyMethods) {
-      String methodName = method.getSimpleName().toString();
-      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
-      builder.put(name, method);
-    }
-    ImmutableMap<String, ExecutableElement> map = builder.build();
     return ImmutableBiMap.copyOf(map);
   }
 
