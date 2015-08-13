@@ -123,7 +123,6 @@ public class PropertyAnnotationsTest extends TestCase {
             "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",
             "final class AutoValue_Baz extends Baz {",
             "  private final int buh;",
-            "",
             "  AutoValue_Baz(" + nullable + "int buh) {",
             "    this.buh = buh;",
             "  }",
@@ -166,10 +165,12 @@ public class PropertyAnnotationsTest extends TestCase {
     return JavaFileObjects.forSourceLines("foo.bar.AutoValue_Baz", lines);
   }
 
+  
   private void assertGeneratedMatches(
       List<String> imports,
       List<String> annotations,
-      List<String> expectedAnnotations) {
+      List<String> expectedAnnotations,
+      String expectedConstructorParamAnnotation) {
 
     JavaFileObject javaFileObject = sourceCode(imports, annotations);
     JavaFileObject expectedOutput = expectedCode(imports, expectedAnnotations);
@@ -179,6 +180,14 @@ public class PropertyAnnotationsTest extends TestCase {
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and().generatesSources(expectedOutput);
+
+  }
+  
+  private void assertGeneratedMatches(
+      List<String> imports,
+      List<String> annotations,
+      List<String> expectedAnnotations) {
+    assertGeneratedMatches(imports, annotations, expectedAnnotations, null);
   }
 
   public void testSimpleAnnotation() {
