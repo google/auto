@@ -17,27 +17,33 @@ package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static java.lang.annotation.ElementType.TYPE;
 import static javax.tools.StandardLocation.SOURCE_OUTPUT;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.testing.compile.JavaFileObjects;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Set;
+
 import javax.annotation.processing.Filer;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class BasicAnnotationProcessorTest {
@@ -112,6 +118,38 @@ public class BasicAnnotationProcessorTest {
     }
   }
 
+  @Target(TYPE)
+  public @interface AnAnnotation {}
+
+  /** When annotating a type {@code Foo}, generates a class called {@code FooXYZ}. */
+  public class AnAnnotationProcessor extends BasicAnnotationProcessor {
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
+
+    @Override
+    protected Iterable<? extends ProcessingStep> initSteps() {
+      return ImmutableSet.of(
+          new ProcessingStep() {
+            @Override
+            public Set<Element> process(
+                SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+              for (Element element : elementsByAnnotation.values()) {
+                generateClass(processingEnv.getFiler(), element.getSimpleName() + "XYZ");
+              }
+              return ImmutableSet.of();
+            }
+
+            @Override
+            public Set<? extends Class<? extends Annotation>> annotations() {
+              return ImmutableSet.of(AnAnnotation.class);
+            }
+          });
+    }
+  }
+
   @Test public void properlyDefersProcessing_typeElement() {
     JavaFileObject classAFileObject = JavaFileObjects.forSourceLines("test.ClassA",
         "package test;",
@@ -135,6 +173,27 @@ public class BasicAnnotationProcessorTest {
         .generatesFileNamed(
             SOURCE_OUTPUT, "test", "GeneratedByRequiresGeneratedCodeProcessor.java");
     assertThat(requiresGeneratedCodeProcessor.rejectedRounds).isEqualTo(0);
+  }
+
+  @Test
+  public void properlyDefersProcessing_nestedTypeValidBeforeOuterType() {
+    JavaFileObject source =
+        JavaFileObjects.forSourceLines(
+            "test.ValidInRound2",
+            "package test;",
+            "",
+            "@" + AnAnnotation.class.getCanonicalName(),
+            "public class ValidInRound2 {",
+            "  ValidInRound1XYZ vir1xyz;",
+            "  @" + AnAnnotation.class.getCanonicalName(),
+            "  static class ValidInRound1 {}",
+            "}");
+    assertAbout(javaSource())
+        .that(source)
+        .processedWith(new AnAnnotationProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesFileNamed(SOURCE_OUTPUT, "test", "ValidInRound2XYZ.java");
   }
 
   @Retention(RetentionPolicy.SOURCE)
