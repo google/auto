@@ -106,21 +106,20 @@ automatically generate an implementing class.
 ### In `Example.java`
 
 ```java
-    import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValue;
 
-    class Example {
-      @AutoValue
-      abstract static class Animal {
-        static Animal create(String name, int numberOfLegs) {
-          return new AutoValue_Example_Animal(name, numberOfLegs);
-          // (or just AutoValue_Animal if this is not nested)
-        }
+class Example {
+  @AutoValue
+  abstract static class Animal {
+    static Animal create(String name, int numberOfLegs) {
+      return new AutoValue_Example_Animal(name, numberOfLegs);
+      // (or just AutoValue_Animal if this is not nested)
+    }
 
-        abstract String name();
-        abstract int numberOfLegs();
-      }
-    }
-
+    abstract String name();
+    abstract int numberOfLegs();
+  }
+}
 ```
 
 That's it! (In real life, some classes and methods would
@@ -140,19 +139,19 @@ interesting** with the object, instead of just checking field
 values going in and out.
 
 ```java
-    public void testAnimal() {
-      Animal dog = Animal.create("dog", 4);
-      assertEquals("dog", dog.name());
-      assertEquals(4, dog.numberOfLegs());
+public void testAnimal() {
+  Animal dog = Animal.create("dog", 4);
+  assertEquals("dog", dog.name());
+  assertEquals(4, dog.numberOfLegs());
 
-      // You really don't need to write tests like these; just illustrating.
+  // You really don't need to write tests like these; just illustrating.
 
-      assertTrue(Animal.create("dog", 4).equals(dog));
-      assertFalse(Animal.create("cat", 4).equals(dog));
-      assertFalse(Animal.create("dog", 2).equals(dog));
+  assertTrue(Animal.create("dog", 4).equals(dog));
+  assertFalse(Animal.create("cat", 4).equals(dog));
+  assertFalse(Animal.create("dog", 2).equals(dog));
 
-      assertEquals("Animal{name=dog, numberOfLegs=4}", dog.toString());
-    }
+  assertEquals("Animal{name=dog, numberOfLegs=4}", dog.toString());
+}
 ```
 
 ### In `pom.xml`
@@ -160,12 +159,12 @@ values going in and out.
 add the following to your Maven configuration:
 
 ```xml
-    <dependency>
-      <groupId>com.google.auto.value</groupId>
-      <artifactId>auto-value</artifactId>
-      <version>1.1</version>
-      <scope>provided</scope>
-    </dependency>
+<dependency>
+  <groupId>com.google.auto.value</groupId>
+  <artifactId>auto-value</artifactId>
+  <version>1.1</version>
+  <scope>provided</scope>
+</dependency>
 ```
 
 ### What's going on here?
@@ -197,32 +196,32 @@ value of the property, and a build method. Here is the example above
 written using builders.
 
 ```java
-    import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValue;
 
-    class Example {
-      @AutoValue
-      abstract static class Animal {
-        static Builder builder() {
-          return new AutoValue_Example_Animal.Builder();
-        }
-
-        abstract String name();
-        abstract int numberOfLegs();
- 
-        @AutoValue.Builder
-        abstract static class Builder {
-          abstract Builder name(String s);
-          abstract Builder numberOfLegs(int n);
-          abstract Animal build();
-        }
-      }
+class Example {
+  @AutoValue
+  abstract static class Animal {
+    static Builder builder() {
+      return new AutoValue_Example_Animal.Builder();
     }
+
+    abstract String name();
+    abstract int numberOfLegs();
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder name(String s);
+      abstract Builder numberOfLegs(int n);
+      abstract Animal build();
+    }
+  }
+}
 ```
 
 Now client code can look something like this:
 
 ```java
-    Animal dog = Animal.builder().name("dog").numberOfLegs(4).build();
+Animal dog = Animal.builder().name("dog").numberOfLegs(4).build();
 ```
 
 
@@ -250,16 +249,16 @@ property, set it in the `builder()` method before returning. Here's
 how to define that animals have 4 legs by default:
 
 ```java
-    class Example {
-      @AutoValue
-      abstract static class Animal {
-        static Builder builder() {
-          return new AutoValue_Example_Animal.Builder()
-              .numberOfLegs(4);
-        }
-        // ...remainder as before...
-      }
+class Example {
+  @AutoValue
+  abstract static class Animal {
+    static Builder builder() {
+      return new AutoValue_Example_Animal.Builder()
+          .numberOfLegs(4);
     }
+    // ...remainder as before...
+  }
+}
 ```
 
 ### Nullability
@@ -298,26 +297,26 @@ autoBuild(). You can construct an object provisionally and inspect its
 properties before returning it. Here's how our example might be validated:
 
 ```java
-    class Example {
-      @AutoValue
-      abstract static class Animal {
-        ...
-        @AutoValue.Builder
-        abstract static class Builder {
-          abstract Builder name(String s);
-          abstract Builder numberOfLegs(int n);
+class Example {
+  @AutoValue
+  abstract static class Animal {
+    ...
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder name(String s);
+      abstract Builder numberOfLegs(int n);
 
-          abstract Animal autoBuild();
-          Animal build() {
-            Animal animal = autoBuild();
-            if (animal.numberOfLegs() < 0) {
-              throw new IllegalStateException("Negative legs");
-            }
-            return animal;
-          }
+      abstract Animal autoBuild();
+      Animal build() {
+        Animal animal = autoBuild();
+        if (animal.numberOfLegs() < 0) {
+          throw new IllegalStateException("Negative legs");
         }
-      }
+        return animal;
+      }
     }
+  }
+}
 ```
 
 If the Builder class is public, typically `build()` will be too but
@@ -331,30 +330,30 @@ exception if no value has been set. Like `autoBuild()`, these getter methods
 will typically not be public.
 
 ```java
-    class Example {
-      @AutoValue
-      abstract static class Animal {
-        abstract String name();
-        abstract int numberOfLegs();
+class Example {
+  @AutoValue
+  abstract static class Animal {
+    abstract String name();
+    abstract int numberOfLegs();
 
-        ...
+    ...
 
-        @AutoValue.Builder
-        abstract static class Builder {
-          abstract Builder name(String s);
-          abstract Builder numberOfLegs(int n);
-          abstract int numberOfLegs();
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder name(String s);
+      abstract Builder numberOfLegs(int n);
+      abstract int numberOfLegs();
 
-          abstract Animal autoBuild();
-          Animal build() {
-            if (numberOfLegs() < 0) {
-              throw new IllegalStateException("Negative legs");
-            }
-            return autoBuild();
-          }
+      abstract Animal autoBuild();
+      Animal build() {
+        if (numberOfLegs() < 0) {
+          throw new IllegalStateException("Negative legs");
         }
-      }
+        return autoBuild();
+      }
     }
+  }
+}
 ```
 
 ### Custom implementations
@@ -385,31 +384,31 @@ An `@AutoValue` class can have type parameters, as illustrated in these
 examples:
 
 ```java
-    @AutoValue
-    abstract class MapEntry<K extends Comparable<K>, V> implements Map.Entry<K, V> {
-      static <K extends Comparable<K>, V> MapEntry<K, V> create(K key, V value) {
-        return new AutoValue_MapEntry<K, V>(key, value);
-      }
-      ...
-    }
+@AutoValue
+abstract class MapEntry<K extends Comparable<K>, V> implements Map.Entry<K, V> {
+  static <K extends Comparable<K>, V> MapEntry<K, V> create(K key, V value) {
+    return new AutoValue_MapEntry<K, V>(key, value);
+  }
+  ...
+}
 ```
 
 or
 
 ```java
-    @AutoValue
-    abstract class MapEntry<K extends Comparable<K>, V> implements Map.Entry<K, V> {
-      static <K extends Comparable<K>, V> Builder<K, V> builder() {
-        return new AutoValue_MapEntry.Builder<K, V>();
-      }
+@AutoValue
+abstract class MapEntry<K extends Comparable<K>, V> implements Map.Entry<K, V> {
+  static <K extends Comparable<K>, V> Builder<K, V> builder() {
+    return new AutoValue_MapEntry.Builder<K, V>();
+  }
 
-      abstract static class Builder<K extends Comparable<K>, V> {
-        abstract Builder setKey(K key);
-        abstract Builder setValue(V value);
-        abstract MapEntry<K, V> build();
-      }
-      ...
-    }
+  abstract static class Builder<K extends Comparable<K>, V> {
+    abstract Builder setKey(K key);
+    abstract Builder setValue(V value);
+    abstract MapEntry<K, V> build();
+  }
+  ...
+}
 ```
 
 ### Converting back to a builder
@@ -421,22 +420,21 @@ that return a new object that is the same as the original one except
 for one changed property. Here is an example:
 
 ```java
-    class Example {
-      @AutoValue
-      abstract static class Animal {
-        static Builder builder() {
-          return AutoValue_Example_Animal.Builder();
-        }
-
-        abstract Builder toBuilder();
-
-        Animal withNumberOfLegs(int n) {
-          return toBuilder().numberOfLegs(n).build();
-        }
-        // ...remainder as before...
-      }
+class Example {
+  @AutoValue
+  abstract static class Animal {
+    static Builder builder() {
+      return AutoValue_Example_Animal.Builder();
     }
 
+    abstract Builder toBuilder();
+
+    Animal withNumberOfLegs(int n) {
+      return toBuilder().numberOfLegs(n).build();
+    }
+    // ...remainder as before...
+  }
+}
 ```
 
 
@@ -558,14 +556,14 @@ state. This doesn't mean your factory method can't *accept*
 mutable types as input parameters. Example:
 
 ```java
-    @AutoValue
-    public abstract class ListExample {
-      abstract ImmutableList<String> names();
-    
-      public static ListExample create(List<String> mutableNames) {
-        return new AutoValue_ListExample(ImmutableList.copyOf(mutableNames));
-      }
-    }
+@AutoValue
+public abstract class ListExample {
+  abstract ImmutableList<String> names();
+
+  public static ListExample create(List<String> mutableNames) {
+    return new AutoValue_ListExample(ImmutableList.copyOf(mutableNames));
+  }
+}
 ```
 
 Primitive arrays are arguably an exception to this, as in this
