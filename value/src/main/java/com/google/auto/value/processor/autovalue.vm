@@ -18,7 +18,9 @@ import $i;
 #end
 
 ${gwtCompatibleAnnotation}
+#if ($generated != "")
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
+#end
 #if ($isFinal) final #else abstract #end class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Fields
