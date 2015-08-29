@@ -82,6 +82,17 @@ class AutoValueTemplateVars extends TemplateVars {
   String simpleClassName;
   /** The simple name of the generated subclass. */
   String subclass;
+  /**
+   * The simple name of the final generated subclass.
+   * For {@code @AutoValue public static class Foo {}} this should always be "AutoValue_Foo".
+   */
+  String finalSubclass;
+
+  /**
+   * True if the generated class should be final (there are no extensions that
+   * will generate subclasses)
+   */
+  Boolean isFinal = false;
 
   /**
    * The formal generic signature of the class with the {@code @AutoValue} annotation and its
