@@ -1,6 +1,6 @@
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.assert_;
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.common.collect.ImmutableList;
@@ -169,25 +169,17 @@ public class PropertyAnnotationsTest extends TestCase {
   private void assertGeneratedMatches(
       List<String> imports,
       List<String> annotations,
-      List<String> expectedAnnotations,
-      String expectedConstructorParamAnnotation) {
+      List<String> expectedAnnotations) {
 
     JavaFileObject javaFileObject = sourceCode(imports, annotations);
     JavaFileObject expectedOutput = expectedCode(imports, expectedAnnotations);
 
-    assert_().about(javaSource())
+    assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and().generatesSources(expectedOutput);
 
-  }
-  
-  private void assertGeneratedMatches(
-      List<String> imports,
-      List<String> annotations,
-      List<String> expectedAnnotations) {
-    assertGeneratedMatches(imports, annotations, expectedAnnotations, null);
   }
 
   public void testSimpleAnnotation() {

@@ -166,8 +166,8 @@ abstract class ExpressionNode extends Node {
      * are not of the same class, they are considered equal if their {@code toString()} values are
      * equal. This means that integer 123 equals long 123L and also string {@code "123"}.  It also
      * means that equality isn't always transitive. For example, two StringBuilder objects each
-     * containing {@code "123"} will not compare equal, even though the string {@code "123"} compares
-     * equal to each of them.
+     * containing {@code "123"} will not compare equal, even though the string {@code "123"}
+     * compares equal to each of them.
      */
     private boolean equal(EvaluationContext context) {
       Object lhsValue = lhs.evaluate(context);

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -250,7 +249,7 @@ class GwtSerialization {
     CRC32 crc = new CRC32();
     update(crc, typeSimplifier.simplify(type.asType()) + ":");
     for (AutoValueProcessor.Property prop : props) {
-      update(crc, prop.toString() + ":" + prop.getType() + ";");
+      update(crc, prop + ":" + prop.getType() + ";");
     }
     return String.format("%08x", crc.getValue());
   }

@@ -20,7 +20,7 @@ import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
-import com.google.auto.value.AutoValueExtension;
+import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import javax.annotation.Generated;
@@ -67,19 +68,6 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import java.beans.Introspector;
-import java.io.IOException;
-import java.io.Serializable;
-import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
-import java.util.Set;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -94,7 +82,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     this(ServiceLoader.load(AutoValueExtension.class, AutoValueProcessor.class.getClassLoader()));
   }
 
-  /* testing */ AutoValueProcessor(Iterable<AutoValueExtension> extensions) {
+  /* testing */ AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
     this.extensions = extensions;
   }
 
@@ -116,7 +104,7 @@ public class AutoValueProcessor extends AbstractProcessor {
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
 
-  private Iterable<AutoValueExtension> extensions;
+  private Iterable<? extends AutoValueExtension> extensions;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -198,7 +186,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     private final ExecutableElement method;
     private final String type;
     private final ImmutableList<String> annotations;
-    private final String nullableAnnotation;
 
     Property(
         String name,
@@ -211,18 +198,6 @@ public class AutoValueProcessor extends AbstractProcessor {
       this.method = method;
       this.type = type;
       this.annotations = buildAnnotations(typeSimplifier);
-      this.nullableAnnotation = buildNullableAnnotation(typeSimplifier);
-    }
-
-    private String buildNullableAnnotation(TypeSimplifier typeSimplifier) {
-      for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-        String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
-        if (name.equals("Nullable")) {
-          AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
-          return annotationOutput.sourceFormForAnnotation(annotationMirror);
-        }
-      }
-      return null;
     }
 
     private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
@@ -758,7 +733,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       }
       Types typeUtils = processingEnv.getTypeUtils();
       TypeElement parentElement = (TypeElement) typeUtils.asElement(parentMirror);
-      if (parentElement.getAnnotation(AutoValue.class) != null) {
+      if (MoreElements.isAnnotationPresent(parentElement, AutoValue.class)) {
         return true;
       }
       type = parentElement;
