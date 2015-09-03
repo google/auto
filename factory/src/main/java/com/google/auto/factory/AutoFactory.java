@@ -23,7 +23,7 @@ import static java.lang.annotation.ElementType.TYPE;
 /**
  * An annotation to be applied to elements for which a factory should be automatically generated.
  *
- * <h2>Visibility
+ * <h2>Visibility</h2>
  * <p>The visibility of the generated factories will always be either {@code public} or default
  * visibility. The visibility of any given factory method is determined by the visibility of the
  * type being created. The generated factory is {@code public} if any of the factory methods are.
