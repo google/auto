@@ -18,28 +18,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Specifies that <a href="https://github.com/google/auto/tree/master/value">AutoValue</a> should
- * generate an implementation class for the annotated abstract class, implementing the standard
- * {@link Object} methods like {@link Object#equals equals} to have conventional value semantics. A
- * simple example: <pre>
- *
- *   &#64;AutoValue
- *   abstract class Person {
- *     static Person create(String name, int id) {
- *       return new AutoValue_Person(name, id);
- *     }
- *
- *     abstract String name();
- *     abstract int id();
- *   }</pre>
- *
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
- *
- *
- * @author Éamonn McManus
- * @author Kevin Bourrillion
- */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface AutoValue {

@@ -400,7 +400,7 @@ class BuilderSpec {
     }
     return Optional.of(new Builder(builderTypeElement));
   }
-  
+
   // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
   private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
     Set<ExecutableElement> methods = getLocalAndInheritedMethods(

@@ -551,7 +551,7 @@ If you have multiple creation methods, have them all call through
 to the same point, so there is still one call to the generated file,
 and one place to insert preconditions, etc.
 
-**Avoid mutable field types**, especially if you make your
+**Avoid mutable field types**, such as arrays, especially if you make your
 accessor methods `public`. The generated accessors won't copy the
 field value on its way out, so you'd be exposing your internal
 state. This doesn't mean your factory method can't *accept*
@@ -567,14 +567,6 @@ mutable types as input parameters. Example:
       }
     }
 ```
-
-Primitive arrays are arguably an exception to this, as in this
-case only AutoValue does return a copy of the internal array
-from the generated accessor. It does not automatically copy the
-data on its way in, however, so your static factory method should
-pass `array.clone()` in to the generated constructor instead of
-the input `array` itself. If you are using builders, arrays will
-be cloned in the generated builder.
 
 Finally, if you choose to provide an explicit `equals`, `hashCode`
 or `toString` implementation, please make it **`final`**, so readers

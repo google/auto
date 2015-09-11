@@ -1,17 +1,18 @@
 package com.google.auto.value.processor;
 
-import com.google.auto.value.AutoValueExtension;
+import static com.google.common.truth.Truth.assertAbout;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+
+import com.google.auto.value.extension.AutoValueExtension;
+import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
+
 import junit.framework.TestCase;
+
+import java.util.Map;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.JavaFileObject;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-
-import static com.google.common.truth.Truth.assertAbout;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 /**
  * Created by rharter on 5/5/15.
@@ -44,7 +45,7 @@ public class ExtensionTest extends TestCase {
     );
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AutoValueProcessor(Collections.<AutoValueExtension>singletonList(new FooExtension())))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
         .and().generatesSources(expectedExtensionOutput);
   }
@@ -82,7 +83,7 @@ public class ExtensionTest extends TestCase {
         "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AutoValueProcessor(Collections.<AutoValueExtension>singletonList(new FooExtension())))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
         .and().generatesSources(expectedExtensionOutput);
   }
@@ -100,7 +101,8 @@ public class ExtensionTest extends TestCase {
     }
 
     @Override
-    public String generateClass(final Context context, final String className, final String classToExtend, boolean isFinal) {
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
       StringBuilder constructor = new StringBuilder()
           .append("  public ")
           .append(className)

@@ -253,11 +253,13 @@ public class GwtSerializerTest extends GWTTestCase {
 
   public void testGenericsWithBuilder() {
     delayTestFinish(2000);
-    GenericsWithBuilder<SimpleWithBuilder> generics = GenericsWithBuilder.<SimpleWithBuilder>builder()
+    GenericsWithBuilder<SimpleWithBuilder> generics =
+        GenericsWithBuilder.<SimpleWithBuilder>builder()
         .simple(SimpleWithBuilder.builder()
             .message("able")
             .build())
         .build();
-    testService.echo(generics, new AssertEqualsCallback<GenericsWithBuilder<SimpleWithBuilder>>(generics));
+    testService.echo(
+        generics, new AssertEqualsCallback<GenericsWithBuilder<SimpleWithBuilder>>(generics));
   }
 }

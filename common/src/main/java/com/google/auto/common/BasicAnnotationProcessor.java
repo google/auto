@@ -15,6 +15,15 @@
  */
 package com.google.auto.common;
 
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.common.SuperficialValidation.validateElement;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Iterables.transform;
+import static com.google.common.collect.Multimaps.filterKeys;
+import static javax.lang.model.element.ElementKind.PACKAGE;
+import static javax.tools.Diagnostic.Kind.ERROR;
+
 import com.google.common.base.Ascii;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -26,6 +35,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -33,6 +43,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -45,15 +56,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
-
-import static com.google.auto.common.SuperficialValidation.validateElement;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Predicates.in;
-import static com.google.common.collect.Iterables.transform;
-import static com.google.common.collect.Multimaps.filterKeys;
-import static javax.lang.model.element.ElementKind.PACKAGE;
-import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * An abstract {@link Processor} implementation that defers processing of {@link Element}s to later
@@ -343,21 +345,43 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     return deferredElements.build();
   }
 
-  private static void findAnnotatedElements(Element element,
+  /**
+   * Adds {@code element} and its enclosed elements to {@code annotatedElements} if they are
+   * annotated with any annotations in {@code annotationClasses}. Does not traverse to member types
+   * of {@code element}, so that if {@code Outer} is passed in the example below, looking for
+   * {@code @X}, then {@code Outer}, {@code Outer.foo}, and {@code Outer.foo()} will be added to the
+   * multimap, but neither {@code Inner} nor its members will.
+   *
+   * <pre><code>
+   *   {@literal @}X class Outer {
+   *     {@literal @}X Object foo;
+   *     {@literal @}X void foo() {}
+   *     {@literal @}X static class Inner {
+   *       {@literal @}X Object bar;
+   *       {@literal @}X void bar() {}
+   *     }
+   *   }
+   * </code></pre>
+   */
+  private static void findAnnotatedElements(
+      Element element,
       ImmutableSet<? extends Class<? extends Annotation>> annotationClasses,
-      ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> builder) {
+      ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> annotatedElements) {
     for (Element enclosedElement : element.getEnclosedElements()) {
-      findAnnotatedElements(enclosedElement, annotationClasses, builder);
+      if (!enclosedElement.getKind().isClass() && !enclosedElement.getKind().isInterface()) {
+        findAnnotatedElements(enclosedElement, annotationClasses, annotatedElements);
+      }
     }
+
     // element.getEnclosedElements() does NOT return parameter elements
     if (element instanceof ExecutableElement) {
       for (Element parameterElement : ((ExecutableElement) element).getParameters()) {
-        findAnnotatedElements(parameterElement, annotationClasses, builder);
+        findAnnotatedElements(parameterElement, annotationClasses, annotatedElements);
       }
     }
     for (Class<? extends Annotation> annotationClass : annotationClasses) {
-      if (MoreElements.isAnnotationPresent(element, annotationClass)) {
-        builder.put(annotationClass, element);
+      if (isAnnotationPresent(element, annotationClass)) {
+        annotatedElements.put(annotationClass, element);
       }
     }
   }

@@ -1,10 +1,10 @@
-package com.google.auto.value;
+package com.google.auto.value.extension;
+
+import java.util.Map;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * An AutoValueExtension allows for extra functionality to be created during the generation
@@ -49,7 +49,7 @@ public interface AutoValueExtension {
     /**
      * The annotated class that this generation cycle is based on.
      *
-     * Given {@code @AutoValue public class Foo {...}}, this will be {@code Foo}.
+     * <p>Given {@code @AutoValue public class Foo {...}}, this will be {@code Foo}.
      *
      * @return The annotated class.
      */

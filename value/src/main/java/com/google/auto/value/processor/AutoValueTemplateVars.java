@@ -88,7 +88,6 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   String finalSubclass;
 
-
   /**
    * True if the generated class should be final (there are no extensions that
    * will generate subclasses)
