@@ -1687,4 +1687,24 @@ public class AutoValueTest extends TestCase {
     // a local variable of that name and can cause the error `int cannot be dereferenced`
     HProperty.create(new Object());
   }
+
+  interface Parent1 {
+    int something();
+  }
+
+  interface Parent2 {
+    int something();
+  }
+
+  @AutoValue
+  abstract static class InheritSameMethodTwice implements Parent1, Parent2 {
+    static InheritSameMethodTwice create(int something) {
+      return new AutoValue_AutoValueTest_InheritSameMethodTwice(something);
+    }
+  }
+
+  public void testInheritSameMethodTwice() {
+    InheritSameMethodTwice x = InheritSameMethodTwice.create(23);
+    assertThat(x.something()).isEqualTo(23);
+  }
 }
