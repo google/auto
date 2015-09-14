@@ -58,6 +58,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
@@ -637,13 +638,18 @@ public class AutoValueProcessor extends AbstractProcessor {
   private ImmutableSet<ExecutableElement> methodsToImplement(
       TypeElement autoValueClass, Set<ExecutableElement> methods) {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
+    Set<Name> toImplementNames = Sets.newHashSet();
     boolean ok = true;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
           && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
           ok &= checkReturnType(autoValueClass, method);
-          toImplement.add(method);
+          if (toImplementNames.add(method.getSimpleName())) {
+            // If an abstract method with the same signature is inherited on more than one path,
+            // we only add it once.
+            toImplement.add(method);
+          }
         } else {
           // This could reasonably be an error, were it not for an Eclipse bug in
           // ElementUtils.override that sometimes fails to recognize that one method overrides
