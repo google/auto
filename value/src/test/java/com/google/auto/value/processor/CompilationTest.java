@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -46,8 +48,10 @@ import javax.tools.JavaFileObject;
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class CompilationTest extends TestCase {
-  public void testCompilation() {
+@RunWith(JUnit4.class)
+public class CompilationTest {
+  @Test
+  public void simpleSuccess() {
     // Positive test case that ensures we generate the expected code for at least one case.
     // Most AutoValue code-generation tests are functional, meaning that we check that the generated
     // code does the right thing rather than checking what it looks like, but this test is a sanity
@@ -116,7 +120,8 @@ public class CompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
-  public void testImports() {
+  @Test
+  public void importTwoWays() {
     // Test that referring to the same class in two different ways does not confuse the import logic
     // into thinking it is two different classes and that therefore it can't import. The code here
     // is nonsensical but successfully reproduces a real problem, which is that a TypeMirror that is
@@ -212,7 +217,8 @@ public class CompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
-  public void testNoMultidimensionalPrimitiveArrays() throws Exception {
+  @Test
+  public void noMultidimensionalPrimitiveArrays() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -236,7 +242,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(7);
   }
 
-  public void testNoObjectArrays() throws Exception {
+  @Test
+  public void noObjectArrays() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -260,7 +267,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(7);
   }
 
-  public void testAnnotationOnInterface() throws Exception {
+  @Test
+  public void annotationOnInterface() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -277,7 +285,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
-  public void testAnnotationOnEnum() throws Exception {
+  @Test
+  public void annotationOnEnum() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -294,7 +303,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
-  public void testExtendAutoValue() throws Exception {
+  @Test
+  public void extendAutoValue() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Outer",
         "package foo.bar;",
@@ -328,7 +338,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(16);
   }
 
-  public void testBogusSerialVersionUID() throws Exception {
+  @Test
+  public void bogusSerialVersionUID() throws Exception {
     String[] mistakes = {
       "final long serialVersionUID = 1234L", // not static
       "static long serialVersionUID = 1234L", // not final
@@ -358,7 +369,8 @@ public class CompilationTest extends TestCase {
     }
   }
 
-  public void testNonExistentSuperclass() throws Exception {
+  @Test
+  public void nonExistentSuperclass() throws Exception {
     // The main purpose of this test is to check that AutoValueProcessor doesn't crash the
     // compiler in this case.
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
@@ -378,7 +390,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
-  public void testCannotImplementAnnotation() throws Exception {
+  @Test
+  public void cannotImplementAnnotation() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.RetentionImpl",
         "package foo.bar;",
@@ -413,7 +426,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(8);
   }
 
-  public void testMissingPropertyType() throws Exception {
+  @Test
+  public void missingPropertyType() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -432,7 +446,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(7);
   }
 
-  public void testMissingGenericPropertyType() throws Exception {
+  @Test
+  public void missingGenericPropertyType() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -451,7 +466,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(7);
   }
 
-  public void testMissingComplexGenericPropertyType() throws Exception {
+  @Test
+  public void missingComplexGenericPropertyType() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -473,7 +489,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(10);
   }
 
-  public void testMissingSuperclassGenericParameter() throws Exception {
+  @Test
+  public void missingSuperclassGenericParameter() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -492,7 +509,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
-  public void testCorrectBuilder() throws Exception {
+  @Test
+  public void correctBuilder() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -733,7 +751,8 @@ public class CompilationTest extends TestCase {
         .generatesSources(expectedOutput);
   }
 
-  public void testAutoValueBuilderOnTopLevelClass() throws Exception {
+  @Test
+  public void autoValueBuilderOnTopLevelClass() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Builder",
         "package foo.bar;",
@@ -753,7 +772,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
-  public void testAutoValueBuilderNotInsideAutoValue() throws Exception {
+  @Test
+  public void autoValueBuilderNotInsideAutoValue() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -781,7 +801,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(13);
   }
 
-  public void testAutoValueBuilderOnEnum() throws Exception {
+  @Test
+  public void autoValueBuilderOnEnum() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -807,7 +828,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(14);
   }
 
-  public void testAutoValueBuilderDuplicate() {
+  @Test
+  public void autoValueBuilderDuplicate() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -834,7 +856,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(13);
   }
 
-  public void testAutoValueBuilderMissingSetter() {
+  @Test
+  public void autoValueBuilderMissingSetter() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -860,7 +883,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderMissingSetterUsingSetPrefix() {
+  @Test
+  public void autoValueBuilderMissingSetterUsingSetPrefix() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -886,7 +910,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderWrongTypeSetter() {
+  @Test
+  public void autoValueBuilderWrongTypeSetter() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -914,7 +939,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderWrongTypeSetterWithCopyOf() {
+  @Test
+  public void autoValueBuilderWrongTypeSetterWithCopyOf() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -946,7 +972,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(14);
   }
 
-  public void testAutoValueBuilderWrongTypeSetterWithCopyOfGenericallyWrong() {
+  @Test
+  public void autoValueBuilderWrongTypeSetterWithCopyOfGenericallyWrong() {
     // This puts the finger on our insufficient error-detection logic for the case where the
     // parameter would be compatible with copyOf were it not for generics. Currently, this leads to
     // a compile error in the generated code. We don't want to suppose anything about the error
@@ -980,7 +1007,8 @@ public class CompilationTest extends TestCase {
         .failsToCompile();
   }
 
-  public void testAutoValueBuilderWrongTypeSetterWithGetPrefix() {
+  @Test
+  public void autoValueBuilderWrongTypeSetterWithGetPrefix() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1008,7 +1036,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderExtraSetter() {
+  @Test
+  public void autoValueBuilderExtraSetter() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1034,7 +1063,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderSetPrefixAndNoSetPrefix() {
+  @Test
+  public void autoValueBuilderSetPrefixAndNoSetPrefix() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1061,7 +1091,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderWrongTypeGetter() {
+  @Test
+  public void autoValueBuilderWrongTypeGetter() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1091,7 +1122,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(15);
   }
 
-  public void testAutoValueBuilderPropertyBuilderAndSetter() {
+  @Test
+  public void autoValueBuilderPropertyBuilderAndSetter() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1118,7 +1150,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderPropertyBuilderInvalidType() {
+  @Test
+  public void autoValueBuilderPropertyBuilderInvalidType() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1145,7 +1178,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderPropertyBuilderRawType() {
+  @Test
+  public void autoValueBuilderPropertyBuilderRawType() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1172,7 +1206,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderPropertyBuilderWrongCollectionType() {
+  @Test
+  public void autoValueBuilderPropertyBuilderWrongCollectionType() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1202,7 +1237,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(13);
   }
 
-  public void testAutoValueBuilderPropertyBuilderWrongElementType() {
+  @Test
+  public void autoValueBuilderPropertyBuilderWrongElementType() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1231,7 +1267,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderAlienMethod0() {
+  @Test
+  public void autoValueBuilderAlienMethod0() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1259,7 +1296,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderAlienMethod1() {
+  @Test
+  public void autoValueBuilderAlienMethod1() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1284,7 +1322,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderAlienMethod2() {
+  @Test
+  public void autoValueBuilderAlienMethod2() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1309,7 +1348,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(11);
   }
 
-  public void testAutoValueBuilderMissingBuildMethod() {
+  @Test
+  public void autoValueBuilderMissingBuildMethod() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1334,7 +1374,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(10);
   }
 
-  public void testAutoValueBuilderDuplicateBuildMethods() {
+  @Test
+  public void autoValueBuilderDuplicateBuildMethods() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1363,7 +1404,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(13);
   }
 
-  public void testAutoValueBuilderWrongTypeBuildMethod() {
+  @Test
+  public void autoValueBuilderWrongTypeBuildMethod() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1389,7 +1431,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(12);
   }
 
-  public void testAutoValueBuilderTypeParametersDontMatch1() {
+  @Test
+  public void autoValueBuilderTypeParametersDontMatch1() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1415,7 +1458,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(10);
   }
 
-  public void testAutoValueBuilderTypeParametersDontMatch2() {
+  @Test
+  public void autoValueBuilderTypeParametersDontMatch2() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1441,7 +1485,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(10);
   }
 
-  public void testAutoValueBuilderTypeParametersDontMatch3() {
+  @Test
+  public void autoValueBuilderTypeParametersDontMatch3() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1467,7 +1512,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(10);
   }
 
-  public void testAutoValueBuilderToBuilderWrongTypeParameters() {
+  @Test
+  public void autoValueBuilderToBuilderWrongTypeParameters() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1495,7 +1541,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(9);
   }
 
-  public void testAutoValueBuilderToBuilderDuplicate() {
+  @Test
+  public void autoValueBuilderToBuilderDuplicate() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1524,7 +1571,8 @@ public class CompilationTest extends TestCase {
         .in(javaFileObject).onLine(9);
   }
 
-  public void testGetFooIsFoo() throws Exception {
+  @Test
+  public void getFooIsFoo() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -1579,7 +1627,8 @@ public class CompilationTest extends TestCase {
     }
   }
 
-  public void testExceptionBecomesError() throws Exception {
+  @Test
+  public void exceptionBecomesError() throws Exception {
     // Ensure that if the annotation processor code gets an unexpected exception, it is converted
     // into a compiler error rather than being propagated. Otherwise the output can be very
     // confusing to the user who stumbles into a bug that causes an exception, whether in
@@ -1649,7 +1698,8 @@ public class CompilationTest extends TestCase {
     }
   }
 
-  public void testReferencingGeneratedClass() {
+  @Test
+  public void referencingGeneratedClass() {
     // Test that ensures that a type that does not exist can be the type of an @AutoValue property
     // as long as it later does come into existence. The BarFoo type referenced here does not exist
     // when the AutoValueProcessor runs on the first round, but the FooProcessor then generates it.
