@@ -218,6 +218,31 @@ public class CompilationTest {
   }
 
   @Test
+  public void autoValueMustBeStatic() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "public class Baz {",
+        "  @AutoValue",
+        "  public abstract class NotStatic {",
+        "    public abstract String buh();",
+        "    public NotStatic create(String buh) {",
+        "      return new AutoValue_Baz_NotStatic(buh);",
+        "    }",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("Nested @AutoValue class must be static")
+        .in(javaFileObject).onLine(7);
+  }
+
+  @Test
   public void noMultidimensionalPrimitiveArrays() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",

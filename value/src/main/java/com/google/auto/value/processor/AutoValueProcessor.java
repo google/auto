@@ -355,6 +355,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       errorReporter.abortWithError("@AutoValue may not be used to implement an annotation"
           + " interface; try using @AutoAnnotation instead", type);
     }
+    checkTopLevelOrStatic(type);
 
     ImmutableSet<ExecutableElement> methods =
         getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
@@ -556,6 +557,17 @@ public class AutoValueProcessor extends AbstractProcessor {
       name = name.substring(2);
     }
     return Introspector.decapitalize(name);
+  }
+
+  private void checkTopLevelOrStatic(TypeElement type) {
+    ElementKind enclosingKind = type.getEnclosingElement().getKind();
+    if ((enclosingKind.isClass() || enclosingKind.isInterface())
+        && !type.getModifiers().contains(Modifier.STATIC)) {
+      errorReporter.abortWithError("Nested @AutoValue class must be static", type);
+    }
+    // In principle type.getEnclosingElement() could be an ExecutableElement (for a class
+    // declared inside a method), but since RoundEnvironment.getElementsAnnotatedWith doesn't
+    // return such classes we won't see them here.
   }
 
   private void checkDuplicateGetters(Map<ExecutableElement, String> methodToIdentifier) {
