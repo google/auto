@@ -32,6 +32,9 @@
     Immutable value-type code generation for Java 1.6+.
   </description>
 
+  <properties>
+    <guava.version>18.0</guava.version>
+  </properties>
   <scm>
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
@@ -53,7 +56,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>18.0</version>
+      <version>${guava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
@@ -70,7 +73,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
-      <version>17.0</version>
+      <version>${guava.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
