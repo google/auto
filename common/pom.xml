@@ -31,6 +31,10 @@
     Common utilities for creating annotation processors.
   </description>
 
+  <properties>
+    <additionalparam>-Xdoclint:none</additionalparam>
+  </properties>
+
   <scm>
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
