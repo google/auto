@@ -44,7 +44,7 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>0.4</version>
+      <version>0.5</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
@@ -71,7 +71,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.6</version>
+      <version>0.8</version>
       <scope>test</scope>
     </dependency>
     <dependency>
