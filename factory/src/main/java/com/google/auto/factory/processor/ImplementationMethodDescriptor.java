@@ -17,7 +17,7 @@ package com.google.auto.factory.processor;
 
 import java.util.Set;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -54,7 +54,7 @@ final class ImplementationMethodDescriptor {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("name", name)
         .add("returnType", returnType)
         .add("publicMethod", publicMethod)
