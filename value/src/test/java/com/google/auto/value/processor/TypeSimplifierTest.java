@@ -316,9 +316,9 @@ public class TypeSimplifierTest extends TestCase {
       assertTrue(set.contains(otherObjectMirror));
 
       assertFalse(set.contains(null));
-      assertFalse(set.contains("foo"));
+      assertFalse(set.contains((Object) "foo"));
       assertFalse(set.remove(null));
-      assertFalse(set.remove("foo"));
+      assertFalse(set.remove((Object) "foo"));
 
       TypeElement list = typeElementOf("java.util.List");
       TypeMirror listOfObjectMirror = typeUtil.getDeclaredType(list, objectMirror);
