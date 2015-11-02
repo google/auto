@@ -136,9 +136,10 @@ public void testAnimal() {
 }
 ```
 
+
 ### In `pom.xml`
 
-add the following to your Maven configuration:
+For Maven users, add the following to your Maven configuration:
 
 ```xml
 <dependency>
@@ -449,6 +450,7 @@ a very simple test like the one shown above is enough.
 We reserve the right to **change the `hashCode` implementation** at any time. Do
 not depend on the order your objects appear in hash maps (use `ImmutableMap` or
 `LinkedHashMap`!), and never persist these hash codes.
+
 
 ## Restrictions and non-features
 
