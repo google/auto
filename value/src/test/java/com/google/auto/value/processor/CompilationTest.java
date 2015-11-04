@@ -564,6 +564,7 @@ public class CompilationTest {
         "    Builder<T> aByteArray(byte[] x);",
         "    Builder<T> aNullableIntArray(@Nullable int[] x);",
         "    Builder<T> aList(List<T> x);",
+        "    Builder<T> anImmutableList(List<T> x);",
         "    ImmutableList.Builder<T> anImmutableListBuilder();",
         "",
         "    List<T> aList();",
@@ -617,12 +618,12 @@ public class CompilationTest {
         "    return anInt;",
         "  }",
         "",
-        "  @SuppressWarnings(value = {\"mutable\")",
+        "  @SuppressWarnings(value = {\"mutable\"})",
         "  @Override public byte[] aByteArray() {",
         "    return aByteArray;",
         "  }",
         "",
-        "  @SuppressWarnings(value = {\"mutable\")",
+        "  @SuppressWarnings(value = {\"mutable\"})",
         "  @Nullable",
         "  @Override public int[] aNullableIntArray() {",
         "    return aNullableIntArray;",
@@ -689,9 +690,11 @@ public class CompilationTest {
         "    private byte[] aByteArray;",
         "    private int[] aNullableIntArray;",
         "    private List<T> aList;",
-        "    private ImmutableList.Builder<T> anImmutableList = ImmutableList.builder();",
+        "    private ImmutableList.Builder<T> anImmutableListBuilder$",
+        "    private ImmutableList<T> anImmutableList;",
         "",
         "    Builder() {",
+        "      this.anImmutableList = ImmutableList.of();",
         "    }",
         "",
         "    Builder(Baz<T> source) {",
@@ -699,7 +702,7 @@ public class CompilationTest {
         "      this.aByteArray = source.aByteArray();",
         "      this.aNullableIntArray = source.aNullableIntArray();",
         "      this.aList = source.aList();",
-        "      this.anImmutableList.addAll(source.anImmutableList());",
+        "      this.anImmutableList = source.anImmutableList();",
         "    }",
         "",
         "    @Override",
@@ -735,17 +738,38 @@ public class CompilationTest {
         "    }",
         "",
         "    @Override",
+        "    public Baz.Builder<T> anImmutableList(List<T> anImmutableList) {",
+        "      if (anImmutableListBuilder$ != null) {",
+        "        throw new IllegalStateException("
+                     + "\"Cannot set anImmutableList after calling anImmutableListBuilder()\")",
+        "      }",
+        "      this.anImmutableList = ImmutableList.copyOf(anImmutableList);",
+        "      return this;",
+        "    }",
+        "",
+        "    @Override",
         "    public ImmutableList.Builder<T> anImmutableListBuilder() {",
-        "      return anImmutableList;",
+        "      if (anImmutableListBuilder$ == null) {",
+        "        anImmutableListBuilder$ = ImmutableList.builder();",
+        "        anImmutableListBuilder$.addAll(anImmutableList);",
+        "        anImmutableList = null;",
+        "      }",
+        "      return anImmutableListBuilder$;",
         "    }",
         "",
         "    @Override",
         "    public ImmutableList<T> anImmutableList() {",
-        "      return anImmutableList.build();",
+        "      if (anImmutableListBuilder$ != null) {",
+        "        return anImmutableListBuilder$.build();",
+        "      }",
+        "      return anImmutableList;",
         "    }",
         "",
         "    @Override",
         "    public Baz<T> build() {",
+        "      if (anImmutableListBuilder$ != null) {",
+        "        anImmutableList = anImmutableListBuilder$.build();",
+        "      }",
         "      String missing = \"\";",
         "      if (anInt == null) {",
         "        missing += \" anInt\";",
@@ -764,7 +788,7 @@ public class CompilationTest {
         "          this.aByteArray,",
         "          this.aNullableIntArray,",
         "          this.aList,",
-        "          this.anImmutableList.build());",
+        "          this.anImmutableList);",
         "    }",
         "  }",
         "}");
@@ -1145,34 +1169,6 @@ public class CompilationTest {
         .withErrorContaining(
             "Method matches a property of foo.bar.Baz but has return type T instead of U")
         .in(javaFileObject).onLine(15);
-  }
-
-  @Test
-  public void autoValueBuilderPropertyBuilderAndSetter() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "import com.google.common.collect.ImmutableSet;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract ImmutableSet<String> blim();",
-        "",
-        "  @AutoValue.Builder",
-        "  public interface Builder {",
-        "    abstract ImmutableSet.Builder<String> blimBuilder();",
-        "    abstract Builder setBlim(ImmutableSet<String> blim);",
-        "    Baz build();",
-        "  }",
-        "}");
-    assertAbout(javaSource())
-        .that(javaFileObject)
-        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
-        .failsToCompile()
-        .withErrorContaining("Property blim cannot have both a setter and a builder")
-        .in(javaFileObject).onLine(11);
   }
 
   @Test

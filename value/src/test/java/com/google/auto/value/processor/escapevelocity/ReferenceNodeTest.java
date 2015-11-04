@@ -40,35 +40,40 @@ import java.util.Map;
 public class ReferenceNodeTest {
   @Rule public Expect expect = Expect.create();
 
-  private static ImmutableList<Class<?>> pair(Class<?> a, Class<?> b) {
-    return ImmutableList.of(a, b);
-  }
-
   // This is the exhaustive list from
   // https://docs.oracle.com/javase/specs/jls/se8/html/jls-5.html#jls-5.1.2.
   // We put the "from" type first for consistency with that list, even though that is inconsistent
   // with our method order (which is itself consistent with assignment, "to" on the left).
   private static final ImmutableSet<ImmutableList<Class<?>>> ASSIGNMENT_COMPATIBLE =
-      ImmutableSet.of(
-          pair(byte.class, short.class),
-          pair(byte.class, int.class),
-          pair(byte.class, long.class),
-          pair(byte.class, float.class),
-          pair(byte.class, double.class),
-          pair(short.class, int.class),
-          pair(short.class, long.class),
-          pair(short.class, float.class),
-          pair(short.class, double.class),
-          pair(char.class, int.class),
-          pair(char.class, long.class),
-          pair(char.class, float.class),
-          pair(char.class, double.class),
-          pair(int.class, long.class),
-          pair(int.class, float.class),
-          pair(int.class, double.class),
-          pair(long.class, float.class),
-          pair(long.class, double.class),
-          pair(float.class, double.class));
+      makeAssignmentCompatibleSet();
+  private static ImmutableSet<ImmutableList<Class<?>>> makeAssignmentCompatibleSet() {
+    Class<?>[][] pairs = {
+        {byte.class, short.class},
+        {byte.class, int.class},
+        {byte.class, long.class},
+        {byte.class, float.class},
+        {byte.class, double.class},
+        {short.class, int.class},
+        {short.class, long.class},
+        {short.class, float.class},
+        {short.class, double.class},
+        {char.class, int.class},
+        {char.class, long.class},
+        {char.class, float.class},
+        {char.class, double.class},
+        {int.class, long.class},
+        {int.class, float.class},
+        {int.class, double.class},
+        {long.class, float.class},
+        {long.class, double.class},
+        {float.class, double.class},
+    };
+    ImmutableSet.Builder<ImmutableList<Class<?>>> builder = ImmutableSet.builder();
+    for (Class<?>[] pair : pairs) {
+      builder.add(ImmutableList.copyOf(pair));
+    }
+    return builder.build();
+  }
 
   @Test
   public void testPrimitiveTypeIsAssignmentCompatible() {

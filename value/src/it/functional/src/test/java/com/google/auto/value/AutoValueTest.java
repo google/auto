@@ -1595,6 +1595,77 @@ public class AutoValueTest extends TestCase {
     assertEquals(a, c);
   }
 
+  @AutoValue
+  public abstract static class BuilderWithCollectionBuilderAndSetter<T extends Number> {
+    public abstract ImmutableList<T> things();
+
+    public static <T extends Number> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithCollectionBuilderAndSetter.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Number> {
+      Builder<T> setThings(List<T> things);
+      ImmutableList<T> things();
+      ImmutableList.Builder<T> thingsBuilder();
+      BuilderWithCollectionBuilderAndSetter<T> build();
+    }
+  }
+
+  public void testBuilderAndSetterDefaultsEmpty() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.<Integer>builder();
+    assertThat(builder.things()).isEmpty();
+    assertThat(builder.build().things()).isEmpty();
+  }
+
+  public void testBuilderAndSetterUsingBuilder() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.builder();
+    builder.thingsBuilder().add(17, 23);
+    BuilderWithCollectionBuilderAndSetter<Integer> x = builder.build();
+    assertThat(x.things()).isEqualTo(ImmutableList.of(17, 23));
+  }
+
+  public void testBuilderAndSetterUsingSetter() {
+    ImmutableList<Integer> things = ImmutableList.of(17, 23);
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.<Integer>builder()
+            .setThings(things);
+    assertThat(builder.things()).isSameAs(things);
+    assertThat(builder.build().things()).isSameAs(things);
+
+    List<Integer> moreThings = Arrays.asList(5, 17, 23);
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder2 =
+        BuilderWithCollectionBuilderAndSetter.<Integer>builder()
+            .setThings(moreThings);
+    assertThat(builder2.things()).isEqualTo(moreThings);
+    assertThat(builder2.build().things()).isEqualTo(moreThings);
+  }
+
+  public void testBuilderAndSetterUsingSetterThenBuilder() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.builder();
+    builder.setThings(ImmutableList.of(5));
+    builder.thingsBuilder().add(17, 23);
+    List<Integer> expectedThings = ImmutableList.of(5, 17, 23);
+    assertThat(builder.things()).isEqualTo(expectedThings);
+    assertThat(builder.build().things()).isEqualTo(expectedThings);
+  }
+
+  public void testBuilderAndSetterCannotSetAfterBuilder() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.builder();
+    builder.setThings(ImmutableList.of(5));
+    builder.thingsBuilder().add(17, 23);
+    try {
+      builder.setThings(ImmutableList.of(1729));
+      fail("Setting list after retrieving builder should provoke an exception");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Cannot set things after calling thingsBuilder()");
+    }
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   @interface GwtCompatible {
     boolean funky() default false;

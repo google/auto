@@ -302,14 +302,17 @@ class BuilderSpec {
    * fooBuilder() must return the corresponding builder, like ImmutableSet.Builder.
    */
   public class PropertyBuilder {
+    private final String name;
     private final String builderType;
     private final String initializer;
     private final String copyAll;
+    private final String empty;
 
     PropertyBuilder(
         ExecutableElement autoValuePropertyMethod,
         ExecutableElement propertyBuilderMethod,
         TypeSimplifier typeSimplifier) {
+      this.name = propertyBuilderMethod.getSimpleName() + "$";
       String immutableType = typeSimplifier.simplify(autoValuePropertyMethod.getReturnType());
       int typeParamIndex = immutableType.indexOf('<');
       checkState(typeParamIndex > 0, immutableType);
@@ -317,6 +320,7 @@ class BuilderSpec {
       this.builderType =
           rawImmutableType + ".Builder" + immutableType.substring(typeParamIndex);
       this.initializer = rawImmutableType + ".builder()";
+      this.empty = rawImmutableType + ".of()";
       // TODO(emcmanus): clean up TypeSimplifier and remove this hack.
       // We want it to simplify com.google.common.collect.ImmutableSet.Builder<E>
       // the same way it would simplify com.google.common.collect.ImmutableSet<E>.
@@ -338,6 +342,11 @@ class BuilderSpec {
       }
     }
 
+    /** The name of the field to hold this builder. */
+    public String getName() {
+      return name;
+    }
+
     /** The type of the builder, for example {@code ImmutableSet.Builder<String>}. */
     public String getBuilderType() {
       return builderType;
@@ -349,7 +358,17 @@ class BuilderSpec {
     }
 
     /**
-     * The method to copy another immutable collection into this one. It is {@code copyAll} for
+     * A method to return an empty collection of the type that this builder builds. For example,
+     * if this is an {@code ImmutableList<String>} then the method {@code ImmutableList.of()} will
+     * correctly return an empty {@code ImmutableList<String>}, assuming the appropriate context for
+     * type inference.
+     */
+    public String getEmpty() {
+      return empty;
+    }
+
+    /**
+     * The method to copy another collection into this builder. It is {@code addAll} for
      * one-dimensional collections like {@code ImmutableList} and {@code ImmutableSet}, and it is
      * {@code putAll} for two-dimensional collections like {@code ImmutableMap} and
      * {@code ImmutableTable}.
