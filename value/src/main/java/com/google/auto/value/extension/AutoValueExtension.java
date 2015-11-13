@@ -1,6 +1,5 @@
 package com.google.auto.value.extension;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -20,14 +19,15 @@ import javax.lang.model.element.TypeElement;
  *
  * <p>Extensions can extend the AutoValue implementation by generating subclasses of the AutoValue
  * generated class. It is not guaranteed that an Extension's generated class will be the final
- * class in the inheritance hierarchy, unless its {@link #mustBeFinal()} method returns true. Only
- * one Extension can return true for a given context. Only generated classes that will be the
+ * class in the inheritance hierarchy, unless its {@link #mustBeFinal(Context)} method returns true.
+ * Only one Extension can return true for a given context. Only generated classes that will be the
  * final class in the inheritance hierarchy can be declared final. All others should be declared
  * abstract.
  *
  * <p>Each Extension must also be sure to generate a constructor with arguments corresponding to
- * all properties in {@link com.google.auto.value.AutoValueExtension.Context#properties()}, in
- * order. This constructor must have at least package visibility.
+ * all properties in
+ * {@link com.google.auto.value.extension.AutoValueExtension.Context#properties()}, in order. This
+ * constructor must have at least package visibility.
  */
 public abstract class AutoValueExtension {
 
@@ -82,8 +82,7 @@ public abstract class AutoValueExtension {
    * in the inheritance hierarchy.  Only one extension may be the final class, so
    * this should be used sparingly.
    *
-   * @param context The {@link com.google.auto.value.AutoValueExtension.Context} of the code
-   *                generation for this class.
+   * @param context The Context of the code generation for this class.
    * @return True if the resulting class must be the final class in the inheritance hierarchy.
    */
   public boolean mustBeFinal(Context context) {
@@ -91,9 +90,9 @@ public abstract class AutoValueExtension {
   }
 
   /**
-   * Returns a non-null set of property names from {@link #properties()} that this extension intends
-   * to implement.  This will prevent AutoValue from generating an implementation, and remove the
-   * supplied properties from builders, constructors, {@code toString}, {@code equals},
+   * Returns a non-null set of property names from {@link Context#properties()} that this extension
+   * intends to implement. This will prevent AutoValue from generating an implementation, and remove
+   * the supplied properties from builders, constructors, {@code toString}, {@code equals},
    * and {@code hashCode}. The default set returned by this method is empty.
    *
    * <p>For example, Android's {@code Parcelable} interface includes a
@@ -107,8 +106,7 @@ public abstract class AutoValueExtension {
    * implementation and return a set containing {@code "describeContents"}. Then
    * {@code describeContents} will be omitted from builders and the rest.
    *
-   * @param context The {@link com.google.auto.value.AutoValueExtension.Context} of the code
-   *     generation for this class.
+   * @param context The Context of the code generation for this class.
    * @return A collection of property names that this extension intends to implement.
    */
   public Set<String> consumeProperties(Context context) {
