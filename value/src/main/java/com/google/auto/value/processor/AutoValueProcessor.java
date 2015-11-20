@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
@@ -63,6 +64,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -431,8 +433,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private static <K, V> ImmutableBiMap<K, V> newImmutableBiMapRemovingKeys(ImmutableBiMap<K, V> original,
-      Set<K> keysToRemove) {
+  private static <K, V> ImmutableBiMap<K, V> newImmutableBiMapRemovingKeys(
+      ImmutableBiMap<K, V> original, Set<K> keysToRemove) {
     ImmutableBiMap.Builder<K, V> builder = ImmutableBiMap.builder();
     for (Map.Entry<K, V> property : original.entrySet()) {
       if (!keysToRemove.contains(property.getKey())) {
@@ -487,8 +489,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     Map<ExecutableElement, String> methodToIdentifier = Maps.newLinkedHashMap(methodToPropertyName);
     fixReservedIdentifiers(methodToIdentifier);
     List<Property> props = new ArrayList<Property>();
+    DeclaredType autoValueTypeMirror = MoreTypes.asDeclared(type.asType());
     for (ExecutableElement method : propertyMethods) {
-      String propertyType = typeSimplifier.simplify(method.getReturnType());
+      TypeMirror returnType = returnTypeAsMemberOf(method, autoValueTypeMirror);
+      String propertyType = typeSimplifier.simplify(returnType);
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
       props.add(new Property(propertyName, identifier, method, propertyType, typeSimplifier));
@@ -504,6 +508,27 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (builder.isPresent()) {
       builder.get().defineVars(vars, typeSimplifier, methodToPropertyName);
     }
+  }
+
+  // Get the real return type of the given method given that it appears in or is inherited by
+  // the given type. For example, if the method is the `T next()` declared by Iterator<T> but we
+  // are asking about it in `class StringIterator implements Iterator<String>` then the real return
+  // type is String.
+  private TypeMirror returnTypeAsMemberOf(ExecutableElement method, DeclaredType in) {
+    TypeMirror methodMirror;
+    try {
+      methodMirror = processingEnv.getTypeUtils().asMemberOf(in, method);
+    } catch (IllegalArgumentException e) {
+      // Eclipse sometimes throws a spurious IAE for inherited interface methods. In that case,
+      // we just use the original return type. That might mean that in some circumstances Eclipse
+      // won't be able to compile your code when javac can. You might be forced to rewrite it in
+      // a way that Eclipse accepts (for example by redeclaring the method in a child), but that
+      // is strictly better than the compile error that results if we don't derive the correct type
+      // in examples like the Iterator<String> one.
+      // See https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590
+      return method.getReturnType();
+    }
+    return MoreTypes.asExecutable(methodMirror).getReturnType();
   }
 
   private ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(

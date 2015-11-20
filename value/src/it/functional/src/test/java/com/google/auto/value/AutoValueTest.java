@@ -614,6 +614,29 @@ public class AutoValueTest extends TestCase {
     assertSame(mergeable, instance.meta());
   }
 
+  static class NodeType<O> {}
+
+  // If this were an interface rather than an abstract class, it would fall afoul of Eclipse
+  // bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590, which might or might not be fixed
+  // in the latest dev builds of Eclipse but is definitely still present as of 4.5. What that
+  // means is that AutoValue will generate incorrect code for that case, when run by the Eclipse
+  // compiler. But javac will manage just fine. See https://github.com/google/auto/issues/166.
+  abstract static class NodeExpression<O> {
+    abstract NodeType<O> getType();
+  }
+
+  @AutoValue
+  abstract static class NotNodeExpression extends NodeExpression<Boolean> {
+    static NotNodeExpression create() {
+      return new AutoValue_AutoValueTest_NotNodeExpression(new NodeType<Boolean>());
+    }
+  }
+
+  public void testConcreteWithGenericParent() {
+    NotNodeExpression instance = NotNodeExpression.create();
+    assertThat(instance.getType()).isInstanceOf(NodeType.class);
+  }
+
   @AutoValue
   abstract static class ExplicitToString {
     abstract String string();
