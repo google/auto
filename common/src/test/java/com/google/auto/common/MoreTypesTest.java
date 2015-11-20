@@ -78,6 +78,12 @@ public class MoreTypesTest {
     DeclaredType mapOfObjectToObjectType =
         types.getDeclaredType(mapElement, objectType, objectType);
     TypeMirror mapType = mapElement.asType();
+    DeclaredType setOfSetOfObject =
+        types.getDeclaredType(setElement, types.getDeclaredType(setElement, objectType));
+    DeclaredType setOfSetOfString =
+        types.getDeclaredType(setElement, types.getDeclaredType(setElement, stringType));
+    DeclaredType setOfSetOfSetOfObject = types.getDeclaredType(setElement, setOfSetOfObject);
+    DeclaredType setOfSetOfSetOfString = types.getDeclaredType(setElement, setOfSetOfString);
     WildcardType wildcard = types.getWildcardType(null, null);
     EquivalenceTester<TypeMirror> tester = EquivalenceTester.<TypeMirror>of(MoreTypes.equivalence())
         .addEquivalenceGroup(types.getNullType())
@@ -102,6 +108,10 @@ public class MoreTypesTest {
         .addEquivalenceGroup(types.getDeclaredType(mapElement, objectType, stringType))
         .addEquivalenceGroup(types.getDeclaredType(mapElement, stringType, objectType))
         .addEquivalenceGroup(types.getDeclaredType(mapElement, stringType, stringType))
+        .addEquivalenceGroup(setOfSetOfObject)
+        .addEquivalenceGroup(setOfSetOfString)
+        .addEquivalenceGroup(setOfSetOfSetOfObject)
+        .addEquivalenceGroup(setOfSetOfSetOfString)
         .addEquivalenceGroup(wildcard)
         // ? extends Object
         .addEquivalenceGroup(types.getWildcardType(objectType, null))
