@@ -77,6 +77,7 @@ import javax.tools.JavaFileObject;
  * class.
  *
  * @see AutoValue
+ * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
