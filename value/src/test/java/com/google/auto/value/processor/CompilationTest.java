@@ -594,7 +594,7 @@ public class CompilationTest {
         "  private final List<T> aList;",
         "  private final ImmutableList<T> anImmutableList;",
         "",
-        "  private AutoValue_Baz(",
+        "  AutoValue_Baz(",
         "      int anInt,",
         "      byte[] aByteArray,",
         "      @Nullable int[] aNullableIntArray,",
