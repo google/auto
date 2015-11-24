@@ -150,7 +150,7 @@
                 </relocation>
                 <relocation>
                   <pattern>com.google</pattern>
-                  <shadedPattern>autovalue.shaded.com.google.common$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.com.google$</shadedPattern>
                   <excludes>
                     <exclude>com.google.auto.value.**</exclude>
                   </excludes>
