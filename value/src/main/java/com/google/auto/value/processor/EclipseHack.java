@@ -15,9 +15,11 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.AutoValueProcessor.Property;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -29,12 +31,22 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
 /**
@@ -64,6 +76,66 @@ class EclipseHack {
 
   EclipseHack(ProcessingEnvironment processingEnv) {
     this.processingEnv = processingEnv;
+  }
+
+  /**
+   * Returns a map containing the real return types of the given methods, knowing that they appear
+   * in the given type. This means that if the given type is say
+   * {@code StringIterator implements Iterator<String>} then we want the {@code next()} method
+   * to map to String, rather than the {@code T} that it returns as inherited from
+   * {@code Iterator<T>}. This method is in EclipseHack because if it weren't for
+   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590">this Eclipse bug</a> it would
+   * be trivial. Unfortunately, versions of Eclipse up to at least 4.5 have a bug where the
+   * {@link Types#asMemberOf} method throws IllegalArgumentException if given a method that is
+   * inherited from an interface. Fortunately, Eclipse's implementation of
+   * {@link Elements#getAllMembers} does the type substitution that {@code asMemberOf} would have
+   * done. But javac's implementation doesn't. So we try the way that would work if Eclipse weren't
+   * buggy, and only if we get IllegalArgumentException do we use {@code getAllMembers}.
+   */
+  ImmutableMap<ExecutableElement, TypeMirror> methodReturnTypes(
+      Set<ExecutableElement> methods, TypeElement autoValueType) {
+    DeclaredType autoValueTypeMirror = MoreTypes.asDeclared(autoValueType.asType());
+    Types typeUtils = processingEnv.getTypeUtils();
+    ImmutableMap.Builder<ExecutableElement, TypeMirror> map = ImmutableMap.builder();
+    Map<Name, ExecutableElement> noArgMethods = null;
+    for (ExecutableElement method : methods) {
+      TypeMirror returnType = null;
+      try {
+        TypeMirror methodMirror = typeUtils.asMemberOf(autoValueTypeMirror, method);
+        returnType = MoreTypes.asExecutable(methodMirror).getReturnType();
+      } catch (IllegalArgumentException e) {
+        if (method.getParameters().isEmpty()) {
+          if (noArgMethods == null) {
+            noArgMethods = noArgMethodsIn(autoValueType);
+          }
+          returnType = noArgMethods.get(method.getSimpleName()).getReturnType();
+        }
+      }
+      if (returnType == null) {
+        returnType = method.getReturnType();
+      }
+      map.put(method, returnType);
+    }
+    return map.build();
+  }
+
+  /**
+   * Constructs a map from name to method of the no-argument methods in the given type. We need
+   * this because an ExecutableElement returned by {@link Elements#getAllMembers} will not compare
+   * equal to the original ExecutableElement if {@code getAllMembers} substituted type parameters,
+   * as it does in Eclipse.
+   */
+  private Map<Name, ExecutableElement> noArgMethodsIn(TypeElement autoValueType) {
+    Elements elementUtils = processingEnv.getElementUtils();
+    List<ExecutableElement> allMethods =
+      ElementFilter.methodsIn(elementUtils.getAllMembers(autoValueType));
+    Map<Name, ExecutableElement> map = new LinkedHashMap<Name, ExecutableElement>();
+    for (ExecutableElement method : allMethods) {
+      if (method.getParameters().isEmpty()) {
+        map.put(method.getSimpleName(), method);
+      }
+    }
+    return map;
   }
 
   /**
