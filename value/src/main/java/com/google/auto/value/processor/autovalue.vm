@@ -254,7 +254,7 @@ ${gwtCompatibleAnnotation}
 
       #end
 
-      this.$p = ${setter.copy($p)};
+      this.$p = #if ($p.nullable) $p == null ? null : #end ${setter.copy($p)};
       return this;
     }
 
