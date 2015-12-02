@@ -719,7 +719,7 @@ public class CompilationTest {
         "",
         "    @Override",
         "    public Baz.Builder<T> aNullableIntArray(@Nullable int[] aNullableIntArray) {",
-        "      this.aNullableIntArray = aNullableIntArray == null ? null : aNullableIntArray;",
+        "      this.aNullableIntArray = aNullableIntArray;",
         "      return this;",
         "    }",
         "",
