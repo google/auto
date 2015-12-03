@@ -263,7 +263,7 @@ class BuilderSpec {
   public class PropertySetter {
     private final String name;
     private final String parameterTypeString;
-    private final String copyFormat;
+    private final String copyOf;
 
     public PropertySetter(
         ExecutableElement setter, TypeMirror propertyType, TypeSimplifier typeSimplifier) {
@@ -277,8 +277,8 @@ class BuilderSpec {
       Types typeUtils = processingEnv.getTypeUtils();
       TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
       boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
-      this.copyFormat = sameType
-          ? "%s"
+      this.copyOf = sameType
+          ? null
           : typeSimplifier.simplifyRaw(erasedPropertyType) + ".copyOf(%s)";
     }
 
@@ -291,7 +291,18 @@ class BuilderSpec {
     }
 
     public String copy(AutoValueProcessor.Property property) {
-      return String.format(copyFormat, property);
+      if (copyOf == null) {
+        return property.toString();
+      }
+      
+      String copy = String.format(copyOf, property);
+      
+      // Add a null guard only in cases where we are using copyOf and the property is @Nullable.
+      if (property.isNullable()) {
+        copy = String.format("(%s == null ? null : %s)", property, copy);
+      }
+      
+      return copy;
     }
   }
 

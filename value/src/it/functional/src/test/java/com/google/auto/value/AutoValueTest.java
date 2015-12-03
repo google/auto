@@ -442,6 +442,91 @@ public class AutoValueTest extends TestCase {
     assertEquals(23, instance.randomInt());
   }
 
+  @AutoValue
+  abstract static class NullableListProperties {
+    @Nullable abstract ImmutableList<String> nullableStringList();
+    static NullableListProperties create(@Nullable ImmutableList<String> nullableStringList) {
+      return new AutoValue_AutoValueTest_NullableListProperties(nullableStringList);
+    }
+  }
+
+  public void testNullableListPropertiesCanBeNonNull() {
+    NullableListProperties instance = NullableListProperties.create(ImmutableList.of("foo", "bar"));
+    assertEquals(ImmutableList.of("foo", "bar"), instance.nullableStringList());
+  }
+
+  public void testNullableListPropertiesCanBeNull() {
+    NullableListProperties instance = NullableListProperties.create(null);
+    assertNull(instance.nullableStringList());
+  }
+
+  @AutoValue
+  abstract static class NullableListPropertiesWithBuilder {
+    @Nullable abstract ImmutableList<String> nullableStringList();
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_NullableListPropertiesWithBuilder.Builder();
+    }
+    @AutoValue.Builder
+    interface Builder {
+      Builder nullableStringList(List<String> nullableStringList);
+      NullableListPropertiesWithBuilder build();
+    }
+  }
+
+  public void testNullableListPropertiesWithBuilderCanBeNonNull() {
+    NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
+        .nullableStringList(ImmutableList.of("foo", "bar"))
+        .build();
+    assertEquals(ImmutableList.of("foo", "bar"), instance.nullableStringList());
+  }
+
+  public void testNullableListPropertiesWithBuilderCanBeUnset() {
+    NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
+        .build();
+    assertNull(instance.nullableStringList());
+  }
+
+  public void testNullableListPropertiesWithBuilderCanBeNull() {
+    NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
+        .nullableStringList(null)
+        .build();
+    assertNull(instance.nullableStringList());
+  }
+
+  @AutoValue
+  abstract static class NullablePrimitiveProperties {
+    @Nullable abstract int nullableInt();
+    static NullablePrimitiveProperties create(@Nullable int nullableInt) {
+      return new AutoValue_AutoValueTest_NullablePrimitiveProperties(nullableInt);
+    }
+  }
+
+  public void testNullablePrimitiveProperties() {
+    NullablePrimitiveProperties instance = NullablePrimitiveProperties.create(123);
+    assertEquals(123, instance.nullableInt());
+  }
+
+  @AutoValue
+  abstract static class NullablePrimitivePropertiesWithBuilder {
+    @Nullable abstract int nullableInt();
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_NullablePrimitivePropertiesWithBuilder.Builder();
+    }
+    @AutoValue.Builder
+    interface Builder {
+      Builder nullableInt(@Nullable int nullableInt);
+      NullablePrimitivePropertiesWithBuilder build();
+    }
+  }
+
+  public void testNullablePrimitivePropertiesWithBuilder() {
+    NullablePrimitivePropertiesWithBuilder instance =
+        NullablePrimitivePropertiesWithBuilder.builder()
+            .nullableInt(123)
+            .build();
+    assertEquals(123, instance.nullableInt());
+  }
+
   static class Nested {
     @AutoValue
     abstract static class Doubly {
