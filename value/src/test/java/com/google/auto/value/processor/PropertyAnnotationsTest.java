@@ -184,9 +184,9 @@ public class PropertyAnnotationsTest extends TestCase {
 
   public void testSimpleAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of("import javax.annotation.Nullable;"),
-        ImmutableList.of("@Nullable"),
-        ImmutableList.of("@Nullable"));
+        ImmutableList.of("import javax.annotation.Resource;"),
+        ImmutableList.of("@Resource"),
+        ImmutableList.of("@Resource"));
   }
 
   public void testSingleStringValueAnnotation() {

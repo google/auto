@@ -535,6 +535,27 @@ public class CompilationTest {
   }
 
   @Test
+  public void nullablePrimitive() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  @interface Nullable {}",
+        "  public abstract @Nullable int foo();",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("Primitive types cannot be @Nullable")
+        .in(javaFileObject).onLine(8);
+  }
+
+  @Test
   public void correctBuilder() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",

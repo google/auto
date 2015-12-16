@@ -493,40 +493,6 @@ public class AutoValueTest extends TestCase {
     assertNull(instance.nullableStringList());
   }
 
-  @AutoValue
-  abstract static class NullablePrimitiveProperties {
-    @Nullable abstract int nullableInt();
-    static NullablePrimitiveProperties create(@Nullable int nullableInt) {
-      return new AutoValue_AutoValueTest_NullablePrimitiveProperties(nullableInt);
-    }
-  }
-
-  public void testNullablePrimitiveProperties() {
-    NullablePrimitiveProperties instance = NullablePrimitiveProperties.create(123);
-    assertEquals(123, instance.nullableInt());
-  }
-
-  @AutoValue
-  abstract static class NullablePrimitivePropertiesWithBuilder {
-    @Nullable abstract int nullableInt();
-    static Builder builder() {
-      return new AutoValue_AutoValueTest_NullablePrimitivePropertiesWithBuilder.Builder();
-    }
-    @AutoValue.Builder
-    interface Builder {
-      Builder nullableInt(@Nullable int nullableInt);
-      NullablePrimitivePropertiesWithBuilder build();
-    }
-  }
-
-  public void testNullablePrimitivePropertiesWithBuilder() {
-    NullablePrimitivePropertiesWithBuilder instance =
-        NullablePrimitivePropertiesWithBuilder.builder()
-            .nullableInt(123)
-            .build();
-    assertEquals(123, instance.nullableInt());
-  }
-
   static class Nested {
     @AutoValue
     abstract static class Doubly {

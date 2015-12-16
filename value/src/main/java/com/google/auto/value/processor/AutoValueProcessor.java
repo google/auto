@@ -497,7 +497,11 @@ public class AutoValueProcessor extends AbstractProcessor {
       String propertyType = typeSimplifier.simplify(returnType);
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
-      props.add(new Property(propertyName, identifier, method, propertyType, typeSimplifier));
+      Property p = new Property(propertyName, identifier, method, propertyType, typeSimplifier);
+      props.add(p);
+      if (p.isNullable() && returnType.getKind().isPrimitive()) {
+        errorReporter.reportError("Primitive types cannot be @Nullable", method);
+      }
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
     eclipseHack.reorderProperties(props);
