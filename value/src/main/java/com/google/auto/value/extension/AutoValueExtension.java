@@ -9,10 +9,9 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
 /**
+ * This API is not final and WILL CHANGE in a future release.
  * An AutoValueExtension allows for extra functionality to be created during the generation
  * of an AutoValue class.
- *
- * <p>NOTE: The design of this interface is not final and subject to change.
  *
  * <p>Extensions are discovered at compile time using the {@link java.util.ServiceLoader} APIs,
  * allowing them to run without any additional annotations.
