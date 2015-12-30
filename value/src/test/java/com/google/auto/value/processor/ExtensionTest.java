@@ -2,6 +2,7 @@ package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.collect.ImmutableList;
@@ -124,6 +125,28 @@ public class ExtensionTest extends TestCase {
             new AutoValueProcessor(ImmutableList.<AutoValueExtension>of(new FooExtension())))
         .compilesWithoutError()
         .and().generatesSources(expectedExtensionOutput);
+  }
+
+  public void testExtensionWithoutConsumedPropertiesFails() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract String foo();",
+        "  abstract String dizzle();",
+        "  abstract Double[] bad();",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(
+            new AutoValueProcessor(ImmutableList.<AutoValueExtension>of(new FooExtension())))
+        .failsToCompile()
+        .withErrorContaining("An @AutoValue class cannot define an array-valued property unless "
+            + "it is a primitive array");
   }
 
   public void testExtensionWithBuilderCompilation() throws Exception {
