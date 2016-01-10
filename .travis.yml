@@ -3,10 +3,10 @@ sudo: false
 language: java
 
 install:
-  - mvn -U -f build.pom.xml dependency:go-offline test clean --quiet --fail-never -DskipTests=true
+  - mvn -B -U -f build.pom.xml dependency:go-offline test clean --quiet --fail-never -DskipTests=true
 
 script:
-  - mvn -U -f build-pom.xml verify --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true
+  - mvn -B -U -f build-pom.xml verify --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true
 
 jdk:
   - oraclejdk7
