@@ -178,11 +178,7 @@ class BuilderMethodClassifier {
       String property = getterEntry.getValue();
       boolean hasSetter = propertyNameToSetter.containsKey(property);
       boolean hasBuilder = propertyNameToPropertyBuilder.containsKey(property);
-      if (hasSetter && hasBuilder) {
-        String error =
-            String.format("Property %s cannot have both a setter and a builder", property);
-        errorReporter.reportError(error, builderType);
-      } else if (!hasSetter && !hasBuilder) {
+      if (!hasSetter && !hasBuilder) {
         // TODO(emcmanus): also mention the possible builder method if the property type allows one
         String setterName = settersPrefixed ? prefixWithSet(property) : property;
         String error = String.format("Expected a method with this signature: %s%s %s(%s)",

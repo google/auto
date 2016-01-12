@@ -30,6 +30,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
@@ -86,6 +87,20 @@ public final class MoreTypes {
 
   // So EQUAL_VISITOR can be a singleton, we maintain visiting state, in particular which types
   // have been seen already, in this object.
+  // The logic for handling recursive types like Comparable<T extends Comparable<T>> is very tricky.
+  // If we're not careful we'll end up with an infinite recursion. So we record the types that
+  // we've already seen during the recursion, and if we see the same pair of types again we just
+  // return true provisionally. But "the same pair of types" is itself poorly-defined. We can't
+  // just say that it is an equal pair of TypeMirrors, because of course if we knew how to
+  // determine that then we wouldn't need the complicated type visitor at all. On the other hand,
+  // we can't say that it is an identical pair of TypeMirrors either, because there's no
+  // guarantee that the TypeMirrors for the two Ts in Comparable<T extends Comparable<T>> will be
+  // represented by the same object, and indeed with the Eclipse compiler they aren't. We could
+  // compare the corresponding Elements, since equality is well-defined there, but that's not enough
+  // either, because the Element for Set<Object> is the same as the one for Set<String>. So we
+  // approximate by comparing the Elements and, if there are any type arguments, requiring them to
+  // be identical. This may not be foolproof either but it is sufficient for all the cases we've
+  // encountered so far.
   private static final class EqualVisitorParam {
     TypeMirror type;
     Set<ComparedElements> visiting;
@@ -93,18 +108,38 @@ public final class MoreTypes {
 
   private static class ComparedElements {
     final Element a;
+    final ImmutableList<TypeMirror> aArguments;
     final Element b;
+    final ImmutableList<TypeMirror> bArguments;
 
-    ComparedElements(Element a, Element b) {
+    ComparedElements(
+        Element a,
+        ImmutableList<TypeMirror> aArguments,
+        Element b,
+        ImmutableList<TypeMirror> bArguments) {
       this.a = a;
+      this.aArguments = aArguments;
       this.b = b;
+      this.bArguments = bArguments;
     }
 
     @Override
     public boolean equals(Object o) {
       if (o instanceof ComparedElements) {
         ComparedElements that = (ComparedElements) o;
-        return this.a.equals(that.a) && this.b.equals(that.b);
+        int nArguments = aArguments.size();
+        if (!this.a.equals(that.a)
+            || !this.b.equals(that.b)
+            || nArguments != bArguments.size()) {
+          // The arguments must be the same size, but we check anyway.
+          return false;
+        }
+        for (int i = 0; i < nArguments; i++) {
+          if (aArguments.get(i) != bArguments.get(i)) {
+            return false;
+          }
+        }
+        return true;
       } else {
         return false;
       }
@@ -138,7 +173,8 @@ public final class MoreTypes {
             DeclaredType b = (DeclaredType) p.type;
             Element aElement = a.asElement();
             Element bElement = b.asElement();
-            Set<ComparedElements> newVisiting = visitingSetPlus(p.visiting, aElement, bElement);
+            Set<ComparedElements> newVisiting = visitingSetPlus(
+                p.visiting, aElement, a.getTypeArguments(), bElement, b.getTypeArguments());
             if (newVisiting.equals(p.visiting)) {
               // We're already visiting this pair of elements.
               // This can happen for example with Enum in Enum<E extends Enum<E>>. Return a
@@ -215,7 +251,18 @@ public final class MoreTypes {
 
         private Set<ComparedElements> visitingSetPlus(
             Set<ComparedElements> visiting, Element a, Element b) {
-          ComparedElements comparedElements = new ComparedElements(a, b);
+          ImmutableList<TypeMirror> noArguments = ImmutableList.of();
+          return visitingSetPlus(visiting, a, noArguments, b, noArguments);
+        }
+
+        private Set<ComparedElements> visitingSetPlus(
+            Set<ComparedElements> visiting,
+            Element a, List<? extends TypeMirror> aArguments,
+            Element b, List<? extends TypeMirror> bArguments) {
+          ComparedElements comparedElements =
+              new ComparedElements(
+                  a, ImmutableList.<TypeMirror>copyOf(aArguments),
+                  b, ImmutableList.<TypeMirror>copyOf(bArguments));
           Set<ComparedElements> newVisiting = new HashSet<ComparedElements>(visiting);
           newVisiting.add(comparedElements);
           return newVisiting;

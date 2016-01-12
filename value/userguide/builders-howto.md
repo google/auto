@@ -1,0 +1,398 @@
+# How do I... (Builder edition)
+
+This page answers common how-to questions that may come up when using AutoValue
+**with the builder option**. You should read and understand [AutoValue with
+builders](builders.md) first.
+
+If you are not using a builder, see [Introduction](index.md) and [How do I...]
+(howto.md) instead.
+
+## Contents
+
+How do I...
+
+*   ... [use (or not use) `set` **prefixes**?](#beans)
+*   ... [use different **names** besides `builder()`/`Builder`/`build()`?]
+    (#build_names)
+*   ... [specify a **default** value for a property?](#default)
+*   ... [initialize a builder to the same property values as an **existing**
+    value instance](#to_builder)
+*   ... [include `with-` methods on my value class for creating slightly
+    **altered** instances?](#withers)
+*   ... [**validate** property values?](#validate)
+*   ... [**normalize** (modify) a property value at `build` time?](#normalize)
+*   ... [expose **both** a builder and a factory method?](#both)
+*   ... [use a **collection**-valued property?](#collection)
+    *   ... [let my builder **accumulate** values for a collection-valued
+        property (not require them all at once)?](#accumulate)
+    *   ... [accumulate values for a collection-valued property, without
+        **breaking the chain**?](#add)
+    *   ... [offer **both** accumulation and set-at-once methods for the same
+        collection-valued property?](#collection_both)
+
+## ... use (or not use) `set` prefixes? {#beans}
+
+Just as you can choose to use JavaBeans-style names for property getters
+(`getFoo()` instead of plain `foo()`) in your value class, you can use them for
+setters in builders too (`setFoo(value)` instead of plain `foo(value)`). As with
+getters, you must use these prefixes consistently or not at all.
+
+Using `get`/`is` prefixes for getters and using the `set` prefix for setters are
+independent choices. For example, it is fine to use the `set` prefixes on all
+your builder methods, but omit the `get`/`is` prefixes from all your accessors.
+
+Here is the `Animal` example using both `get` and `set` prefixes:
+
+```java
+@AutoValue
+abstract class Animal {
+  abstract String getName();
+  abstract int getNumberOfLegs();
+
+  static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  abstract static class Builder {
+    abstract Builder setName(String value);
+    abstract Builder setNumberOfLegs(int value);
+    abstract Animal build();
+  }
+}
+```
+
+## ... use different names besides `builder()`/`Builder`/`build()`? {#build_names}
+
+Use whichever names you like; AutoValue doesn't actually care.
+
+(We would gently recommend these names as conventional.)
+
+## ... specify a default value for a property? {#default}
+
+What should happen when a caller does not supply a value for a property before
+calling `build()`? If the property in question is [nullable](howto.md#nullable),
+it will simply default to `null` as you would expect. But if it isn't (including
+if it is a primitive-valued property, which *can't* be null), then `build()`
+will throw an unchecked exception.
+
+But this presents a problem, since one of the main *advantages* of a builder in
+the first place is that callers can specify only the properties they care about!
+
+The solution is to provide a default value for such properties. Fortunately this
+is easy: just set it on the newly-constructed builder instance before returning
+it from the `builder()` method.
+
+Here is the `Animal` example with the default number of legs being 4:
+
+```java
+@AutoValue
+abstract class Animal {
+  abstract String name();
+  abstract int numberOfLegs();
+
+  static Builder builder() {
+    return new AutoValue_Animal.Builder()
+        .numberOfLegs(4);
+  }
+
+  @AutoValue.Builder
+  abstract static class Builder {
+    abstract Builder name(String value);
+    abstract Builder numberOfLegs(int value);
+    abstract Animal build();
+  }
+}
+```
+
+## ... initialize a builder to the same property values as an existing value instance {#to_builder}
+
+Suppose your caller has an existing instance of your value class, and wants to
+change only one or two of its properties. Of course, it's immutable, but it
+would be convenient if they could easily get a `Builder` instance representing
+the same property values, which they could then modify and use to create a new
+value instance.
+
+To give them this ability, just add an abstract `toBuilder` method, returning
+your abstract builder type, to your value class. AutoValue will implement it.
+
+```java
+  public abstract Builder toBuilder();
+```
+
+## ... include `with-` methods on my value class for creating slightly altered instances? {#withers}
+
+This is a somewhat common pattern among immutable classes. You can't have
+setters, but you can have methods that act similarly to setters by returning a
+new immutable instance that has one property changed.
+
+If you're already using the builder option, you can add these methods by hand:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  abstract Builder toBuilder();
+
+  public Animal withName(String name) {
+    return toBuilder().name(name).build();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder name(String value);
+    public abstract Builder numberOfLegs(int value);
+    public abstract Animal build();
+  }
+}
+```
+
+Note that it's your free choice what to make public (`toBuilder`, `withName`,
+neither, or both).
+
+## ... validate property values? {#validate}
+
+Validating properties is a little less straightforward than it is in the
+[non-builder case](howto.md#validate).
+
+What you need to do is *split* your "build" method into two methods:
+
+*   the non-visible, abstract method that AutoValue implements
+*   and the visible, *concrete* method you provide, which calls the generated
+    method and performs validation.
+
+We recommend naming these methods `autoBuild` and `build`, but any names will
+work. It ends up looking like this:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder name(String value);
+    public abstract Builder numberOfLegs(int value);
+
+    abstract Animal autoBuild();  // not public
+
+    public Animal build() {
+      Animal animal = autoBuild();
+      Preconditions.checkState(animal.numberOfLegs() >= 0, "Negative legs");
+      return animal;
+    }
+  }
+}
+```
+
+## ... normalize (modify) a property value at `build` time? {#normalize}
+
+Suppose you want to convert the animal's name to lower case.
+
+You'll need to add a *getter* to your builder, as shown:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
+
+    abstract String name(); // matches method name in Animal
+
+    abstract Animal autoBuild(); // not public
+
+    public Animal build() {
+      setName(name().toLowerCase());
+      return autoBuild();
+    }
+  }
+}
+```
+
+The getter in your builder must have the exact same signature as the abstract
+property accessor method in the value class. It will return the value that has
+been set on the `Builder`. If no value has been set for a non-[nullable]
+(howto.md#nullable) property, `IllegalStateException` is thrown.
+
+Getters should generally only be used within the `Builder` as shown, so they are
+not public.
+
+## ... expose *both* a builder *and* a factory method? {#both}
+
+If you use the builder option, AutoValue will not generate a visible constructor
+for the generated concrete value class. If it's important to offer your caller
+the choice of a factory method as well as the builder, then your factory method
+implementation will have to invoke the builder itself.
+
+## ... use a collection-valued property? {#collection}
+
+Value objects should be immutable, so if a property of one is a collection then
+that collection should be immutable too. We recommend using Guava's [immutable
+collections] to make that explicit. AutoValue's builder support includes a few
+special arrangements to make this more convenient.
+
+In the examples here we use `ImmutableSet`, but the same principles apply to all
+of Guava's immutable collection types, like `ImmutableList`,
+`ImmutableMultimap`, and so on.
+
+We recommend using the immutable type (like `ImmutableSet<String>`) as your
+actual property type. However, it can be a pain for callers to always have to
+construct `ImmutableSet` instances to pass into your builder. So AutoValue
+allows your builder method to accept an argument of any type that
+`ImmutableSet.copyOf` accepts.
+
+If our `Animal` acquires an `ImmutableSet<String>` that is the countries it
+lives in, that can be set from a `Set<String>` or a `Collection<String>` or an
+`Iterable<String>` or a `String[]` or any other compatible type. You can even
+offer multiple choices, as in this example:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+  public abstract ImmutableSet<String> countries();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder name(String value);
+    public abstract Builder numberOfLegs(int value);
+    public abstract Builder countries(Set<String> value);
+    public abstract Builder countries(String... value);
+    public abstract Animal build();
+  }
+}
+```
+
+[immutable collections]: https://github.com/google/guava/wiki/ImmutableCollectionsExplained
+
+### ... let my builder *accumulate* values for a collection-valued property (not require them all at once)? {#accumulate}
+
+Instead of defining a setter for an immutable collection `foos`, you can define
+a method `foosBuilder()` that returns the associated builder type for that
+collection. In this example, we have an `ImmutableSet<String>` which can be
+built using the `countriesBuilder()` method:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+  public abstract ImmutableSet<String> countries();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder name(String value);
+    public abstract Builder numberOfLegs(int value);
+    public abstract ImmutableSet.Builder<String> countriesBuilder();
+    public abstract Animal build();
+  }
+}
+```
+
+You may notice a small problem with this example: the caller can no longer
+create their instance in a single chained statement:
+
+```java
+  // This DOES NOT work!
+  Animal dog = Animal.builder()
+      .name("dog")
+      .numberOfLegs(4)
+      .countriesBuilder()
+          .add("Guam")
+          .add("Laos")
+      .build();
+```
+
+Instead they are forced to hold the builder itself in a temporary variable:
+
+```java
+  // This DOES work... but we have to "break the chain"!
+  Animal.Builder builder = Animal.builder()
+      .name("dog")
+      .numberOfLegs(4);
+  builder.countriesBuilder()
+      .add("Guam")
+      .add("Laos");
+  Animal dog = builder.build();
+```
+
+One solution for this problem is just below.
+
+### ... accumulate values for a collection-valued property, without "breaking the chain"? {#add}
+
+Another option is to keep `countriesBuilder()` itself non-public, only use it to
+implement a public `addCountry` method:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+  public abstract ImmutableSet<String> countries();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder name(String value);
+    public abstract Builder numberOfLegs(int value);
+
+    abstract ImmutableSet.Builder<String> countriesBuilder();
+    public Builder addCountry(String value) {
+      countriesBuilder().add(value);
+      return this;
+    }
+
+    public abstract Animal build();
+  }
+}
+```
+
+Now the caller can do this:
+
+```java
+  // This DOES work!
+  Animal dog = Animal.builder()
+      .name("dog")
+      .numberOfLegs(4)
+      .addCountry("Guam")
+      .addCountry("Laos") // however many times needed
+      .build();
+```
+
+### ... offer both accumulation and set-at-once methods for the same collection-valued property?
+
+You can have both. If the caller uses `setFoos` after `foosBuilder` has been
+called, an unchecked exception will be thrown.
+

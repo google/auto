@@ -194,41 +194,49 @@ ${gwtCompatibleAnnotation}
 
     private $types.boxedClass($p.typeMirror).simpleName $p;
 
-    #elseif ($builderPropertyBuilders[$p.name])
-
-    private ${builderPropertyBuilders[$p.name].builderType} $p = ##
-        ${builderPropertyBuilders[$p.name].initializer};
-
     #else
+
+      #if ($builderPropertyBuilders[$p.name])
+      ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
+      ## private ImmutableList.Builder<String> stringsBuilder$;
+      ## private ImmutableList<String> strings;
+
+    private ${builderPropertyBuilders[$p.name].builderType} ##
+        ${builderPropertyBuilders[$p.name].name};
+
+      #end
 
     private $p.type $p;
 
     #end
-
   #end
 
     Builder() {
+
+  #foreach ($p in $props)
+    #if ($builderPropertyBuilders[$p.name])
+
+      this.$p = ${builderPropertyBuilders[$p.name].empty};
+
+    #end
+  #end
+
     }
 
     Builder(${origClass}${actualTypes} source) {
 
   #foreach ($p in $props)
 
-    #if ($builderPropertyBuilders[$p.name])
-
-      this.${p}.${builderPropertyBuilders[$p.name].copyAll}(source.${p.getter}());
-
-    #else
-
       this.$p = source.${p.getter}();
-
-    #end
 
   #end
 
     }
 
   #foreach ($p in $props)
+
+    ## The following is either null or an instance of BuilderSpec.PropertyBuilder
+    #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
 
     ## Setter and/or property builder
 
@@ -237,17 +245,31 @@ ${gwtCompatibleAnnotation}
     @Override
     public ${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
+
+      #if ($propertyBuilder)
+
+      if (${propertyBuilder.name} != null) {
+        throw new IllegalStateException("Cannot set $p after calling ${p.name}Builder()");
+      }
+
+      #end
+
       this.$p = ${setter.copy($p)};
       return this;
     }
 
     #end
 
-    #if ($builderPropertyBuilders[$p.name])
+    #if ($propertyBuilder)
 
     @Override
-    public ${builderPropertyBuilders[$p.name].builderType} ${p.name}Builder() {
-      return $p;
+    public $propertyBuilder.builderType ${p.name}Builder() {
+      if (${propertyBuilder.name} == null) {
+        ${propertyBuilder.name} = ${propertyBuilder.initializer};
+        ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
+        $p = null;
+      }
+      return $propertyBuilder.name;
     }
 
     #end
@@ -268,13 +290,13 @@ ${gwtCompatibleAnnotation}
 
       #if ($builderPropertyBuilders[$p.name])
 
-      return ${p}.build();
-
-      #else
-
-      return $p;
+      if (${propertyBuilder.name} != null) {
+        return ${propertyBuilder.name}.build();
+      }
 
       #end
+
+      return $p;
 
     }
 
@@ -283,6 +305,18 @@ ${gwtCompatibleAnnotation}
 
     @Override
     public ${origClass}${actualTypes} ${buildMethodName}() {
+
+  #foreach ($p in $props)
+    #if ($builderPropertyBuilders[$p.name])
+
+      if (${builderPropertyBuilders[$p.name].name} != null) {
+        $p = ${builderPropertyBuilders[$p.name].name}.build();
+      }
+
+    #end
+  #end
+
+
   #if (!$builderRequiredProperties.empty)
 
       String missing = "";
@@ -303,9 +337,7 @@ ${gwtCompatibleAnnotation}
       return new ${finalSubclass}${actualTypes}(
   #foreach ($p in $props)
 
-          this.$p ##
-    #if (${builderPropertyBuilders[$p.name]}) .build() #end
-    #if ($foreach.hasNext) , #end
+          this.$p #if ($foreach.hasNext) , #end
   #end );
     }
   }

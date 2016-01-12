@@ -29,6 +29,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -75,6 +76,7 @@ import javax.tools.JavaFileObject;
  * class.
  *
  * @see AutoValue
+ * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
@@ -431,8 +433,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private static <K, V> ImmutableBiMap<K, V> newImmutableBiMapRemovingKeys(ImmutableBiMap<K, V> original,
-      Set<K> keysToRemove) {
+  private static <K, V> ImmutableBiMap<K, V> newImmutableBiMapRemovingKeys(
+      ImmutableBiMap<K, V> original, Set<K> keysToRemove) {
     ImmutableBiMap.Builder<K, V> builder = ImmutableBiMap.builder();
     for (Map.Entry<K, V> property : original.entrySet()) {
       if (!keysToRemove.contains(property.getKey())) {
@@ -487,14 +489,22 @@ public class AutoValueProcessor extends AbstractProcessor {
     Map<ExecutableElement, String> methodToIdentifier = Maps.newLinkedHashMap(methodToPropertyName);
     fixReservedIdentifiers(methodToIdentifier);
     List<Property> props = new ArrayList<Property>();
+    EclipseHack eclipseHack = eclipseHack();
+    ImmutableMap<ExecutableElement, TypeMirror> returnTypes =
+        eclipseHack.methodReturnTypes(methods, type);
     for (ExecutableElement method : propertyMethods) {
-      String propertyType = typeSimplifier.simplify(method.getReturnType());
+      TypeMirror returnType = returnTypes.get(method);
+      String propertyType = typeSimplifier.simplify(returnType);
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
-      props.add(new Property(propertyName, identifier, method, propertyType, typeSimplifier));
+      Property p = new Property(propertyName, identifier, method, propertyType, typeSimplifier);
+      props.add(p);
+      if (p.isNullable() && returnType.getKind().isPrimitive()) {
+        errorReporter.reportError("Primitive types cannot be @Nullable", method);
+      }
     }
     // If we are running from Eclipse, undo the work of its compiler which sorts methods.
-    eclipseHack().reorderProperties(props);
+    eclipseHack.reorderProperties(props);
     vars.props = ImmutableSet.copyOf(props);
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);

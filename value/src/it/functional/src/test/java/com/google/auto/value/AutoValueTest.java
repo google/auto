@@ -17,7 +17,7 @@ package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -69,7 +69,7 @@ public class AutoValueTest extends TestCase {
     assertEquals("example", instance1a.publicString());
     assertEquals(23, instance1a.protectedInt());
     assertEquals(ImmutableMap.of("twenty-three", 23L), instance1a.packageMap());
-    Objects.ToStringHelper toStringHelper = Objects.toStringHelper(Simple.class);
+    MoreObjects.ToStringHelper toStringHelper = MoreObjects.toStringHelper(Simple.class);
     toStringHelper.add("publicString", "example");
     toStringHelper.add("protectedInt", 23);
     toStringHelper.add("packageMap", ImmutableMap.of("twenty-three", 23L));
@@ -442,6 +442,57 @@ public class AutoValueTest extends TestCase {
     assertEquals(23, instance.randomInt());
   }
 
+  @AutoValue
+  abstract static class NullableListProperties {
+    @Nullable abstract ImmutableList<String> nullableStringList();
+    static NullableListProperties create(@Nullable ImmutableList<String> nullableStringList) {
+      return new AutoValue_AutoValueTest_NullableListProperties(nullableStringList);
+    }
+  }
+
+  public void testNullableListPropertiesCanBeNonNull() {
+    NullableListProperties instance = NullableListProperties.create(ImmutableList.of("foo", "bar"));
+    assertEquals(ImmutableList.of("foo", "bar"), instance.nullableStringList());
+  }
+
+  public void testNullableListPropertiesCanBeNull() {
+    NullableListProperties instance = NullableListProperties.create(null);
+    assertNull(instance.nullableStringList());
+  }
+
+  @AutoValue
+  abstract static class NullableListPropertiesWithBuilder {
+    @Nullable abstract ImmutableList<String> nullableStringList();
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_NullableListPropertiesWithBuilder.Builder();
+    }
+    @AutoValue.Builder
+    interface Builder {
+      Builder nullableStringList(List<String> nullableStringList);
+      NullableListPropertiesWithBuilder build();
+    }
+  }
+
+  public void testNullableListPropertiesWithBuilderCanBeNonNull() {
+    NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
+        .nullableStringList(ImmutableList.of("foo", "bar"))
+        .build();
+    assertEquals(ImmutableList.of("foo", "bar"), instance.nullableStringList());
+  }
+
+  public void testNullableListPropertiesWithBuilderCanBeUnset() {
+    NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
+        .build();
+    assertNull(instance.nullableStringList());
+  }
+
+  public void testNullableListPropertiesWithBuilderCanBeNull() {
+    NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
+        .nullableStringList(null)
+        .build();
+    assertNull(instance.nullableStringList());
+  }
+
   static class Nested {
     @AutoValue
     abstract static class Doubly {
@@ -612,6 +663,37 @@ public class AutoValueTest extends TestCase {
     MergeableImpl mergeable = new MergeableImpl();
     Delta<MergeableImpl> instance = Delta.create(mergeable);
     assertSame(mergeable, instance.meta());
+  }
+
+  static class NodeType<O> {}
+
+  abstract static class NodeExpressionClass<O> {
+    abstract NodeType<O> getType();
+  }
+
+  @AutoValue
+  abstract static class NotNodeExpression extends NodeExpressionClass<Boolean> {
+    static NotNodeExpression create() {
+      return new AutoValue_AutoValueTest_NotNodeExpression(new NodeType<Boolean>());
+    }
+  }
+
+  interface NodeExpressionInterface<O> {
+    NodeType<O> getType();
+  }
+
+  @AutoValue
+  abstract static class NotNodeExpression2 implements NodeExpressionInterface<Boolean> {
+    static NotNodeExpression2 create() {
+      return new AutoValue_AutoValueTest_NotNodeExpression2(new NodeType<Boolean>());
+    }
+  }
+
+  public void testConcreteWithGenericParent() {
+    NotNodeExpression instance = NotNodeExpression.create();
+    assertThat(instance.getType()).isInstanceOf(NodeType.class);
+    NotNodeExpression2 instance2 = NotNodeExpression2.create();
+    assertThat(instance2.getType()).isInstanceOf(NodeType.class);
   }
 
   @AutoValue
@@ -1593,6 +1675,77 @@ public class AutoValueTest extends TestCase {
 
     BuilderWithCopyingSetters<Integer> c = builder.setThings(1, 2).build();
     assertEquals(a, c);
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithCollectionBuilderAndSetter<T extends Number> {
+    public abstract ImmutableList<T> things();
+
+    public static <T extends Number> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithCollectionBuilderAndSetter.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Number> {
+      Builder<T> setThings(List<T> things);
+      ImmutableList<T> things();
+      ImmutableList.Builder<T> thingsBuilder();
+      BuilderWithCollectionBuilderAndSetter<T> build();
+    }
+  }
+
+  public void testBuilderAndSetterDefaultsEmpty() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.<Integer>builder();
+    assertThat(builder.things()).isEmpty();
+    assertThat(builder.build().things()).isEmpty();
+  }
+
+  public void testBuilderAndSetterUsingBuilder() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.builder();
+    builder.thingsBuilder().add(17, 23);
+    BuilderWithCollectionBuilderAndSetter<Integer> x = builder.build();
+    assertThat(x.things()).isEqualTo(ImmutableList.of(17, 23));
+  }
+
+  public void testBuilderAndSetterUsingSetter() {
+    ImmutableList<Integer> things = ImmutableList.of(17, 23);
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.<Integer>builder()
+            .setThings(things);
+    assertThat(builder.things()).isSameAs(things);
+    assertThat(builder.build().things()).isSameAs(things);
+
+    List<Integer> moreThings = Arrays.asList(5, 17, 23);
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder2 =
+        BuilderWithCollectionBuilderAndSetter.<Integer>builder()
+            .setThings(moreThings);
+    assertThat(builder2.things()).isEqualTo(moreThings);
+    assertThat(builder2.build().things()).isEqualTo(moreThings);
+  }
+
+  public void testBuilderAndSetterUsingSetterThenBuilder() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.builder();
+    builder.setThings(ImmutableList.of(5));
+    builder.thingsBuilder().add(17, 23);
+    List<Integer> expectedThings = ImmutableList.of(5, 17, 23);
+    assertThat(builder.things()).isEqualTo(expectedThings);
+    assertThat(builder.build().things()).isEqualTo(expectedThings);
+  }
+
+  public void testBuilderAndSetterCannotSetAfterBuilder() {
+    BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
+        BuilderWithCollectionBuilderAndSetter.builder();
+    builder.setThings(ImmutableList.of(5));
+    builder.thingsBuilder().add(17, 23);
+    try {
+      builder.setThings(ImmutableList.of(1729));
+      fail("Setting list after retrieving builder should provoke an exception");
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessage("Cannot set things after calling thingsBuilder()");
+    }
   }
 
   @Retention(RetentionPolicy.RUNTIME)
