@@ -68,10 +68,22 @@ accessor.
 Ordinarily the generated constructor will reject any null values. If you want to
 accept null, simply apply any annotation named `@Nullable` to the appropriate
 accessor methods. This causes AutoValue to remove the null checks and generate
-null-friendly code for `equals`, `hashCode` and `toString`.
+null-friendly code for `equals`, `hashCode` and `toString`. Example:
 
-You may also wish to add `@Nullable` to the appropriate parameters of your
-public factory method, but doing this doesn't affect AutoValue.
+```java
+@AutoValue
+public abstract class Foo {
+  public static Foo create(@Nullable Bar bar) {
+    return new AutoValue_Foo(bar);
+  }
+
+  @Nullable abstract Bar bar();
+}
+```
+
+This example also shows annotating the corresponding `create` parameter with
+`@Nullable`. AutoValue does not actually require this annotation, only the one
+on the accessor, but we recommended it as useful documentation to your caller.
 
 ## ... perform other validation? {#validate}
 
