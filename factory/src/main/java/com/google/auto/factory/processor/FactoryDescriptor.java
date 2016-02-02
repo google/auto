@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map.Entry;
 
 /**
@@ -58,7 +59,8 @@ final class FactoryDescriptor {
     this.implementingTypes = checkNotNull(implementingTypes);
     this.publicType = publicType;
     this.methodDescriptors = checkNotNull(methodDescriptors);
-    this.implementationMethodDescriptors = checkNotNull(implementationMethodDescriptors);
+    this.implementationMethodDescriptors = dedupeMethods(
+        methodDescriptors, implementationMethodDescriptors);
     this.allowSubclasses = allowSubclasses;
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
@@ -114,5 +116,27 @@ final class FactoryDescriptor {
 
   boolean allowSubclasses() {
     return allowSubclasses;
+  }
+
+  /** Removes methods with matching signatures from the set of ImplmentationMethods. */
+  private static ImmutableSet<ImplementationMethodDescriptor> dedupeMethods(
+      ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
+      ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors) {
+
+    checkNotNull(implementationMethodDescriptors);
+    LinkedHashSet<ImplementationMethodDescriptor> dedupedMethods =
+        new LinkedHashSet<ImplementationMethodDescriptor>(implementationMethodDescriptors);
+
+    for (ImplementationMethodDescriptor implementationMethod : implementationMethodDescriptors) {
+      for (FactoryMethodDescriptor factoryMethod : methodDescriptors) {
+        if (implementationMethod.name().equals(factoryMethod.name())
+            && Iterables.elementsEqual(
+                implementationMethod.passedParameters(), factoryMethod.passedParameters())) {
+          dedupedMethods.remove(implementationMethod);
+          break;
+        }
+      }
+    }
+    return ImmutableSet.copyOf(dedupedMethods);
   }
 }

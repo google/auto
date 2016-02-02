@@ -325,4 +325,16 @@ public class AutoFactoryProcessorTest {
         .and().generatesSources(
             JavaFileObjects.forResource("expected/ClassUsingQualifierWithArgsFactory.java"));
   }
+
+  @Test public void factoryImplementingInterfaceWhichRedeclaresCreateMethods() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("good/FactoryImplementingCreateMethod.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+        JavaFileObjects.forResource(
+            "expected/FactoryImplementingCreateMethod_ConcreteClassFactory.java"));
+  }
 }
