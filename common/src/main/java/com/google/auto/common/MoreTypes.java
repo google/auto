@@ -32,7 +32,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 
 import java.lang.reflect.Method;
 import java.util.HashSet;
@@ -468,13 +467,13 @@ public final class MoreTypes {
     ImmutableSet.Builder<TypeElement> elements = ImmutableSet.builder();
     type.accept(new SimpleTypeVisitor6<Void, ImmutableSet.Builder<TypeElement>>() {
       @Override
-      public Void visitArray(ArrayType t, Builder<TypeElement> p) {
+      public Void visitArray(ArrayType t, ImmutableSet.Builder<TypeElement> p) {
         t.getComponentType().accept(this, p);
         return null;
       }
 
       @Override
-      public Void visitDeclared(DeclaredType t, Builder<TypeElement> p) {
+      public Void visitDeclared(DeclaredType t, ImmutableSet.Builder<TypeElement> p) {
         p.add(MoreElements.asType(t.asElement()));
         for (TypeMirror typeArgument : t.getTypeArguments()) {
           typeArgument.accept(this, p);
@@ -483,14 +482,14 @@ public final class MoreTypes {
       }
 
       @Override
-      public Void visitTypeVariable(TypeVariable t, Builder<TypeElement> p) {
+      public Void visitTypeVariable(TypeVariable t, ImmutableSet.Builder<TypeElement> p) {
         t.getLowerBound().accept(this, p);
         t.getUpperBound().accept(this, p);
         return null;
       }
 
       @Override
-      public Void visitWildcard(WildcardType t, Builder<TypeElement> p) {
+      public Void visitWildcard(WildcardType t, ImmutableSet.Builder<TypeElement> p) {
         TypeMirror extendsBound = t.getExtendsBound();
         if (extendsBound != null) {
           extendsBound.accept(this, p);
