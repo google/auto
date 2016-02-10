@@ -56,7 +56,7 @@ import com.google.auto.value.AutoValue;
 @AutoValue
 abstract class Animal {
   static Animal create(String name, int numberOfLegs) {
-    // use AutoValue_Outer_Animal if this is a nested class
+    // See "How do I...?" below for nested classes.
     return new AutoValue_Animal(name, numberOfLegs);
   }
 

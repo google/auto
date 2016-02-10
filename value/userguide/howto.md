@@ -43,9 +43,20 @@ Please see [AutoValue with builders](builders.md).
 ## ... use AutoValue with a nested class? {#nested}
 
 AutoValue composes the generated class name in the form
-*`AutoValue_Outer_Middle_Inner`*; use as many of these underscore-separated
-segments as required. Only the simple class name will appear in `toString`
-output.
+`AutoValue_`*`Outer_Middle_Inner`*.
+As many of these segments will be used in the generated name as required.
+Only the simple class name will appear in `toString` output.
+
+```java
+class Outer {
+  static class Middle {
+    @AutoValue
+    abstract static class Inner {
+      static Inner create(String foo) {
+        return new AutoValue_Outer_Middle_Inner(foo);
+      }
+      ...
+```
 
 ## ... use (or not use) JavaBeans-style name prefixes? {#beans}
 
