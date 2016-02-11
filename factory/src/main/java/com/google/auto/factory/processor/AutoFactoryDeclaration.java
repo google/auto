@@ -16,6 +16,7 @@
 package com.google.auto.factory.processor;
 
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -49,37 +50,19 @@ import static javax.tools.Diagnostic.Kind.ERROR;
  *
  * @author Gregory Kick
  */
-final class AutoFactoryDeclaration {
-  private final TypeElement targetType;
-  private final Element target;
-  private final Optional<String> className;
-  private final TypeElement extendingType;
-  private final ImmutableSet<TypeElement> implementingTypes;
-  private final boolean allowSubclasses;
-  private final AnnotationMirror mirror;
-  private final ImmutableMap<String, AnnotationValue> valuesMap;
-
-  private AutoFactoryDeclaration(
-      TypeElement targetType,
-      Element target,
-      Optional<String> className,
-      TypeElement extendingType,
-      ImmutableSet<TypeElement> implementingTypes,
-      boolean allowSubclasses,
-      AnnotationMirror mirror,
-      Map<String, AnnotationValue> valuesMap) {
-    this.targetType = targetType;
-    this.target = target;
-    this.className = className;
-    this.extendingType = extendingType;
-    this.implementingTypes = implementingTypes;
-    this.allowSubclasses = allowSubclasses;
-    this.mirror = mirror;
-    this.valuesMap = ImmutableMap.copyOf(valuesMap);
-  }
+@AutoValue
+abstract class AutoFactoryDeclaration {
+  abstract TypeElement targetType();
+  abstract Element target();
+  abstract Optional<String> className();
+  abstract TypeElement extendingType();
+  abstract ImmutableSet<TypeElement> implementingTypes();
+  abstract boolean allowSubclasses();
+  abstract AnnotationMirror mirror();
+  abstract ImmutableMap<String, AnnotationValue> valuesMap();
 
   String getFactoryName() {
-    CharSequence packageName = getPackage(targetType).getQualifiedName();
+    CharSequence packageName = getPackage(targetType()).getQualifiedName();
     StringBuilder builder = new StringBuilder(packageName);
     if (packageName.length() > 0) {
       builder.append('.');
@@ -87,50 +70,22 @@ final class AutoFactoryDeclaration {
     for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
       builder.append(enclosingSimpleName).append('_');
     }
-    if (className.isPresent()) {
-      builder.append(className.get());
+    if (className().isPresent()) {
+      builder.append(className().get());
     } else {
-      builder.append(targetType.getSimpleName()).append("Factory");
+      builder.append(targetType().getSimpleName()).append("Factory");
     }
     return builder.toString();
   }
 
   private ImmutableList<String> targetEnclosingSimpleNames() {
     ImmutableList.Builder<String> simpleNames = ImmutableList.builder();
-    for (Element element = targetType.getEnclosingElement();
+    for (Element element = targetType().getEnclosingElement();
         element.getEnclosingElement() != null;
         element = element.getEnclosingElement()) {
       simpleNames.add(element.getSimpleName().toString());
     }
     return simpleNames.build().reverse();
-  }
-
-  Element target() {
-    return target;
-  }
-
-  Optional<String> getClassName() {
-    return className;
-  }
-
-  TypeElement extendingType() {
-    return extendingType;
-  }
-
-  ImmutableSet<TypeElement> implementingTypes() {
-    return implementingTypes;
-  }
-
-  boolean allowSubclasses() {
-    return allowSubclasses;
-  }
-
-  AnnotationMirror mirror() {
-    return mirror;
-  }
-
-  ImmutableMap<String, AnnotationValue> valuesMap() {
-    return valuesMap;
   }
 
   static final class Factory {
@@ -205,8 +160,8 @@ final class AutoFactoryDeclaration {
       AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
       boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
 
-      return Optional.of(
-          new AutoFactoryDeclaration(
+      return Optional.<AutoFactoryDeclaration>of(
+          new AutoValue_AutoFactoryDeclaration(
               getAnnotatedType(element),
               element,
               className.isEmpty() ? Optional.<String>absent() : Optional.of(className),
@@ -214,7 +169,7 @@ final class AutoFactoryDeclaration {
               implementingTypes,
               allowSubclasses,
               mirror,
-              values));
+              ImmutableMap.copyOf(values)));
     }
 
     private static TypeElement getAnnotatedType(Element element) {

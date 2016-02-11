@@ -15,6 +15,9 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.squareup.javapoet.MethodSpec.constructorBuilder;
+import static com.squareup.javapoet.MethodSpec.methodBuilder;
+import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -24,23 +27,25 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 
-import com.squareup.javawriter.JavaWriter;
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.List;
 import java.util.Map.Entry;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
+import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Modifier;
-import javax.tools.JavaFileObject;
+import javax.lang.model.type.TypeMirror;
 
 final class FactoryWriter {
   private final Filer filer;
@@ -53,76 +58,55 @@ final class FactoryWriter {
 
   void writeFactory(final FactoryDescriptor descriptor)
       throws IOException {
-    JavaFileObject sourceFile = filer.createSourceFile(descriptor.name());
-    JavaWriter writer = new JavaWriter(sourceFile.openWriter());
-    String packageName = getPackage(descriptor.name()).toString();
-    writer.emitPackage(packageName)
-        .emitImports("javax.annotation.Generated");
-
-    writer.emitImports("javax.inject.Inject");
-    if (!descriptor.providerNames().isEmpty()) {
-      writer.emitImports("javax.inject.Provider");
-    }
-
-    for (String implementingType : descriptor.implementingTypes()) {
-      String implementingPackageName = getPackage(implementingType).toString();
-      if (!"java.lang".equals(implementingPackageName)
-          && !packageName.equals(implementingPackageName)) {
-        writer.emitImports(implementingType);
-      }
-    }
-
-    String[] implementedClasses = FluentIterable.from(descriptor.implementingTypes())
-        .transform(new Function<String, String>() {
-          @Override public String apply(String implemetingClass) {
-            return getSimpleName(implemetingClass).toString();
-          }
-        })
-        .toSortedSet(Ordering.natural())
-        .toArray(new String[0]);
-
     String factoryName = getSimpleName(descriptor.name()).toString();
-    writer.emitAnnotation(Generated.class,
-        ImmutableMap.of("value", "\"" + AutoFactoryProcessor.class.getName() + "\""));
-    EnumSet<Modifier> modifiers = EnumSet.noneOf(Modifier.class);
+    TypeSpec.Builder factory = classBuilder(factoryName);
+    factory.addAnnotation(
+        AnnotationSpec.builder(Generated.class)
+            .addMember("value", "$S", AutoFactoryProcessor.class.getName())
+            .addMember(
+                "comments", "$S", "https://github.com/google/auto/tree/master/factory")
+            .build());
     if (!descriptor.allowSubclasses()) {
-      modifiers.add(FINAL);
+      factory.addModifiers(FINAL);
     }
     if (descriptor.publicType()) {
-      modifiers.add(PUBLIC);
+      factory.addModifiers(PUBLIC);
     }
-    writer.beginType(factoryName, "class", modifiers,
-        Object.class.getName().equals(descriptor.extendingType())
-            ? null : descriptor.extendingType(),
-        implementedClasses);
 
-    ImmutableList.Builder<String> constructorTokens = ImmutableList.builder();
+    factory.superclass(TypeName.get(descriptor.extendingType()));
+    for (TypeMirror implementingType : descriptor.implementingTypes()) {
+      factory.addSuperinterface(TypeName.get(implementingType));
+    }
+
+    MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
+    if (descriptor.publicType()) {
+      constructor.addModifiers(PUBLIC);
+    }
     for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {
       Key key = entry.getKey();
       String providerName = entry.getValue();
-      writer.emitField("Provider<" + key.getType() + ">", providerName, EnumSet.of(PRIVATE, FINAL));
       Optional<AnnotationMirror> qualifier = key.getQualifier();
-      String qualifierPrefix = qualifier.isPresent() ? qualifier.get() + " " : "";
-      constructorTokens.add(qualifierPrefix + "Provider<" + key.getType() + ">").add(providerName);
-    }
 
-    writer.emitAnnotation("Inject");
-    writer.beginMethod(null, factoryName,
-        descriptor.publicType() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
-        constructorTokens.build().toArray(new String[0]));
+      TypeName providerType =
+          ParameterizedTypeName.get(ClassName.get(Provider.class), TypeName.get(key.type()));
+      factory.addField(providerType, providerName, PRIVATE, FINAL);
+      constructor.addParameter(annotateIfPresent(providerType, qualifier), providerName);
+    }
 
     for (String providerName : descriptor.providerNames().values()) {
-      writer.emitStatement("this.%1$s = %1$s", providerName);
+      constructor.addStatement("this.$1L = $1L", providerName);
     }
 
-    writer.endMethod();
+    factory.addMethod(constructor.build());
 
     for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
-      writer.beginMethod(
-          methodDescriptor.returnType(),
-          methodDescriptor.name(),
-          methodDescriptor.publicMethod() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
-          parameterTokens(methodDescriptor.passedParameters()));
+      MethodSpec.Builder method =
+          MethodSpec.methodBuilder(methodDescriptor.name())
+              .returns(TypeName.get(methodDescriptor.returnType()));
+      if (methodDescriptor.publicMethod()) {
+        method.addModifiers(PUBLIC);
+      }
+      method.addParameters(parameters(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.creationParameters())
               .transform(
@@ -138,19 +122,23 @@ final class FactoryWriter {
                       }
                     }
                   });
-      writer.emitStatement(
-          "return new %s(%s)",
-          writer.compressType(methodDescriptor.returnType()),
+      method.addStatement(
+          "return new $T($L)",
+          methodDescriptor.returnType(),
           argumentJoiner.join(creationParameterNames));
-      writer.endMethod();
+      factory.addMethod(method.build());
     }
 
     for (ImplementationMethodDescriptor methodDescriptor
         : descriptor.implementationMethodDescriptors()) {
-      writer.emitAnnotation(Override.class);
-      writer.beginMethod(methodDescriptor.returnType(), methodDescriptor.name(),
-          methodDescriptor.publicMethod() ? EnumSet.of(PUBLIC) : EnumSet.noneOf(Modifier.class),
-          parameterTokens(methodDescriptor.passedParameters()));
+      MethodSpec.Builder implementationMethod =
+          methodBuilder(methodDescriptor.name())
+              .addAnnotation(Override.class)
+              .returns(TypeName.get(methodDescriptor.returnType()));
+      if (methodDescriptor.publicMethod()) {
+        implementationMethod.addModifiers(PUBLIC);
+      }
+      implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
       FluentIterable<String> creationParameterNames =
           FluentIterable.from(methodDescriptor.passedParameters())
               .transform(new Function<Parameter, String>() {
@@ -158,22 +146,24 @@ final class FactoryWriter {
                   return parameter.name();
                 }
               });
-      writer.emitStatement("return create(%s)", argumentJoiner.join(creationParameterNames));
-      writer.endMethod();
+      implementationMethod.addStatement(
+          "return create($L)", argumentJoiner.join(creationParameterNames));
+      factory.addMethod(implementationMethod.build());
     }
 
-    writer.endType();
-    writer.close();
+    JavaFile.builder(getPackage(descriptor.name()), factory.build())
+        .skipJavaLangImports(true)
+        .build()
+        .writeTo(filer);
   }
 
-  private static String[] parameterTokens(Collection<Parameter> parameters) {
-    List<String> parameterTokens =
-        Lists.newArrayListWithCapacity(parameters.size());
+  private static Iterable<ParameterSpec> parameters(Iterable<Parameter> parameters) {
+    ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {
-      parameterTokens.add(parameter.type());
-      parameterTokens.add(parameter.name());
+      builder.add(
+          ParameterSpec.builder(TypeName.get(parameter.type()), parameter.name()).build());
     }
-    return parameterTokens.toArray(new String[0]);
+    return builder.build();
   }
 
   private static CharSequence getSimpleName(CharSequence fullyQualifiedName) {
@@ -181,9 +171,9 @@ final class FactoryWriter {
     return fullyQualifiedName.subSequence(lastDot + 1, fullyQualifiedName.length());
   }
 
-  private static CharSequence getPackage(CharSequence fullyQualifiedName) {
+  private static String getPackage(CharSequence fullyQualifiedName) {
     int lastDot = lastIndexOf(fullyQualifiedName, '.');
-    return fullyQualifiedName.subSequence(0, lastDot);
+    return fullyQualifiedName.subSequence(0, lastDot).toString();
   }
 
   private static int lastIndexOf(CharSequence charSequence, char c) {
@@ -193,5 +183,13 @@ final class FactoryWriter {
       }
     }
     return -1;
+  }
+
+  private static TypeName annotateIfPresent(
+      TypeName typeName, Optional<AnnotationMirror> annotation) {
+    if (annotation.isPresent()) {
+      return typeName.annotated(AnnotationSpec.get(annotation.get()));
+    }
+    return typeName;
   }
 }

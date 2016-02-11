@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.common.base.Function;
@@ -30,7 +31,6 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
@@ -119,22 +119,10 @@ final class FactoryDescriptorGenerator {
       ExecutableElement constructor) {
     checkNotNull(constructor);
     checkArgument(constructor.getKind() == ElementKind.CONSTRUCTOR);
-    Element classElement = constructor.getEnclosingElement();
-    Name returnType = classElement.accept(
-        new ElementKindVisitor6<Name, Void>() {
-          @Override
-          protected Name defaultAction(Element e, Void p) {
-            throw new AssertionError();
-          }
-
-          @Override
-          public Name visitTypeAsClass(TypeElement e, Void p) {
-            if (!e.getTypeParameters().isEmpty()) {
-              messager.printMessage(ERROR, "AutoFactory does not support generic types", e);
-            }
-            return e.getQualifiedName();
-          }
-        }, null);
+    TypeElement classElement = MoreElements.asType(constructor.getEnclosingElement());
+    if (!classElement.getTypeParameters().isEmpty()) {
+      messager.printMessage(ERROR, "AutoFactory does not support generic types", classElement);
+    }
     ImmutableListMultimap<Boolean, ? extends VariableElement> parameterMap =
         Multimaps.index(constructor.getParameters(), Functions.forPredicate(
             new Predicate<VariableElement>() {
@@ -147,10 +135,10 @@ final class FactoryDescriptorGenerator {
         Parameter.forParameterList(parameterMap.get(true), types);
     ImmutableSet<Parameter> passedParameters =
         Parameter.forParameterList(parameterMap.get(false), types);
-    return new FactoryMethodDescriptor.Builder(declaration)
+    return FactoryMethodDescriptor.builder(declaration)
         .name("create")
-        .returnType(returnType.toString())
-        .publicMethod(constructor.getEnclosingElement().getModifiers().contains(PUBLIC))
+        .returnType(classElement.asType())
+        .publicMethod(classElement.getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
@@ -159,13 +147,14 @@ final class FactoryDescriptorGenerator {
 
   private ImmutableSet<FactoryMethodDescriptor> generateDescriptorForDefaultConstructor(
       AutoFactoryDeclaration declaration, TypeElement type) {
-    return ImmutableSet.of(new FactoryMethodDescriptor.Builder(declaration)
-        .name("create")
-        .returnType(type.getQualifiedName().toString())
-        .publicMethod(type.getModifiers().contains(PUBLIC))
-        .passedParameters(ImmutableSet.<Parameter>of())
-        .creationParameters(ImmutableSet.<Parameter>of())
-        .providedParameters(ImmutableSet.<Parameter>of())
-        .build());
+    return ImmutableSet.of(
+        FactoryMethodDescriptor.builder(declaration)
+            .name("create")
+            .returnType(type.asType())
+            .publicMethod(type.getModifiers().contains(PUBLIC))
+            .passedParameters(ImmutableSet.<Parameter>of())
+            .creationParameters(ImmutableSet.<Parameter>of())
+            .providedParameters(ImmutableSet.<Parameter>of())
+            .build());
   }
 }
