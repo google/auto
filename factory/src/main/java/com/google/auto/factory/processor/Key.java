@@ -19,7 +19,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.type.TypeMirror;
 
 /**
  * A value object for types and qualifiers.
@@ -27,10 +26,10 @@ import javax.lang.model.type.TypeMirror;
  * @author Gregory Kick
  */
 final class Key {
-  private final TypeMirror type;
+  private final String type;
   private final Optional<AnnotationMirror> qualifier;
 
-  Key(Optional<AnnotationMirror> qualifier, TypeMirror type) {
+  Key(Optional<AnnotationMirror> qualifier, String type) {
     this.qualifier = qualifier;
     this.type = type;
   }
@@ -39,7 +38,7 @@ final class Key {
     return qualifier;
   }
 
-  TypeMirror type() {
+  String getType() {
     return type;
   }
 
@@ -64,6 +63,6 @@ final class Key {
   public String toString() {
     return qualifier.isPresent()
         ? qualifier.get().toString() + '/' + type
-        : type.toString();
+        : type;
   }
 }

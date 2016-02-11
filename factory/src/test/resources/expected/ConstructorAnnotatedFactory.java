@@ -19,29 +19,26 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class ConstructorAnnotatedFactory {
   private final Provider<Object> objProvider;
-
+  
   @Inject ConstructorAnnotatedFactory(Provider<Object> objProvider) {
     this.objProvider = objProvider;
   }
-
+  
   ConstructorAnnotated create() {
     return new ConstructorAnnotated();
   }
-
+  
   ConstructorAnnotated create(String s) {
     return new ConstructorAnnotated(s);
   }
-
+  
   ConstructorAnnotated create(int i) {
     return new ConstructorAnnotated(objProvider.get(), i);
   }
-
+  
   ConstructorAnnotated create(char c) {
     return new ConstructorAnnotated(objProvider.get(), c);
   }

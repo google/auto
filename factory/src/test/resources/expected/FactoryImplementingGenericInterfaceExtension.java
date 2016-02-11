@@ -19,12 +19,11 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+import tests.FactoryImplementingGenericInterfaceExtension.MyFactory;
+
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class FactoryImplementingGenericInterfaceExtensionFactory
-    implements FactoryImplementingGenericInterfaceExtension.MyFactory {
+    implements MyFactory {
   private final Provider<String> sProvider;
   @Inject
   FactoryImplementingGenericInterfaceExtensionFactory(Provider<String> sProvider) {

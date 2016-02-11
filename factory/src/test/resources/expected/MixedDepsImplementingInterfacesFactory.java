@@ -19,34 +19,35 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
+import tests.MixedDepsImplementingInterfaces.FromInt;
+import tests.MixedDepsImplementingInterfaces.FromObject;
+import tests.MixedDepsImplementingInterfaces.MarkerA;
+import tests.MixedDepsImplementingInterfaces.MarkerB;
+
 /**
  * @author Gregory Kick
  */
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class MixedDepsImplementingInterfacesFactory
-    implements MixedDepsImplementingInterfaces.FromInt, MixedDepsImplementingInterfaces.FromObject,
-        MixedDepsImplementingInterfaces.MarkerA, MixedDepsImplementingInterfaces.MarkerB {
+    implements FromInt, FromObject, MarkerA, MarkerB {
   private final Provider<String> sProvider;
-
+  
   @Inject MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
     this.sProvider = sProvider;
   }
-
+  
   MixedDepsImplementingInterfaces create(int i) {
     return new MixedDepsImplementingInterfaces(sProvider.get(), i);
   }
-
+  
   MixedDepsImplementingInterfaces create(Object o) {
     return new MixedDepsImplementingInterfaces(o);
   }
-
+  
   @Override public MixedDepsImplementingInterfaces fromInt(int i) {
     return create(i);
   }
-
+  
   @Override public MixedDepsImplementingInterfaces fromObject(Object o) {
     return create(o);
   }

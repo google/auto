@@ -19,10 +19,7 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class ClassUsingQualifierWithArgsFactory {
   private final Provider<String> providedDepAProvider;
 

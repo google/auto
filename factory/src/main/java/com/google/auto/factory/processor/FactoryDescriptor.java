@@ -17,7 +17,6 @@ package com.google.auto.factory.processor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,15 +26,13 @@ import com.google.common.collect.Iterables;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
-import javax.lang.model.type.TypeMirror;
 
 /**
  * A value object representing a factory to be generated.
  *
  * @author Gregory Kick
  */
-@AutoValue
-abstract class FactoryDescriptor {
+final class FactoryDescriptor {
   private static final CharMatcher invalidIdentifierCharacters =
       new CharMatcher() {
         @Override
@@ -44,23 +41,27 @@ abstract class FactoryDescriptor {
         }
       };
 
-  abstract String name();
-  abstract TypeMirror extendingType();
-  abstract ImmutableSet<TypeMirror> implementingTypes();
-  abstract boolean publicType();
-  abstract ImmutableSet<FactoryMethodDescriptor> methodDescriptors();
-  abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
-  abstract boolean allowSubclasses();
-  abstract ImmutableMap<Key, String> providerNames();
+  private final String name;
+  private final String extendingType;
+  private final ImmutableSortedSet<String> implementingTypes;
+  private final boolean publicType;
+  private final ImmutableSet<FactoryMethodDescriptor> methodDescriptors;
+  private final ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors;
+  private final ImmutableMap<Key, String> providerNames;
+  private final boolean allowSubclasses;
 
-  static FactoryDescriptor create(
-      String name,
-      TypeMirror extendingType,
-      ImmutableSet<TypeMirror> implementingTypes,
-      boolean publicType,
-      ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
+  FactoryDescriptor(String name, String extendingType, ImmutableSortedSet<String> implementingTypes,
+      boolean publicType, ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
       ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors,
       boolean allowSubclasses) {
+    this.name = checkNotNull(name);
+    this.extendingType = checkNotNull(extendingType);
+    this.implementingTypes = checkNotNull(implementingTypes);
+    this.publicType = publicType;
+    this.methodDescriptors = checkNotNull(methodDescriptors);
+    this.implementationMethodDescriptors = dedupeMethods(
+        methodDescriptors, implementationMethodDescriptors);
+    this.allowSubclasses = allowSubclasses;
     ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
@@ -82,15 +83,39 @@ abstract class FactoryDescriptor {
           break;
       }
     }
-    return new AutoValue_FactoryDescriptor(
-        name,
-        extendingType,
-        implementingTypes,
-        publicType,
-        methodDescriptors,
-        dedupeMethods(methodDescriptors, implementationMethodDescriptors),
-        allowSubclasses,
-        providersBuilder.build());
+    this.providerNames = providersBuilder.build();
+  }
+
+  String name() {
+    return name;
+  }
+
+  String extendingType() {
+    return extendingType;
+  }
+
+  ImmutableSortedSet<String> implementingTypes() {
+    return implementingTypes;
+  }
+
+  boolean publicType() {
+    return publicType;
+  }
+
+  ImmutableSet<FactoryMethodDescriptor> methodDescriptors() {
+    return methodDescriptors;
+  }
+
+  ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors() {
+    return implementationMethodDescriptors;
+  }
+
+  ImmutableMap<Key, String> providerNames() {
+    return providerNames;
+  }
+
+  boolean allowSubclasses() {
+    return allowSubclasses;
   }
 
   /** Removes methods with matching signatures from the set of ImplmentationMethods. */

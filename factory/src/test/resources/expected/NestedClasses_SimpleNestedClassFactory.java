@@ -18,13 +18,10 @@ package tests;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 final class NestedClasses_SimpleNestedClassFactory {
   @Inject NestedClasses_SimpleNestedClassFactory() {}
-
+  
   NestedClasses.SimpleNestedClass create() {
     return new NestedClasses.SimpleNestedClass();
   }

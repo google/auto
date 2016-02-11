@@ -18,13 +18,10 @@ package tests;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
 class SimpleClassNonFinalFactory {
   @Inject SimpleClassNonFinalFactory() {}
-
+  
   SimpleClassNonFinal create() {
     return new SimpleClassNonFinal();
   }
