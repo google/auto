@@ -100,9 +100,13 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     typeUtils = processingEnv.getTypeUtils();
-    boolean claimed = (annotations.size() == 1
-        && annotations.iterator().next().getQualifiedName().toString().equals(
-            AutoAnnotation.class.getName()));
+    boolean claimed =
+        (annotations.size() == 1
+            && annotations
+                .iterator()
+                .next()
+                .getQualifiedName()
+                .contentEquals(AutoAnnotation.class.getName()));
     if (claimed) {
       process(roundEnv);
       return true;

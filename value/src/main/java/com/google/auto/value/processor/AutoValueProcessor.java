@@ -209,7 +209,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
         TypeElement annotationElement =
             (TypeElement) annotationMirror.getAnnotationType().asElement();
-        if (annotationElement.getQualifiedName().toString().equals(Override.class.getName())) {
+        if (annotationElement.getQualifiedName().contentEquals(Override.class.getName())) {
           // Don't copy @Override if present, since we will be adding our own @Override in the
           // implementation.
           continue;
@@ -767,7 +767,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (typeUtils.isAssignable(type.asType(), serializable)) {
       List<VariableElement> fields = ElementFilter.fieldsIn(type.getEnclosedElements());
       for (VariableElement field : fields) {
-        if (field.getSimpleName().toString().equals("serialVersionUID")) {
+        if (field.getSimpleName().contentEquals("serialVersionUID")) {
           Object value = field.getConstantValue();
           if (field.getModifiers().containsAll(Arrays.asList(Modifier.STATIC, Modifier.FINAL))
               && field.asType().getKind() == TypeKind.LONG
