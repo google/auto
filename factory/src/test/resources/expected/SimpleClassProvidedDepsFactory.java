@@ -19,13 +19,16 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+@Generated(
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+)
 final class SimpleClassProvidedDepsFactory {
   private final Provider<Integer> providedPrimitiveAProvider;
   private final Provider<Integer> providedPrimitiveBProvider;
   private final Provider<String> providedDepAProvider;
   private final Provider<String> providedDepBProvider;
-  
+
   @Inject
   SimpleClassProvidedDepsFactory(
       @AQualifier Provider<Integer> providedPrimitiveAProvider,
@@ -37,7 +40,7 @@ final class SimpleClassProvidedDepsFactory {
     this.providedDepAProvider = providedDepAProvider;
     this.providedDepBProvider = providedDepBProvider;
   }
-  
+
   SimpleClassProvidedDeps create() {
     return new SimpleClassProvidedDeps(
         providedPrimitiveAProvider.get(),

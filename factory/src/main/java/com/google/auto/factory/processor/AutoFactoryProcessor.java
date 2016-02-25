@@ -15,6 +15,8 @@
  */
 package com.google.auto.factory.processor;
 
+import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
@@ -25,12 +27,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -45,6 +49,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -114,9 +119,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                     supertypeMethod.getParameters(), methodType.getParameterTypes(), types);
             implementationMethodDescriptorsBuilder.put(
                 factoryName,
-                new ImplementationMethodDescriptor.Builder()
+                ImplementationMethodDescriptor.builder()
                     .name(supertypeMethod.getSimpleName().toString())
-                    .returnType(getAnnotatedType(element).getQualifiedName().toString())
+                    .returnType(getAnnotatedType(element))
                     .publicMethod()
                     .passedParameters(passedParameters)
                     .build());
@@ -134,9 +139,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                       interfaceMethod.getParameters(), methodType.getParameterTypes(), types);
               implementationMethodDescriptorsBuilder.put(
                   factoryName,
-                  new ImplementationMethodDescriptor.Builder()
+                  ImplementationMethodDescriptor.builder()
                       .name(interfaceMethod.getSimpleName().toString())
-                      .returnType(getAnnotatedType(element).getQualifiedName().toString())
+                      .returnType(getAnnotatedType(element))
                       .publicMethod()
                       .passedParameters(passedParameters)
                       .build());
@@ -160,15 +165,23 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
     for (Entry<String, Collection<FactoryMethodDescriptor>> entry
         : indexedMethods.build().asMap().entrySet()) {
-      ImmutableSet.Builder<String> extending = ImmutableSet.builder();
-      ImmutableSortedSet.Builder<String> implementing = ImmutableSortedSet.naturalOrder();
+      ImmutableSet.Builder<TypeMirror> extending = ImmutableSet.builder();
+      ImmutableSortedSet.Builder<TypeMirror> implementing =
+          ImmutableSortedSet.orderedBy(new Comparator<TypeMirror>() {
+            @Override
+            public int compare(TypeMirror first, TypeMirror second) {
+              String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
+              String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
+              return firstName.compareTo(secondName);
+            }
+          });
       boolean publicType = false;
       Boolean allowSubclasses = null;
       boolean skipCreation = false;
       for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
-        extending.add(methodDescriptor.declaration().extendingType().getQualifiedName().toString());
+        extending.add(methodDescriptor.declaration().extendingType().asType());
         for (TypeElement implementingType : methodDescriptor.declaration().implementingTypes()) {
-          implementing.add(implementingType.getQualifiedName().toString());
+          implementing.add(implementingType.asType());
         }
         publicType |= methodDescriptor.publicMethod();
         if (allowSubclasses == null) {
@@ -185,7 +198,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       if (!skipCreation) {
         try {
           factoryWriter.writeFactory(
-              new FactoryDescriptor(
+              FactoryDescriptor.create(
                   entry.getKey(),
                   Iterables.getOnlyElement(extending.build()),
                   implementing.build(),
@@ -200,13 +213,13 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     }
   }
 
-  private TypeElement getAnnotatedType(Element element) {
+  private TypeMirror getAnnotatedType(Element element) {
     List<TypeElement> types = ImmutableList.of();
     while (types.isEmpty()) {
       types = ElementFilter.typesIn(Arrays.asList(element));
       element = element.getEnclosingElement();
     }
-    return Iterables.getOnlyElement(types);
+    return Iterables.getOnlyElement(types).asType();
   }
 
   @Override

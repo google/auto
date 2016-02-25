@@ -17,10 +17,9 @@ package com.google.auto.factory.processor;
 
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.auto.common.MoreTypes;
-import com.google.common.base.Objects;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
@@ -36,72 +35,12 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 
-// TODO(cgruber): AutoValue
-final class Parameter {
-  private final String type;
-  private final String name;
-  private final boolean providerOfType;
-  private final Key key;
-
-  private Parameter(String type, Key key, String name, boolean providerOfType) {
-    this.type = checkNotNull(type);
-    this.key = checkNotNull(key);
-    this.name = checkNotNull(name);
-    this.providerOfType = providerOfType;
-  }
-
-  String type() {
-    return type;
-  }
-
-  Key key() {
-    return key;
-  }
-
-  String name() {
-    return name;
-  }
-
-  boolean providerOfType() {
-    return providerOfType;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    } else if (obj instanceof Parameter) {
-      Parameter that = (Parameter) obj;
-      return this.type.equals(that.type)
-          && this.key.equals(that.key)
-          && this.name.equals(that.name)
-          && this.providerOfType == that.providerOfType;
-    } else {
-      return false;
-    }
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(type, key, name, providerOfType);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder().append('\'');
-    if (key.getQualifier().isPresent()) {
-      builder.append(key.getQualifier().get()).append(' ');
-    }
-    if (providerOfType) {
-      builder.append("Provider<");
-    }
-    builder.append(type);
-    if (providerOfType) {
-      builder.append('>');
-    }
-    builder.append(' ').append(name).append('\'');
-    return builder.toString();
-  }
+@AutoValue
+abstract class Parameter {
+  abstract TypeMirror type();
+  abstract String name();
+  abstract boolean providerOfType();
+  abstract Key key();
 
   static Parameter forVariableElement(VariableElement variable, TypeMirror type, Types types) {
     ImmutableSet.Builder<AnnotationMirror> qualifiers = ImmutableSet.builder();
@@ -118,10 +57,10 @@ final class Parameter {
 
     // TODO(gak): check for only one qualifier rather than using the first
     Optional<AnnotationMirror> qualifier = FluentIterable.from(qualifiers.build()).first();
-    Key key = new Key(qualifier, boxedType(providedType, types).toString());
+    Key key = new Key(qualifier, boxedType(providedType, types));
 
-    return new Parameter(
-        providedType.toString(), key, variable.getSimpleName().toString(), provider);
+    return new AutoValue_Parameter(
+        providedType, variable.getSimpleName().toString(), provider, key);
   }
 
   /**
@@ -143,7 +82,7 @@ final class Parameter {
     Set<String> names = Sets.newHashSetWithExpectedSize(variables.size());
     for (int i = 0; i < variables.size(); i++) {
       Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i), types);
-      checkArgument(names.add(parameter.name));
+      checkArgument(names.add(parameter.name()));
       builder.add(parameter);
     }
     ImmutableSet<Parameter> parameters = builder.build();
