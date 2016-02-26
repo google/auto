@@ -15,8 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
-
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -25,8 +23,8 @@ import javax.inject.Provider;
  * @author Gregory Kick
  */
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
 )
 final class MixedDepsImplementingInterfacesFactory
     implements MixedDepsImplementingInterfaces.FromInt, MixedDepsImplementingInterfaces.FromObject,
@@ -38,11 +36,11 @@ final class MixedDepsImplementingInterfacesFactory
   }
 
   MixedDepsImplementingInterfaces create(int i) {
-    return new MixedDepsImplementingInterfaces(Preconditions.checkNotNull(sProvider.get()), i);
+    return new MixedDepsImplementingInterfaces(sProvider.get(), i);
   }
 
   MixedDepsImplementingInterfaces create(Object o) {
-    return new MixedDepsImplementingInterfaces(Preconditions.checkNotNull(o));
+    return new MixedDepsImplementingInterfaces(o);
   }
 
   @Override public MixedDepsImplementingInterfaces fromInt(int i) {

@@ -15,41 +15,55 @@
  */
 package com.google.auto.factory.processor;
 
-import com.google.auto.common.AnnotationMirrors;
-import com.google.auto.common.MoreTypes;
-import com.google.auto.value.AutoValue;
-import com.google.common.base.Equivalence;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
-
-import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
-import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 
 /**
  * A value object for types and qualifiers.
  *
  * @author Gregory Kick
  */
-@AutoValue
-abstract class Key {
-  abstract TypeMirror type();
-  abstract Optional<Equivalence.Wrapper<AnnotationMirror>> qualifierWrapper();
+final class Key {
+  private final TypeMirror type;
+  private final Optional<AnnotationMirror> qualifier;
 
-  Optional<AnnotationMirror> qualifier() {
-    return unwrapOptionalEquivalence(qualifierWrapper());
+  Key(Optional<AnnotationMirror> qualifier, TypeMirror type) {
+    this.qualifier = qualifier;
+    this.type = type;
   }
 
-  static Key create(Optional<AnnotationMirror> qualifier, TypeMirror type) {
-    return new AutoValue_Key(
-        type, wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), qualifier));
+  Optional<AnnotationMirror> getQualifier() {
+    return qualifier;
+  }
+
+  TypeMirror type() {
+    return type;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    } else if (obj instanceof Key) {
+      Key that = (Key) obj;
+      return this.type.equals(that.type)
+          && this.qualifier.toString().equals(that.qualifier.toString());
+    }
+    return super.equals(obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(qualifier.toString(), type);
   }
 
   @Override
   public String toString() {
-    String typeQualifiedName = MoreTypes.asTypeElement(type()).toString();
-    return qualifier().isPresent()
-        ? qualifier().get() + "/" + typeQualifiedName
-        : typeQualifiedName;
+    return qualifier.isPresent()
+        ? qualifier.get().toString() + '/' + type
+        : type.toString();
   }
 }
