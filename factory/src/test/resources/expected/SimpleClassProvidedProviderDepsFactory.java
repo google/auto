@@ -15,13 +15,15 @@
  */
 package tests;
 
+import com.google.auto.factory.internal.Preconditions;
+
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
 )
 final class SimpleClassProvidedProviderDepsFactory {
   private final Provider<String> providedDepAProvider;
@@ -36,6 +38,8 @@ final class SimpleClassProvidedProviderDepsFactory {
   }
 
   SimpleClassProvidedProviderDeps create() {
-    return new SimpleClassProvidedProviderDeps(providedDepAProvider, providedDepBProvider);
+    return new SimpleClassProvidedProviderDeps(
+        Preconditions.checkNotNull(providedDepAProvider),
+        Preconditions.checkNotNull(providedDepBProvider));
   }
 }

@@ -19,14 +19,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
 
 /**
@@ -51,7 +52,7 @@ abstract class FactoryDescriptor {
   abstract ImmutableSet<FactoryMethodDescriptor> methodDescriptors();
   abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
   abstract boolean allowSubclasses();
-  abstract ImmutableMap<Key, String> providerNames();
+  abstract ImmutableMap<Key, ProviderField> providers();
 
   static FactoryDescriptor create(
       String name,
@@ -61,24 +62,36 @@ abstract class FactoryDescriptor {
       ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
       ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors,
       boolean allowSubclasses) {
-    ImmutableSetMultimap.Builder<Key, String> providerNamesBuilder = ImmutableSetMultimap.builder();
+    ImmutableSetMultimap.Builder<Key, Parameter> parametersForProviders =
+        ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
       for (Parameter parameter : descriptor.providedParameters()) {
-        providerNamesBuilder.put(parameter.key(), parameter.name());
+        parametersForProviders.put(parameter.key(), parameter);
       }
     }
-    ImmutableMap.Builder<Key, String> providersBuilder = ImmutableMap.builder();
-    for (Entry<Key, Collection<String>> entry : providerNamesBuilder.build().asMap().entrySet()) {
+    ImmutableMap.Builder<Key, ProviderField> providersBuilder = ImmutableMap.builder();
+    for (Entry<Key, Collection<Parameter>> entry :
+        parametersForProviders.build().asMap().entrySet()) {
       Key key = entry.getKey();
       switch (entry.getValue().size()) {
         case 0:
           throw new AssertionError();
         case 1:
-          providersBuilder.put(key, Iterables.getOnlyElement(entry.getValue()) + "Provider");
+          Parameter parameter = Iterables.getOnlyElement(entry.getValue());
+          providersBuilder.put(
+              key, ProviderField.create(parameter.name() + "Provider", key, parameter.nullable()));
           break;
         default:
-          providersBuilder.put(
-              key, invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider");
+          String providerName =
+              invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider";
+          TypeMirror type = null;
+          Optional<AnnotationMirror> nullable = Optional.absent();
+          for (Parameter param : entry.getValue()) {
+            type = param.type();
+            nullable = nullable.or(param.nullable());
+          }
+          checkNotNull(type);
+          providersBuilder.put(key, ProviderField.create(providerName, key, nullable));
           break;
       }
     }
