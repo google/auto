@@ -12,10 +12,6 @@ jdk:
   - oraclejdk7
   - openjdk7
 
-branches:
-  except:
-    - gh-pages
-
 env:
   global:
   - secure: "bWNSSMURwYC0oZWIMZRd7dy5+JdoyZ060d427TAqFRJmOkYtlR+dBbBggjeJmM0PEkQDzeBrWwln/Vq3lnRPv8czA7hSg/R33r3GzTyi1GZhjCYN2mPW8qp4qgqlloh78aaOODUNSJsOtQqPDJPmhLLfD6UCY0eq9zHhweIjYdw="
@@ -26,3 +22,7 @@ after_success:
   - util/generate-latest-docs.sh
   - util/publish-snapshot-on-commit.sh
 
+branches:
+  only:
+    - master
+    - /^release.*$/
