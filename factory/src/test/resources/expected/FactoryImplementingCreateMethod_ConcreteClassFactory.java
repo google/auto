@@ -15,6 +15,7 @@
  */
 package tests;
 
+import java.util.List;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
@@ -32,8 +33,12 @@ public final class FactoryImplementingCreateMethod_ConcreteClassFactory
     return new FactoryImplementingCreateMethod.ConcreteClass();
   }
 
-  public FactoryImplementingCreateMethod.ConcreteClass create(int a) {
-    return new FactoryImplementingCreateMethod.ConcreteClass(a);
+  public FactoryImplementingCreateMethod.ConcreteClass create(int aDifferentArgumentName) {
+    return new FactoryImplementingCreateMethod.ConcreteClass(aDifferentArgumentName);
+  }
+
+  public FactoryImplementingCreateMethod.ConcreteClass create(List<Integer> genericWithDifferentArgumentName) {
+    return new FactoryImplementingCreateMethod.ConcreteClass(genericWithDifferentArgumentName);
   }
 
   public FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {

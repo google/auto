@@ -17,6 +17,8 @@ package tests;
 
 import com.google.auto.factory.AutoFactory;
 
+import java.util.List;
+
 final class FactoryImplementingCreateMethod {
 
   interface Interface {}
@@ -24,8 +26,9 @@ final class FactoryImplementingCreateMethod {
   interface FactoryInterfaceWithCreateMethod {
     Interface create();
 
-    // Parameters names have to match unfortunately.
     Interface create(int a);
+    
+    Interface create(List<Integer> generic);
   }
 
   @AutoFactory(implementing = FactoryInterfaceWithCreateMethod.class)
@@ -34,7 +37,10 @@ final class FactoryImplementingCreateMethod {
     ConcreteClass() {}
 
     // Will generate a method with a signature that matches one from the interface.
-    ConcreteClass(int a) {}
+    ConcreteClass(int aDifferentArgumentName) {}
+
+    // Will generate a method with a signature that matches one from the interface.
+    ConcreteClass(List<Integer> genericWithDifferentArgumentName) {}
 
     ConcreteClass(int a, boolean b) {}
   }

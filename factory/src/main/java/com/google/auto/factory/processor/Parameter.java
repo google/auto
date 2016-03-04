@@ -20,13 +20,16 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import java.util.List;
 import java.util.Set;
+
 import javax.inject.Provider;
 import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
@@ -37,6 +40,14 @@ import javax.lang.model.util.Types;
 
 @AutoValue
 abstract class Parameter {
+
+  static Function<Parameter, TypeMirror> parameterToType = new Function<Parameter, TypeMirror>() {
+      @Override
+      public TypeMirror apply(Parameter parameter) {
+        return parameter.type();
+      }
+    };
+
   abstract TypeMirror type();
   abstract String name();
   abstract boolean providerOfType();

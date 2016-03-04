@@ -17,16 +17,18 @@ package com.google.auto.factory.processor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
+
 import javax.lang.model.type.TypeMirror;
 
 /**
@@ -93,7 +95,10 @@ abstract class FactoryDescriptor {
         providersBuilder.build());
   }
 
-  /** Removes methods with matching signatures from the set of ImplmentationMethods. */
+  /**
+   * Removes methods with matching signatures from the set of
+   * {@link ImplementationMethodDescriptor}s.
+   */
   private static ImmutableSet<ImplementationMethodDescriptor> dedupeMethods(
       ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
       ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors) {
@@ -105,13 +110,23 @@ abstract class FactoryDescriptor {
     for (ImplementationMethodDescriptor implementationMethod : implementationMethodDescriptors) {
       for (FactoryMethodDescriptor factoryMethod : methodDescriptors) {
         if (implementationMethod.name().equals(factoryMethod.name())
-            && Iterables.elementsEqual(
+            && parameterTypesEqual(
                 implementationMethod.passedParameters(), factoryMethod.passedParameters())) {
           dedupedMethods.remove(implementationMethod);
-          break;
         }
       }
     }
     return ImmutableSet.copyOf(dedupedMethods);
+  }
+
+  /**
+   * Returns whether the two {@link Iterable}s of {@link Parameter}s are equal solely by type.
+   */
+  private static boolean parameterTypesEqual(
+      Iterable<Parameter> first, Iterable<Parameter> second) {
+
+    return MoreTypes.equivalence().pairwise().equivalent(
+        Iterables.transform(first, Parameter.parameterToType),
+        Iterables.transform(second, Parameter.parameterToType));
   }
 }
