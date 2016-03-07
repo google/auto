@@ -33,7 +33,7 @@
   </description>
 
   <properties>
-    <guava.version>18.0</guava.version>
+    <guava.version>19.0</guava.version>
   </properties>
   <scm>
     <url>http://github.com/google/auto</url>
