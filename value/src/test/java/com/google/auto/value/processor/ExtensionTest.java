@@ -121,10 +121,25 @@ public class ExtensionTest extends TestCase {
     );
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(
-            new AutoValueProcessor(ImmutableList.<AutoValueExtension>of(new FooExtension())))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
         .and().generatesSources(expectedExtensionOutput);
+  }
+
+  public void testDoesntRaiseWarningOnConsumedProperties() {
+    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue public abstract class Baz {",
+        "  abstract String foo();",
+        "  abstract String dizzle();",
+        "}");
+    assertAbout(javaSource())
+        .that(impl)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+        .compilesWithoutError()
+        // expected warnings: @AutoValue and @Generated annotations not consumed
+        .withWarningCount(2);
   }
 
   public void testExtensionWithoutConsumedPropertiesFails() throws Exception {
