@@ -15,18 +15,17 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.Map.Entry;
 
 import javax.lang.model.type.TypeMirror;
@@ -84,49 +83,110 @@ abstract class FactoryDescriptor {
           break;
       }
     }
+
+    ImmutableBiMap<FactoryMethodDescriptor, ImplementationMethodDescriptor>
+        duplicateMethodDescriptors =
+            createDuplicateMethodDescriptorsBiMap(
+                methodDescriptors, implementationMethodDescriptors);
+
+    ImmutableSet<FactoryMethodDescriptor> deduplicatedMethodDescriptors =
+        getDeduplicatedMethodDescriptors(methodDescriptors, duplicateMethodDescriptors);
+
+    ImmutableSet<ImplementationMethodDescriptor> deduplicatedImplementationMethodDescriptors =
+        ImmutableSet.copyOf(
+            Sets.difference(implementationMethodDescriptors, duplicateMethodDescriptors.values()));
+
     return new AutoValue_FactoryDescriptor(
         name,
         extendingType,
         implementingTypes,
         publicType,
-        methodDescriptors,
-        dedupeMethods(methodDescriptors, implementationMethodDescriptors),
+        deduplicatedMethodDescriptors,
+        deduplicatedImplementationMethodDescriptors,
         allowSubclasses,
         providersBuilder.build());
   }
 
   /**
-   * Removes methods with matching signatures from the set of
-   * {@link ImplementationMethodDescriptor}s.
+   * Creates a bi-map of duplicate {@link ImplementationMethodDescriptor}s by their respective
+   * {@link FactoryMethodDescriptor}.
    */
-  private static ImmutableSet<ImplementationMethodDescriptor> dedupeMethods(
-      ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
-      ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors) {
+  private static ImmutableBiMap<FactoryMethodDescriptor, ImplementationMethodDescriptor>
+      createDuplicateMethodDescriptorsBiMap(
+          ImmutableSet<FactoryMethodDescriptor> factoryMethodDescriptors,
+          ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors) {
 
-    checkNotNull(implementationMethodDescriptors);
-    LinkedHashSet<ImplementationMethodDescriptor> dedupedMethods =
-        new LinkedHashSet<ImplementationMethodDescriptor>(implementationMethodDescriptors);
+    ImmutableBiMap.Builder<FactoryMethodDescriptor, ImplementationMethodDescriptor> builder =
+        ImmutableBiMap.builder();
 
-    for (ImplementationMethodDescriptor implementationMethod : implementationMethodDescriptors) {
-      for (FactoryMethodDescriptor factoryMethod : methodDescriptors) {
-        if (implementationMethod.name().equals(factoryMethod.name())
-            && parameterTypesEqual(
-                implementationMethod.passedParameters(), factoryMethod.passedParameters())) {
-          dedupedMethods.remove(implementationMethod);
+    for (FactoryMethodDescriptor factoryMethodDescriptor : factoryMethodDescriptors) {
+      for (ImplementationMethodDescriptor implementationMethodDescriptor :
+          implementationMethodDescriptors) {
+
+        boolean areDuplicateMethodDescriptors =
+            areDuplicateMethodDescriptors(factoryMethodDescriptor, implementationMethodDescriptor);
+        if (areDuplicateMethodDescriptors) {
+          builder.put(factoryMethodDescriptor, implementationMethodDescriptor);
+          break;
         }
       }
     }
-    return ImmutableSet.copyOf(dedupedMethods);
+
+    return builder.build();
   }
 
   /**
-   * Returns whether the two {@link Iterable}s of {@link Parameter}s are equal solely by type.
+   * Returns a set of deduplicated {@link FactoryMethodDescriptor}s from the set of original
+   * descriptors and the bi-map of duplicate descriptors.
+   *
+   * <p>Modifies the duplicate {@link FactoryMethodDescriptor}s such that they are overriding and
+   * reflect properties from the {@link ImplementationMethodDescriptor} they are implementing.
    */
-  private static boolean parameterTypesEqual(
-      Iterable<Parameter> first, Iterable<Parameter> second) {
+  private static ImmutableSet<FactoryMethodDescriptor> getDeduplicatedMethodDescriptors(
+      ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
+      ImmutableBiMap<FactoryMethodDescriptor, ImplementationMethodDescriptor>
+          duplicateMethodDescriptors) {
 
+    ImmutableSet.Builder<FactoryMethodDescriptor> deduplicatedMethodDescriptors =
+        ImmutableSet.builder();
+
+    for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
+      ImplementationMethodDescriptor duplicateMethodDescriptor =
+          duplicateMethodDescriptors.get(methodDescriptor);
+
+      FactoryMethodDescriptor newMethodDescriptor =
+         (duplicateMethodDescriptor != null)
+              ? methodDescriptor
+                  .toBuilder()
+                  .overridingMethod(true)
+                  .publicMethod(duplicateMethodDescriptor.publicMethod())
+                  .returnType(duplicateMethodDescriptor.returnType())
+                  .build()
+              : methodDescriptor;
+      deduplicatedMethodDescriptors.add(newMethodDescriptor);
+    }
+
+    return deduplicatedMethodDescriptors.build();
+  }
+
+  /**
+   * Returns true if the given {@link FactoryMethodDescriptor} and
+   * {@link ImplementationMethodDescriptor} are duplicates.
+   *
+   * <p>Descriptors are duplicates if they have the same name and if they have the same passed types
+   * in the same order.
+   */
+  private static boolean areDuplicateMethodDescriptors(
+      FactoryMethodDescriptor factory,
+      ImplementationMethodDescriptor implementation) {
+
+    if (!factory.name().equals(implementation.name())) {
+      return false;
+    }
+
+    // Descriptors are identical if they have the same passed types in the same order.
     return MoreTypes.equivalence().pairwise().equivalent(
-        Iterables.transform(first, Parameter.parameterToType),
-        Iterables.transform(second, Parameter.parameterToType));
+        Iterables.transform(factory.passedParameters(), Parameter.parameterToType),
+        Iterables.transform(implementation.passedParameters(), Parameter.parameterToType));
   }
 }

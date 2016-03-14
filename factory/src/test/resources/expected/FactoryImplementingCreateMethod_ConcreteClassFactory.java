@@ -23,25 +23,28 @@ import javax.inject.Inject;
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
     comments = "https://github.com/google/auto/tree/master/factory"
 )
-public final class FactoryImplementingCreateMethod_ConcreteClassFactory
+final class FactoryImplementingCreateMethod_ConcreteClassFactory
     implements FactoryImplementingCreateMethod.FactoryInterfaceWithCreateMethod {
 
   @Inject
-  public FactoryImplementingCreateMethod_ConcreteClassFactory() {}
+  FactoryImplementingCreateMethod_ConcreteClassFactory() {}
 
+  @Override
   public FactoryImplementingCreateMethod.ConcreteClass create() {
     return new FactoryImplementingCreateMethod.ConcreteClass();
   }
 
+  @Override
   public FactoryImplementingCreateMethod.ConcreteClass create(int aDifferentArgumentName) {
     return new FactoryImplementingCreateMethod.ConcreteClass(aDifferentArgumentName);
   }
 
+  @Override
   public FactoryImplementingCreateMethod.ConcreteClass create(List<Integer> genericWithDifferentArgumentName) {
     return new FactoryImplementingCreateMethod.ConcreteClass(genericWithDifferentArgumentName);
   }
 
-  public FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {
+  FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {
     return new FactoryImplementingCreateMethod.ConcreteClass(a, b);
   }
 }
