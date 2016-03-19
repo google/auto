@@ -168,7 +168,7 @@ class EclipseHack {
     final ImmutableList<String> order;
     try {
       order = propertyOrderer.determinePropertyOrder();
-    } catch (IOException e) {
+    } catch (Exception e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, e.toString());
       return;
     }
