@@ -36,11 +36,11 @@ How do I...
     API?](#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract class?](#interface)
 
-## ... also generate a builder for my value class? {#builder}
+## <a name="builder"></a>... also generate a builder for my value class?
 
 Please see [AutoValue with builders](builders.md).
 
-## ... use AutoValue with a nested class? {#nested}
+## <a name="nested"></a>... use AutoValue with a nested class?
 
 AutoValue composes the generated class name in the form
 `AutoValue_`*`Outer_Middle_Inner`*.
@@ -58,7 +58,7 @@ class Outer {
       ...
 ```
 
-## ... use (or not use) JavaBeans-style name prefixes? {#beans}
+## <a name="beans"></a>... use (or not use) JavaBeans-style name prefixes?
 
 Some developers prefer to name their accessors with a `get-` or `is-` prefix,
 but would prefer that only the "bare" property name be used in `toString` and
@@ -74,7 +74,7 @@ Note that, in keeping with the JavaBeans specification, the `is-` prefix is only
 allowed on `boolean`-returning methods. `get-` is allowed on any type of
 accessor.
 
-## ... use nullable properties? {#nullable}
+## <a name="nullable"></a>... use nullable properties?
 
 Ordinarily the generated constructor will reject any null values. If you want to
 accept null, simply apply any annotation named `@Nullable` to the appropriate
@@ -96,7 +96,7 @@ This example also shows annotating the corresponding `create` parameter with
 `@Nullable`. AutoValue does not actually require this annotation, only the one
 on the accessor, but we recommended it as useful documentation to your caller.
 
-## ... perform other validation? {#validate}
+## <a name="validate"></a>... perform other validation?
 
 Null checks are added automatically (as [above](#nullable)). For other types of
 precondition checks or pre-processing, just add them to your factory method:
@@ -108,7 +108,7 @@ static MyType create(String first, String second) {
 }
 ```
 
-## ... use a property of a mutable type? {#mutable_property}
+## <a name="mutable_property"></a>... use a property of a mutable type?
 
 First, check if the mutable type has a corresponding immutable cousin. For
 example, the types `List<String>` and `String[]` have the immutable counterpart
@@ -152,7 +152,7 @@ public abstract class MutableExample {
 
 Note: this is a perfectly ugly workaround, not a sensible practice!
 
-## ... use a custom implementation of `equals`, etc.? {#custom}
+## <a name="custom"></a>... use a custom implementation of `equals`, etc.?
 
 Simply write your custom implementation; AutoValue will notice this and will
 skip generating its own. Your hand-written logic will thus be inherited on the
@@ -184,12 +184,12 @@ class PleaseOverrideExample extends SuperclassThatDefinesToString {
 
 <!-- TODO(kevinb): should the latter part have been split out? -->
 
-## ... have multiple `create` methods, or name it/them differently? {#create}
+## <a name="create"></a>... have multiple `create` methods, or name it/them differently?
 
 Just do it! AutoValue doesn't actually care. This [best practice item]
 (practices.md#one_reference) may be relevant.
 
-## ... ignore certain properties in `equals`, etc.? {#ignore}
+## <a name="ignore"></a>... ignore certain properties in `equals`, etc.?
 
 Suppose your value class has an extra field that shouldn't be included in
 `equals` or `hashCode` computations. One common reason is that it is a "cached"
@@ -242,31 +242,31 @@ abstract class IgnoreExample {
 Note that in both cases the field ignored for `equals` and `hashCode` is also
 ignored by `toString`; to AutoValue it simply doesn't exist.
 
-## ... have AutoValue also implement abstract methods from my supertypes? {#supertypes}
+## <a name="supertypes"></a>... have AutoValue also implement abstract methods from my supertypes?
 
 AutoValue will recognize every abstract accessor method whether it is defined
 directly in your own hand-written class or in a supertype.
 
 <!-- TODO(kevinb): what about the order? -->
 
-## ... use AutoValue with a generic class? {#generic}
+## <a name="generic"></a>... use AutoValue with a generic class?
 
 There's nothing to it: just add type parameters to your class and to your call
 to the generated constructor.
 
-## ... make my class Java- or GWT-serializable? {#serialize}
+## <a name="serialize"></a>... make my class Java- or GWT-serializable?
 
 Just add `implements Serializable` or the `@GwtCompatible(serializable = true)`
 annotation (respectively) to your hand-written class; it (as well as any
 `serialVersionUID`) will be duplicated on the generated class, and you'll be
 good to go.
 
-## ... apply an annotation to a generated field? {#annotate_field}
+## <a name="annotate_field"></a>... apply an annotation to a generated field?
 
 Your only option is to put the same annotation on your hand-written abstract
 accessor method, if possible.
 
-## ... use AutoValue to implement an annotation type? {#annotation}
+## <a name="annotation"></a>... use AutoValue to implement an annotation type?
 
 Most users should never have the need to programmatically create "fake"
 annotation instances. But if you do, using `@AutoValue` in the usual way will
@@ -294,7 +294,7 @@ public class Names {
 For more details, see the [`AutoAnnotation` javadoc]
 (http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 
-## ... also include setter (mutator) methods? {#setters}
+## <a name="setters"></a>... also include setter (mutator) methods?
 
 You can't; AutoValue only generates immutable value classes.
 
@@ -303,7 +303,7 @@ questionable practice in the first place. Equal instances of a value class are
 treated as *interchangeable*, but they can't truly be interchangeable if one
 might be mutated and the other not.
 
-## ... also generate `compareTo`? {#compareTo}
+## <a name="compareTo"></a>... also generate `compareTo`?
 
 AutoValue intentionally does not provide this feature. It is better for you to
 roll your own comparison logic using the new methods added to [`Comparator`]
@@ -316,14 +316,14 @@ Since these mechanisms are easy to use, require very little code, and give you
 the flexibility you need, there's really no way for AutoValue to improve on
 them!
 
-## ... use a primitive array for a property value? {#primitive_array}
+## <a name="primitive_array"></a>... use a primitive array for a property value?
 
 Go right ahead! AutoValue will generate code that acts on the *values* stored
 the array, not the object identity of the array itself, which is (with virtual
 certainty) what you want. Heed the warnings given above about [mutable
 properties](#mutable_property).
 
-## ... use an object array for a property value? {#object_array}
+## <a name="object_array"></a>... use an object array for a property value?
 
 This is not allowed. Object arrays are very badly-behaved and unlike primitive
 arrays, they can be replaced with a proper `List` implementation for very little
@@ -333,24 +333,24 @@ added cost.
 If it's important to accept an object array at construction time, refer to the
 *first* example shown [here](#mutable_property).
 
-## ... have one `@AutoValue` class extend another? {#inherit}
+## <a name="inherit"></a>... have one `@AutoValue` class extend another?
 
 This ability is intentionally not supported, because there is no way to do it
 correctly. See *Effective Java, 2nd Edition* Item 8.
 
-## ... keep my accessor methods private? {#private_accessors}
+## <a name="private_accessors"></a>... keep my accessor methods private?
 
 We're sorry. This is one of the rare and unfortunate restrictions AutoValue's
 approach places on your API. Your accessor methods don't have to be *public*,
 but they must be at least package-visible.
 
-## ... expose a constructor, not factory method, as my public creation API? {#public_constructor}
+## <a name="public_constructor"></a>... expose a constructor, not factory method, as my public creation API?
 
 We're sorry. This is one of the rare restrictions AutoValue's approach places on
 your API. However, note that static factory methods are recommended over public
 constructors by *Effective Java*, Item 1.
 
-## ... use AutoValue on an interface, not abstract class? {#interface}
+## <a name="interface"></a>... use AutoValue on an interface, not abstract class?
 
 Interfaces are not allowed. The only advantage of interfaces we're aware of is
 that you can omit `public abstract` from the methods. That's not much. On the

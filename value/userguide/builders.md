@@ -9,16 +9,15 @@ Fortunately, AutoValue can generate builder classes too! This page explains how.
 Note that we recommend reading and understanding the basic usage shown in the
 [introduction](index.md) first.
 
-<!-- TODO: table of contents that works both internal/external -->
 
-## How to use AutoValue with Builders {#howto}
+## How to use AutoValue with Builders<a name="howto"></a>
 
 As explained in the introduction, the AutoValue concept is that **you write an
 abstract value class, and AutoValue implements it**. Builder generation works in
 the exact same way: you also create an abstract builder class, nesting it inside
 your abstract value class, and AutoValue generates implementations for both.
 
-### In `Animal.java` {#example_java}
+### In `Animal.java`<a name="example_java"></a>
 
 ```java
 import com.google.auto.value.AutoValue;
@@ -45,7 +44,7 @@ Note that in real life, some classes and methods would presumably be public and
 have **Javadoc**. We're leaving these off in the User Guide only to keep the
 examples clean and short.
 
-### Usage {#usage}
+### Usage<a name="usage"></a>
 
 ```java
 public void testAnimal() {
@@ -62,19 +61,19 @@ public void testAnimal() {
 }
 ```
 
-### What does AutoValue generate? {#generated}
+### What does AutoValue generate?<a name="generated"></a>
 
 For the `Animal` example shown above, here is [typical code AutoValue might
 generate](generated-builder-example.md).
 
-## Warnings {#warnings}
+## Warnings<a name="warnings"></a>
 
 Be sure to put the static `builder()` method directly in your value class (e.g.,
 `Animal`) and not the nested abstract `Builder` class. That ensures that the
 `Animal` class is always initialized before `Builder`. Otherwise you may be
 exposing yourself to initialization-order problems.
 
-## How do I... {#howto}
+## <a name="howto"></a>How do I...
 
 *   ... [use (or not use) `set` **prefixes**?](builders-howto.md#beans)
 *   ... [use different **names** besides `builder()`/`Builder`/`build()`?]

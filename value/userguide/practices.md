@@ -1,14 +1,13 @@
 # Best practices
 
-[TOC]
 
-## "Equals means interchangeable" {#interchangeable}
+## <a name="interchangeable"></a>"Equals means interchangeable"
 
 Don't use AutoValue to implement value semantics unless you really want value
 semantics. In particular, you should never care about the difference between two
 equal instances.
 
-## Avoid mutable property types {#mutable_properties}
+## <a name="mutable_properties"></a>Avoid mutable property types
 
 Avoid mutable types, including arrays, for your properties, especially if you
 make your accessor methods `public`. The generated accessors don't copy the
@@ -28,7 +27,7 @@ public abstract class ListExample {
 }
 ```
 
-## Keep behavior simple and dependency-free {#simple}
+## <a name="simple"></a>Keep behavior simple and dependency-free
 
 Your class can (and should) contain *simple* intrinsic behavior. But it
 shouldn't require complex dependencies and shouldn't access static state.
@@ -40,7 +39,7 @@ actually needs to be mocked or faked, split it into a separate type that is
 *not* a value type. Otherwise it permits an instance with "real" behavior and
 one with "mock/fake" behavior to be `equals`, which does not make sense.
 
-## One reference only {#one_reference}
+## <a name="one_reference"></a>One reference only
 
 Other code in the same package will be able to directly access the generated
 class, but *should not*. It's best if each generated class has one and only one
@@ -50,7 +49,7 @@ delegate to the same hand-written method, so there is still only one point of
 contact with the generated code. This way, you have only one place to insert
 precondition checks or other pre- or postprocessing.
 
-## Mark all concrete methods `final` {#final}
+## <a name="final"></a>Mark all concrete methods `final`
 
 Consider that other developers will try to read and understand your value class
 while looking only at your hand-written class, not the actual (generated)
@@ -59,7 +58,7 @@ to wonder whether the generated subclass might be overriding them. This is
 especially helpful if you are *[underriding](howto.md#custom)* `equals`,
 `hashCode` or `toString`!
 
-## Maybe add an explicit, inaccessible constructor {#constructor}
+## <a name="constructor"></a>Maybe add an explicit, inaccessible constructor
 
 There are a few small advantages to adding a package-private, parameterless
 constructor to your abstract class. It prevents unwanted subclasses, and

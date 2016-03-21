@@ -1,6 +1,6 @@
 # Performance notes
 
-TODO(kevinb): write a real page
+TODO: write a real page
 
 *   should perform like a hand-written class after HotSpot compiles it
     (generated accessors can be inlined)
