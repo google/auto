@@ -32,7 +32,7 @@ final class FactoryImplementingCreateMethod {
   }
 
   @AutoFactory(implementing = FactoryInterfaceWithCreateMethod.class)
-  public static class ConcreteClass implements Interface {
+  static class ConcreteClass implements Interface {
     // Will generate a method with a signature that matches one from the interface.
     ConcreteClass() {}
 

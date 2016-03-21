@@ -15,13 +15,14 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import javax.lang.model.type.TypeMirror;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import javax.lang.model.type.TypeMirror;
 
 /**
  * A value object representing a factory method to be generated.
@@ -34,9 +35,11 @@ abstract class FactoryMethodDescriptor {
   abstract String name();
   abstract TypeMirror returnType();
   abstract boolean publicMethod();
+  abstract boolean overridingMethod();
   abstract ImmutableSet<Parameter> passedParameters();
   abstract ImmutableSet<Parameter> providedParameters();
   abstract ImmutableSet<Parameter> creationParameters();
+  abstract Builder toBuilder();
 
   final String factoryName() {
     return declaration().getFactoryName();
@@ -45,7 +48,8 @@ abstract class FactoryMethodDescriptor {
   static Builder builder(AutoFactoryDeclaration declaration) {
     return new AutoValue_FactoryMethodDescriptor.Builder()
         .declaration(checkNotNull(declaration))
-        .publicMethod(false);
+        .publicMethod(false)
+        .overridingMethod(false);
   }
 
   @AutoValue.Builder
@@ -54,6 +58,7 @@ abstract class FactoryMethodDescriptor {
     abstract Builder name(String name);
     abstract Builder returnType(TypeMirror returnType);
     abstract Builder publicMethod(boolean publicMethod);
+    abstract Builder overridingMethod(boolean overridingMethod);
     abstract Builder passedParameters(Iterable<Parameter> passedParameters);
     abstract Builder providedParameters(Iterable<Parameter> providedParameters);
     abstract Builder creationParameters(Iterable<Parameter> creationParameters);

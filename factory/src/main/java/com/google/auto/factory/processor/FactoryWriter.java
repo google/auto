@@ -106,6 +106,9 @@ final class FactoryWriter {
       MethodSpec.Builder method =
           MethodSpec.methodBuilder(methodDescriptor.name())
               .returns(TypeName.get(methodDescriptor.returnType()));
+      if (methodDescriptor.overridingMethod()) {
+        method.addAnnotation(Override.class);
+      }
       if (methodDescriptor.publicMethod()) {
         method.addModifiers(PUBLIC);
       }
