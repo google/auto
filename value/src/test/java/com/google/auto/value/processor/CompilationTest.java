@@ -243,6 +243,31 @@ public class CompilationTest {
   }
 
   @Test
+  public void autoValueMustBeNotBePrivate() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "public class Baz {",
+        "  @AutoValue",
+        "  private abstract static class Private {",
+        "    public abstract String buh();",
+        "    public Private create(String buh) {",
+        "      return new AutoValue_Baz_Private(buh);",
+        "    }",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .failsToCompile()
+        .withErrorContaining("@AutoValue class must not be private")
+        .in(javaFileObject).onLine(7);
+  }
+
+  @Test
   public void noMultidimensionalPrimitiveArrays() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
