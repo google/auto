@@ -135,7 +135,7 @@ class Reparser {
   private static boolean isWhitespaceLiteral(Node node) {
     if (node instanceof ConstantExpressionNode) {
       Object constant = node.evaluate(null);
-      return constant instanceof String && CharMatcher.WHITESPACE.matchesAllOf((String) constant);
+      return constant instanceof String && CharMatcher.whitespace().matchesAllOf((String) constant);
     }
     return false;
   }
