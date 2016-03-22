@@ -76,7 +76,7 @@ Maven users, add the following to your configuration:
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.1</version>
+  <version>1.2-rc1</version>
   <scope>provided</scope>
 </dependency>
 ```
