@@ -218,6 +218,10 @@ public class AutoValueProcessor extends AbstractProcessor {
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
 
+      for (AnnotationMirror annotationMirror : Java8Support.getAnnotationMirrors(method.getReturnType())) {
+        AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
+        builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
+      }
       return builder.build();
     }
 
@@ -549,6 +553,9 @@ public class AutoValueProcessor extends AbstractProcessor {
     Set<TypeMirror> annotationTypes = new TypeMirrorSet();
     for (ExecutableElement method : methods) {
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+        annotationTypes.add(annotationMirror.getAnnotationType());
+      }
+      for (AnnotationMirror annotationMirror : Java8Support.getAnnotationMirrors(method.getReturnType())) {
         annotationTypes.add(annotationMirror.getAnnotationType());
       }
     }
