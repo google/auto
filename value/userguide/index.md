@@ -70,16 +70,29 @@ examples short and simple.
 
 ### In `pom.xml`
 
-Maven users, add the following to your configuration:
+Maven users should add the following to the project's `pom.xml` file:
 
 ```xml
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.2-rc1</version>
+  <version>1.2</version>
   <scope>provided</scope>
 </dependency>
 ```
+
+Gradle users should install the annotation processing plugin [as described in
+these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
+
+```groovy
+dependencies {
+  compileOnly "com.google.auto.value:auto-value:1.2"
+  apt         "com.google.auto.value:auto-value:1.2"
+}
+```
+
+[tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
+
 
 ### <a name="usage"></a>Usage
 

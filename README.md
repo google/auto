@@ -1,38 +1,37 @@
-Auto
-======
+# Auto
 
 A collection of source code generators for [Java][java].
 
-Auto‽
------
+## Auto‽
 
-[Java][java] is full of code that is mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
+[Java][java] is full of code that is mechanical, repetitive, typically untested
+and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
-The Auto subprojects are a collection of code generators that automate those types of tasks. They create the code you would have written, but without the bugs.
+The Auto subprojects are a collection of code generators that automate those
+types of tasks. They create the code you would have written, but without
+the bugs.
 
 Save time.  Save code.  Save sanity.
 
-Subprojects
------------
+## Subprojects
 
-  * [AutoFactory](https://github.com/google/auto/tree/master/factory) - JSR-330-compatible factories
+  * [AutoFactory] - JSR-330-compatible factories
 
     Latest version: `0.1-beta3`
 
-  * [AutoService](https://github.com/google/auto/tree/master/service) - Provider-configuration files for [`ServiceLoader`](http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html)
+  * [AutoService] - Provider-configuration files for [`ServiceLoader`]
 
     Latest version: `1.0-rc2`
 
-  * [AutoValue](https://github.com/google/auto/tree/master/value) - Immutable [value-type](http://en.wikipedia.org/wiki/Value_object) code generation for Java 1.6+.
+  * [AutoValue] - Immutable [value-type] code generation for Java 1.6+.
 
-    Latest version: `1.2-rc1`
+    Latest version: `1.2`
 
-  * [Common](https://github.com/google/auto/tree/master/common) - Helper utilities for writing annotation processors.
+  * [Common] - Helper utilities for writing annotation processors.
 
     Latest version: `0.6`
 
-License
--------
+## License
 
     Copyright 2013 Google, Inc.
 
@@ -48,5 +47,11 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
-[java]: https://en.wikipedia.org/wiki/Java_(programming_language)
+[AutoFactory]: https://github.com/google/auto/tree/master/factory
+[AutoService]: https://github.com/google/auto/tree/master/service
+[AutoValue]: https://github.com/google/auto/tree/master/value
+[Common]: https://github.com/google/auto/tree/master/common
 
+[java]: https://en.wikipedia.org/wiki/Java_(programming_language)
+[value-type]: http://en.wikipedia.org/wiki/Value_object
+[`ServiceLoader`]: http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html
