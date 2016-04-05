@@ -30,7 +30,7 @@ How do I...
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
 
-## ... use (or not use) `set` prefixes? {#beans}
+## <a name="beans"></a>... use (or not use) `set` prefixes?
 
 Just as you can choose to use JavaBeans-style names for property getters
 (`getFoo()` instead of plain `foo()`) in your value class, you can use them for
@@ -62,13 +62,13 @@ abstract class Animal {
 }
 ```
 
-## ... use different names besides `builder()`/`Builder`/`build()`? {#build_names}
+## <a name="build_names"></a>... use different names besides `builder()`/`Builder`/`build()`?
 
 Use whichever names you like; AutoValue doesn't actually care.
 
 (We would gently recommend these names as conventional.)
 
-## ... specify a default value for a property? {#default}
+## <a name="default"></a>... specify a default value for a property?
 
 What should happen when a caller does not supply a value for a property before
 calling `build()`? If the property in question is [nullable](howto.md#nullable),
@@ -105,7 +105,7 @@ abstract class Animal {
 }
 ```
 
-## ... initialize a builder to the same property values as an existing value instance {#to_builder}
+## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
 Suppose your caller has an existing instance of your value class, and wants to
 change only one or two of its properties. Of course, it's immutable, but it
@@ -120,7 +120,7 @@ your abstract builder type, to your value class. AutoValue will implement it.
   public abstract Builder toBuilder();
 ```
 
-## ... include `with-` methods on my value class for creating slightly altered instances? {#withers}
+## <a name="withers"></a>... include `with-` methods on my value class for creating slightly altered instances?
 
 This is a somewhat common pattern among immutable classes. You can't have
 setters, but you can have methods that act similarly to setters by returning a
@@ -156,7 +156,7 @@ public abstract class Animal {
 Note that it's your free choice what to make public (`toBuilder`, `withName`,
 neither, or both).
 
-## ... validate property values? {#validate}
+## <a name="validate"></a>... validate property values?
 
 Validating properties is a little less straightforward than it is in the
 [non-builder case](howto.md#validate).
@@ -196,7 +196,7 @@ public abstract class Animal {
 }
 ```
 
-## ... normalize (modify) a property value at `build` time? {#normalize}
+## <a name="normalize"></a>... normalize (modify) a property value at `build` time?
 
 Suppose you want to convert the animal's name to lower case.
 
@@ -237,14 +237,14 @@ been set on the `Builder`. If no value has been set for a non-[nullable]
 Getters should generally only be used within the `Builder` as shown, so they are
 not public.
 
-## ... expose *both* a builder *and* a factory method? {#both}
+## <a name="both"></a>... expose *both* a builder *and* a factory method?
 
 If you use the builder option, AutoValue will not generate a visible constructor
 for the generated concrete value class. If it's important to offer your caller
 the choice of a factory method as well as the builder, then your factory method
 implementation will have to invoke the builder itself.
 
-## ... use a collection-valued property? {#collection}
+## <a name="collection"></a>... use a collection-valued property?
 
 Value objects should be immutable, so if a property of one is a collection then
 that collection should be immutable too. We recommend using Guava's [immutable
@@ -290,7 +290,7 @@ public abstract class Animal {
 
 [immutable collections]: https://github.com/google/guava/wiki/ImmutableCollectionsExplained
 
-### ... let my builder *accumulate* values for a collection-valued property (not require them all at once)? {#accumulate}
+### <a name="accumulate"></a>... let my builder *accumulate* values for a collection-valued property (not require them all at once)?
 
 Instead of defining a setter for an immutable collection `foos`, you can define
 a method `foosBuilder()` that returns the associated builder type for that
@@ -347,7 +347,7 @@ Instead they are forced to hold the builder itself in a temporary variable:
 
 One solution for this problem is just below.
 
-### ... accumulate values for a collection-valued property, without "breaking the chain"? {#add}
+### <a name="add"></a>... accumulate values for a collection-valued property, without "breaking the chain"?
 
 Another option is to keep `countriesBuilder()` itself non-public, only use it to
 implement a public `addCountry` method:

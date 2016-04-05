@@ -34,7 +34,7 @@ import java.util.Arrays;
 @RunWith(JUnit4.class)
 public class GuavaCollectionBuildersTest {
   private static final ImmutableSet<String> NON_BUILDABLE_COLLECTIONS =
-      ImmutableSet.of("ImmutableCollection", "ImmutableMapBuilder");
+      ImmutableSet.of("ImmutableCollection");
 
   @Rule public final Expect expect = Expect.create();
 

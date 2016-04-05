@@ -12,9 +12,8 @@
 >
 > -- *Joshua Bloch, author, Effective Java*
 
-<!-- TODO: table of contents that works both internal/external -->
 
-## Background {#background}
+## <a name="background"></a>Background
 
 **Value classes** are extremely common in Java projects. These are classes for
 which you want to treat any two instances with suitably equal field values as
@@ -35,7 +34,7 @@ code almost any aspect of your class exactly the way you want it.
 This page will walk you through how to use AutoValue. Looking for a little more
 persuasion? Please see [Why AutoValue?](why.md).
 
-## How to use AutoValue {#howto}
+## <a name="howto"></a>How to use AutoValue
 
 The AutoValue concept is extremely simple: **You write an abstract class, and
 AutoValue implements it.** That is all there is to it; there is literally *no*
@@ -45,7 +44,7 @@ configuration.
 builder class. If you're more interested in the builder support, continue
 reading at [AutoValue with Builders](builders.md) instead.
 
-### In your value class {#example_java}
+### <a name="example_java"></a>In your value class
 
 Create your value class as an *abstract* class, with an abstract accessor method
 for each desired property, and bearing the `@AutoValue` annotation.
@@ -69,20 +68,33 @@ Note that in real life, some classes and methods would presumably be public and
 have Javadoc. We're leaving these off in the User Guide only to keep the
 examples short and simple.
 
-### In `pom.xml` {#example_pom}
+### In `pom.xml`
 
-Maven users, add the following to your configuration:
+Maven users should add the following to the project's `pom.xml` file:
 
 ```xml
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.1</version>
+  <version>1.2</version>
   <scope>provided</scope>
 </dependency>
 ```
 
-### Usage {#usage}
+Gradle users should install the annotation processing plugin [as described in
+these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
+
+```groovy
+dependencies {
+  compileOnly "com.google.auto.value:auto-value:1.2"
+  apt         "com.google.auto.value:auto-value:1.2"
+}
+```
+
+[tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
+
+
+### <a name="usage"></a>Usage
 
 Your choice to use AutoValue is essentially *API-invisible*. That means that to
 the consumer of your class, your class looks and functions like any other. The
@@ -105,7 +117,7 @@ public void testAnimal() {
 }
 ```
 
-### What's going on here? {#whats_going_on}
+### <a name="whats_going_on"></a>What's going on here?
 
 AutoValue runs inside `javac` as a standard annotation processor. It reads your
 abstract class and infers what the implementation class should look like. It
@@ -131,7 +143,7 @@ generate](generated-example.md).
 Note that *consumers* of your value class *don't need to know any of this*. They
 just invoke your provided factory method and get a well-behaved instance back.
 
-## Warnings {#warnings}
+## <a name="warnings"></a>Warnings
 
 Be careful that you don't accidentally pass parameters to the generated
 constructor in the wrong order. You must ensure that **your tests are
@@ -146,11 +158,11 @@ Never persist the result of `hashCode` or use it for any other unintended
 purpose, and be careful never to depend on the order your values appear in
 unordered collections like `HashSet`.
 
-## Why should I use AutoValue? {#why}
+## <a name="why"></a>Why should I use AutoValue?
 
 See [Why AutoValue?](why.md).
 
-## How do I... {#more_howto}
+## <a name="more_howto"></a>How do I...
 
 How do I...
 
@@ -186,7 +198,7 @@ How do I...
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
 
-## More information {#more}
+## <a name="more"></a>More information
 
 See the links in the sidebar at the top left.
 
