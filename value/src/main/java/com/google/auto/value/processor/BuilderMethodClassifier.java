@@ -212,8 +212,11 @@ class BuilderMethodClassifier {
 
   /**
    * Classifies a method given that it has no arguments. Currently a method with no
-   * arguments can only be a {@code build()} method, meaning that its return type must be the
-   * {@code @AutoValue} class.
+   * arguments can be a {@code build()} method, meaning that its return type must be the
+   * {@code @AutoValue} class; it can be a getter, with the same signature as one of
+   * the property getters in the {@code @AutoValue} class; or it can be a property builder,
+   * like {@code ImmutableList.Builder<String> foosBuilder()} for the property defined by
+   * {@code ImmutableList<String> foos()} or {@code getFoos()}.
    *
    * @return true if the method was successfully classified, false if an error has been reported.
    */
@@ -328,6 +331,7 @@ class BuilderMethodClassifier {
       // propertyNameToSetters can't be null when we call put on it below.
       errorReporter.reportError(
           "Method does not correspond to a property of " + autoValueClass, method);
+      checkForFailedJavaBean(method);
       return false;
     }
     if (!checkSetterParameter(valueGetter, method)) {
@@ -339,6 +343,25 @@ class BuilderMethodClassifier {
     } else {
       propertyNameToSetters.put(propertyName, method);
       return true;
+    }
+  }
+
+  // A frequence source of problems is where the JavaBeans conventions have been followed for
+  // most but not all getters. Then AutoValue considers that they haven't been followed at all,
+  // so you might have a property called getFoo where you thought it was called just foo, and
+  // you might not understand why your setter called setFoo is rejected (it would have to be called
+  // setGetFoo).
+  private void checkForFailedJavaBean(ExecutableElement rejectedSetter) {
+    ImmutableSet<ExecutableElement> allGetters = getterToPropertyName.keySet();
+    ImmutableSet<ExecutableElement> prefixedGetters =
+        AutoValueProcessor.prefixedGettersIn(allGetters);
+    if (prefixedGetters.size() < allGetters.size()
+        && prefixedGetters.size() >= allGetters.size() / 2) {
+      String note =
+          "This might be because you are using the getFoo() convention"
+              + " for some but not all methods. These methods don't follow the convention: "
+              + Sets.difference(allGetters, prefixedGetters);
+      errorReporter.reportNote(note, rejectedSetter);
     }
   }
 

@@ -517,12 +517,12 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(
-      Iterable<ExecutableElement> propertyMethods) {
+      Set<ExecutableElement> propertyMethods) {
     Map<String, ExecutableElement> map = Maps.newLinkedHashMap();
-    boolean allGetters = allGetters(propertyMethods);
+    boolean allPrefixed = gettersAllPrefixed(propertyMethods);
     for (ExecutableElement method : propertyMethods) {
       String methodName = method.getSimpleName().toString();
-      String name = allGetters ? nameWithoutPrefix(methodName) : methodName;
+      String name = allPrefixed ? nameWithoutPrefix(methodName) : methodName;
       Object old = map.put(name, method);
       if (old != null) {
         errorReporter.reportError("More than one @AutoValue property called " + name, method);
@@ -531,18 +531,23 @@ public class AutoValueProcessor extends AbstractProcessor {
     return ImmutableBiMap.copyOf(map);
   }
 
-  private static boolean allGetters(Iterable<ExecutableElement> methods) {
+  private static boolean gettersAllPrefixed(Set<ExecutableElement> methods) {
+    return prefixedGettersIn(methods).size() == methods.size();
+  }
+
+  static ImmutableSet<ExecutableElement> prefixedGettersIn(Iterable<ExecutableElement> methods) {
+    ImmutableSet.Builder<ExecutableElement> getters = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
       String name = method.getSimpleName().toString();
       // TODO(emcmanus): decide whether getfoo() (without a capital) is a getter. Currently it is.
       boolean get = name.startsWith("get") && !name.equals("get");
       boolean is = name.startsWith("is") && !name.equals("is")
           && method.getReturnType().getKind() == TypeKind.BOOLEAN;
-      if (!get && !is) {
-        return false;
+      if (get || is) {
+        getters.add(method);
       }
     }
-    return true;
+    return getters.build();
   }
 
   private Set<TypeMirror> allMethodAnnotationTypes(Iterable<ExecutableElement> methods) {

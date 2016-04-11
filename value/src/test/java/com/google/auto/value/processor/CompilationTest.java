@@ -1131,6 +1131,39 @@ public class CompilationTest {
         .in(javaFileObject).onLine(12);
   }
 
+  // Check that we get a helpful error message if some of your properties look like getters but
+  // others don't.
+  @Test
+  public void autoValueBuilderBeansConfusion() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Item",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Item {",
+        "  abstract String getTitle();",
+        "  abstract boolean hasThumbnail();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    Builder setTitle(String title);",
+        "    Builder setHasThumbnail(boolean t);",
+        "    Item build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Method does not correspond to a property of foo.bar.Item")
+        .in(javaFileObject).onLine(12)
+        .and()
+        .withNoteContaining("hasThumbnail")
+        .in(javaFileObject).onLine(12);
+  }
+
   @Test
   public void autoValueBuilderExtraSetter() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
