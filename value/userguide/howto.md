@@ -208,7 +208,7 @@ abstract class DerivedExample {
 
   private String derivedProperty;
 
-  String derivedProperty() {
+  final String derivedProperty() {
     // non-thread-safe example
     if (derivedProperty == null) {
       derivedProperty = realProperty().toLowerCase();
@@ -233,7 +233,7 @@ abstract class IgnoreExample {
 
   private String ignoredProperty; // sadly, it can't be `final`
 
-  String ignoredProperty() {
+  final String ignoredProperty() {
     return ignoredProperty;
   }
 }
