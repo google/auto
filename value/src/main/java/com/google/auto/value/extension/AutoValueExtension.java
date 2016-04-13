@@ -114,8 +114,7 @@ public abstract class AutoValueExtension {
 
   /**
    * Generates the source code of the class named {@code className} to extend
-   * {@code classToExtend}, with the original annotated class of
-   * {@code classToImplement}.  The generated class should be final if {@code isFinal}
+   * {@code classToExtend}. The generated class should be final if {@code isFinal}
    * is true; otherwise it should be abstract.
    *
    * @param context The {@link Context} of the code generation for this class.
