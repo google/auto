@@ -362,8 +362,13 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableSet<ExecutableElement> methods =
         getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
     ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
-    ImmutableBiMap<String, ExecutableElement> properties =
-        propertyNameToMethodMap(methodsToImplement);
+
+    BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
+    ImmutableSet<ExecutableElement> toBuilderMethods =
+        toBuilderMethods(builderSpec, methodsToImplement);
+    Set<ExecutableElement> propertyMethods = Sets.difference(methodsToImplement, toBuilderMethods);
+
+    ImmutableBiMap<String, ExecutableElement> properties = propertyNameToMethodMap(propertyMethods);
 
     String fqExtClass = TypeSimplifier.classNameOf(type);
     List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
@@ -466,13 +471,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
     Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
-    ImmutableSet<ExecutableElement> toBuilderMethods;
     if (builder.isPresent()) {
-      toBuilderMethods = builder.get().toBuilderMethods(typeUtils, methodsToImplement);
       types.addAll(builder.get().referencedTypes());
-    } else {
-      toBuilderMethods = ImmutableSet.of();
     }
+    ImmutableSet<ExecutableElement> toBuilderMethods =
+        toBuilderMethods(builderSpec, methodsToImplement);
     vars.toBuilderMethods =
         FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
     Set<ExecutableElement> propertyMethods = Sets.difference(methodsToImplement, toBuilderMethods);
@@ -676,6 +679,16 @@ public class AutoValueProcessor extends AbstractProcessor {
       throw new AbortProcessingException();
     }
     return toImplement.build();
+  }
+
+  private ImmutableSet<ExecutableElement> toBuilderMethods(
+      BuilderSpec builderSpec, ImmutableSet<ExecutableElement> methodsToImplement) {
+    Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
+    if (builder.isPresent()) {
+      return builder.get().toBuilderMethods(processingEnv.getTypeUtils(), methodsToImplement);
+    } else {
+      return ImmutableSet.of();
+    }
   }
 
   private boolean checkReturnType(TypeElement autoValueClass, ExecutableElement getter) {
