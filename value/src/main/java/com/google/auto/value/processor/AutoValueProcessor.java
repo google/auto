@@ -21,6 +21,7 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
+import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -31,6 +32,7 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -42,7 +44,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -109,10 +111,13 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   private Iterable<? extends AutoValueExtension> extensions;
 
+  private Types typeUtils;
+
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
     errorReporter = new ErrorReporter(processingEnv);
+    typeUtils = processingEnv.getTypeUtils();
   }
 
   @Override
@@ -359,54 +364,72 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
     checkModifiersIfNested(type);
 
+    // We are going to classify the methods of the @AutoValue class into several categories.
+    // This covers the methods in the class itself and the ones it inherits from supertypes.
+    // First, the only concrete (non-abstract) methods we are interested in are overrides of
+    // Object methods (equals, hashCode, toString), which signal that we should not generate
+    // an implementation of those methods.
+    // Then, each abstract method is one of the following:
+    // (1) A property getter, like "abstract String foo()" or "abstract String getFoo()".
+    // (2) A toBuilder() method, which is any abstract no-arg method returning the Builder for
+    //     this @AutoValue class.
+    // (3) An abstract method that will be consumed by an extension, such as
+    //     Parcelable.describeContents() or Parcelable.writeToParcel(Parcel, int).
+    // The describeContents() example shows a quirk here: initially we will identify it as a
+    // property, which means that we need to reconstruct the list of properties after allowing
+    // extensions to consume abstract methods.
+    // If there are abstract methods that don't fit any of the categories above, that is an error
+    // which we signal explicitly to avoid confusion.
+
     ImmutableSet<ExecutableElement> methods =
         getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
-    ImmutableBiMap<String, ExecutableElement> properties =
-        propertyNameToMethodMap(methodsToImplement);
+    ImmutableSet<ExecutableElement> abstractMethods = abstractMethodsIn(methods);
 
-    String fqExtClass = TypeSimplifier.classNameOf(type);
-    List<AutoValueExtension> appliedExtensions = new ArrayList<AutoValueExtension>();
-    ExtensionContext context = new ExtensionContext(processingEnv, type, properties);
-    for (AutoValueExtension extension : extensions) {
-      if (extension.applicable(context)) {
-        if (extension.mustBeFinal(context)) {
-          appliedExtensions.add(0, extension);
-        } else {
-          appliedExtensions.add(extension);
-        }
-      }
+    BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
+    Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
+    ImmutableSet<ExecutableElement> toBuilderMethods;
+    if (builder.isPresent()) {
+      toBuilderMethods = builder.get().toBuilderMethods(typeUtils, abstractMethods);
+    } else {
+      toBuilderMethods = ImmutableSet.of();
     }
 
-    if (!appliedExtensions.isEmpty()) {
-      final Set<String> methodsToRemove = Sets.newHashSet();
-      for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
-        AutoValueExtension extension = appliedExtensions.get(i);
-        methodsToRemove.addAll(extension.consumeProperties(context));
-      }
-      if (!methodsToRemove.isEmpty()) {
-        context.setProperties(newImmutableBiMapRemovingKeys(properties, methodsToRemove));
-        Set<ExecutableElement> newMethods = Sets.newLinkedHashSet(methods);
-        for (Iterator<ExecutableElement> it = newMethods.iterator(); it.hasNext(); ) {
-          if (methodsToRemove.contains(it.next().getSimpleName().toString())) {
-            it.remove();
-          }
-        }
-        methods = ImmutableSet.copyOf(newMethods);
-      }
+    ImmutableSet<ExecutableElement> propertyMethods =
+        propertyMethodsIn(immutableSetDifference(abstractMethods, toBuilderMethods));
+    ImmutableBiMap<String, ExecutableElement> properties = propertyNameToMethodMap(propertyMethods);
+
+    ExtensionContext context =
+        new ExtensionContext(processingEnv, type, properties, abstractMethods);
+    ImmutableList<AutoValueExtension> applicableExtensions = applicableExtensions(type, context);
+    ImmutableSet<ExecutableElement> consumedMethods = methodsConsumedByExtensions(
+        type, applicableExtensions, context, abstractMethods, properties);
+
+    if (!consumedMethods.isEmpty()) {
+      ImmutableSet<ExecutableElement> allAbstractMethods = abstractMethods;
+      abstractMethods = immutableSetDifference(abstractMethods, consumedMethods);
+      toBuilderMethods = immutableSetDifference(toBuilderMethods, consumedMethods);
+      propertyMethods =
+          propertyMethodsIn(immutableSetDifference(abstractMethods, toBuilderMethods));
+      properties = propertyNameToMethodMap(propertyMethods);
+      context = new ExtensionContext(processingEnv, type, properties, allAbstractMethods);
     }
+
+    boolean extensionsPresent = !applicableExtensions.isEmpty();
+    validateMethods(type, abstractMethods, toBuilderMethods, propertyMethods, extensionsPresent);
 
     String finalSubclass = generatedSubclassName(type, 0);
-    String subclass = generatedSubclassName(type, appliedExtensions.size());
+    String subclass = generatedSubclassName(type, applicableExtensions.size());
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
-    vars.origClass = fqExtClass;
+    vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
-    vars.isFinal = appliedExtensions.isEmpty();
+    vars.isFinal = applicableExtensions.isEmpty();
     vars.types = processingEnv.getTypeUtils();
-    defineVarsForType(type, vars, methods);
+    determineObjectMethodsToGenerate(methods, vars);
+    defineVarsForType(type, vars, toBuilderMethods, propertyMethods, builder);
+
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
     String text = vars.toText();
@@ -415,9 +438,17 @@ public class AutoValueProcessor extends AbstractProcessor {
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
 
+    writeExtensions(type, context, applicableExtensions, subclass);
+  }
+
+  private void writeExtensions(
+      TypeElement type,
+      ExtensionContext context,
+      ImmutableList<AutoValueExtension> applicableExtensions,
+      String subclass) {
     String extClass = TypeSimplifier.simpleNameOf(subclass);
-    for (int i = appliedExtensions.size() - 1; i >= 0; i--) {
-      AutoValueExtension extension = appliedExtensions.remove(i);
+    for (int i = applicableExtensions.size() - 1; i >= 0; i--) {
+      AutoValueExtension extension = applicableExtensions.get(i);
       String fqClassName = generatedSubclassName(type, i);
       String className = TypeSimplifier.simpleNameOf(fqClassName);
       boolean isFinal = (i == 0);
@@ -433,26 +464,125 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private static <K, V> ImmutableBiMap<K, V> newImmutableBiMapRemovingKeys(
-      ImmutableBiMap<K, V> original, Set<K> keysToRemove) {
-    ImmutableBiMap.Builder<K, V> builder = ImmutableBiMap.builder();
-    for (Map.Entry<K, V> property : original.entrySet()) {
-      if (!keysToRemove.contains(property.getKey())) {
-        builder.put(property);
+  private ImmutableList<AutoValueExtension> applicableExtensions(
+      TypeElement type, ExtensionContext context) {
+    List<AutoValueExtension> applicableExtensions = Lists.newArrayList();
+    List<AutoValueExtension> finalExtensions = Lists.newArrayList();
+    for (AutoValueExtension extension : extensions) {
+      if (extension.applicable(context)) {
+        if (extension.mustBeFinal(context)) {
+          finalExtensions.add(extension);
+        } else {
+          applicableExtensions.add(extension);
+        }
       }
     }
-    return builder.build();
+    switch (finalExtensions.size()) {
+      case 0:
+        break;
+      case 1:
+        applicableExtensions.add(0, finalExtensions.get(0));
+        break;
+      default:
+        errorReporter.reportError(
+            "More than one extension wants to generate the final class: "
+                + FluentIterable.from(finalExtensions).transform(ExtensionName.INSTANCE)
+                    .join(Joiner.on(", ")),
+            type);
+        break;
+    }
+    return ImmutableList.copyOf(applicableExtensions);
+  }
+
+  private ImmutableSet<ExecutableElement> methodsConsumedByExtensions(
+      TypeElement type,
+      ImmutableList<AutoValueExtension> applicableExtensions,
+      ExtensionContext context,
+      ImmutableSet<ExecutableElement> abstractMethods,
+      ImmutableBiMap<String, ExecutableElement> properties) {
+    Set<ExecutableElement> consumed = Sets.newHashSet();
+    for (AutoValueExtension extension : applicableExtensions) {
+      Set<ExecutableElement> consumedHere = Sets.newHashSet();
+      for (String consumedProperty : extension.consumeProperties(context)) {
+        ExecutableElement propertyMethod = properties.get(consumedProperty);
+        if (propertyMethod == null) {
+          errorReporter.reportError(
+              "Extension " + extensionName(extension)
+                  + " wants to consume a property that does not exist: " + consumedProperty,
+              type);
+        } else {
+          consumedHere.add(propertyMethod);
+        }
+      }
+      for (ExecutableElement consumedMethod : extension.consumeMethods(context)) {
+        if (!abstractMethods.contains(consumedMethod)) {
+          errorReporter.reportError(
+              "Extension " + extensionName(extension)
+                  + " wants to consume a method that is not one of the abstract methods in this"
+                  + " class: " + consumedMethod,
+              type);
+        } else {
+          consumedHere.add(consumedMethod);
+        }
+      }
+      for (ExecutableElement repeat : Sets.intersection(consumed, consumedHere)) {
+        errorReporter.reportError(
+            "Extension " + extensionName(extension) + " wants to consume a method that was already"
+                + " consumed by another extension", repeat);
+      }
+      consumed.addAll(consumedHere);
+    }
+    return ImmutableSet.copyOf(consumed);
+  }
+
+  private void validateMethods(
+      TypeElement type,
+      ImmutableSet<ExecutableElement> abstractMethods,
+      ImmutableSet<ExecutableElement> toBuilderMethods,
+      ImmutableSet<ExecutableElement> propertyMethods,
+      boolean extensionsPresent) {
+    boolean ok = true;
+    for (ExecutableElement method : abstractMethods) {
+      if (propertyMethods.contains(method)) {
+        ok &= checkReturnType(type, method);
+      } else if (!toBuilderMethods.contains(method)
+          && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
+        // This could reasonably be an error, were it not for an Eclipse bug in
+        // ElementUtils.override that sometimes fails to recognize that one method overrides
+        // another, and therefore leaves us with both an abstract method and the subclass method
+        // that overrides it. This shows up in AutoValueTest.LukesBase for example.
+        String message = "Abstract method is neither a property getter nor a Builder converter";
+        if (extensionsPresent) {
+          message += ", and no extension consumed it";
+        }
+        errorReporter.reportWarning(message, method);
+      }
+    }
+    if (!ok) {
+      throw new AbortProcessingException();
+    }
+  }
+
+  private static String extensionName(AutoValueExtension extension) {
+    return extension.getClass().getName();
+  }
+
+  private enum ExtensionName implements Function<AutoValueExtension, String> {
+    INSTANCE;
+
+    @Override public String apply(AutoValueExtension input) {
+      return extensionName(input);
+    }
   }
 
   private void defineVarsForType(
       TypeElement type,
       AutoValueTemplateVars vars,
-      Set<ExecutableElement> methods) {
-    Types typeUtils = processingEnv.getTypeUtils();
-    determineObjectMethodsToGenerate(methods, vars);
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
+      ImmutableSet<ExecutableElement> toBuilderMethods,
+      ImmutableSet<ExecutableElement> propertyMethods,
+      Optional<BuilderSpec.Builder> builder) {
     Set<TypeMirror> types = new TypeMirrorSet();
-    types.addAll(returnTypesOf(methodsToImplement));
+    types.addAll(returnTypesOf(propertyMethods));
     TypeElement generatedTypeElement =
         processingEnv.getElementUtils().getTypeElement(Generated.class.getName());
     if (generatedTypeElement != null) {
@@ -464,18 +594,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       // Arrange to import it unless that would introduce ambiguity.
       types.add(javaUtilArrays);
     }
-    BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
-    Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
-    ImmutableSet<ExecutableElement> toBuilderMethods;
-    if (builder.isPresent()) {
-      toBuilderMethods = builder.get().toBuilderMethods(typeUtils, methodsToImplement);
-      types.addAll(builder.get().referencedTypes());
-    } else {
-      toBuilderMethods = ImmutableSet.of();
-    }
     vars.toBuilderMethods =
         FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
-    Set<ExecutableElement> propertyMethods = Sets.difference(methodsToImplement, toBuilderMethods);
     types.addAll(allMethodAnnotationTypes(propertyMethods));
     String pkg = TypeSimplifier.packageNameOf(type);
     TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
@@ -491,7 +611,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<Property> props = new ArrayList<Property>();
     EclipseHack eclipseHack = eclipseHack();
     ImmutableMap<ExecutableElement, TypeMirror> returnTypes =
-        eclipseHack.methodReturnTypes(methods, type);
+        eclipseHack.methodReturnTypes(propertyMethods, type);
     for (ExecutableElement method : propertyMethods) {
       TypeMirror returnType = returnTypes.get(method);
       String propertyType = typeSimplifier.simplify(returnType);
@@ -652,35 +772,40 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableSet<ExecutableElement> methodsToImplement(
-      TypeElement autoValueClass, Set<ExecutableElement> methods) {
-    ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
-    Set<Name> toImplementNames = Sets.newHashSet();
-    boolean ok = true;
+  private ImmutableSet<ExecutableElement> abstractMethodsIn(
+      ImmutableSet<ExecutableElement> methods) {
+    Set<Name> noArgMethods = Sets.newHashSet();
+    ImmutableSet.Builder<ExecutableElement> abstracts = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
-      if (method.getModifiers().contains(Modifier.ABSTRACT)
-          && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
-        if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
-          ok &= checkReturnType(autoValueClass, method);
-          if (toImplementNames.add(method.getSimpleName())) {
-            // If an abstract method with the same signature is inherited on more than one path,
-            // we only add it once.
-            toImplement.add(method);
-          }
-        } else {
-          // This could reasonably be an error, were it not for an Eclipse bug in
-          // ElementUtils.override that sometimes fails to recognize that one method overrides
-          // another, and therefore leaves us with both an abstract method and the subclass method
-          // that overrides it. This shows up in AutoValueTest.LukesBase for example.
-          errorReporter.reportWarning("@AutoValue classes cannot have abstract methods other than"
-              + " property getters and Builder converters", method);
+      if (method.getModifiers().contains(Modifier.ABSTRACT)) {
+        boolean hasArgs = !method.getParameters().isEmpty();
+        if (hasArgs || noArgMethods.add(method.getSimpleName())) {
+          // If an abstract method with the same signature is inherited on more than one path,
+          // we only add it once. At the moment we only do this check for no-arg methods. All
+          // methods that AutoValue will implement are either no-arg methods or equals(Object).
+          // The former is covered by this check and the latter will lead to vars.equals being
+          // set to true, regardless of how many times it appears. So the only case that is
+          // covered imperfectly here is that of a method that is inherited on more than one path
+          // and that will be consumed by an extension. We could check parameters as well, but that
+          // can be a bit tricky if any of the parameters are generic.
+          abstracts.add(method);
         }
       }
     }
-    if (!ok) {
-      throw new AbortProcessingException();
+    return abstracts.build();
+  }
+
+  private ImmutableSet<ExecutableElement> propertyMethodsIn(
+      ImmutableSet<ExecutableElement> abstractMethods) {
+    ImmutableSet.Builder<ExecutableElement> properties = ImmutableSet.builder();
+    for (ExecutableElement method : abstractMethods) {
+      if (method.getParameters().isEmpty()
+          && method.getReturnType().getKind() != TypeKind.VOID
+          && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
+        properties.add(method);
+      }
     }
-    return toImplement.build();
+    return properties.build();
   }
 
   private boolean checkReturnType(TypeElement autoValueClass, ExecutableElement getter) {
@@ -754,7 +879,6 @@ public class AutoValueProcessor extends AbstractProcessor {
       if (parentMirror.getKind() == TypeKind.NONE) {
         return false;
       }
-      Types typeUtils = processingEnv.getTypeUtils();
       TypeElement parentElement = (TypeElement) typeUtils.asElement(parentMirror);
       if (MoreElements.isAnnotationPresent(parentElement, AutoValue.class)) {
         return true;
@@ -764,14 +888,12 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   private boolean implementsAnnotation(TypeElement type) {
-    Types typeUtils = processingEnv.getTypeUtils();
     return typeUtils.isAssignable(type.asType(), getTypeMirror(Annotation.class));
   }
 
   // Return a string like "1234L" if type instanceof Serializable and defines
   // serialVersionUID = 1234L, otherwise "".
   private String getSerialVersionUID(TypeElement type) {
-    Types typeUtils = processingEnv.getTypeUtils();
     TypeMirror serializable = getTypeMirror(Serializable.class);
     if (typeUtils.isAssignable(type.asType(), serializable)) {
       List<VariableElement> fields = ElementFilter.fieldsIn(type.getEnclosedElements());
@@ -809,6 +931,14 @@ public class AutoValueProcessor extends AbstractProcessor {
           + Joiner.on(", ").join(
               FluentIterable.from(typeParameters).transform(Functions.constant("?")))
           + ">";
+    }
+  }
+
+  private static <E> ImmutableSet<E> immutableSetDifference(ImmutableSet<E> a, ImmutableSet<E> b) {
+    if (Collections.disjoint(a, b)) {
+      return a;
+    } else {
+      return ImmutableSet.copyOf(Sets.difference(a, b));
     }
   }
 

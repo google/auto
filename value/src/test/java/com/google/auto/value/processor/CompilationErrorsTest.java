@@ -127,7 +127,7 @@ public class CompilationErrorsTest extends TestCase {
   }
 
   private static final Pattern CANNOT_HAVE_NON_PROPERTIES = Pattern.compile(
-      "@AutoValue classes cannot have abstract methods other than property getters");
+      "Abstract method is neither a property getter nor a Builder converter");
 
   public void testAbstractVoid() throws Exception {
     String testSourceCode = Joiner.on('\n').join(
