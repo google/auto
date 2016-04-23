@@ -8,12 +8,12 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
 
 /**
- * this class provides access to java 8 type annotations via reflection (to still allow running on
- * older java versions).
- * 
+ * Provides access to Java 8 type annotations via reflection, to allow running on
+ * older Java versions.
+ *
  * @author Till Brychcy
  */
-public class Java8Support {
+class Java8Support {
   private static Method determineAnnotationsMirrorsMethod() {
     try {
       return Class.forName("javax.lang.model.AnnotatedConstruct").getMethod("getAnnotationMirrors");
@@ -26,22 +26,26 @@ public class Java8Support {
   static Method getAnnotationsMirrorsMethod = determineAnnotationsMirrorsMethod();
 
   /**
-   * provides access to {@link javax.lang.model.AnnotatedConstruct#getAnnotationMirrors()} via
-   * reflection
-   * 
-   * @param typeMirror
-   * @return if possible, the result of typeMirror.getAnnotationMirrors(), otherwise an empty list.
+   * Provides access to {@link javax.lang.model.AnnotatedConstruct#getAnnotationMirrors()} via
+   * reflection.
+   *
+   * @param typeMirror the type whose annotations are to be returned.
+   * @return if possible, the result of {@code typeMirror.getAnnotationMirrors()},
+   *     otherwise an empty list.
    */
-  @SuppressWarnings("unchecked")
   static List<? extends AnnotationMirror> getAnnotationMirrors(TypeMirror typeMirror) {
+    if (getAnnotationsMirrorsMethod == null) {
+      return Collections.emptyList();
+    }
     try {
-      if (getAnnotationsMirrorsMethod != null) {
-        return (List<? extends AnnotationMirror>) getAnnotationsMirrorsMethod.invoke(typeMirror);
-      } else {
-        return Collections.emptyList();
-      }
+      @SuppressWarnings("unchecked")
+      List<? extends AnnotationMirror> annotations =
+          (List<? extends AnnotationMirror>) getAnnotationsMirrorsMethod.invoke(typeMirror);
+      return annotations;
     } catch (Exception e) {
       throw new RuntimeException("exception during invocation of getAnnotationMirrors", e);
     }
   }
+
+  private Java8Support() {}
 }

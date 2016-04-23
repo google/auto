@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -434,18 +435,19 @@ final class TypeSimplifier {
 
   private static Set<String> ambiguousNames(Types typeUtils, Set<TypeMirror> types) {
     Set<String> ambiguous = new HashSet<String>();
-    Map<String,String> simpleNamesToQualifiedNames = new HashMap<String,String>();
+    Map<String, Name> simpleNamesToQualifiedNames = new HashMap<String, Name>();
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ERROR) {
         throw new MissingTypeException();
       }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
       /*
-       * compare by qualified names, because in eclipse jdt, if java 8 type annotations are used,
-       * the same (unannotated) type may appear multiple times in the Set<TypeMirror>
+       * Compare by qualified names, because in Eclipse JDT, if Java 8 type annotations are used,
+       * the same (unannotated) type may appear multiple times in the Set<TypeMirror>.
+       * TODO(emcmanus): investigate further, because this might cause problems elsewhere.
        */
-      String qualifiedName = ((TypeElement)typeUtils.asElement(type)).getQualifiedName().toString();
-      String previous=simpleNamesToQualifiedNames.put(simpleName, qualifiedName);
+      Name qualifiedName = ((TypeElement)typeUtils.asElement(type)).getQualifiedName();
+      Name previous = simpleNamesToQualifiedNames.put(simpleName, qualifiedName);
       if (previous != null && !previous.equals(qualifiedName)) {
         ambiguous.add(simpleName);
       }
