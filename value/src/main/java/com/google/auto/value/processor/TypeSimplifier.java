@@ -434,19 +434,25 @@ final class TypeSimplifier {
 
   private static Set<String> ambiguousNames(Types typeUtils, Set<TypeMirror> types) {
     Set<String> ambiguous = new HashSet<String>();
-    Set<String> simpleNames = new HashSet<String>();
+    Map<String,String> simpleNamesToQualifiedNames = new HashMap<String,String>();
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ERROR) {
         throw new MissingTypeException();
       }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
-      if (!simpleNames.add(simpleName)) {
+      /*
+       * compare by qualified names, because in eclipse jdt, if java 8 type annotations are used,
+       * the same (unannotated) type may appear multiple times in the Set<TypeMirror>
+       */
+      String qualifiedName = ((TypeElement)typeUtils.asElement(type)).getQualifiedName().toString();
+      String previous=simpleNamesToQualifiedNames.put(simpleName, qualifiedName);
+      if (previous != null && !previous.equals(qualifiedName)) {
         ambiguous.add(simpleName);
       }
     }
     return ambiguous;
   }
-
+  
   /**
    * Returns true if casting to the given type will elicit an unchecked warning from the
    * compiler. Only generic types such as {@code List<String>} produce such warnings. There will be
