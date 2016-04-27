@@ -1280,6 +1280,58 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  public abstract static class OptionalPropertyWithBuilder {
+    public abstract com.google.common.base.Optional<String> optionalString();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setOptionalString(com.google.common.base.Optional<String> s);
+      OptionalPropertyWithBuilder build();
+    }
+  }
+
+  public void testOmitOptionalWithBuilder() {
+    OptionalPropertyWithBuilder omitted = OptionalPropertyWithBuilder.builder().build();
+    assertThat(omitted.optionalString()).isAbsent();
+
+    OptionalPropertyWithBuilder supplied = OptionalPropertyWithBuilder.builder()
+        .setOptionalString(com.google.common.base.Optional.of("foo"))
+        .build();
+    assertThat(supplied.optionalString()).hasValue("foo");
+  }
+
+  @AutoValue
+  public abstract static class NullableOptionalPropertyWithBuilder {
+    @Nullable
+    public abstract com.google.common.base.Optional<String> optionalString();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_NullableOptionalPropertyWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setOptionalString(com.google.common.base.Optional<String> s);
+      NullableOptionalPropertyWithBuilder build();
+    }
+  }
+
+  public void testOmitNullableOptionalWithBuilder() {
+    NullableOptionalPropertyWithBuilder omitted =
+        NullableOptionalPropertyWithBuilder.builder().build();
+    assertThat(omitted.optionalString()).isNull();
+
+    NullableOptionalPropertyWithBuilder supplied = NullableOptionalPropertyWithBuilder.builder()
+        .setOptionalString(com.google.common.base.Optional.of("foo"))
+        .build();
+    assertThat(supplied.optionalString()).hasValue("foo");
+  }
+
+  @AutoValue
   public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
     public abstract List<T> list();
     public abstract U u();

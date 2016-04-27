@@ -194,6 +194,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     private final ExecutableElement method;
     private final String type;
     private final ImmutableList<String> annotations;
+    private final Optionalish optional;
 
     Property(
         String name,
@@ -206,6 +207,9 @@ public class AutoValueProcessor extends AbstractProcessor {
       this.method = method;
       this.type = type;
       this.annotations = buildAnnotations(typeSimplifier);
+      TypeMirror propertyType = method.getReturnType();
+      this.optional =
+          Optionalish.createIfOptional(propertyType, typeSimplifier.simplifyRaw(propertyType));
     }
 
     private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
@@ -278,6 +282,14 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     public List<String> getAnnotations() {
       return annotations;
+    }
+
+    /**
+     * Returns an {@link Optionalish} representing the kind of Optional that this property's type
+     * is, or null if the type is not an Optional of any kind.
+     */
+    public Optionalish getOptional() {
+      return optional;
     }
 
     /**

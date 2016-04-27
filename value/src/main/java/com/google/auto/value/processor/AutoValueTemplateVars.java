@@ -158,9 +158,13 @@ class AutoValueTemplateVars extends TemplateVars {
       ImmutableMap.of();
 
   /**
-   * Properties that are required to be set. A property must be set explicitly unless it is either
-   * {@code @Nullable} (in which case it defaults to null), or has a property-builder method
-   * (in which case it defaults to empty).
+   * Properties that are required to be set. A property must be set explicitly except in the
+   * following cases:
+   * <ul>
+   * <li>it is {@code @Nullable} (in which case it defaults to null);
+   * <li>it is {@code Optional} (in which case it defaults to empty);
+   * <li>it has a property-builder method (in which case it defaults to empty).
+   * </ul>
    */
   ImmutableSet<AutoValueProcessor.Property> builderRequiredProperties = ImmutableSet.of();
 

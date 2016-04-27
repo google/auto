@@ -227,7 +227,9 @@ class BuilderSpec {
 
       Set<Property> required = Sets.newLinkedHashSet(vars.props);
       for (Property property : vars.props) {
-        if (property.isNullable() || vars.builderPropertyBuilders.containsKey(property.getName())) {
+        if (property.isNullable()
+            || property.getOptional() != null
+            || vars.builderPropertyBuilders.containsKey(property.getName())) {
           required.remove(property);
         }
       }
