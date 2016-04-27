@@ -260,7 +260,8 @@ class BuilderSpec {
    * method {@code foo(T)} or {@code setFoo(T)} that returns the builder type. Additionally, it
    * can have a setter with a type that can be copied to {@code T} through a {@code copyOf} method;
    * for example a property {@code foo} of type {@code ImmutableSet<String>} can be set with a
-   * method {@code setFoo(Collection<String> foos)}.
+   * method {@code setFoo(Collection<String> foos)}. And, if {@code T} is {@code Optional},
+   * it can have a setter with a type that can be copied to {@code T} through {@code Optional.of}.
    */
   public class PropertySetter {
     private final String name;
@@ -279,9 +280,13 @@ class BuilderSpec {
       Types typeUtils = processingEnv.getTypeUtils();
       TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
       boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
-      this.copyOf = sameType
-          ? null
-          : typeSimplifier.simplifyRaw(erasedPropertyType) + ".copyOf(%s)";
+      if (sameType) {
+        this.copyOf = null;
+      } else {
+        String rawTarget = typeSimplifier.simplifyRaw(erasedPropertyType);
+        String of = Optionalish.isOptional(propertyType) ? "of" : "copyOf";
+        this.copyOf = rawTarget + "." + of + "(%s)";
+      }
     }
 
     public String getName() {

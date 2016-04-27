@@ -368,7 +368,7 @@ class BuilderMethodClassifier {
   /**
    * Checks that the given setter method has a parameter type that is compatible with the return
    * type of the given getter. Compatible means either that it is the same, or that it is a type
-   * that can be copied using a method like {@code ImmutableList.copyOf}.
+   * that can be copied using a method like {@code ImmutableList.copyOf} or {@code Optional.of}.
    *
    * @return true if the types correspond, false if an error has been reported.
    */
@@ -459,11 +459,12 @@ class BuilderMethodClassifier {
     if (!targetType.getKind().equals(TypeKind.DECLARED)) {
       return ImmutableList.of();
     }
+    String copyOf = Optionalish.isOptional(targetType) ? "of" : "copyOf";
     TypeElement immutableTargetType = MoreElements.asType(typeUtils.asElement(targetType));
     ImmutableList.Builder<ExecutableElement> copyOfMethods = ImmutableList.builder();
     for (ExecutableElement method :
         ElementFilter.methodsIn(immutableTargetType.getEnclosedElements())) {
-      if (method.getSimpleName().contentEquals("copyOf")
+      if (method.getSimpleName().contentEquals(copyOf)
           && method.getParameters().size() == 1
           && method.getModifiers().contains(Modifier.STATIC)) {
         copyOfMethods.add(method);

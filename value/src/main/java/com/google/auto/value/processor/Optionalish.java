@@ -2,6 +2,7 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 
 import javax.lang.model.element.TypeElement;
@@ -41,22 +42,33 @@ public class Optionalish {
    *     {@code OptionalInt}, etc. In cases of ambiguity it might be {@code java.util.Optional} etc.
    */
   static Optionalish createIfOptional(TypeMirror type, String rawTypeSpelling) {
+    TypeElement optionalType = asOptionalTypeElement(type);
+    if (optionalType == null) {
+      return null;
+    } else {
+      return new Optionalish(optionalType, Preconditions.checkNotNull(rawTypeSpelling));
+    }
+  }
+
+  static boolean isOptional(TypeMirror type) {
+    return asOptionalTypeElement(type) != null;
+  }
+
+  private static TypeElement asOptionalTypeElement(TypeMirror type) {
     if (type.getKind() != TypeKind.DECLARED) {
       return null;
     }
     DeclaredType declaredType = MoreTypes.asDeclared(type);
     TypeElement typeElement = MoreElements.asType(declaredType.asElement());
-    if (OPTIONAL_CLASS_NAMES.contains(typeElement.getQualifiedName().toString())) {
-      return new Optionalish(typeElement, rawTypeSpelling);
-    } else {
-      return null;
-    }
+    return OPTIONAL_CLASS_NAMES.contains(typeElement.getQualifiedName().toString())
+        ? typeElement
+        : null;
   }
 
   /**
    * Returns a string representing the method call to obtain the empty version of this Optional.
    * This will be something like {@code "Optional.empty()"} or possibly
-   * {@code java.util.Optional.empty()}. It does not have a final semicolon.
+   * {@code "java.util.Optional.empty()"}. It does not have a final semicolon.
    *
    * <p>This method is public so that it can be referenced as {@code p.optional.empty} from
    * templates.

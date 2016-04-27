@@ -1290,6 +1290,7 @@ public class AutoValueTest extends TestCase {
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
+      Builder setOptionalString(String s);
       OptionalPropertyWithBuilder build();
     }
   }
@@ -1302,6 +1303,11 @@ public class AutoValueTest extends TestCase {
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
+
+    OptionalPropertyWithBuilder suppliedDirectly = OptionalPropertyWithBuilder.builder()
+        .setOptionalString("foo")
+        .build();
+    assertThat(suppliedDirectly.optionalString()).hasValue("foo");
   }
 
   @AutoValue
@@ -1328,6 +1334,33 @@ public class AutoValueTest extends TestCase {
     NullableOptionalPropertyWithBuilder supplied = NullableOptionalPropertyWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
+    assertThat(supplied.optionalString()).hasValue("foo");
+  }
+
+  @AutoValue
+  public abstract static class OptionalPropertyWithBuilderSimpleSetter {
+    public abstract com.google.common.base.Optional<String> optionalString();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilderSimpleSetter.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setOptionalString(String s);
+      OptionalPropertyWithBuilderSimpleSetter build();
+    }
+  }
+
+  public void testOptionalPropertySimpleSetter() {
+    OptionalPropertyWithBuilderSimpleSetter omitted =
+        OptionalPropertyWithBuilderSimpleSetter.builder().build();
+    assertThat(omitted.optionalString()).isAbsent();
+
+    OptionalPropertyWithBuilderSimpleSetter supplied =
+        OptionalPropertyWithBuilderSimpleSetter.builder()
+            .setOptionalString("foo")
+            .build();
     assertThat(supplied.optionalString()).hasValue("foo");
   }
 
