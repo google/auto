@@ -22,6 +22,7 @@ How do I...
 *   ... [**validate** property values?](#validate)
 *   ... [**normalize** (modify) a property value at `build` time?](#normalize)
 *   ... [expose **both** a builder and a factory method?](#both)
+*   ... [handle `Optional` properties?](#optional)
 *   ... [use a **collection**-valued property?](#collection)
     *   ... [let my builder **accumulate** values for a collection-valued
         property (not require them all at once)?](#accumulate)
@@ -72,9 +73,11 @@ Use whichever names you like; AutoValue doesn't actually care.
 
 What should happen when a caller does not supply a value for a property before
 calling `build()`? If the property in question is [nullable](howto.md#nullable),
-it will simply default to `null` as you would expect. But if it isn't (including
-if it is a primitive-valued property, which *can't* be null), then `build()`
-will throw an unchecked exception.
+it will simply default to `null` as you would expect. And if it is
+[Optional](#optional) it will default to an empty `Optional` as you might
+also expect. But if it isn't either of those things (including if it is a
+primitive-valued property, which *can't* be null), then `build()` will throw an
+unchecked exception.
 
 But this presents a problem, since one of the main *advantages* of a builder in
 the first place is that callers can specify only the properties they care about!
@@ -243,6 +246,28 @@ If you use the builder option, AutoValue will not generate a visible constructor
 for the generated concrete value class. If it's important to offer your caller
 the choice of a factory method as well as the builder, then your factory method
 implementation will have to invoke the builder itself.
+
+## <a name="optional"></a>... handle `Optional` properties?
+
+Properties of type `Optional` benefit from special treatment. If you
+have a property of type `Optional<String>`, say, then it will default
+to an empty `Optional` without needing to [specify](#default) a default
+explicitly. And, instead of or as well as the normal `setFoo(Optional<String>)`
+method, you can have `setFoo(String)`. Then `setFoo(s)` is equivalent to
+`setFoo(Optional.of(s))`.
+
+Here, `Optional` means either [`java.util.Optional`] from Java (Java 8
+or later), or [`com.google.common.base.Optional`] from Guava. Java 8
+also introduced related classes in `java.util` called [`OptionalInt`],
+[`OptionalLong`], and [`OptionalDouble`]. You can use those in the same way. For
+example a property of type `OptionalInt` will default to `OptionalInt.empty()`
+and you can set it with either `setFoo(OptionalInt)` or `setFoo(int)`.
+
+[`java.util.Optional`]: https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html
+[`com.google.common.base.Optional`]: http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html
+[`OptionalDouble`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalDouble.html
+[`OptionalInt`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalInt.html
+[`OptionalLong`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalLong.html
 
 ## <a name="collection"></a>... use a collection-valued property?
 
