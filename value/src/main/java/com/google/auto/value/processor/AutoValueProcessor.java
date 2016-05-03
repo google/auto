@@ -361,7 +361,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     ImmutableSet<ExecutableElement> methods =
         getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     ImmutableBiMap<String, ExecutableElement> properties =
         propertyNameToMethodMap(methodsToImplement);
 
@@ -395,6 +395,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         methods = ImmutableSet.copyOf(newMethods);
       }
     }
+    verifyMethods(type, methods);
 
     String finalSubclass = generatedSubclassName(type, 0);
     String subclass = generatedSubclassName(type, appliedExtensions.size());
@@ -450,7 +451,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       Set<ExecutableElement> methods) {
     Types typeUtils = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
-    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(type, methods);
+    ImmutableSet<ExecutableElement> methodsToImplement = methodsToImplement(methods);
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(methodsToImplement));
     TypeElement generatedTypeElement =
@@ -647,21 +648,31 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private ImmutableSet<ExecutableElement> methodsToImplement(
-      TypeElement autoValueClass, Set<ExecutableElement> methods) {
+  private ImmutableSet<ExecutableElement> methodsToImplement(Set<ExecutableElement> methods) {
     ImmutableSet.Builder<ExecutableElement> toImplement = ImmutableSet.builder();
     Set<Name> toImplementNames = Sets.newHashSet();
+    for (ExecutableElement method : methods) {
+      if (method.getModifiers().contains(Modifier.ABSTRACT)
+          && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
+        if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
+          if (toImplementNames.add(method.getSimpleName())) {
+            // If an abstract method with the same signature is inherited on more than one path,
+            // we only add it once.
+            toImplement.add(method);
+          }
+        }
+      }
+    }
+    return toImplement.build();
+  }
+
+  private void verifyMethods(TypeElement autoValueClass, ImmutableSet<ExecutableElement> methods) {
     boolean ok = true;
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)
           && objectMethodToOverride(method) == ObjectMethodToOverride.NONE) {
         if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
           ok &= checkReturnType(autoValueClass, method);
-          if (toImplementNames.add(method.getSimpleName())) {
-            // If an abstract method with the same signature is inherited on more than one path,
-            // we only add it once.
-            toImplement.add(method);
-          }
         } else {
           // This could reasonably be an error, were it not for an Eclipse bug in
           // ElementUtils.override that sometimes fails to recognize that one method overrides
@@ -675,7 +686,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (!ok) {
       throw new AbortProcessingException();
     }
-    return toImplement.build();
   }
 
   private boolean checkReturnType(TypeElement autoValueClass, ExecutableElement getter) {

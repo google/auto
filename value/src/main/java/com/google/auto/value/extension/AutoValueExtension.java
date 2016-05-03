@@ -24,9 +24,8 @@ import javax.lang.model.element.TypeElement;
  * abstract.
  *
  * <p>Each Extension must also be sure to generate a constructor with arguments corresponding to
- * all properties in
- * {@link com.google.auto.value.extension.AutoValueExtension.Context#properties()}, in order. This
- * constructor must have at least package visibility.
+ * all properties in {@link Context#properties()}, in order. This constructor must have at least
+ * package visibility.
  */
 public abstract class AutoValueExtension {
 
@@ -81,7 +80,7 @@ public abstract class AutoValueExtension {
    * in the inheritance hierarchy.  Only one extension may be the final class, so
    * this should be used sparingly.
    *
-   * @param context The Context of the code generation for this class.
+   * @param context The {@link Context} of the code generation for this class.
    * @return True if the resulting class must be the final class in the inheritance hierarchy.
    */
   public boolean mustBeFinal(Context context) {
@@ -89,10 +88,11 @@ public abstract class AutoValueExtension {
   }
 
   /**
-   * Returns a non-null set of property names from {@link Context#properties()} that this extension
-   * intends to implement. This will prevent AutoValue from generating an implementation, and remove
-   * the supplied properties from builders, constructors, {@code toString}, {@code equals},
-   * and {@code hashCode}. The default set returned by this method is empty.
+   * Returns a non-null set of property names from {@link AutoValueExtension.Context#properties()}
+   * that this extension intends to implement.  This will prevent AutoValue from generating an
+   * implementation, and remove the supplied properties from builders, constructors,
+   * {@code toString}, {@code equals}, and {@code hashCode}. The default set returned by this
+   * method is empty.
    *
    * <p>For example, Android's {@code Parcelable} interface includes a
    * <a href="http://developer.android.com/reference/android/os/Parcelable.html#describeContents()">method</a>
@@ -105,7 +105,8 @@ public abstract class AutoValueExtension {
    * implementation and return a set containing {@code "describeContents"}. Then
    * {@code describeContents} will be omitted from builders and the rest.
    *
-   * @param context The Context of the code generation for this class.
+   * @param context The {@link com.google.auto.value.extension.AutoValueExtension.Context} of the code
+   *     generation for this class.
    * @return A collection of property names that this extension intends to implement.
    */
   public Set<String> consumeProperties(Context context) {
