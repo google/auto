@@ -1365,6 +1365,37 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  public abstract static class PropertyWithOptionalGetter {
+    public abstract String getString();
+    public abstract int getInt();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_PropertyWithOptionalGetter.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setString(String s);
+      com.google.common.base.Optional<String> getString();
+      Builder setInt(int x);
+      com.google.common.base.Optional<Integer> getInt();
+      PropertyWithOptionalGetter build();
+    }
+  }
+
+  public void testOptionalGetter() {
+    PropertyWithOptionalGetter.Builder omitted =
+        PropertyWithOptionalGetter.builder();
+    assertThat(omitted.getString()).isAbsent();
+    assertThat(omitted.getInt()).isAbsent();
+
+    PropertyWithOptionalGetter.Builder supplied =
+        PropertyWithOptionalGetter.builder().setString("foo").setInt(23);
+    assertThat(supplied.getString()).hasValue("foo");
+    assertThat(supplied.getInt()).hasValue(23);
+  }
+
+  @AutoValue
   public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
     public abstract List<T> list();
     public abstract U u();

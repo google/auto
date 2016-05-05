@@ -1200,6 +1200,52 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  public abstract static class PropertyWithOptionalGetters {
+    public abstract String getString();
+    public abstract int getInt();
+    public abstract long getLong();
+    public abstract double getDouble();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_PropertyWithOptionalGetters.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setString(String s);
+      java.util.Optional<String> getString();
+      Builder setInt(int x);
+      java.util.OptionalInt getInt();
+      Builder setLong(long x);
+      java.util.OptionalLong getLong();
+      Builder setDouble(double d);
+      java.util.OptionalDouble getDouble();
+      PropertyWithOptionalGetters build();
+    }
+  }
+
+  public void testOptionalGetter() {
+    PropertyWithOptionalGetters.Builder omitted =
+        PropertyWithOptionalGetters.builder();
+    assertThat(omitted.getString().isPresent()).isFalse();
+    assertThat(omitted.getInt().isPresent()).isFalse();
+    assertThat(omitted.getLong().isPresent()).isFalse();
+    assertThat(omitted.getDouble().isPresent()).isFalse();
+
+    PropertyWithOptionalGetters.Builder supplied =
+        PropertyWithOptionalGetters
+            .builder()
+            .setString("foo")
+            .setInt(23)
+            .setLong(17L)
+            .setDouble(5.0);
+    assertThat(supplied.getString().get()).isEqualTo("foo");
+    assertThat(supplied.getInt().getAsInt()).isEqualTo(23);
+    assertThat(supplied.getLong().getAsLong()).isEqualTo(17L);
+    assertThat(supplied.getDouble().getAsDouble()).isWithin(0.0).of(5.0);
+  }
+
+  @AutoValue
   public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
     public abstract List<T> list();
     public abstract U u();

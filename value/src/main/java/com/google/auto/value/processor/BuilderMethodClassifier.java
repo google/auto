@@ -58,9 +58,11 @@ class BuilderMethodClassifier {
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
+  private final TypeSimplifier typeSimplifier;
 
   private final Set<ExecutableElement> buildMethods = Sets.newLinkedHashSet();
-  private final Set<String> propertiesWithBuilderGetters = Sets.newLinkedHashSet();
+  private final Map<String, BuilderSpec.PropertyGetter> builderGetters =
+      Maps.newLinkedHashMap();
   private final Multimap<String, ExecutableElement> propertyNameToPrefixedSetters =
       LinkedListMultimap.create();
   private final Multimap<String, ExecutableElement> propertyNameToUnprefixedSetters =
@@ -74,7 +76,8 @@ class BuilderMethodClassifier {
       ProcessingEnvironment processingEnv,
       TypeElement autoValueClass,
       TypeElement builderType,
-      ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      TypeSimplifier typeSimplifier) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.autoValueClass = autoValueClass;
@@ -86,6 +89,7 @@ class BuilderMethodClassifier {
       getterToPropertyNameBuilder.put(getter.getSimpleName().toString(), getter);
     }
     this.getterNameToGetter = getterToPropertyNameBuilder.build();
+    this.typeSimplifier = typeSimplifier;
   }
 
   /**
@@ -106,9 +110,15 @@ class BuilderMethodClassifier {
       ProcessingEnvironment processingEnv,
       TypeElement autoValueClass,
       TypeElement builderType,
-      ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      TypeSimplifier typeSimplifier) {
     BuilderMethodClassifier classifier = new BuilderMethodClassifier(
-        errorReporter, processingEnv, autoValueClass, builderType, getterToPropertyName);
+        errorReporter,
+        processingEnv,
+        autoValueClass,
+        builderType,
+        getterToPropertyName,
+        typeSimplifier);
     if (classifier.classifyMethods(methods)) {
       return Optional.of(classifier);
     } else {
@@ -138,8 +148,8 @@ class BuilderMethodClassifier {
    * then the name of the property is {@code foo}, If the builder also has a method of the same name
    * ({@code foo()} or {@code getFoo()}) then the set returned here will contain {@code foo}.
    */
-  ImmutableSet<String> propertiesWithBuilderGetters() {
-    return ImmutableSet.copyOf(propertiesWithBuilderGetters);
+  ImmutableMap<String, BuilderSpec.PropertyGetter> builderGetters() {
+    return ImmutableMap.copyOf(builderGetters);
   }
 
   /**
@@ -251,22 +261,46 @@ class BuilderMethodClassifier {
 
   private boolean classifyGetter(
       ExecutableElement builderGetter, ExecutableElement originalGetter) {
-    if (!TYPE_EQUIVALENCE.equivalent(
-        builderGetter.getReturnType(), originalGetter.getReturnType())) {
-      String error = String.format(
-          "Method matches a property of %s but has return type %s instead of %s",
-          autoValueClass, builderGetter.getReturnType(), originalGetter.getReturnType());
-      errorReporter.reportError(error, builderGetter);
-      return false;
+    String propertyName = getterToPropertyName.get(originalGetter);
+    TypeMirror builderGetterType = builderGetter.getReturnType();
+    String builderGetterTypeString = typeSimplifier.simplify(builderGetterType);
+    TypeMirror originalGetterType = originalGetter.getReturnType();
+    if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
+      builderGetters.put(
+          propertyName, new BuilderSpec.PropertyGetter(builderGetterTypeString, null));
+      return true;
     }
-    propertiesWithBuilderGetters.add(getterToPropertyName.get(originalGetter));
-    return true;
+    Optionalish optional = Optionalish.createIfOptional(
+        builderGetterType, typeSimplifier.simplifyRaw(builderGetterType));
+    if (optional != null) {
+      TypeMirror containedType = optional.getContainedType(typeUtils);
+      // If the original method is int getFoo() then we allow Optional<Integer> here.
+      // boxedOriginalType is Integer, and containedType is also Integer.
+      // We don't need any special code for OptionalInt because containedType will be int then.
+      TypeMirror boxedOriginalType = (originalGetterType.getKind().isPrimitive())
+          ? typeUtils.boxedClass(MoreTypes.asPrimitiveType(originalGetterType))
+              .asType()
+          : null;
+      if (TYPE_EQUIVALENCE.equivalent(containedType, originalGetterType)
+          || TYPE_EQUIVALENCE.equivalent(containedType, boxedOriginalType)) {
+        builderGetters.put(
+            propertyName,
+            new BuilderSpec.PropertyGetter(builderGetterTypeString, optional));
+        return true;
+      }
+    }
+    String error = String.format(
+        "Method matches a property of %1$s but has return type %2$s instead of %3$s "
+            + "or an Optional wrapping of %3$s",
+        autoValueClass, builderGetter.getReturnType(), originalGetter.getReturnType());
+    errorReporter.reportError(error, builderGetter);
+    return false;
   }
 
   // Construct this string so it won't be found by Maven shading and renamed, which is not what
   // we want.
   private static final String COM_GOOGLE_COMMON_COLLECT_IMMUTABLE =
-      new StringBuilder("com.").append("google.common.collect.Immutable").toString();
+      "com.".concat("google.common.collect.Immutable");
 
   private boolean classifyPropertyBuilder(ExecutableElement method, String property) {
     TypeMirror builderTypeMirror = method.getReturnType();

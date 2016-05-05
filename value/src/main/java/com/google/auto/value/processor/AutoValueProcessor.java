@@ -600,6 +600,9 @@ public class AutoValueProcessor extends AbstractProcessor {
       Optional<BuilderSpec.Builder> builder) {
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(propertyMethods));
+    if (builder.isPresent()) {
+      types.addAll(builder.get().referencedTypes());
+    }
     TypeElement generatedTypeElement =
         processingEnv.getElementUtils().getTypeElement(Generated.class.getName());
     if (generatedTypeElement != null) {
@@ -789,6 +792,8 @@ public class AutoValueProcessor extends AbstractProcessor {
         case TO_STRING:
           vars.toString = canGenerate;
           break;
+        default:
+          // Not a method from Object, nothing to do.
       }
     }
   }

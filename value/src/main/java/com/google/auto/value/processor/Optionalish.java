@@ -3,12 +3,17 @@ package com.google.auto.value.processor;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
+import java.util.List;
 
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Types;
 
 /**
  * A wrapper for properties of Optional-like classes. This can be com.google.common.base.Optional,
@@ -24,10 +29,10 @@ public class Optionalish {
       "java.util.OptionalInt",
       "java.util.OptionalLong");
 
-  private final TypeElement optionalType;
+  private final DeclaredType optionalType;
   private final String rawTypeSpelling;
 
-  private Optionalish(TypeElement optionalType, String rawTypeSpelling) {
+  private Optionalish(DeclaredType optionalType, String rawTypeSpelling) {
     this.optionalType = optionalType;
     this.rawTypeSpelling = rawTypeSpelling;
   }
@@ -42,27 +47,31 @@ public class Optionalish {
    *     {@code OptionalInt}, etc. In cases of ambiguity it might be {@code java.util.Optional} etc.
    */
   static Optionalish createIfOptional(TypeMirror type, String rawTypeSpelling) {
-    TypeElement optionalType = asOptionalTypeElement(type);
-    if (optionalType == null) {
-      return null;
+    if (isOptional(type)) {
+      return new Optionalish(
+          MoreTypes.asDeclared(type), Preconditions.checkNotNull(rawTypeSpelling));
     } else {
-      return new Optionalish(optionalType, Preconditions.checkNotNull(rawTypeSpelling));
+      return null;
     }
   }
 
   static boolean isOptional(TypeMirror type) {
-    return asOptionalTypeElement(type) != null;
-  }
-
-  private static TypeElement asOptionalTypeElement(TypeMirror type) {
     if (type.getKind() != TypeKind.DECLARED) {
-      return null;
+      return false;
     }
     DeclaredType declaredType = MoreTypes.asDeclared(type);
     TypeElement typeElement = MoreElements.asType(declaredType.asElement());
     return OPTIONAL_CLASS_NAMES.contains(typeElement.getQualifiedName().toString())
-        ? typeElement
-        : null;
+        && typeElement.getTypeParameters().size() == declaredType.getTypeArguments().size();
+  }
+
+  /**
+   * Returns a string representing the raw type of this Optional. This will typically be just
+   * {@code "Optional"}, but it might be {@code "OptionalInt"} or {@code "java.util.Optional"}
+   * for example.
+   */
+  public String getRawType() {
+    return rawTypeSpelling;
   }
 
   /**
@@ -74,9 +83,34 @@ public class Optionalish {
    * templates.
    */
   public String getEmpty() {
-    String empty = optionalType.getQualifiedName().toString().startsWith("java.util.")
+    TypeElement typeElement = MoreElements.asType(optionalType.asElement());
+    String empty = typeElement.getQualifiedName().toString().startsWith("java.util.")
         ? ".empty()"
         : ".absent()";
     return rawTypeSpelling + empty;
+  }
+
+  TypeMirror getContainedType(Types typeUtils) {
+    List<? extends TypeMirror> typeArguments = optionalType.getTypeArguments();
+    switch (typeArguments.size()) {
+      case 1:
+        return typeArguments.get(0);
+      case 0:
+        return getContainedPrimitiveType(typeUtils);
+      default:
+        throw new AssertionError("Wrong number of type arguments: " + optionalType);
+    }
+  }
+
+  private static final ImmutableMap<String, TypeKind> PRIMITIVE_TYPE_KINDS = ImmutableMap.of(
+      "OptionalDouble", TypeKind.DOUBLE,
+      "OptionalInt", TypeKind.INT,
+      "OptionalLong", TypeKind.LONG);
+
+  private TypeMirror getContainedPrimitiveType(Types typeUtils) {
+    String simpleName = optionalType.asElement().getSimpleName().toString();
+    TypeKind typeKind = PRIMITIVE_TYPE_KINDS.get(simpleName);
+    Verify.verifyNotNull(typeKind, "Could not get contained type of %s", optionalType);
+    return typeUtils.getPrimitiveType(typeKind);
   }
 }

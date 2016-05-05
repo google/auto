@@ -20,9 +20,9 @@ import com.google.common.testing.NullPointerTester;
 
 import junit.framework.TestCase;
 
-import java.util.Map;
-
 import org.junit.Ignore;
+
+import java.util.Map;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

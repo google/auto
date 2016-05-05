@@ -276,27 +276,38 @@ ${gwtCompatibleAnnotation}
 
     ## Getter
 
-    #if ($propertiesWithBuilderGetters.contains($p.name))
+    #if ($builderGetters[$p.name])
 
     @Override
-    ${p.nullableAnnotation}public $p.type ${p.getter}() {
-      #if ($builderRequiredProperties.contains($p))
+    ${p.nullableAnnotation}public $builderGetters[$p.name].type ${p.getter}() {
+      #if ($builderGetters[$p.name].optional)
+
+      if ($p == null) {
+        return $builderGetters[$p.name].optional.empty;
+      } else {
+        return ${builderGetters[$p.name].optional.rawType}.of($p);
+      }
+
+      #else
+        #if ($builderRequiredProperties.contains($p))
 
       if ($p == null) {
         throw new IllegalStateException("Property \"$p.name\" has not been set");
       }
 
-      #end
+        #end
 
-      #if ($builderPropertyBuilders[$p.name])
+        #if ($builderPropertyBuilders[$p.name])
 
       if (${propertyBuilder.name} != null) {
         return ${propertyBuilder.name}.build();
       }
 
-      #end
+        #end
 
       return $p;
+
+      #end
 
     }
 

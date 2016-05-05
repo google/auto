@@ -169,9 +169,12 @@ class AutoValueTemplateVars extends TemplateVars {
   ImmutableSet<AutoValueProcessor.Property> builderRequiredProperties = ImmutableSet.of();
 
   /**
-   * Properties that have getters in the builder.
+   * A map from property names to information about the associated property getter. A property
+   * called foo (defined by a method foo() or getFoo()) can have a property getter method with
+   * the same name (foo() or getFoo()) and either the same return type or an Optional
+   * (or OptionalInt, etc) wrapping it.
    */
-  ImmutableSet<String> propertiesWithBuilderGetters = ImmutableSet.of();
+  ImmutableMap<String, BuilderSpec.PropertyGetter> builderGetters = ImmutableMap.of();
 
   /**
    * The names of any {@code toBuilder()} methods, that is methods that return the builder type.

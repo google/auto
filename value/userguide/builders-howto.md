@@ -108,6 +108,10 @@ abstract class Animal {
 }
 ```
 
+Occasionally you may want to supply a default value, but only if the
+property is not set explicitly. This is covered in the section on
+[normalization](#normalize).
+
 ## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
 Suppose your caller has an existing instance of your value class, and wants to
@@ -232,13 +236,59 @@ public abstract class Animal {
 }
 ```
 
-The getter in your builder must have the exact same signature as the abstract
+The getter in your builder must have the same signature as the abstract
 property accessor method in the value class. It will return the value that has
 been set on the `Builder`. If no value has been set for a non-[nullable]
 (howto.md#nullable) property, `IllegalStateException` is thrown.
 
 Getters should generally only be used within the `Builder` as shown, so they are
 not public.
+
+As an alternative to returning the same type as the property accessor method,
+the builder getter can return an Optional wrapping of that type. This can be
+used if you want to supply a default, but only if the property has not been set.
+(The [usual way](#default) of supplying defaults means that the property always
+appears to have been set.) For example, suppose you wanted the default name of
+your Animal to be something like "4-legged creature", where 4 is the
+`numberOfLegs()` property. You might write this:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
+
+    abstract Optional<String> name();
+    abstract int numberOfLegs();
+
+    abstract Animal autoBuild(); // not public
+
+    public Animal build() {
+      if (!name().isPresent()) {
+        setName(numberOfLegs() + "-legged creature);
+      }
+      return autoBuild();
+    }
+  }
+}
+```
+
+Notice that this will throw `IllegalStateException` if the `numberOfLegs`
+property hasn't been set either.
+
+The Optional wrapping can be any of the Optional types mentioned in the
+[section](#optional) on `Optional` properties. If your property has type
+`int` it can be wrapped as either `Optional<Integer>` or `OptionalInt`,
+and likewise for `long` and `double`.
 
 ## <a name="both"></a>... expose *both* a builder *and* a factory method?
 
