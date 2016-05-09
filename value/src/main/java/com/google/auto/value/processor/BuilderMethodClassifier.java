@@ -232,7 +232,7 @@ class BuilderMethodClassifier {
    */
   private boolean classifyMethodNoArgs(ExecutableElement method) {
     String methodName = method.getSimpleName().toString();
-    TypeMirror returnType = method.getReturnType();
+    TypeMirror returnType = builderMethodReturnType(method);
 
     ExecutableElement getter = getterNameToGetter.get(methodName);
     if (getter != null) {
@@ -262,7 +262,7 @@ class BuilderMethodClassifier {
   private boolean classifyGetter(
       ExecutableElement builderGetter, ExecutableElement originalGetter) {
     String propertyName = getterToPropertyName.get(originalGetter);
-    TypeMirror builderGetterType = builderGetter.getReturnType();
+    TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
     String builderGetterTypeString = typeSimplifier.simplify(builderGetterType);
     TypeMirror originalGetterType = originalGetter.getReturnType();
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
@@ -292,7 +292,7 @@ class BuilderMethodClassifier {
     String error = String.format(
         "Method matches a property of %1$s but has return type %2$s instead of %3$s "
             + "or an Optional wrapping of %3$s",
-        autoValueClass, builderGetter.getReturnType(), originalGetter.getReturnType());
+        autoValueClass, builderGetterType, originalGetter.getReturnType());
     errorReporter.reportError(error, builderGetter);
     return false;
   }
@@ -303,7 +303,7 @@ class BuilderMethodClassifier {
       "com.".concat("google.common.collect.Immutable");
 
   private boolean classifyPropertyBuilder(ExecutableElement method, String property) {
-    TypeMirror builderTypeMirror = method.getReturnType();
+    TypeMirror builderTypeMirror = builderMethodReturnType(method);
     TypeElement builderTypeElement = MoreTypes.asTypeElement(builderTypeMirror);
     String builderTypeString = builderTypeElement.getQualifiedName().toString();
     boolean isGuavaBuilder = (builderTypeString.startsWith(COM_GOOGLE_COMMON_COLLECT_IMMUTABLE)
@@ -370,7 +370,8 @@ class BuilderMethodClassifier {
     }
     if (!checkSetterParameter(valueGetter, method)) {
       return false;
-    } else if (!TYPE_EQUIVALENCE.equivalent(method.getReturnType(), builderType.asType())) {
+    } else if (
+        !TYPE_EQUIVALENCE.equivalent(builderMethodReturnType(method), builderType.asType())) {
       errorReporter.reportError(
           "Setter methods must return " + builderType + typeParamsString(), method);
       return false;
@@ -505,6 +506,40 @@ class BuilderMethodClassifier {
       }
     }
     return copyOfMethods.build();
+  }
+
+  /**
+   * Returns the return type of the given method from the builder. This should be the final type of
+   * the method when any bound type variables are substituted. Consider this example:
+   * <pre>{@code
+   * abstract static class ParentBuilder<B extends ParentBuilder> {
+   *   B setFoo(String s);
+   * }
+   * abstract static class ChildBuilder extends ParentBuilder<ChildBuilder> {
+   *   ...
+   * }
+   * }</pre>
+   * If the builder is {@code ChildBuilder} then the return type of {@code setFoo} is also
+   * {@code ChildBuilder}, and not {@code B} as its {@code getReturnType()} method would claim.
+   *
+   * <p>If the caller is in a version of Eclipse with
+   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590">this bug</a> then the
+   * {@code asMemberOf} call will fail if the method is inherited from an interface. We work around
+   * that for methods in the {@code @AutoValue} class using {@link EclipseHack#methodReturnTypes}
+   * but we don't try to do so here because it should be much less likely. You might need to change
+   * {@code ParentBuilder} from an interface to an abstract class to make it work, but you'll often
+   * need to do that anyway.
+   */
+  private TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
+    DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
+    TypeMirror methodMirror;
+    try {
+      methodMirror = typeUtils.asMemberOf(builderTypeMirror, builderMethod);
+    } catch (IllegalArgumentException e) {
+      // Presumably we've hit the Eclipse bug cited.
+      return builderMethod.getReturnType();
+    }
+    return MoreTypes.asExecutable(methodMirror).getReturnType();
   }
 
   private String prefixWithSet(String propertyName) {

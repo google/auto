@@ -1864,6 +1864,36 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  abstract static class AbstractParentWithBuilder {
+    abstract String foo();
+
+    abstract static class Builder<B extends Builder<B>> {
+      abstract B foo(String s);
+    }
+  }
+
+  @AutoValue
+  abstract static class ChildWithBuilder extends AbstractParentWithBuilder {
+    abstract String bar();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_ChildWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder extends AbstractParentWithBuilder.Builder<Builder> {
+      abstract Builder bar(String s);
+
+      abstract ChildWithBuilder build();
+    }
+  }
+
+  public void testInheritedBuilder() {
+    ChildWithBuilder x = ChildWithBuilder.builder().foo("foo").bar("bar").build();
+    assertThat(x.foo()).isEqualTo("foo");
+    assertThat(x.bar()).isEqualTo("bar");
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   @interface GwtCompatible {
     boolean funky() default false;
