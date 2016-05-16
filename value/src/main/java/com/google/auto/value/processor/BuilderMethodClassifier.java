@@ -58,9 +58,11 @@ class BuilderMethodClassifier {
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
+  private final TypeSimplifier typeSimplifier;
 
   private final Set<ExecutableElement> buildMethods = Sets.newLinkedHashSet();
-  private final Set<String> propertiesWithBuilderGetters = Sets.newLinkedHashSet();
+  private final Map<String, BuilderSpec.PropertyGetter> builderGetters =
+      Maps.newLinkedHashMap();
   private final Multimap<String, ExecutableElement> propertyNameToPrefixedSetters =
       LinkedListMultimap.create();
   private final Multimap<String, ExecutableElement> propertyNameToUnprefixedSetters =
@@ -74,7 +76,8 @@ class BuilderMethodClassifier {
       ProcessingEnvironment processingEnv,
       TypeElement autoValueClass,
       TypeElement builderType,
-      ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      TypeSimplifier typeSimplifier) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.autoValueClass = autoValueClass;
@@ -86,6 +89,7 @@ class BuilderMethodClassifier {
       getterToPropertyNameBuilder.put(getter.getSimpleName().toString(), getter);
     }
     this.getterNameToGetter = getterToPropertyNameBuilder.build();
+    this.typeSimplifier = typeSimplifier;
   }
 
   /**
@@ -106,9 +110,15 @@ class BuilderMethodClassifier {
       ProcessingEnvironment processingEnv,
       TypeElement autoValueClass,
       TypeElement builderType,
-      ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      TypeSimplifier typeSimplifier) {
     BuilderMethodClassifier classifier = new BuilderMethodClassifier(
-        errorReporter, processingEnv, autoValueClass, builderType, getterToPropertyName);
+        errorReporter,
+        processingEnv,
+        autoValueClass,
+        builderType,
+        getterToPropertyName,
+        typeSimplifier);
     if (classifier.classifyMethods(methods)) {
       return Optional.of(classifier);
     } else {
@@ -138,8 +148,8 @@ class BuilderMethodClassifier {
    * then the name of the property is {@code foo}, If the builder also has a method of the same name
    * ({@code foo()} or {@code getFoo()}) then the set returned here will contain {@code foo}.
    */
-  ImmutableSet<String> propertiesWithBuilderGetters() {
-    return ImmutableSet.copyOf(propertiesWithBuilderGetters);
+  ImmutableMap<String, BuilderSpec.PropertyGetter> builderGetters() {
+    return ImmutableMap.copyOf(builderGetters);
   }
 
   /**
@@ -212,14 +222,17 @@ class BuilderMethodClassifier {
 
   /**
    * Classifies a method given that it has no arguments. Currently a method with no
-   * arguments can only be a {@code build()} method, meaning that its return type must be the
-   * {@code @AutoValue} class.
+   * arguments can be a {@code build()} method, meaning that its return type must be the
+   * {@code @AutoValue} class; it can be a getter, with the same signature as one of
+   * the property getters in the {@code @AutoValue} class; or it can be a property builder,
+   * like {@code ImmutableList.Builder<String> foosBuilder()} for the property defined by
+   * {@code ImmutableList<String> foos()} or {@code getFoos()}.
    *
    * @return true if the method was successfully classified, false if an error has been reported.
    */
   private boolean classifyMethodNoArgs(ExecutableElement method) {
     String methodName = method.getSimpleName().toString();
-    TypeMirror returnType = method.getReturnType();
+    TypeMirror returnType = builderMethodReturnType(method);
 
     ExecutableElement getter = getterNameToGetter.get(methodName);
     if (getter != null) {
@@ -248,25 +261,49 @@ class BuilderMethodClassifier {
 
   private boolean classifyGetter(
       ExecutableElement builderGetter, ExecutableElement originalGetter) {
-    if (!TYPE_EQUIVALENCE.equivalent(
-        builderGetter.getReturnType(), originalGetter.getReturnType())) {
-      String error = String.format(
-          "Method matches a property of %s but has return type %s instead of %s",
-          autoValueClass, builderGetter.getReturnType(), originalGetter.getReturnType());
-      errorReporter.reportError(error, builderGetter);
-      return false;
+    String propertyName = getterToPropertyName.get(originalGetter);
+    TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
+    String builderGetterTypeString = typeSimplifier.simplify(builderGetterType);
+    TypeMirror originalGetterType = originalGetter.getReturnType();
+    if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
+      builderGetters.put(
+          propertyName, new BuilderSpec.PropertyGetter(builderGetterTypeString, null));
+      return true;
     }
-    propertiesWithBuilderGetters.add(getterToPropertyName.get(originalGetter));
-    return true;
+    Optionalish optional = Optionalish.createIfOptional(
+        builderGetterType, typeSimplifier.simplifyRaw(builderGetterType));
+    if (optional != null) {
+      TypeMirror containedType = optional.getContainedType(typeUtils);
+      // If the original method is int getFoo() then we allow Optional<Integer> here.
+      // boxedOriginalType is Integer, and containedType is also Integer.
+      // We don't need any special code for OptionalInt because containedType will be int then.
+      TypeMirror boxedOriginalType = (originalGetterType.getKind().isPrimitive())
+          ? typeUtils.boxedClass(MoreTypes.asPrimitiveType(originalGetterType))
+              .asType()
+          : null;
+      if (TYPE_EQUIVALENCE.equivalent(containedType, originalGetterType)
+          || TYPE_EQUIVALENCE.equivalent(containedType, boxedOriginalType)) {
+        builderGetters.put(
+            propertyName,
+            new BuilderSpec.PropertyGetter(builderGetterTypeString, optional));
+        return true;
+      }
+    }
+    String error = String.format(
+        "Method matches a property of %1$s but has return type %2$s instead of %3$s "
+            + "or an Optional wrapping of %3$s",
+        autoValueClass, builderGetterType, originalGetter.getReturnType());
+    errorReporter.reportError(error, builderGetter);
+    return false;
   }
 
   // Construct this string so it won't be found by Maven shading and renamed, which is not what
   // we want.
   private static final String COM_GOOGLE_COMMON_COLLECT_IMMUTABLE =
-      new StringBuilder("com.").append("google.common.collect.Immutable").toString();
+      "com.".concat("google.common.collect.Immutable");
 
   private boolean classifyPropertyBuilder(ExecutableElement method, String property) {
-    TypeMirror builderTypeMirror = method.getReturnType();
+    TypeMirror builderTypeMirror = builderMethodReturnType(method);
     TypeElement builderTypeElement = MoreTypes.asTypeElement(builderTypeMirror);
     String builderTypeString = builderTypeElement.getQualifiedName().toString();
     boolean isGuavaBuilder = (builderTypeString.startsWith(COM_GOOGLE_COMMON_COLLECT_IMMUTABLE)
@@ -328,11 +365,13 @@ class BuilderMethodClassifier {
       // propertyNameToSetters can't be null when we call put on it below.
       errorReporter.reportError(
           "Method does not correspond to a property of " + autoValueClass, method);
+      checkForFailedJavaBean(method);
       return false;
     }
     if (!checkSetterParameter(valueGetter, method)) {
       return false;
-    } else if (!TYPE_EQUIVALENCE.equivalent(method.getReturnType(), builderType.asType())) {
+    } else if (
+        !TYPE_EQUIVALENCE.equivalent(builderMethodReturnType(method), builderType.asType())) {
       errorReporter.reportError(
           "Setter methods must return " + builderType + typeParamsString(), method);
       return false;
@@ -342,10 +381,29 @@ class BuilderMethodClassifier {
     }
   }
 
+  // A frequence source of problems is where the JavaBeans conventions have been followed for
+  // most but not all getters. Then AutoValue considers that they haven't been followed at all,
+  // so you might have a property called getFoo where you thought it was called just foo, and
+  // you might not understand why your setter called setFoo is rejected (it would have to be called
+  // setGetFoo).
+  private void checkForFailedJavaBean(ExecutableElement rejectedSetter) {
+    ImmutableSet<ExecutableElement> allGetters = getterToPropertyName.keySet();
+    ImmutableSet<ExecutableElement> prefixedGetters =
+        AutoValueProcessor.prefixedGettersIn(allGetters);
+    if (prefixedGetters.size() < allGetters.size()
+        && prefixedGetters.size() >= allGetters.size() / 2) {
+      String note =
+          "This might be because you are using the getFoo() convention"
+              + " for some but not all methods. These methods don't follow the convention: "
+              + Sets.difference(allGetters, prefixedGetters);
+      errorReporter.reportNote(note, rejectedSetter);
+    }
+  }
+
   /**
    * Checks that the given setter method has a parameter type that is compatible with the return
    * type of the given getter. Compatible means either that it is the same, or that it is a type
-   * that can be copied using a method like {@code ImmutableList.copyOf}.
+   * that can be copied using a method like {@code ImmutableList.copyOf} or {@code Optional.of}.
    *
    * @return true if the types correspond, false if an error has been reported.
    */
@@ -436,17 +494,52 @@ class BuilderMethodClassifier {
     if (!targetType.getKind().equals(TypeKind.DECLARED)) {
       return ImmutableList.of();
     }
+    String copyOf = Optionalish.isOptional(targetType) ? "of" : "copyOf";
     TypeElement immutableTargetType = MoreElements.asType(typeUtils.asElement(targetType));
     ImmutableList.Builder<ExecutableElement> copyOfMethods = ImmutableList.builder();
     for (ExecutableElement method :
         ElementFilter.methodsIn(immutableTargetType.getEnclosedElements())) {
-      if (method.getSimpleName().contentEquals("copyOf")
+      if (method.getSimpleName().contentEquals(copyOf)
           && method.getParameters().size() == 1
           && method.getModifiers().contains(Modifier.STATIC)) {
         copyOfMethods.add(method);
       }
     }
     return copyOfMethods.build();
+  }
+
+  /**
+   * Returns the return type of the given method from the builder. This should be the final type of
+   * the method when any bound type variables are substituted. Consider this example:
+   * <pre>{@code
+   * abstract static class ParentBuilder<B extends ParentBuilder> {
+   *   B setFoo(String s);
+   * }
+   * abstract static class ChildBuilder extends ParentBuilder<ChildBuilder> {
+   *   ...
+   * }
+   * }</pre>
+   * If the builder is {@code ChildBuilder} then the return type of {@code setFoo} is also
+   * {@code ChildBuilder}, and not {@code B} as its {@code getReturnType()} method would claim.
+   *
+   * <p>If the caller is in a version of Eclipse with
+   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590">this bug</a> then the
+   * {@code asMemberOf} call will fail if the method is inherited from an interface. We work around
+   * that for methods in the {@code @AutoValue} class using {@link EclipseHack#methodReturnTypes}
+   * but we don't try to do so here because it should be much less likely. You might need to change
+   * {@code ParentBuilder} from an interface to an abstract class to make it work, but you'll often
+   * need to do that anyway.
+   */
+  private TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
+    DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
+    TypeMirror methodMirror;
+    try {
+      methodMirror = typeUtils.asMemberOf(builderTypeMirror, builderMethod);
+    } catch (IllegalArgumentException e) {
+      // Presumably we've hit the Eclipse bug cited.
+      return builderMethod.getReturnType();
+    }
+    return MoreTypes.asExecutable(methodMirror).getReturnType();
   }
 
   private String prefixWithSet(String propertyName) {

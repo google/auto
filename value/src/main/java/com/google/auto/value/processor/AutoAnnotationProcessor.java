@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoAnnotation;
@@ -186,7 +187,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     boolean overloaded = false;
     Set<String> classNames = new HashSet<String>();
     for (ExecutableElement method : methods) {
-      if (!classNames.add(generatedClassName(method))) {
+      String qualifiedClassName = MoreElements.getPackage(method).getQualifiedName() + "."
+          + generatedClassName(method);
+      if (!classNames.add(qualifiedClassName)) {
         overloaded = true;
         reportError(method, "@AutoAnnotation methods cannot be overloaded");
       }

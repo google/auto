@@ -36,6 +36,16 @@ class ErrorReporter {
   }
 
   /**
+   * Issue a compilation note.
+   *
+   * @param msg the text of the note
+   * @param e the element to which it pertains
+   */
+  void reportNote(String msg, Element e) {
+    messager.printMessage(Diagnostic.Kind.NOTE, msg, e);
+  }
+
+  /**
    * Issue a compilation warning.
    *
    * @param msg the text of the warning

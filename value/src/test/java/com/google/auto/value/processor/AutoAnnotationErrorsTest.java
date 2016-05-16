@@ -112,6 +112,42 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .withErrorContaining("@AutoAnnotation methods cannot be overloaded")
         .in(testSource).onLine(11);
   }
+  
+  // Overload detection used to detect all @AutoAnnotation methods that resulted in 
+  // annotation class of the same SimpleName as being an overload. 
+  // This verifies that implementations in different packages work correctly.
+  public void testSameNameDifferentPackagesDoesNotTriggerOverload() {
+    
+    JavaFileObject fooTestSource = JavaFileObjects.forSourceLines(
+        "com.foo.Test",
+        "package com.foo;",
+        "",
+        "import com.example.TestAnnotation;",
+        "import com.google.auto.value.AutoAnnotation;",
+        "",
+        "class Test {",
+        "  @AutoAnnotation static TestAnnotation newTestAnnotation(int value) {",
+        "    return new AutoAnnotation_Test_newTestAnnotation(value);",
+        "  }",
+        "}"); 
+    JavaFileObject barTestSource = JavaFileObjects.forSourceLines(
+        "com.bar.Test",
+        "package com.bar;",
+        "",
+        "import com.example.TestAnnotation;",
+        "import com.google.auto.value.AutoAnnotation;",
+        "",
+        "class Test {",
+        "  @AutoAnnotation static TestAnnotation newTestAnnotation(int value) {",
+        "    return new AutoAnnotation_Test_newTestAnnotation(value);",
+        "  }",
+        "}");
+    
+    assert_().about(javaSources())
+        .that(ImmutableList.of(TEST_ANNOTATION, fooTestSource, barTestSource))
+        .processedWith(new AutoAnnotationProcessor())
+        .compilesWithoutError();    
+  }
 
   public void testWrongName() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(

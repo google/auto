@@ -162,7 +162,7 @@ Remember when doing this that you are losing AutoValue's protections. Be careful
 to follow the basic rules of hash codes: equal objects must have equal hash
 codes *always*, and equal hash codes should imply equal objects *almost always*.
 You should now test your class more thoroughly, ideally using [`EqualsTester`]
-(http://static.javadoc.io/com.google.guava/guava-testlib/18.0/com/google/common/testing/EqualsTester.html)
+(http://static.javadoc.io/com.google.guava/guava-testlib/19.0/com/google/common/testing/EqualsTester.html)
 from [guava-testlib](http://github.com/google/guava).
 
 Best practice: mark your underriding methods `final` to make it clear to future
@@ -208,7 +208,7 @@ abstract class DerivedExample {
 
   private String derivedProperty;
 
-  String derivedProperty() {
+  final String derivedProperty() {
     // non-thread-safe example
     if (derivedProperty == null) {
       derivedProperty = realProperty().toLowerCase();
@@ -233,7 +233,7 @@ abstract class IgnoreExample {
 
   private String ignoredProperty; // sadly, it can't be `final`
 
-  String ignoredProperty() {
+  final String ignoredProperty() {
     return ignoredProperty;
   }
 }

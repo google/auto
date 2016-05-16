@@ -186,7 +186,8 @@ class BuilderSpec {
           processingEnv,
           autoValueClass,
           builderTypeElement,
-          getterToPropertyName);
+          getterToPropertyName,
+          typeSimplifier);
       if (!optionalClassifier.isPresent()) {
         return;
       }
@@ -210,7 +211,7 @@ class BuilderSpec {
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethodName = buildMethod.getSimpleName().toString();
-      vars.propertiesWithBuilderGetters = classifier.propertiesWithBuilderGetters();
+      vars.builderGetters = classifier.builderGetters();
 
       ImmutableMultimap.Builder<String, PropertySetter> setterBuilder = ImmutableMultimap.builder();
       for (Map.Entry<String, ExecutableElement> entry :
@@ -227,7 +228,9 @@ class BuilderSpec {
 
       Set<Property> required = Sets.newLinkedHashSet(vars.props);
       for (Property property : vars.props) {
-        if (property.isNullable() || vars.builderPropertyBuilders.containsKey(property.getName())) {
+        if (property.isNullable()
+            || property.getOptional() != null
+            || vars.builderPropertyBuilders.containsKey(property.getName())) {
           required.remove(property);
         }
       }
@@ -253,12 +256,53 @@ class BuilderSpec {
   }
 
   /**
+   * Information about a builder property getter, referenced from the autovalue.vm template. A
+   * property called foo (defined by a method {@code T foo()} or {@code T getFoo()}) can have a
+   * getter method in the builder with the same name ({@code foo()} or {@code getFoo()}) and a
+   * return type of either {@code T} or {@code Optional<T>}. The {@code Optional<T>} form can be
+   * used to tell whether the property has been set. Here, {@code Optional<T>} can be either
+   * {@code java.util.Optional} or {@code com.google.common.base.Optional}. If {@code T} is {@code
+   * int}, {@code long}, or {@code double}, then instead of {@code Optional<T>} we can have {@code
+   * OptionalInt} etc. If {@code T} is a primitive type (including these ones but also the other
+   * five) then {@code Optional<T>} can be the corresponding boxed type.
+   */
+  public static class PropertyGetter {
+    private final String type;
+    private final Optionalish optional;
+
+    /**
+     * Makes a new {@code PropertyGetter} instance.
+     *
+     * @param type the type that the getter returns. This is written to take imports into account,
+     *     so it might be {@code List<String>} for example. It is either identical to the type
+     *     of the corresponding getter in the {@code @AutoValue} class, or it is an optional
+     *     wrapper, like {@code Optional<List<String>>}.
+     * @param optional a representation of the {@code Optional} type that the getter returns, if
+     *     this is an optional getter, or null otherwise. An optional getter is one that returns
+     *     {@code Optional<T>} rather than {@code T}, as explained above.
+     */
+    PropertyGetter(String type, Optionalish optional) {
+      this.type = type;
+      this.optional = optional;
+    }
+
+    public String getType() {
+      return type;
+    }
+
+    public Optionalish getOptional() {
+      return optional;
+    }
+  }
+
+  /**
    * Information about a property setter, referenced from the autovalue.vm template. A property
    * called foo (defined by a method {@code T foo()} or {@code T getFoo()}) can have a setter
    * method {@code foo(T)} or {@code setFoo(T)} that returns the builder type. Additionally, it
    * can have a setter with a type that can be copied to {@code T} through a {@code copyOf} method;
    * for example a property {@code foo} of type {@code ImmutableSet<String>} can be set with a
-   * method {@code setFoo(Collection<String> foos)}.
+   * method {@code setFoo(Collection<String> foos)}. And, if {@code T} is {@code Optional},
+   * it can have a setter with a type that can be copied to {@code T} through {@code Optional.of}.
    */
   public class PropertySetter {
     private final String name;
@@ -277,9 +321,13 @@ class BuilderSpec {
       Types typeUtils = processingEnv.getTypeUtils();
       TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
       boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
-      this.copyOf = sameType
-          ? null
-          : typeSimplifier.simplifyRaw(erasedPropertyType) + ".copyOf(%s)";
+      if (sameType) {
+        this.copyOf = null;
+      } else {
+        String rawTarget = typeSimplifier.simplifyRaw(erasedPropertyType);
+        String of = Optionalish.isOptional(propertyType) ? "of" : "copyOf";
+        this.copyOf = rawTarget + "." + of + "(%s)";
+      }
     }
 
     public String getName() {

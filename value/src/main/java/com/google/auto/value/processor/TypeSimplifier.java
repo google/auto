@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -434,19 +435,26 @@ final class TypeSimplifier {
 
   private static Set<String> ambiguousNames(Types typeUtils, Set<TypeMirror> types) {
     Set<String> ambiguous = new HashSet<String>();
-    Set<String> simpleNames = new HashSet<String>();
+    Map<String, Name> simpleNamesToQualifiedNames = new HashMap<String, Name>();
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ERROR) {
         throw new MissingTypeException();
       }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
-      if (!simpleNames.add(simpleName)) {
+      /*
+       * Compare by qualified names, because in Eclipse JDT, if Java 8 type annotations are used,
+       * the same (unannotated) type may appear multiple times in the Set<TypeMirror>.
+       * TODO(emcmanus): investigate further, because this might cause problems elsewhere.
+       */
+      Name qualifiedName = ((TypeElement)typeUtils.asElement(type)).getQualifiedName();
+      Name previous = simpleNamesToQualifiedNames.put(simpleName, qualifiedName);
+      if (previous != null && !previous.equals(qualifiedName)) {
         ambiguous.add(simpleName);
       }
     }
     return ambiguous;
   }
-
+  
   /**
    * Returns true if casting to the given type will elicit an unchecked warning from the
    * compiler. Only generic types such as {@code List<String>} produce such warnings. There will be
