@@ -1,5 +1,45 @@
 # AutoValue Changes
 
+## 1.2 → 1.3
+
+### Functional changes
+
+* Support for TYPE_USE `@Nullable`.
+  This is https://github.com/google/auto/pull/293 by @brychcy.
+
+* Restructured the code in AutoValueProcessor for handling extensions, to get
+  rid of warnings about abstract methods when those methods are going to be
+  implemented by an extension, and to fix a bug where extensions would not work
+  right if there was a toBuilder() method. Some of the code in this change is
+  based on https://github.com/google/auto/pull/299 by @rharter.
+
+* Added support for "optional getters", where a getter in an AutoValue Builder
+  can have type `Optional<T>` and it will return `Optional.of(x)` where `x` is
+  the value that has been set in the Builder, or `Optional.empty()` if no value
+  has been set.
+
+* In AutoValue builders, added support for setting a property of type
+  `Optional<T>` via a setter with an argument of type `T`.
+
+* Added logic to AutoValue to detect the confusing case where you think you
+  are using JavaBeans conventions (like getFoo()) but you aren't because at
+  least one method isn't.
+
+* Added a README.md describing EscapeVelocity.
+
+### Bugs fixed
+
+* Allow an `@AutoValue.Builder` to extend a parent builder using the `<B extends
+  Builder<B>>` idiom.
+
+* AutoAnnotation now factors in package names when detecting
+  overloads. Previously it treated all annotations with the same SimpleName as
+  being overload attempts.
+
+* Removed an inaccurate javadoc reference, which referred to an
+  artifact from an earlier draft version of the Extensions API. This is
+  https://github.com/google/auto/pull/322 by @lucastsa.
+
 ## 1.1 → 1.2
 
 ### Functional changes

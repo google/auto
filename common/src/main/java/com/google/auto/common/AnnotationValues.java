@@ -67,7 +67,7 @@ public final class AnnotationValues {
                   new SimpleAnnotationValueVisitor6<Boolean, List<? extends AnnotationValue>>() {
                     @Override protected Boolean defaultAction(
                         Object ignored, List<? extends AnnotationValue> alsoIgnored) {
-                      return false; // Not an annotation mirror, so can't be equal to such.
+                      return false; // Not an array, so can't be equal to such.
                     }
 
                     @SuppressWarnings("unchecked") // safe covariant cast
