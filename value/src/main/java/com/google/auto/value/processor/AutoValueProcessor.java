@@ -21,6 +21,7 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -87,7 +88,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     this(ServiceLoader.load(AutoValueExtension.class, AutoValueProcessor.class.getClassLoader()));
   }
 
-  /* testing */ AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
+  @VisibleForTesting
+  public AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
     this.extensions = extensions;
   }
 
