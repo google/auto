@@ -40,6 +40,7 @@ import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -87,13 +88,29 @@ final class FactoryDescriptorGenerator {
           if (constructors.isEmpty()) {
             return generateDescriptorForDefaultConstructor(declaration.get(), type);
           } else {
-            return FluentIterable.from(constructors)
-                .transform(new Function<ExecutableElement, FactoryMethodDescriptor>() {
-                  @Override public FactoryMethodDescriptor apply(ExecutableElement constructor) {
-                    return generateDescriptorForConstructor(declaration.get(), constructor);
+            ImmutableSet<ExecutableElement> nonPrivateConstructors = FluentIterable.from(constructors)
+                .filter(new Predicate<ExecutableElement>() {
+                  @Override
+                  public boolean apply(ExecutableElement constructor) {
+                    return !constructor.getModifiers().contains(PRIVATE);
                   }
                 })
                 .toSet();
+            if (nonPrivateConstructors.isEmpty()) {
+              // applied to a type with only private constructors
+              messager.printMessage(ERROR,
+                  "Auto-factory doesn't support being applied to classes with only " +
+                      "private constructors.", type, mirror);
+              return ImmutableSet.of();
+            } else {
+              return FluentIterable.from(nonPrivateConstructors)
+                  .transform(new Function<ExecutableElement, FactoryMethodDescriptor>() {
+                    @Override public FactoryMethodDescriptor apply(ExecutableElement constructor) {
+                      return generateDescriptorForConstructor(declaration.get(), constructor);
+                    }
+                  })
+                  .toSet();
+            }
           }
         }
       }
@@ -110,7 +127,13 @@ final class FactoryDescriptorGenerator {
       public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(ExecutableElement e,
           Void p) {
         // applied to a constructor of a type to be created
-        return ImmutableSet.of(generateDescriptorForConstructor(declaration.get(), e));
+        if (e.getModifiers().contains(PRIVATE)) {
+          messager.printMessage(ERROR,
+              "Auto-factory doesn't support being applied to private constructors.", e, mirror);
+          return ImmutableSet.of();
+        } else {
+          return ImmutableSet.of(generateDescriptorForConstructor(declaration.get(), e));
+        }
       }
     }, null);
   }
