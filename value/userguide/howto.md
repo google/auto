@@ -263,8 +263,9 @@ good to go.
 
 ## <a name="annotate_field"></a>... apply an annotation to a generated field?
 
-Your only option is to put the same annotation on your hand-written abstract
-accessor method, if possible.
+This is not currently supported; however any annotations on your
+hand-written abstract accessor methods will also appear on the generated
+implementations of these methods.
 
 ## <a name="annotation"></a>... use AutoValue to implement an annotation type?
 
