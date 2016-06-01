@@ -245,6 +245,12 @@ public final class MoreElements {
    * result. So if {@code type} defines {@code public String toString()}, the returned set will
    * contain that method, but not the {@code toString()} method defined by {@code Object}.
    *
+   * <p>The returned set may contain more than one method with the same signature, if
+   * {@code type} inherits those methods from different ancestors. For example, if it
+   * inherits from unrelated interfaces {@code One} and {@code Two} which each define
+   * {@code void foo();}, and if it does not itself override the {@code foo()} method,
+   * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   *
    * @param type the type whose own and inherited methods are to be returned
    * @param elementUtils an {@link Elements} object, typically returned by
    *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--

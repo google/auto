@@ -343,7 +343,7 @@ final class $className implements $annotationName {
     default:
       if (c < 0x20) {
         sb.append('\\');
-        appendWithZeroPadding(sb, Integer.toOctalString(c), 3);;
+        appendWithZeroPadding(sb, Integer.toOctalString(c), 3);
       } else if (c < 0x7f || Character.isLetter(c)) {
         sb.append(c);
       } else {
@@ -355,6 +355,7 @@ final class $className implements $annotationName {
   }
 
   ## We use this rather than String.format because that doesn't exist on GWT.
+
   private static void appendWithZeroPadding(StringBuilder sb, String s, int width) {
     for (int i = width - s.length(); i > 0; i--) {
       sb.append('0');
