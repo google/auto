@@ -39,6 +39,7 @@ public final class FactoryGenerated {
   }
 
   // Generates second factory method with a different name for the Dependency dependency.
+  // Tests http://b/21632171.
   FactoryGenerated(
       Object name,
       @Provided Dependency dependency2,
