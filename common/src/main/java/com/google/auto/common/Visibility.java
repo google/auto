@@ -76,4 +76,43 @@ public enum Visibility {
     }
     return effectiveVisibility;
   }
+
+  /**
+   * Returns whether the given element is visible from another element in the given package.
+   */
+  public static boolean isVisibleFrom(Element element, PackageElement from) {
+    switch (effectiveVisibilityOfElement(element)) {
+      case PUBLIC:
+        return true;
+      case PROTECTED:
+      case DEFAULT:
+        return MoreElements.getPackage(element).equals(from);
+      case PRIVATE:
+        return false;
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  /**
+   * Returns whether the given element is visible from another element in the given package,
+   * assuming that other element is a subclass (or a member of a subclass) of the former (or
+   * its enclosing type).
+   *
+   * <p>This is similar to {@link #isVisibleFrom(Element, PackageElement)} except for the
+   * treatment of {@code protected} elements.
+   */
+  public static boolean isVisibleFromSubclass(Element element, PackageElement from) {
+    switch (effectiveVisibilityOfElement(element)) {
+      case PUBLIC:
+      case PROTECTED:
+        return true;
+      case DEFAULT:
+        return MoreElements.getPackage(element).equals(from);
+      case PRIVATE:
+        return false;
+      default:
+        throw new AssertionError();
+    }
+  }
 }
