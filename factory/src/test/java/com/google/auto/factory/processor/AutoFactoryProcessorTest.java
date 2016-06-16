@@ -337,4 +337,37 @@ public class AutoFactoryProcessorTest {
         JavaFileObjects.forResource(
             "expected/FactoryImplementingCreateMethod_ConcreteClassFactory.java"));
   }
+
+  @Test public void classWithPrivateConstructor() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/ClassWithPrivateConstructor.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/ClassWithPrivateConstructorFactory.java"));
+  }
+
+  @Test public void classWithOnlyPrivateConstructors() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("bad/ClassWithOnlyPrivateConstructors.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining("Auto-factory doesn't support being applied to classes " +
+            "with only private constructors.")
+                .in(file).onLine(20);
+  }
+
+  @Test public void privateConstructor() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("bad/PrivateConstructor.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .failsToCompile()
+        .withErrorContaining("Auto-factory doesn't support being applied to private " +
+            "constructors.")
+                .in(file).onLine(21);
+  }
 }
