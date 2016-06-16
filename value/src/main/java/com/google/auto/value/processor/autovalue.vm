@@ -40,7 +40,11 @@ ${gwtCompatibleAnnotation}
       ${p.nullableAnnotation}$p.type $p #if ($foreach.hasNext) , #end
 #end ) {
 #foreach ($p in $props)
-  #if (!$p.kind.primitive && !$p.nullable && $builderTypeName == "")
+  #if (!$p.kind.primitive && !$p.nullable && ($builderTypeName == "" || !$isFinal))
+    ## We don't need a null check if the type is primitive or @Nullable. We also don't need it
+    ## if there is a builder, since the build() method will check for us. However, if there is a
+    ## builder but there are also extensions (!$isFinal) then we can't omit the null check because
+    ## the constructor is called from the extension code.
 
     if ($p == null) {
       throw new NullPointerException("Null $p.name");

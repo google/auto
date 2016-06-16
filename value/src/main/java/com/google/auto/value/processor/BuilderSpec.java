@@ -163,13 +163,19 @@ class BuilderSpec {
       return builderMethods;
     }
 
+    /**
+     * Returns the types that are referenced by abstract methods in the builder, either as
+     * parameters or as return types.
+     */
     Set<TypeMirror> referencedTypes() {
       Set<TypeMirror> types = new TypeMirrorSet();
       for (ExecutableElement method :
           ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
-        types.add(method.getReturnType());
-        for (VariableElement parameter : method.getParameters()) {
-          types.add(parameter.asType());
+        if (method.getModifiers().contains(Modifier.ABSTRACT)) {
+          types.add(method.getReturnType());
+          for (VariableElement parameter : method.getParameters()) {
+            types.add(parameter.asType());
+          }
         }
       }
       return types;
