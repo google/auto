@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import com.google.common.base.Equivalence;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -75,5 +76,28 @@ final class Mirrors {
       }
     }
     return Optional.absent();
+  }
+
+  /**
+   * Wraps an {@link Optional} of a type in an {@code Optional} of a {@link Equivalence.Wrapper} for
+   * that type.
+   */
+  // TODO(ronshapiro): this is used in AutoFactory and Dagger, consider moving it into auto-common.
+  static <T> Optional<Equivalence.Wrapper<T>> wrapOptionalInEquivalence(
+      Equivalence<T> equivalence, Optional<T> optional) {
+    return optional.isPresent()
+        ? Optional.of(equivalence.wrap(optional.get()))
+        : Optional.<Equivalence.Wrapper<T>>absent();
+  }
+
+  /**
+   * Unwraps an {@link Optional} of a {@link Equivalence.Wrapper} into an {@code Optional} of the
+   * underlying type.
+   */
+  static <T> Optional<T> unwrapOptionalEquivalence(
+      Optional<Equivalence.Wrapper<T>> wrappedOptional) {
+    return wrappedOptional.isPresent()
+        ? Optional.of(wrappedOptional.get().get())
+        : Optional.<T>absent();
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,28 @@
  */
 package tests;
 
+import com.google.auto.factory.internal.Preconditions;
+
 import javax.annotation.Generated;
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 @Generated(
   value = "com.google.auto.factory.processor.AutoFactoryProcessor",
   comments = "https://github.com/google/auto/tree/master/factory"
 )
-final class SimpleClassImplementingSimpleInterfaceFactory
-    implements SimpleClassImplementingSimpleInterface.SimpleInterface {
-  @Inject SimpleClassImplementingSimpleInterfaceFactory() {}
+final class MultipleProvidedParamsSameKeyFactory {
+  private final Provider<String> java_lang_StringProvider;
 
-  SimpleClassImplementingSimpleInterface create() {
-    return new SimpleClassImplementingSimpleInterface();
+  @Inject
+  MultipleProvidedParamsSameKeyFactory(Provider<String> java_lang_StringProvider) {
+    this.java_lang_StringProvider = java_lang_StringProvider;
   }
 
-  @Override public SimpleClassImplementingSimpleInterface newInstance() {
-    return create();
+  MultipleProvidedParamsSameKey create() {
+    return new MultipleProvidedParamsSameKey(
+        Preconditions.checkNotNull(java_lang_StringProvider.get()),
+        Preconditions.checkNotNull(java_lang_StringProvider.get()),
+        java_lang_StringProvider.get());
   }
 }

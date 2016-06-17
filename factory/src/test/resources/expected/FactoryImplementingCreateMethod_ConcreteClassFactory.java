@@ -15,13 +15,14 @@
  */
 package tests;
 
+import com.google.auto.factory.internal.Preconditions;
 import java.util.List;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
 @Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
 )
 final class FactoryImplementingCreateMethod_ConcreteClassFactory
     implements FactoryImplementingCreateMethod.FactoryInterfaceWithCreateMethod {
@@ -41,7 +42,8 @@ final class FactoryImplementingCreateMethod_ConcreteClassFactory
 
   @Override
   public FactoryImplementingCreateMethod.ConcreteClass create(List<Integer> genericWithDifferentArgumentName) {
-    return new FactoryImplementingCreateMethod.ConcreteClass(genericWithDifferentArgumentName);
+    return new FactoryImplementingCreateMethod.ConcreteClass(
+        Preconditions.checkNotNull(genericWithDifferentArgumentName));
   }
 
   FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {

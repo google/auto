@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,22 @@ package tests;
 
 import javax.annotation.Generated;
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 @Generated(
   value = "com.google.auto.factory.processor.AutoFactoryProcessor",
   comments = "https://github.com/google/auto/tree/master/factory"
 )
-final class SimpleClassImplementingSimpleInterfaceFactory
-    implements SimpleClassImplementingSimpleInterface.SimpleInterface {
-  @Inject SimpleClassImplementingSimpleInterfaceFactory() {}
+final class CustomNullableFactory {
 
-  SimpleClassImplementingSimpleInterface create() {
-    return new SimpleClassImplementingSimpleInterface();
+  private final Provider<Object> objectProvider;
+
+  @Inject
+  CustomNullableFactory(Provider<Object> objectProvider) {
+    this.objectProvider = objectProvider;
   }
 
-  @Override public SimpleClassImplementingSimpleInterface newInstance() {
-    return create();
+  CustomNullable create(@CustomNullable.Nullable String string) {
+    return new CustomNullable(string, objectProvider.get());
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,20 @@
  */
 package tests;
 
-import javax.annotation.Generated;
-import javax.inject.Inject;
+import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
 
-@Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-)
-final class NestedClasses_CustomNamedFactory {
-  @Inject NestedClasses_CustomNamedFactory() {}
+@AutoFactory
+final class CustomNullable {
 
-  NestedClasses.SimpleNestedClassWithCustomFactory create() {
-    return new NestedClasses.SimpleNestedClassWithCustomFactory();
+  private final String string;
+  private final Object object;
+
+  CustomNullable(
+      @CustomNullable.Nullable String string, @CustomNullable.Nullable @Provided Object object) {
+    this.string = string;
+    this.object = object;
   }
+
+  @interface Nullable {}
 }
