@@ -15,15 +15,13 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
-
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
 )
 final class FactoryImplementingGenericInterfaceExtensionFactory
     implements FactoryImplementingGenericInterfaceExtension.MyFactory {
@@ -33,8 +31,7 @@ final class FactoryImplementingGenericInterfaceExtensionFactory
     this.sProvider = sProvider;
   }
   FactoryImplementingGenericInterfaceExtension create(Integer i) {
-    return new FactoryImplementingGenericInterfaceExtension(
-        Preconditions.checkNotNull(sProvider.get()), Preconditions.checkNotNull(i));
+    return new FactoryImplementingGenericInterfaceExtension(sProvider.get(), i);
   }
   @Override
   public FactoryImplementingGenericInterfaceExtension make(Integer arg) {
