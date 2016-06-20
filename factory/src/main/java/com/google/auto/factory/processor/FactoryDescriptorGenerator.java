@@ -139,6 +139,7 @@ final class FactoryDescriptorGenerator {
         .name("create")
         .returnType(classElement.asType())
         .publicMethod(classElement.getModifiers().contains(PUBLIC))
+        .isVarargs(constructor.isVarArgs())
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
