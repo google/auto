@@ -95,6 +95,15 @@ public class AutoFactoryProcessorTest {
         .and().generatesSources(
             JavaFileObjects.forResource("expected/SimpleClassPassedDepsFactory.java"));
   }
+  
+  @Test public void simpleClassVarargsDeps() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/SimpleClassVarargsDeps.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+    		JavaFileObjects.forResource("expected/SimpleClassVarargsDepsFactory.java"));
+  }
 
   @Test public void simpleClassProvidedDeps() {
     assertAbout(javaSources())

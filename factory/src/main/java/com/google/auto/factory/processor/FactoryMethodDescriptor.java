@@ -36,6 +36,7 @@ abstract class FactoryMethodDescriptor {
   abstract TypeMirror returnType();
   abstract boolean publicMethod();
   abstract boolean overridingMethod();
+  abstract boolean isVarargs();
   abstract ImmutableSet<Parameter> passedParameters();
   abstract ImmutableSet<Parameter> providedParameters();
   abstract ImmutableSet<Parameter> creationParameters();
@@ -49,7 +50,8 @@ abstract class FactoryMethodDescriptor {
     return new AutoValue_FactoryMethodDescriptor.Builder()
         .declaration(checkNotNull(declaration))
         .publicMethod(false)
-        .overridingMethod(false);
+        .overridingMethod(false)
+        .isVarargs(false);
   }
 
   @AutoValue.Builder
@@ -59,6 +61,7 @@ abstract class FactoryMethodDescriptor {
     abstract Builder returnType(TypeMirror returnType);
     abstract Builder publicMethod(boolean publicMethod);
     abstract Builder overridingMethod(boolean overridingMethod);
+    abstract Builder isVarargs(boolean varargs);
     abstract Builder passedParameters(Iterable<Parameter> passedParameters);
     abstract Builder providedParameters(Iterable<Parameter> providedParameters);
     abstract Builder creationParameters(Iterable<Parameter> creationParameters);

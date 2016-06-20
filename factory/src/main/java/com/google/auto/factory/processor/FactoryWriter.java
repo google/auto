@@ -132,6 +132,7 @@ final class FactoryWriter {
           "return new $T($L)",
           methodDescriptor.returnType(),
           argumentJoiner.join(creationParameterNames));
+      method.varargs(methodDescriptor.isVarargs());
       factory.addMethod(method.build());
     }
 
