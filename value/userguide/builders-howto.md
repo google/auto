@@ -274,7 +274,7 @@ public abstract class Animal {
 
     public Animal build() {
       if (!name().isPresent()) {
-        setName(numberOfLegs() + "-legged creature);
+        setName(numberOfLegs() + "-legged creature");
       }
       return autoBuild();
     }
