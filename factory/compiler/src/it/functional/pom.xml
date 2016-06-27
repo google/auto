@@ -29,6 +29,12 @@
       <version>@auto.version@</version>
     </dependency>
     <dependency>
+      <groupId>com.google.auto.factory</groupId>
+      <artifactId>auto-factory-compiler</artifactId>
+      <version>@auto.version@</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <version>1.3.9</version>
