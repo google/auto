@@ -15,7 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
@@ -27,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
@@ -152,12 +150,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
-      indexedMethods.putAll(
-          Multimaps.index(descriptors, new Function<FactoryMethodDescriptor, String>() {
-            @Override public String apply(FactoryMethodDescriptor descriptor) {
-              return descriptor.factoryName();
-            }
-          }));
+      for (FactoryMethodDescriptor descriptor : descriptors) {
+        indexedMethods.put(descriptor.factoryName(), descriptor);
+      }
     }
 
     ImmutableSetMultimap<String, ImplementationMethodDescriptor>
@@ -167,14 +162,15 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         : indexedMethods.build().asMap().entrySet()) {
       ImmutableSet.Builder<TypeMirror> extending = ImmutableSet.builder();
       ImmutableSortedSet.Builder<TypeMirror> implementing =
-          ImmutableSortedSet.orderedBy(new Comparator<TypeMirror>() {
-            @Override
-            public int compare(TypeMirror first, TypeMirror second) {
-              String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
-              String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
-              return firstName.compareTo(secondName);
-            }
-          });
+          ImmutableSortedSet.orderedBy(
+              new Comparator<TypeMirror>() {
+                @Override
+                public int compare(TypeMirror first, TypeMirror second) {
+                  String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
+                  String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
+                  return firstName.compareTo(secondName);
+                }
+              });
       boolean publicType = false;
       Boolean allowSubclasses = null;
       boolean skipCreation = false;

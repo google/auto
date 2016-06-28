@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,22 @@
  */
 package tests;
 
-import javax.annotation.Generated;
-import javax.inject.Inject;
+import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.Provided;
+import javax.annotation.Nullable;
 
-@Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
-final class CustomNamedFactory {
-  @Inject CustomNamedFactory() {}
+@AutoFactory
+final class MultipleProvidedParamsSameKey {
+  private final String one;
+  private final String two;
+  private final String three;
 
-  SimpleClass create() {
-    return new SimpleClass();
+  public MultipleProvidedParamsSameKey(
+      @Provided String one,
+      @Provided String two,
+      @Nullable @Provided String three) {
+    this.one = one;
+    this.two = two;
+    this.three = three;
   }
 }

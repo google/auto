@@ -15,17 +15,20 @@
  */
 package tests;
 
+import com.google.auto.factory.internal.Preconditions;
+
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
 @Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 final class SimpleClassPassedDepsFactory {
   @Inject SimpleClassPassedDepsFactory() {}
 
   SimpleClassPassedDeps create(String depA, String depB) {
-    return new SimpleClassPassedDeps(depA, depB);
+    return new SimpleClassPassedDeps(
+        Preconditions.checkNotNull(depA, 1), Preconditions.checkNotNull(depB, 2));
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,26 +25,18 @@ import javax.inject.Provider;
   value = "com.google.auto.factory.processor.AutoFactoryProcessor",
   comments = "https://github.com/google/auto/tree/master/factory"
   )
-class ConstructorAnnotatedNonFinalFactory {
-  private final Provider<Object> objProvider;
+final class MultipleProvidedParamsSameKeyFactory {
+  private final Provider<String> java_lang_StringProvider;
 
-  @Inject ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
-    this.objProvider = objProvider;
+  @Inject
+  MultipleProvidedParamsSameKeyFactory(Provider<String> java_lang_StringProvider) {
+    this.java_lang_StringProvider = java_lang_StringProvider;
   }
 
-  ConstructorAnnotatedNonFinal create() {
-    return new ConstructorAnnotatedNonFinal();
-  }
-
-  ConstructorAnnotatedNonFinal create(String s) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(s, 1));
-  }
-
-  ConstructorAnnotatedNonFinal create(int i) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(objProvider.get(), 1), i);
-  }
-
-  ConstructorAnnotatedNonFinal create(char c) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(objProvider.get(), 1), c);
+  MultipleProvidedParamsSameKey create() {
+    return new MultipleProvidedParamsSameKey(
+        Preconditions.checkNotNull(java_lang_StringProvider.get(), 1),
+        Preconditions.checkNotNull(java_lang_StringProvider.get(), 2),
+        java_lang_StringProvider.get());
   }
 }

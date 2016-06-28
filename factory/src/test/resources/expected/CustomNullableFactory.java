@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
-
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -25,26 +23,16 @@ import javax.inject.Provider;
   value = "com.google.auto.factory.processor.AutoFactoryProcessor",
   comments = "https://github.com/google/auto/tree/master/factory"
   )
-class ConstructorAnnotatedNonFinalFactory {
-  private final Provider<Object> objProvider;
+final class CustomNullableFactory {
 
-  @Inject ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
-    this.objProvider = objProvider;
+  private final Provider<Object> objectProvider;
+
+  @Inject
+  CustomNullableFactory(Provider<Object> objectProvider) {
+    this.objectProvider = objectProvider;
   }
 
-  ConstructorAnnotatedNonFinal create() {
-    return new ConstructorAnnotatedNonFinal();
-  }
-
-  ConstructorAnnotatedNonFinal create(String s) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(s, 1));
-  }
-
-  ConstructorAnnotatedNonFinal create(int i) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(objProvider.get(), 1), i);
-  }
-
-  ConstructorAnnotatedNonFinal create(char c) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(objProvider.get(), 1), c);
+  CustomNullable create(@CustomNullable.Nullable String string) {
+    return new CustomNullable(string, objectProvider.get());
   }
 }

@@ -337,4 +337,33 @@ public class AutoFactoryProcessorTest {
         JavaFileObjects.forResource(
             "expected/FactoryImplementingCreateMethod_ConcreteClassFactory.java"));
   }
+
+  @Test public void nullableParams() {
+    assertAbout(javaSources())
+        .that(ImmutableSet.of(
+            JavaFileObjects.forResource("good/SimpleClassNullableParameters.java"),
+            JavaFileObjects.forResource("support/AQualifier.java"),
+            JavaFileObjects.forResource("support/BQualifier.java")))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/SimpleClassNullableParametersFactory.java"));
+  }
+
+  @Test public void customNullableType() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/CustomNullable.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(JavaFileObjects.forResource("expected/CustomNullableFactory.java"));
+  }
+
+  @Test public void multipleProvidedParamsWithSameKey() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/MultipleProvidedParamsSameKey.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/MultipleProvidedParamsSameKeyFactory.java"));
+  }
 }

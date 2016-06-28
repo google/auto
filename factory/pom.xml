@@ -44,7 +44,7 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>0.5</version>
+      <version>0.6</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.value</groupId>
@@ -56,6 +56,11 @@
       <artifactId>auto-service</artifactId>
       <version>1.0-rc2</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.googlejavaformat</groupId>
+      <artifactId>google-java-format</artifactId>
+      <version>1.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -76,7 +81,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.8</version>
+      <version>0.9</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -88,7 +93,13 @@
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <version>0.25</version>
+      <version>0.28</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>1.3.9</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
