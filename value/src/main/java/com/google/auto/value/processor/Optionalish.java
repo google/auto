@@ -96,6 +96,24 @@ public class Optionalish {
     return TypeEncoder.encodeRaw(optionalType) + empty;
   }
 
+  /**
+   * Returns a string representing the method call to obtain the nullable version of this Optional.
+   * This will be something like {@code "fromNullable()"} or possibly {@code "ofNullable()"}. It does not have a final semicolon.
+   *
+   * <p>This method is public so that it can be referenced as {@code p.optional.nullable} from
+   * templates.
+   */
+  public String getNullable() {
+    if (optionalType.getTypeArguments().isEmpty()) {
+      // No typeArguments means a primitive wrapper -- it has no nullable input
+      return "of";
+    }
+    TypeElement typeElement = MoreElements.asType(optionalType.asElement());
+    return typeElement.getQualifiedName().toString().startsWith("java.util.")
+        ? "ofNullable"
+        : "fromNullable";
+  }
+
   TypeMirror getContainedType(Types typeUtils) {
     List<? extends TypeMirror> typeArguments = optionalType.getTypeArguments();
     switch (typeArguments.size()) {

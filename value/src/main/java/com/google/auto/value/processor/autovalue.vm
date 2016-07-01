@@ -240,11 +240,17 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
     #foreach ($setter in $builderSetters[$p.name])
 
+    #if ($p.nullable)
+      #set ($nullableAnnotation = $p.nullableAnnotation)
+    #else
+      #set ($nullableAnnotation = $setter.nullableAnnotation)
+    #end
+
     @Override
     ${setter.access}${builderTypeName}${builderActualTypes} ##
-        ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
+        ${setter.name}(${nullableAnnotation}$setter.parameterType $p) {
 
-      #if (!$setter.primitiveParameter && !$p.nullable)
+      #if (!$setter.primitiveParameter && !$nullableAnnotation)
 
         #if ($identifiers)
 
