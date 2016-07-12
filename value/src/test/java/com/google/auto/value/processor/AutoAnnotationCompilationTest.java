@@ -285,7 +285,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "    if (enums == null) {",
         "      throw new NullPointerException(\"Null enums\");",
         "    }",
-        "    this.enums = enums.toArray(new MyEnum[enums.size()];",
+        "    this.enums = enums.toArray(new MyEnum[0];",
         "  }",
         "",
         "  @Override public Class<? extends MyAnnotation> annotationType() {",

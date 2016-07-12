@@ -67,9 +67,15 @@ final class $className implements $annotationName {
 
     this.$p = ${members[$p].typeMirror.componentType}ArrayFromCollection($p);
 
+    #elseif ($members[$p].arrayOfClassWithBounds)
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    ${members[$p].componentType}[] ${p}$ = ${p}.toArray(new Class[0]);
+    this.$p = ${p}$;
+
     #else
 
-    this.$p = ${p}.toArray(new ${members[$p].componentType}[${p}.size()]);
+    this.$p = ${p}.toArray(new ${members[$p].componentType}[0]);
 
     #end
   #else
