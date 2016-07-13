@@ -216,6 +216,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     private ImmutableList<String> buildAnnotations(TypeSimplifier typeSimplifier) {
       ImmutableList.Builder<String> builder = ImmutableList.builder();
+      Set<Name> methodAnnotations = null;
 
       for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
         TypeElement annotationElement =
@@ -225,12 +226,21 @@ public class AutoValueProcessor extends AbstractProcessor {
           // implementation.
           continue;
         }
+        if (methodAnnotations == null) {
+          methodAnnotations = Sets.newHashSet();
+        }
+        methodAnnotations.add(annotationElement.getQualifiedName());
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
 
       for (AnnotationMirror annotationMirror :
           Java8Support.getAnnotationMirrors(method.getReturnType())) {
+        if (methodAnnotations != null && methodAnnotations.contains(
+            ((TypeElement) annotationMirror.getAnnotationType().asElement()).getQualifiedName())) {
+            // annotation has already been seen (can happen if it is both a type annotation and a method annotation)
+          continue;
+        }
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
