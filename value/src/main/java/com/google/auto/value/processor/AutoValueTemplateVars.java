@@ -66,6 +66,13 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   String gwtCompatibleAnnotation;
 
+  /**
+   * The full spelling of any annotation to add to this class, or an empty list if there are none. A
+   * non-empty value might look something like {@code
+   * "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   */
+  ImmutableList<String> annotations;
+
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
 

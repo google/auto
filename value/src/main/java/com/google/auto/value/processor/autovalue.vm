@@ -18,6 +18,9 @@ import $i;
 #end
 
 ${gwtCompatibleAnnotation}
+#foreach ($a in $annotations)
+$a
+#end
 #if ($generated != "")
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
 #end

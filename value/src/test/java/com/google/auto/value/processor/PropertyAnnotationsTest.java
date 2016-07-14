@@ -24,6 +24,7 @@ import com.google.testing.compile.JavaFileObjects;
 
 import junit.framework.TestCase;
 
+import java.lang.annotation.Inherited;
 import java.util.List;
 
 import javax.tools.JavaFileObject;
@@ -92,6 +93,9 @@ public class PropertyAnnotationsTest extends TestCase {
     OtherAnnotation[] testAnnotations()
         default {@OtherAnnotation(foo = 999), @OtherAnnotation(bar = "baz")};
   }
+
+  @Inherited
+  public @interface InheritedAnnotation {}
 
   private JavaFileObject sourceCode(List<String> imports, List<String> annotations) {
     ImmutableList<String> list = ImmutableList.<String>builder()
@@ -365,4 +369,40 @@ public class PropertyAnnotationsTest extends TestCase {
             + "(testAnnotations = {@" + PROPERTY_ANNOTATION_TEST
             + ".OtherAnnotation(foo = 999)})"));
   }
+
+  /**
+   * Tests that when CopyAnnotations is present on a method, all non-inherited methods (except those
+   * appearing in CopyAnnotations.exclude) are copied to the method implementation in the generated
+   * class.
+   */
+  public void testCopyingMethodAnnotations() {
+    ImmutableList<String> sourceImports =
+        ImmutableList.of(
+            "import javax.annotation.Resource;",
+            IMPORT_TEST_ANNOTATION,
+            "import " + PROPERTY_ANNOTATION_TEST + ".InheritedAnnotation;");
+    ImmutableList<String> sourceAnnotations =
+        ImmutableList.of(
+            "@AutoValue.CopyAnnotations(exclude={TestAnnotation.class})",
+            "@Resource",
+            "@TestAnnotation",
+            "@InheritedAnnotation");
+
+    ImmutableList<String> expectedImports = ImmutableList.of("import javax.annotation.Resource;");
+    ImmutableList<String> expectedAnnotations =
+        ImmutableList.of(
+            "@Resource",
+            "@com.google.auto.value.processor.PropertyAnnotationsTest.InheritedAnnotation");
+
+    JavaFileObject javaFileObject = sourceCode(sourceImports, sourceAnnotations);
+    JavaFileObject expectedOutput = expectedCode(expectedImports, expectedAnnotations);
+
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(expectedOutput);
+  }
+
 }
