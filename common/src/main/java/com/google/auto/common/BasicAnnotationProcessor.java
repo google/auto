@@ -127,8 +127,20 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    */
   protected abstract Iterable<? extends ProcessingStep> initSteps();
 
-  /** An optional hook for logic to be executed at the end of each round. */
+  /**
+   * An optional hook for logic to be executed at the end of each round.
+   *
+   * @deprecated use {@link #postRound(RoundEnvironment)} instead
+   */
+  @Deprecated
   protected void postProcess() {}
+
+  /** An optional hook for logic to be executed at the end of each round. */
+  protected void postRound(RoundEnvironment roundEnv) {
+    if (!roundEnv.processingOver()) {
+      postProcess();
+    }
+  }
 
   private ImmutableSet<? extends Class<? extends Annotation>> getSupportedAnnotationClasses() {
     checkState(steps != null);
@@ -164,13 +176,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     // If this is the last round, report all of the missing elements
     if (roundEnv.processingOver()) {
+      postRound(roundEnv);
       reportMissingElements(deferredElements, elementsDeferredBySteps.values());
       return false;
     }
 
     process(validElements(deferredElements, roundEnv));
 
-    postProcess();
+    postRound(roundEnv);
 
     return false;
   }
