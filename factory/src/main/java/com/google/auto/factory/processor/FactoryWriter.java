@@ -23,7 +23,6 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.google.auto.factory.internal.Preconditions;
-import com.google.auto.common.MoreElements;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -55,7 +54,6 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
-import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleTypeVisitor7;
@@ -98,7 +96,7 @@ final class FactoryWriter {
       constructor.addModifiers(PUBLIC);
     }
     for (ProviderField provider : descriptor.providers().values()) {
-      TypeName typeName = typeName(provider.key().type()).box();
+      TypeName typeName = TypeName.get(provider.key().type()).box();
       TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
@@ -129,19 +127,19 @@ final class FactoryWriter {
         boolean nullableArgument;
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
-          argument = codeBlock(parameter.name());
+          argument = CodeBlock.of(parameter.name());
           nullableArgument = parameter.nullable().isPresent() || isPrimitive(parameter.type());
         } else {
           ProviderField provider = descriptor.providers().get(parameter.key());
-          argument = codeBlock(provider.name());
+          argument = CodeBlock.of(provider.name());
           if (!parameter.providerOfType()) {
-            argument = codeBlock("$L.get()", argument);
+            argument = CodeBlock.of("$L.get()", argument);
           }
           nullableArgument = parameter.nullable().isPresent();
         }
         if (!nullableArgument) {
           argument =
-              codeBlock("$T.checkNotNull($L, $L)", Preconditions.class, argument, argumentIndex);
+              CodeBlock.of("$T.checkNotNull($L, $L)", Preconditions.class, argument, argumentIndex);
         }
         args.add(argument);
         if (parameters.hasNext()) {
@@ -198,10 +196,13 @@ final class FactoryWriter {
   private static Iterable<ParameterSpec> parameters(Iterable<Parameter> parameters) {
     ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {
-      Iterable<AnnotationMirror> annotations =
-          Iterables.concat(parameter.nullable().asSet(), parameter.key().qualifier().asSet());
-      TypeName type = annotate(TypeName.get(parameter.type()), annotations);
-      builder.add(ParameterSpec.builder(type, parameter.name()).build());
+      ParameterSpec.Builder parameterBuilder =
+          ParameterSpec.builder(TypeName.get(parameter.type()), parameter.name());
+      for (AnnotationMirror annotation :
+          Iterables.concat(parameter.nullable().asSet(), parameter.key().qualifier().asSet())) {
+        parameterBuilder.addAnnotation(AnnotationSpec.get(annotation));
+      }
+      builder.add(parameterBuilder.build());
     }
     return builder.build();
   }
@@ -225,19 +226,6 @@ final class FactoryWriter {
     return -1;
   }
 
-  private static TypeName annotate(TypeName type, Iterable<AnnotationMirror> annotations) {
-    // TODO(ronshapiro): multiple calls to TypeName.annotated() will be fixed in JavaPoet 1.6
-    ImmutableList.Builder<AnnotationSpec> specs = ImmutableList.builder();
-    for (AnnotationMirror annotation : annotations) {
-      specs.add(AnnotationSpec.get(annotation));
-    }
-    return type.annotated(specs.build());
-  }
-
-  private static CodeBlock codeBlock(String format, Object... args) {
-    return CodeBlock.builder().add(format, args).build();
-  }
-
   private static boolean isPrimitive(TypeMirror type) {
     return type.accept(new SimpleTypeVisitor7<Boolean, Void>(){
       @Override
@@ -248,24 +236,6 @@ final class FactoryWriter {
       @Override
       protected Boolean defaultAction(TypeMirror e, Void aVoid) {
         return false;
-      }
-    }, null);
-  }
-
-  /**
-   * JavaPoet 1.5.1 does not handle {@link ErrorType} in {@link TypeName#get(TypeMirror)}. A fix is
-   * proposed in https://github.com/square/javapoet/pull/430.
-   */
-  private static TypeName typeName(TypeMirror type) {
-    return type.accept(new SimpleTypeVisitor7<TypeName, Void>(){
-      @Override
-      public TypeName visitError(ErrorType type, Void p) {
-        return ClassName.get(MoreElements.asType(type.asElement()));
-      }
-
-      @Override
-      protected TypeName defaultAction(TypeMirror type, Void p) {
-        return TypeName.get(type);
       }
     }, null);
   }
