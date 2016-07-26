@@ -25,7 +25,7 @@ import javax.inject.Inject;
 final class CustomNamedFactory {
   @Inject CustomNamedFactory() {}
 
-  SimpleClass create() {
-    return new SimpleClass();
+  SimpleClassCustomName create() {
+    return new SimpleClassCustomName();
   }
 }

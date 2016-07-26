@@ -18,4 +18,4 @@ package tests;
 import com.google.auto.factory.AutoFactory;
 
 @AutoFactory(className = "CustomNamedFactory")
-final class SimpleClass {}
+final class SimpleClassCustomName {}
