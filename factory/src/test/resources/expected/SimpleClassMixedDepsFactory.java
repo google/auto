@@ -30,7 +30,7 @@ final class SimpleClassMixedDepsFactory {
 
   @Inject SimpleClassMixedDepsFactory(
       @AQualifier Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = providedDepAProvider;
+    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 1);
   }
 
   SimpleClassMixedDeps create(String depB) {

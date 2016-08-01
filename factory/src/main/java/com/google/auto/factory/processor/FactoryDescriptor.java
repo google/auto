@@ -15,8 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
@@ -88,13 +86,10 @@ abstract class FactoryDescriptor {
         default:
           String providerName =
               invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider";
-          TypeMirror type = null;
           Optional<AnnotationMirror> nullable = Optional.absent();
           for (Parameter param : entry.getValue()) {
-            type = param.type();
             nullable = nullable.or(param.nullable());
           }
-          checkNotNull(type);
           providersBuilder.put(key, ProviderField.create(providerName, key, nullable));
           break;
       }

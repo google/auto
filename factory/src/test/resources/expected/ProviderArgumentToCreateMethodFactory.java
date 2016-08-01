@@ -16,29 +16,24 @@
 package tests;
 
 import com.google.auto.factory.internal.Preconditions;
-
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
-final class MultipleProvidedParamsSameKeyFactory {
-  private final Provider<String> java_lang_StringProvider;
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+)
+final class ProviderArgumentToCreateMethodFactory
+    implements ProviderArgumentToCreateMethod.CustomCreator{
+  @Inject ProviderArgumentToCreateMethodFactory() {}
 
-  @Inject
-  MultipleProvidedParamsSameKeyFactory(Provider<String> java_lang_StringProvider) {
-    this.java_lang_StringProvider = Preconditions.checkNotNull(java_lang_StringProvider, 1);
+  ProviderArgumentToCreateMethod create(Provider<String> stringProvider) {
+    return new ProviderArgumentToCreateMethod(Preconditions.checkNotNull(stringProvider, 1));
   }
 
-  MultipleProvidedParamsSameKey create() {
-    return new MultipleProvidedParamsSameKey(
-        Preconditions.checkNotNull(java_lang_StringProvider.get(), 1),
-        Preconditions.checkNotNull(java_lang_StringProvider.get(), 2),
-        java_lang_StringProvider.get(),
-        java_lang_StringProvider,
-        java_lang_StringProvider);
+  @Override
+  public ProviderArgumentToCreateMethod newInstance(Provider<String> stringProvider) {
+    return create(stringProvider);
   }
 }

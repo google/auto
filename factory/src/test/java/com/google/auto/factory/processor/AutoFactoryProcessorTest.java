@@ -366,4 +366,13 @@ public class AutoFactoryProcessorTest {
         .and().generatesSources(
             JavaFileObjects.forResource("expected/MultipleProvidedParamsSameKeyFactory.java"));
   }
+
+  @Test public void providerArgumentToCreateMethod() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/ProviderArgumentToCreateMethod.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/ProviderArgumentToCreateMethodFactory.java"));
+  }
 }

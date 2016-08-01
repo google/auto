@@ -15,6 +15,7 @@
  */
 package tests;
 
+import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -29,7 +30,7 @@ final class CustomNullableFactory {
 
   @Inject
   CustomNullableFactory(Provider<Object> objectProvider) {
-    this.objectProvider = objectProvider;
+    this.objectProvider = Preconditions.checkNotNull(objectProvider, 1);
   }
 
   CustomNullable create(@CustomNullable.Nullable String string) {

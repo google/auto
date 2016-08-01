@@ -34,7 +34,7 @@ final class MixedDepsImplementingInterfacesFactory
   private final Provider<String> sProvider;
 
   @Inject MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
-    this.sProvider = sProvider;
+    this.sProvider = Preconditions.checkNotNull(sProvider, 1);
   }
 
   MixedDepsImplementingInterfaces create(int i) {

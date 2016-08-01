@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.factory.processor.Mirrors.isProvider;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -67,7 +68,7 @@ final class FactoryWriter {
     this.filer = filer;
   }
 
-  private static final Joiner argumentJoiner = Joiner.on(", ");
+  private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
 
   void writeFactory(final FactoryDescriptor descriptor)
       throws IOException {
@@ -91,11 +92,22 @@ final class FactoryWriter {
       factory.addSuperinterface(TypeName.get(implementingType));
     }
 
+    addConstructorAndProviderFields(factory, descriptor);
+    addFactoryMethods(factory, descriptor);
+    addImplementationMethods(factory, descriptor);
+
+    writeFile(factory.build(), descriptor);
+  }
+
+  private void addConstructorAndProviderFields(
+      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
     if (descriptor.publicType()) {
       constructor.addModifiers(PUBLIC);
     }
-    for (ProviderField provider : descriptor.providers().values()) {
+    Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
+    for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
+      ProviderField provider = providerFields.next();
       TypeName typeName = TypeName.get(provider.key().type()).box();
       TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
@@ -104,11 +116,17 @@ final class FactoryWriter {
         providerType = providerType.annotated(AnnotationSpec.get(provider.key().qualifier().get()));
       }
       constructor.addParameter(providerType, provider.name());
-      constructor.addStatement("this.$1L = $1L", provider.name());
+      constructor.addStatement(
+          "this.$1L = $2T.checkNotNull($1L, $3L)",
+          provider.name(),
+          Preconditions.class,
+          argumentIndex);
     }
 
     factory.addMethod(constructor.build());
+  }
 
+  private void addFactoryMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
       MethodSpec.Builder method =
           MethodSpec.methodBuilder(methodDescriptor.name())
@@ -124,20 +142,24 @@ final class FactoryWriter {
       Iterator<Parameter> parameters = methodDescriptor.creationParameters().iterator();
       for (int argumentIndex = 1; parameters.hasNext(); argumentIndex++) {
         Parameter parameter = parameters.next();
-        boolean nullableArgument;
+        boolean checkNotNull = !parameter.nullable().isPresent();
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
           argument = CodeBlock.of(parameter.name());
-          nullableArgument = parameter.nullable().isPresent() || isPrimitive(parameter.type());
+          if (isPrimitive(parameter.type())) {
+            checkNotNull = false;
+          }
         } else {
           ProviderField provider = descriptor.providers().get(parameter.key());
           argument = CodeBlock.of(provider.name());
-          if (!parameter.providerOfType()) {
+          if (isProvider(parameter.type())) {
+            // Providers are checked for nullness in the Factory's constructor.
+            checkNotNull = false;
+          } else {
             argument = CodeBlock.of("$L.get()", argument);
           }
-          nullableArgument = parameter.nullable().isPresent();
         }
-        if (!nullableArgument) {
+        if (checkNotNull) {
           argument =
               CodeBlock.of("$T.checkNotNull($L, $L)", Preconditions.class, argument, argumentIndex);
         }
@@ -149,9 +171,11 @@ final class FactoryWriter {
       method.addStatement("return new $T($L)", methodDescriptor.returnType(), args.build());
       factory.addMethod(method.build());
     }
+  }
 
-    for (ImplementationMethodDescriptor methodDescriptor
-        : descriptor.implementationMethodDescriptors()) {
+  private void addImplementationMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+    for (ImplementationMethodDescriptor methodDescriptor :
+        descriptor.implementationMethodDescriptors()) {
       MethodSpec.Builder implementationMethod =
           methodBuilder(methodDescriptor.name())
               .addAnnotation(Override.class)
@@ -160,22 +184,25 @@ final class FactoryWriter {
         implementationMethod.addModifiers(PUBLIC);
       }
       implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
-      FluentIterable<String> creationParameterNames =
-          FluentIterable.from(methodDescriptor.passedParameters())
-              .transform(new Function<Parameter, String>() {
-                @Override public String apply(Parameter parameter) {
-                  return parameter.name();
-                }
-              });
       implementationMethod.addStatement(
-          "return create($L)", argumentJoiner.join(creationParameterNames));
+          "return create($L)",
+          FluentIterable.from(methodDescriptor.passedParameters())
+              .transform(
+                  new Function<Parameter, String>() {
+                    @Override
+                    public String apply(Parameter parameter) {
+                      return parameter.name();
+                    }
+                  })
+              .join(ARGUMENT_JOINER));
       factory.addMethod(implementationMethod.build());
     }
+  }
 
+  private void writeFile(TypeSpec factory, FactoryDescriptor descriptor)
+      throws IOException {
     JavaFile javaFile =
-        JavaFile.builder(getPackage(descriptor.name()), factory.build())
-            .skipJavaLangImports(true)
-            .build();
+        JavaFile.builder(getPackage(descriptor.name()), factory).skipJavaLangImports(true).build();
 
     final JavaFileObject sourceFile = filer.createSourceFile(
         ClassName.get(javaFile.packageName, javaFile.typeSpec.name).toString(),
@@ -193,6 +220,10 @@ final class FactoryWriter {
     }
   }
 
+  /**
+   * {@link ParameterSpec}s to match {@code parameters}. Note that the type of the {@link
+   * ParameterSpec}s match {@link Parameter#type()} and not {@link Key#type()}.
+   */
   private static Iterable<ParameterSpec> parameters(Iterable<Parameter> parameters) {
     ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {

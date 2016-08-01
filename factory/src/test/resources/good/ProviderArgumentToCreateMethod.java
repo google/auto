@@ -16,28 +16,17 @@
 package tests;
 
 import com.google.auto.factory.AutoFactory;
-import com.google.auto.factory.Provided;
-import javax.annotation.Nullable;
 import javax.inject.Provider;
 
-@AutoFactory
-final class MultipleProvidedParamsSameKey {
-  private final String one;
-  private final String two;
-  private final String three;
-  private final Provider<String> providerOne;
-  private final Provider<String> providerTwo;
+@AutoFactory(implementing = ProviderArgumentToCreateMethod.CustomCreator.class)
+final class ProviderArgumentToCreateMethod {
+  private final Provider<String> stringProvider;
 
-  public MultipleProvidedParamsSameKey(
-      @Provided String one,
-      @Provided String two,
-      @Nullable @Provided String three,
-      @Provided Provider<String> providerOne,
-      @Provided Provider<String> providerTwo) {
-    this.one = one;
-    this.two = two;
-    this.three = three;
-    this.providerOne = providerOne;
-    this.providerTwo = providerTwo;
+  ProviderArgumentToCreateMethod(Provider<String> stringProvider) {
+    this.stringProvider = stringProvider;
+  }
+
+  interface CustomCreator {
+    ProviderArgumentToCreateMethod newInstance(Provider<String> stringProvider);
   }
 }

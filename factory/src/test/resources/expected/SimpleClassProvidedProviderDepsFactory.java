@@ -33,13 +33,11 @@ final class SimpleClassProvidedProviderDepsFactory {
   SimpleClassProvidedProviderDepsFactory(
       @AQualifier Provider<String> providedDepAProvider,
       @BQualifier Provider<String> providedDepBProvider) {
-    this.providedDepAProvider = providedDepAProvider;
-    this.providedDepBProvider = providedDepBProvider;
+    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 1);
+    this.providedDepBProvider = Preconditions.checkNotNull(providedDepBProvider, 2);
   }
 
   SimpleClassProvidedProviderDeps create() {
-    return new SimpleClassProvidedProviderDeps(
-        Preconditions.checkNotNull(providedDepAProvider, 1),
-        Preconditions.checkNotNull(providedDepBProvider, 2));
+    return new SimpleClassProvidedProviderDeps(providedDepAProvider, providedDepBProvider);
   }
 }

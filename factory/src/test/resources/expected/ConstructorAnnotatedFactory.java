@@ -29,7 +29,7 @@ final class ConstructorAnnotatedFactory {
   private final Provider<Object> objProvider;
 
   @Inject ConstructorAnnotatedFactory(Provider<Object> objProvider) {
-    this.objProvider = objProvider;
+    this.objProvider = Preconditions.checkNotNull(objProvider, 1);
   }
 
   ConstructorAnnotated create() {

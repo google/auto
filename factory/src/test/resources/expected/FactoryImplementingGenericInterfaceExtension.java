@@ -30,7 +30,7 @@ final class FactoryImplementingGenericInterfaceExtensionFactory
   private final Provider<String> sProvider;
   @Inject
   FactoryImplementingGenericInterfaceExtensionFactory(Provider<String> sProvider) {
-    this.sProvider = sProvider;
+    this.sProvider = Preconditions.checkNotNull(sProvider, 1);
   }
   FactoryImplementingGenericInterfaceExtension create(Integer i) {
     return new FactoryImplementingGenericInterfaceExtension(

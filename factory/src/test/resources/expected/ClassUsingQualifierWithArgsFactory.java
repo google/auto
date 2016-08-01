@@ -30,7 +30,7 @@ final class ClassUsingQualifierWithArgsFactory {
 
   @Inject ClassUsingQualifierWithArgsFactory(
       @QualifierWithArgs(name="Fred", count=3) Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = providedDepAProvider;
+    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 1);
   }
 
   ClassUsingQualifierWithArgs create() {

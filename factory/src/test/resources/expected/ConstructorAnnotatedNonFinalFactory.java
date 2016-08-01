@@ -29,7 +29,7 @@ class ConstructorAnnotatedNonFinalFactory {
   private final Provider<Object> objProvider;
 
   @Inject ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
-    this.objProvider = objProvider;
+    this.objProvider = Preconditions.checkNotNull(objProvider, 1);
   }
 
   ConstructorAnnotatedNonFinal create() {
