@@ -809,6 +809,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("SelfEquals")
   public void testExplicitEquals() throws Exception {
     ExplicitEquals instance = ExplicitEquals.create();
     assertEquals(0, instance.equalsCount);
