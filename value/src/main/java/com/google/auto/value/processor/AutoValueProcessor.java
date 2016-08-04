@@ -39,7 +39,6 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
@@ -52,10 +51,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -93,12 +92,19 @@ import javax.tools.JavaFileObject;
 @AutoService(Processor.class)
 public class AutoValueProcessor extends AbstractProcessor {
   public AutoValueProcessor() {
-    this(ServiceLoader.load(AutoValueExtension.class, AutoValueProcessor.class.getClassLoader()));
+    this(AutoValueProcessor.class.getClassLoader());
+  }
+
+  @VisibleForTesting
+  AutoValueProcessor(ClassLoader loaderForExtensions) {
+    this.extensions = null;
+    this.loaderForExtensions = loaderForExtensions;
   }
 
   @VisibleForTesting
   public AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
-    this.extensions = extensions;
+    this.extensions = ImmutableList.<AutoValueExtension>copyOf(extensions);
+    this.loaderForExtensions = null;
   }
 
   @Override
@@ -126,7 +132,11 @@ public class AutoValueProcessor extends AbstractProcessor {
    */
   private final List<String> deferredTypeNames = new ArrayList<String>();
 
-  private Iterable<? extends AutoValueExtension> extensions;
+  // Depending on how this AutoValueProcessor was constructed, we might already have a list of
+  // extensions when init() is run, or, if `extensions` is null, we have a ClassLoader that will be
+  // used to get the list using the ServiceLoader API.
+  private ImmutableList<AutoValueExtension> extensions;
+  private final ClassLoader loaderForExtensions;
 
   private Types typeUtils;
 
@@ -135,6 +145,26 @@ public class AutoValueProcessor extends AbstractProcessor {
     super.init(processingEnv);
     errorReporter = new ErrorReporter(processingEnv);
     typeUtils = processingEnv.getTypeUtils();
+
+    if (extensions == null) {
+      try {
+        extensions = ImmutableList.copyOf(
+            ServiceLoader.load(AutoValueExtension.class, loaderForExtensions));
+        // ServiceLoader.load returns a lazily-evaluated Iterable, so evaluate it eagerly now
+        // to discover any exceptions.
+      } catch (Throwable t) {
+        StringBuilder warning = new StringBuilder();
+        warning.append(
+            "An exception occurred while looking for AutoValue extensions. "
+                + "No extensions will function.");
+        if (t instanceof ServiceConfigurationError) {
+          warning.append(" This may be due to a corrupt jar file in the compiler's classpath.");
+        }
+        warning.append(" Exception: ").append(t);
+        errorReporter.reportWarning(warning.toString(), null);
+        extensions = ImmutableList.of();
+      }
+    }
   }
 
   @Override
