@@ -25,10 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map.Entry;
-
+import java.util.Set;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
 
@@ -56,6 +56,22 @@ abstract class FactoryDescriptor {
   abstract boolean allowSubclasses();
   abstract ImmutableMap<Key, ProviderField> providers();
 
+  private static class UniqueNameSet {
+    private final Set<String> uniqueNames = new HashSet<String>();
+
+    /**
+     * Generates a unique name using {@code base}. If {@code base} has not yet been added, it will
+     * be returned as-is. If your {@code base} is healthy, this will always return {@code base}.
+     */
+    String getUniqueName(CharSequence base) {
+      String name = base.toString();
+      for (int differentiator = 2; !uniqueNames.add(name); differentiator++) {
+        name = base.toString() + differentiator;
+      }
+      return name;
+    }
+  }
+
   static FactoryDescriptor create(
       String name,
       TypeMirror extendingType,
@@ -72,6 +88,7 @@ abstract class FactoryDescriptor {
       }
     }
     ImmutableMap.Builder<Key, ProviderField> providersBuilder = ImmutableMap.builder();
+    UniqueNameSet uniqueNames = new UniqueNameSet();
     for (Entry<Key, Collection<Parameter>> entry :
         parametersForProviders.build().asMap().entrySet()) {
       Key key = entry.getKey();
@@ -81,11 +98,16 @@ abstract class FactoryDescriptor {
         case 1:
           Parameter parameter = Iterables.getOnlyElement(entry.getValue());
           providersBuilder.put(
-              key, ProviderField.create(parameter.name() + "Provider", key, parameter.nullable()));
+              key,
+              ProviderField.create(
+                  uniqueNames.getUniqueName(parameter.name() + "Provider"),
+                  key,
+                  parameter.nullable()));
           break;
         default:
           String providerName =
-              invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider";
+              uniqueNames.getUniqueName(
+                  invalidIdentifierCharacters.replaceFrom(key.toString(), '_') + "Provider");
           Optional<AnnotationMirror> nullable = Optional.absent();
           for (Parameter param : entry.getValue()) {
             nullable = nullable.or(param.nullable());

@@ -24,6 +24,7 @@ import org.junit.runners.JUnit4;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 /**
@@ -374,5 +375,16 @@ public class AutoFactoryProcessorTest {
         .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource("expected/ProviderArgumentToCreateMethodFactory.java"));
+  }
+
+  @Test public void multipleFactoriesConflictingParameterNames() {
+    assertThat(
+            JavaFileObjects.forResource("good/MultipleFactoriesConflictingParameterNames.java"),
+            JavaFileObjects.forResource("support/AQualifier.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource(
+                "expected/MultipleFactoriesConflictingParameterNamesFactory.java"));
   }
 }
