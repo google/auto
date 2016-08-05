@@ -520,7 +520,7 @@ public final class MoreTypes {
   private static final TypeVisitor<Element, Void> AS_ELEMENT_VISITOR =
       new SimpleTypeVisitor6<Element, Void>() {
         @Override protected Element defaultAction(TypeMirror e, Void p) {
-          throw new IllegalArgumentException(e + "cannot be converted to an Element");
+          throw new IllegalArgumentException(e + " cannot be converted to an Element");
         }
 
         @Override public Element visitDeclared(DeclaredType t, Void p) {
