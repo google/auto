@@ -16,7 +16,6 @@
 package tests;
 
 import com.google.auto.factory.AutoFactory;
-
 import java.util.List;
 
 final class FactoryImplementingCreateMethod {

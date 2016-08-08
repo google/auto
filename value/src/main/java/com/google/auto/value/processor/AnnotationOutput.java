@@ -16,10 +16,8 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableMap;
-
 import java.util.List;
 import java.util.Map;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;

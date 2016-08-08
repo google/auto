@@ -15,14 +15,14 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
+import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
+
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import javax.lang.model.element.AnnotationMirror;
-
-import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
-import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 
 @AutoValue
 abstract class ProviderField {

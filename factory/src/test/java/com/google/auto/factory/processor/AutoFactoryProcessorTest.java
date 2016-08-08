@@ -15,17 +15,17 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.truth.Truth.assertAbout;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubject.assertThat;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
-import static com.google.common.truth.Truth.assertAbout;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static com.google.testing.compile.JavaSourcesSubject.assertThat;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 /**
  * Functional tests for the {@link AutoFactoryProcessor}.
@@ -177,10 +177,10 @@ public class AutoFactoryProcessorTest {
         .failsToCompile()
         .withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(25).atColumn(3)
+            .in(file).onLine(22).atColumn(3)
          .and().withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(26).atColumn(3);
+            .in(file).onLine(23).atColumn(3);
   }
 
   @Test public void failsOnGenericClass() {
@@ -277,7 +277,7 @@ public class AutoFactoryProcessorTest {
         .withErrorContaining(
             "java.util.concurrent.TimeUnit is not a valid supertype for a factory. "
                 + "Supertypes must be non-final classes.")
-                    .in(file).onLine(22);
+                    .in(file).onLine(21);
   }
 
   @Test public void factoryExtendingFinalClass() {

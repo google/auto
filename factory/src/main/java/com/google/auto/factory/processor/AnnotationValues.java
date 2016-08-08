@@ -15,8 +15,9 @@
  */
 package com.google.auto.factory.processor;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import java.util.List;
-
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -24,9 +25,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleAnnotationValueVisitor6;
 import javax.lang.model.util.SimpleTypeVisitor6;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
 final class AnnotationValues {
   private AnnotationValues() {}

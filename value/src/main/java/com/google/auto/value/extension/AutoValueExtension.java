@@ -18,7 +18,6 @@ package com.google.auto.value.extension;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;

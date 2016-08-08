@@ -21,10 +21,8 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
-
-import junit.framework.TestCase;
-
 import javax.tools.JavaFileObject;
+import junit.framework.TestCase;
 
 /**
  * Tests for compilation errors with the AutoAnnotation processor.

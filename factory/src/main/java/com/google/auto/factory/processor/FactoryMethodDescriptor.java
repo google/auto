@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-
 import javax.lang.model.type.TypeMirror;
 
 /**

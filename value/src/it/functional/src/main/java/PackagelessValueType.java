@@ -15,9 +15,7 @@
  */
 
 import com.google.auto.value.AutoValue;
-
 import java.util.Map;
-
 import javax.annotation.Nullable;
 
 /**

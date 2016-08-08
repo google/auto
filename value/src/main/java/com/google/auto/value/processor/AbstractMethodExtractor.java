@@ -16,7 +16,6 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableListMultimap;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 

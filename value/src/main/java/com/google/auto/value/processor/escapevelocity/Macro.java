@@ -35,7 +35,6 @@ package com.google.auto.value.processor.escapevelocity;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-
 import java.util.List;
 import java.util.Map;
 

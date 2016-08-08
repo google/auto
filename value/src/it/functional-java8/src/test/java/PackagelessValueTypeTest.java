@@ -16,11 +16,8 @@
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
-
-import junit.framework.TestCase;
-
 import java.util.Map;
-
+import junit.framework.TestCase;
 import org.junit.Ignore;
 
 /**

@@ -15,6 +15,11 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.factory.processor.Mirrors.isProvider;
+import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
+import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
+
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
@@ -24,14 +29,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
-
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.auto.factory.processor.Mirrors.isProvider;
-import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
-import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 
 /**
  * A value object for types and qualifiers.

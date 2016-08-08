@@ -15,8 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.AutoValue;
-
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;

@@ -15,9 +15,8 @@
  */
 package com.google.auto.value.processor;
 
-import junit.framework.TestCase;
-
 import java.io.StringReader;
+import junit.framework.TestCase;
 
 /**
  * Unit tests for {@link EclipseHackTokenizer}.

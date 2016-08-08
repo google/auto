@@ -15,9 +15,8 @@
  */
 package com.google.auto.value;
 
-import java.util.Map;
-
 import com.google.auto.value.annotation.Nullable;
+import java.util.Map;
 
 /**
  * Simple value type for tests.

@@ -18,7 +18,6 @@ package com.google.auto.value.processor;
 import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.base.Optional;
 import com.google.common.collect.Multimap;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.zip.CRC32;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;

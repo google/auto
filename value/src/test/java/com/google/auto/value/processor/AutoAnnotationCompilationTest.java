@@ -21,20 +21,17 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
-
-import junit.framework.TestCase;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
-
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
+import junit.framework.TestCase;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

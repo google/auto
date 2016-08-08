@@ -16,9 +16,7 @@
 package com.google.auto.common;
 
 import com.google.common.base.Equivalence;
-
 import java.util.List;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.type.TypeMirror;

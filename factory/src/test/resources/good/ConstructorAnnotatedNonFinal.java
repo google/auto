@@ -15,8 +15,6 @@
  */
 package tests;
 
-import javax.annotation.Generated;
-
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 

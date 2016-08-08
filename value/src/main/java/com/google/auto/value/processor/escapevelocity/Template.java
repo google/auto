@@ -33,7 +33,6 @@
 package com.google.auto.value.processor.escapevelocity;
 
 import com.google.auto.value.processor.escapevelocity.EvaluationContext.PlainEvaluationContext;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Map;

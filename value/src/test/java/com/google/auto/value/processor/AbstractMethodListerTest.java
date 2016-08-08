@@ -15,11 +15,10 @@
  */
 package com.google.auto.value.processor;
 
-import junit.framework.TestCase;
-
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import junit.framework.TestCase;
 
 /**
  * Tests for {@link AbstractMethodLister}.

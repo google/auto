@@ -16,7 +16,6 @@
 package tests;
 
 import com.google.auto.factory.internal.Preconditions;
-
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;

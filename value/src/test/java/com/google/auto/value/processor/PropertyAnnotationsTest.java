@@ -21,13 +21,10 @@ import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.testing.compile.JavaFileObjects;
-
-import junit.framework.TestCase;
-
 import java.lang.annotation.Inherited;
 import java.util.List;
-
 import javax.tools.JavaFileObject;
+import junit.framework.TestCase;
 
 /**
  * Tests to ensure annotations are kept on AutoValue generated classes

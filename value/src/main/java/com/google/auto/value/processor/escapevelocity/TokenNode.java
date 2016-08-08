@@ -33,7 +33,6 @@
 package com.google.auto.value.processor.escapevelocity;
 
 import com.google.common.collect.ImmutableList;
-
 import java.util.List;
 
 /**

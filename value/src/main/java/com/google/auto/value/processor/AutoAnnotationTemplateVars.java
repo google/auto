@@ -16,7 +16,6 @@
 package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.escapevelocity.Template;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;

@@ -29,7 +29,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
-
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSink;
 import com.google.common.io.CharSource;
@@ -44,9 +43,7 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
 import java.io.IOException;
-
 import java.io.Writer;
 import java.util.Iterator;
 import javax.annotation.Generated;
