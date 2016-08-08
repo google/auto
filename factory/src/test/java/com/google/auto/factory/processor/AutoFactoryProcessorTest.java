@@ -299,7 +299,7 @@ public class AutoFactoryProcessorTest {
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource(
-            "expected/FactoryImplementingGenericInterfaceExtension.java"));
+            "expected/FactoryImplementingGenericInterfaceExtensionFactory.java"));
   }
 
   @Test public void multipleFactoriesImpementingInterface() {
