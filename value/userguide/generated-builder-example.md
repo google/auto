@@ -75,13 +75,13 @@ final class AutoValue_Animal extends Animal {
     }
 
     @Override
-    public Animal.Builder name(String name) {
+    public Animal.Builder setName(String name) {
       this.name = name;
       return this;
     }
 
     @Override
-    public Animal.Builder numberOfLegs(int numberOfLegs) {
+    public Animal.Builder setNumberOfLegs(int numberOfLegs) {
       this.numberOfLegs = numberOfLegs;
       return this;
     }
