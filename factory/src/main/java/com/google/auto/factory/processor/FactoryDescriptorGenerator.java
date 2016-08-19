@@ -142,6 +142,7 @@ final class FactoryDescriptorGenerator {
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
+        .isVarArgs(constructor.isVarArgs())
         .build();
   }
 

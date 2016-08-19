@@ -39,6 +39,7 @@ abstract class FactoryMethodDescriptor {
   abstract ImmutableSet<Parameter> providedParameters();
   abstract ImmutableSet<Parameter> creationParameters();
   abstract Builder toBuilder();
+  abstract boolean isVarArgs();
 
   final String factoryName() {
     return declaration().getFactoryName();
@@ -48,7 +49,8 @@ abstract class FactoryMethodDescriptor {
     return new AutoValue_FactoryMethodDescriptor.Builder()
         .declaration(checkNotNull(declaration))
         .publicMethod(false)
-        .overridingMethod(false);
+        .overridingMethod(false)
+        .isVarArgs(false);
   }
 
   @AutoValue.Builder
@@ -61,6 +63,7 @@ abstract class FactoryMethodDescriptor {
     abstract Builder passedParameters(Iterable<Parameter> passedParameters);
     abstract Builder providedParameters(Iterable<Parameter> providedParameters);
     abstract Builder creationParameters(Iterable<Parameter> creationParameters);
+    abstract Builder isVarArgs(boolean isVarargs);
     abstract FactoryMethodDescriptor buildImpl();
 
     FactoryMethodDescriptor build() {

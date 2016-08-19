@@ -387,4 +387,12 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource(
                 "expected/MultipleFactoriesConflictingParameterNamesFactory.java"));
   }
+
+  @Test public void factoryVarargs() {
+    assertThat(JavaFileObjects.forResource("good/SimpleClassVarargs.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(JavaFileObjects.forResource("expected/SimpleClassVarargsFactory.java"));
+  }
 }

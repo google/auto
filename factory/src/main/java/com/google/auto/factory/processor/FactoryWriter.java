@@ -124,10 +124,11 @@ final class FactoryWriter {
   }
 
   private void addFactoryMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
-    for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
+    for (FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
       MethodSpec.Builder method =
           MethodSpec.methodBuilder(methodDescriptor.name())
-              .returns(TypeName.get(methodDescriptor.returnType()));
+              .returns(TypeName.get(methodDescriptor.returnType()))
+              .varargs(methodDescriptor.isVarArgs());
       if (methodDescriptor.overridingMethod()) {
         method.addAnnotation(Override.class);
       }
@@ -176,7 +177,8 @@ final class FactoryWriter {
       MethodSpec.Builder implementationMethod =
           methodBuilder(methodDescriptor.name())
               .addAnnotation(Override.class)
-              .returns(TypeName.get(methodDescriptor.returnType()));
+              .returns(TypeName.get(methodDescriptor.returnType()))
+              .varargs(methodDescriptor.isVarArgs());
       if (methodDescriptor.publicMethod()) {
         implementationMethod.addModifiers(PUBLIC);
       }

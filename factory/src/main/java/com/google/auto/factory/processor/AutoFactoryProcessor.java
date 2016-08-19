@@ -104,45 +104,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       if (declaration.isPresent()) {
         String factoryName = declaration.get().getFactoryName();
         TypeElement extendingType = declaration.get().extendingType();
-        List<ExecutableElement> supertypeMethods =
-            ElementFilter.methodsIn(elements.getAllMembers(extendingType));
-        for (ExecutableElement supertypeMethod : supertypeMethods) {
-          if (supertypeMethod.getModifiers().contains(Modifier.ABSTRACT)) {
-            ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
-                types, supertypeMethod, extendingType);
-            ImmutableSet<Parameter> passedParameters =
-                Parameter.forParameterList(
-                    supertypeMethod.getParameters(), methodType.getParameterTypes(), types);
-            implementationMethodDescriptorsBuilder.put(
-                factoryName,
-                ImplementationMethodDescriptor.builder()
-                    .name(supertypeMethod.getSimpleName().toString())
-                    .returnType(getAnnotatedType(element))
-                    .publicMethod()
-                    .passedParameters(passedParameters)
-                    .build());
-          }
-        }
+        implementationMethodDescriptorsBuilder.putAll(
+            factoryName, implementationMethods(extendingType, element));
         for (TypeElement implementingType : declaration.get().implementingTypes()) {
-          List<ExecutableElement> interfaceMethods =
-              ElementFilter.methodsIn(elements.getAllMembers(implementingType));
-          for (ExecutableElement interfaceMethod : interfaceMethods) {
-            if (interfaceMethod.getModifiers().contains(Modifier.ABSTRACT)) {
-              ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
-                  types, interfaceMethod, implementingType);
-              ImmutableSet<Parameter> passedParameters =
-                  Parameter.forParameterList(
-                      interfaceMethod.getParameters(), methodType.getParameterTypes(), types);
-              implementationMethodDescriptorsBuilder.put(
-                  factoryName,
-                  ImplementationMethodDescriptor.builder()
-                      .name(interfaceMethod.getSimpleName().toString())
-                      .returnType(getAnnotatedType(element))
-                      .publicMethod()
-                      .passedParameters(passedParameters)
-                      .build());
-            }
-          }
+          implementationMethodDescriptorsBuilder.putAll(
+              factoryName, implementationMethods(implementingType, element));
         }
       }
 
@@ -205,6 +171,32 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         }
       }
     }
+  }
+
+  private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
+      TypeElement supertype, Element autoFactoryElement) {
+    ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
+        ImmutableSet.builder();
+    for (ExecutableElement implementationMethod :
+        ElementFilter.methodsIn(elements.getAllMembers(supertype))) {
+      if (implementationMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+        ExecutableType methodType =
+            Elements2.getExecutableElementAsMemberOf(
+                types, implementationMethod, supertype);
+        ImmutableSet<Parameter> passedParameters =
+            Parameter.forParameterList(
+                implementationMethod.getParameters(), methodType.getParameterTypes(), types);
+        implementationMethodsBuilder.add(
+            ImplementationMethodDescriptor.builder()
+                .name(implementationMethod.getSimpleName().toString())
+                .returnType(getAnnotatedType(autoFactoryElement))
+                .publicMethod()
+                .passedParameters(passedParameters)
+                .isVarArgs(implementationMethod.isVarArgs())
+                .build());
+      }
+    }
+    return implementationMethodsBuilder.build();
   }
 
   private TypeMirror getAnnotatedType(Element element) {
