@@ -96,7 +96,7 @@ abstract class Animal {
 
   static Builder builder() {
     return new AutoValue_Animal.Builder()
-        .numberOfLegs(4);
+        .setNumberOfLegs(4);
   }
 
   @AutoValue.Builder
