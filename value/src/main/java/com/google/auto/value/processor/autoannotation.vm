@@ -238,6 +238,13 @@ final class $className implements $annotationName {
   #end
 #end
 
+## Compute the member name's contribution to the hashcode directly in the
+## template engine, to avoid triggering a compiler error for integer overflow.
+#macro (memberNameHash $m)
+  #set ($hc = 127 * $m.toString().hashCode())
+  ${hc} ##
+#end
+
   @Override
   public int hashCode() {
   #if ($members.isEmpty())
@@ -249,13 +256,13 @@ final class $className implements $annotationName {
     return
     #foreach ($m in $members)
 
-        ((127 * ${m.toString().hashCode()}) ^ (#memberHashCodeExpression($m))) ##
+        (#memberNameHash($m) ^ (#memberHashCodeExpression($m))) ##
         #if ($foreach.hasNext) + #end
     #end
         ;
     #foreach ($m in $members)
 
-    // ${m.toString().hashCode()} is "${m}".hashCode()
+    // #memberNameHash($m) is 127 * "${m}".hashCode()
     #end
 
   #end

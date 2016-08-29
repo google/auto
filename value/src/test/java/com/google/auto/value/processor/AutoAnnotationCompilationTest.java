@@ -115,7 +115,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    return ((127 * " + "value".hashCode() + ") ^ (value.hashCode()));",
+        "    return (" + 127 * "value".hashCode() + " ^ (value.hashCode()));",
         "  }",
         "}"
     );
@@ -205,7 +205,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    return ((127 * " + "value".hashCode() + ") ^ (Arrays.hashCode(value)));",
+        "    return (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)));",
         "  }",
         "}"
     );
@@ -327,8 +327,8 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "",
         "  @Override public int hashCode() {",
         "    return ",
-        "        ((127 * " + "value".hashCode() + ") ^ (Arrays.hashCode(value))) +",
-        "        ((127 * " + "enums".hashCode() + ") ^ (Arrays.hashCode(enums)));",
+        "        (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value))) +",
+        "        (" + 127 * "enums".hashCode() + " ^ (Arrays.hashCode(enums)));",
         "  }",
         "",
         "  private static int[] intArrayFromCollection(Collection<Integer> c) {",
