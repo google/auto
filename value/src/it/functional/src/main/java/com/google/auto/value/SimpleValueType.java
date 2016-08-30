@@ -16,7 +16,6 @@
 package com.google.auto.value;
 
 import java.util.Map;
-
 import javax.annotation.Nullable;
 
 /**

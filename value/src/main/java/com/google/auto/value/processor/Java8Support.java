@@ -18,7 +18,6 @@ package com.google.auto.value.processor;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
 

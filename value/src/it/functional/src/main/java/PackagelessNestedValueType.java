@@ -15,7 +15,6 @@
  */
 
 import com.google.auto.value.AutoValue;
-
 import java.util.Map;
 
 /**

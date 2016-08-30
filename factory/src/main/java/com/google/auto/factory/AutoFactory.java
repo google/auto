@@ -15,10 +15,10 @@
  */
 package com.google.auto.factory;
 
-import java.lang.annotation.Target;
-
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
 import static java.lang.annotation.ElementType.TYPE;
+
+import java.lang.annotation.Target;
 
 /**
  * An annotation to be applied to elements for which a factory should be automatically generated.

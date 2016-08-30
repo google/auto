@@ -17,13 +17,11 @@ package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
-
-import junit.framework.TestCase;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.List;
+import junit.framework.TestCase;
 
 /**
  * Tests for FieldReader.

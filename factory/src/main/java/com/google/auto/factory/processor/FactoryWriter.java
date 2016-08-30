@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.factory.processor.Mirrors.isProvider;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -22,42 +23,49 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
-import com.google.auto.common.MoreElements;
+import com.google.auto.factory.internal.Preconditions;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
-
+import com.google.common.collect.Iterables;
+import com.google.common.io.CharSink;
+import com.google.common.io.CharSource;
+import com.google.googlejavaformat.java.Formatter;
+import com.google.googlejavaformat.java.FormatterException;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
 import java.io.IOException;
-import java.util.Map.Entry;
-
+import java.io.Writer;
+import java.util.Iterator;
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.type.ErrorType;
+import javax.lang.model.element.Element;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleTypeVisitor7;
+import javax.tools.JavaFileObject;
 
 final class FactoryWriter {
+
   private final Filer filer;
 
   FactoryWriter(Filer filer) {
     this.filer = filer;
   }
 
-  private static final Joiner argumentJoiner = Joiner.on(", ");
+  private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
 
   void writeFactory(final FactoryDescriptor descriptor)
       throws IOException {
@@ -81,93 +89,150 @@ final class FactoryWriter {
       factory.addSuperinterface(TypeName.get(implementingType));
     }
 
+    addConstructorAndProviderFields(factory, descriptor);
+    addFactoryMethods(factory, descriptor);
+    addImplementationMethods(factory, descriptor);
+
+    writeFile(factory.build(), descriptor);
+  }
+
+  private void addConstructorAndProviderFields(
+      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
     if (descriptor.publicType()) {
       constructor.addModifiers(PUBLIC);
     }
-    for (Entry<Key, String> entry : descriptor.providerNames().entrySet()) {
-      Key key = entry.getKey();
-      String providerName = entry.getValue();
-      Optional<AnnotationMirror> qualifier = key.getQualifier();
-
-      TypeName providerType =
-          ParameterizedTypeName.get(ClassName.get(Provider.class), typeName(key.type()));
-      factory.addField(providerType, providerName, PRIVATE, FINAL);
-      constructor.addParameter(annotateIfPresent(providerType, qualifier), providerName);
-    }
-
-    for (String providerName : descriptor.providerNames().values()) {
-      constructor.addStatement("this.$1L = $1L", providerName);
+    Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
+    for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
+      ProviderField provider = providerFields.next();
+      TypeName typeName = TypeName.get(provider.key().type()).box();
+      TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
+      factory.addField(providerType, provider.name(), PRIVATE, FINAL);
+      if (provider.key().qualifier().isPresent()) {
+        // only qualify the constructor parameter
+        providerType = providerType.annotated(AnnotationSpec.get(provider.key().qualifier().get()));
+      }
+      constructor.addParameter(providerType, provider.name());
+      constructor.addStatement(
+          "this.$1L = $2T.checkNotNull($1L, $3L)",
+          provider.name(),
+          Preconditions.class,
+          argumentIndex);
     }
 
     factory.addMethod(constructor.build());
+  }
 
-    for (final FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
+  private void addFactoryMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+    for (FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
       MethodSpec.Builder method =
           MethodSpec.methodBuilder(methodDescriptor.name())
-              .returns(TypeName.get(methodDescriptor.returnType()));
+              .returns(TypeName.get(methodDescriptor.returnType()))
+              .varargs(methodDescriptor.isVarArgs());
       if (methodDescriptor.overridingMethod()) {
         method.addAnnotation(Override.class);
       }
       if (methodDescriptor.publicMethod()) {
         method.addModifiers(PUBLIC);
       }
+      CodeBlock.Builder args = CodeBlock.builder();
       method.addParameters(parameters(methodDescriptor.passedParameters()));
-      FluentIterable<String> creationParameterNames =
-          FluentIterable.from(methodDescriptor.creationParameters())
-              .transform(
-                  new Function<Parameter, String>() {
-                    @Override
-                    public String apply(Parameter parameter) {
-                      if (methodDescriptor.passedParameters().contains(parameter)) {
-                        return parameter.name();
-                      } else if (parameter.providerOfType()) {
-                        return descriptor.providerNames().get(parameter.key());
-                      } else {
-                        return descriptor.providerNames().get(parameter.key()) + ".get()";
-                      }
-                    }
-                  });
-      method.addStatement(
-          "return new $T($L)",
-          methodDescriptor.returnType(),
-          argumentJoiner.join(creationParameterNames));
+      Iterator<Parameter> parameters = methodDescriptor.creationParameters().iterator();
+      for (int argumentIndex = 1; parameters.hasNext(); argumentIndex++) {
+        Parameter parameter = parameters.next();
+        boolean checkNotNull = !parameter.nullable().isPresent();
+        CodeBlock argument;
+        if (methodDescriptor.passedParameters().contains(parameter)) {
+          argument = CodeBlock.of(parameter.name());
+          if (isPrimitive(parameter.type())) {
+            checkNotNull = false;
+          }
+        } else {
+          ProviderField provider = descriptor.providers().get(parameter.key());
+          argument = CodeBlock.of(provider.name());
+          if (isProvider(parameter.type())) {
+            // Providers are checked for nullness in the Factory's constructor.
+            checkNotNull = false;
+          } else {
+            argument = CodeBlock.of("$L.get()", argument);
+          }
+        }
+        if (checkNotNull) {
+          argument =
+              CodeBlock.of("$T.checkNotNull($L, $L)", Preconditions.class, argument, argumentIndex);
+        }
+        args.add(argument);
+        if (parameters.hasNext()) {
+          args.add(", ");
+        }
+      }
+      method.addStatement("return new $T($L)", methodDescriptor.returnType(), args.build());
       factory.addMethod(method.build());
     }
+  }
 
-    for (ImplementationMethodDescriptor methodDescriptor
-        : descriptor.implementationMethodDescriptors()) {
+  private void addImplementationMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+    for (ImplementationMethodDescriptor methodDescriptor :
+        descriptor.implementationMethodDescriptors()) {
       MethodSpec.Builder implementationMethod =
           methodBuilder(methodDescriptor.name())
               .addAnnotation(Override.class)
-              .returns(TypeName.get(methodDescriptor.returnType()));
+              .returns(TypeName.get(methodDescriptor.returnType()))
+              .varargs(methodDescriptor.isVarArgs());
       if (methodDescriptor.publicMethod()) {
         implementationMethod.addModifiers(PUBLIC);
       }
       implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
-      FluentIterable<String> creationParameterNames =
-          FluentIterable.from(methodDescriptor.passedParameters())
-              .transform(new Function<Parameter, String>() {
-                @Override public String apply(Parameter parameter) {
-                  return parameter.name();
-                }
-              });
       implementationMethod.addStatement(
-          "return create($L)", argumentJoiner.join(creationParameterNames));
+          "return create($L)",
+          FluentIterable.from(methodDescriptor.passedParameters())
+              .transform(
+                  new Function<Parameter, String>() {
+                    @Override
+                    public String apply(Parameter parameter) {
+                      return parameter.name();
+                    }
+                  })
+              .join(ARGUMENT_JOINER));
       factory.addMethod(implementationMethod.build());
     }
-
-    JavaFile.builder(getPackage(descriptor.name()), factory.build())
-        .skipJavaLangImports(true)
-        .build()
-        .writeTo(filer);
   }
 
+  private void writeFile(TypeSpec factory, FactoryDescriptor descriptor)
+      throws IOException {
+    JavaFile javaFile =
+        JavaFile.builder(getPackage(descriptor.name()), factory).skipJavaLangImports(true).build();
+
+    final JavaFileObject sourceFile = filer.createSourceFile(
+        ClassName.get(javaFile.packageName, javaFile.typeSpec.name).toString(),
+        Iterables.toArray(javaFile.typeSpec.originatingElements, Element.class));
+    try {
+      new Formatter().formatSource(
+          CharSource.wrap(javaFile.toString()),
+          new CharSink() {
+            @Override public Writer openStream() throws IOException {
+              return sourceFile.openWriter();
+            }
+          });
+    } catch (FormatterException e) {
+      Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * {@link ParameterSpec}s to match {@code parameters}. Note that the type of the {@link
+   * ParameterSpec}s match {@link Parameter#type()} and not {@link Key#type()}.
+   */
   private static Iterable<ParameterSpec> parameters(Iterable<Parameter> parameters) {
     ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {
-      builder.add(
-          ParameterSpec.builder(TypeName.get(parameter.type()), parameter.name()).build());
+      ParameterSpec.Builder parameterBuilder =
+          ParameterSpec.builder(TypeName.get(parameter.type()), parameter.name());
+      for (AnnotationMirror annotation :
+          Iterables.concat(parameter.nullable().asSet(), parameter.key().qualifier().asSet())) {
+        parameterBuilder.addAnnotation(AnnotationSpec.get(annotation));
+      }
+      builder.add(parameterBuilder.build());
     }
     return builder.build();
   }
@@ -191,28 +256,16 @@ final class FactoryWriter {
     return -1;
   }
 
-  private static TypeName annotateIfPresent(
-      TypeName typeName, Optional<AnnotationMirror> annotation) {
-    if (annotation.isPresent()) {
-      return typeName.annotated(AnnotationSpec.get(annotation.get()));
-    }
-    return typeName;
-  }
-
-  /**
-   * JavaPoet 1.5.1 does not handle {@link ErrorType} in {@link TypeName#get(TypeMirror)}. A fix is
-   * proposed in https://github.com/square/javapoet/pull/430.
-   */
-  private static TypeName typeName(TypeMirror type) {
-    return type.accept(new SimpleTypeVisitor7<TypeName, Void>(){
+  private static boolean isPrimitive(TypeMirror type) {
+    return type.accept(new SimpleTypeVisitor7<Boolean, Void>(){
       @Override
-      public TypeName visitError(ErrorType type, Void p) {
-        return ClassName.get(MoreElements.asType(type.asElement()));
+      public Boolean visitPrimitive(PrimitiveType t, Void aVoid) {
+        return true;
       }
 
       @Override
-      protected TypeName defaultAction(TypeMirror type, Void p) {
-        return TypeName.get(type);
+      protected Boolean defaultAction(TypeMirror e, Void aVoid) {
+        return false;
       }
     }, null);
   }

@@ -16,15 +16,13 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableList;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Modifier;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Modifier;
 
 /**
  * A class file parser that lists the no-arg abstract methods in a class.

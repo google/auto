@@ -15,9 +15,9 @@
  */
 package com.google.auto.value;
 
-import junit.framework.Test;
 import com.google.auto.value.client.GwtSerializerTest;
 import com.google.gwt.junit.tools.GWTTestSuite;
+import junit.framework.Test;
 
 public class GwtSerializerSuite {
   public static Test suite() {

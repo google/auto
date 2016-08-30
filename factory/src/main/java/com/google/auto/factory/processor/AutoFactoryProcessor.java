@@ -15,22 +15,18 @@
  */
 package com.google.auto.factory.processor;
 
-import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimaps;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -108,56 +104,19 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       if (declaration.isPresent()) {
         String factoryName = declaration.get().getFactoryName();
         TypeElement extendingType = declaration.get().extendingType();
-        List<ExecutableElement> supertypeMethods =
-            ElementFilter.methodsIn(elements.getAllMembers(extendingType));
-        for (ExecutableElement supertypeMethod : supertypeMethods) {
-          if (supertypeMethod.getModifiers().contains(Modifier.ABSTRACT)) {
-            ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
-                types, supertypeMethod, extendingType);
-            ImmutableSet<Parameter> passedParameters =
-                Parameter.forParameterList(
-                    supertypeMethod.getParameters(), methodType.getParameterTypes(), types);
-            implementationMethodDescriptorsBuilder.put(
-                factoryName,
-                ImplementationMethodDescriptor.builder()
-                    .name(supertypeMethod.getSimpleName().toString())
-                    .returnType(getAnnotatedType(element))
-                    .publicMethod()
-                    .passedParameters(passedParameters)
-                    .build());
-          }
-        }
+        implementationMethodDescriptorsBuilder.putAll(
+            factoryName, implementationMethods(extendingType, element));
         for (TypeElement implementingType : declaration.get().implementingTypes()) {
-          List<ExecutableElement> interfaceMethods =
-              ElementFilter.methodsIn(elements.getAllMembers(implementingType));
-          for (ExecutableElement interfaceMethod : interfaceMethods) {
-            if (interfaceMethod.getModifiers().contains(Modifier.ABSTRACT)) {
-              ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
-                  types, interfaceMethod, implementingType);
-              ImmutableSet<Parameter> passedParameters =
-                  Parameter.forParameterList(
-                      interfaceMethod.getParameters(), methodType.getParameterTypes(), types);
-              implementationMethodDescriptorsBuilder.put(
-                  factoryName,
-                  ImplementationMethodDescriptor.builder()
-                      .name(interfaceMethod.getSimpleName().toString())
-                      .returnType(getAnnotatedType(element))
-                      .publicMethod()
-                      .passedParameters(passedParameters)
-                      .build());
-            }
-          }
+          implementationMethodDescriptorsBuilder.putAll(
+              factoryName, implementationMethods(implementingType, element));
         }
       }
 
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
-      indexedMethods.putAll(
-          Multimaps.index(descriptors, new Function<FactoryMethodDescriptor, String>() {
-            @Override public String apply(FactoryMethodDescriptor descriptor) {
-              return descriptor.factoryName();
-            }
-          }));
+      for (FactoryMethodDescriptor descriptor : descriptors) {
+        indexedMethods.put(descriptor.factoryName(), descriptor);
+      }
     }
 
     ImmutableSetMultimap<String, ImplementationMethodDescriptor>
@@ -167,14 +126,15 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         : indexedMethods.build().asMap().entrySet()) {
       ImmutableSet.Builder<TypeMirror> extending = ImmutableSet.builder();
       ImmutableSortedSet.Builder<TypeMirror> implementing =
-          ImmutableSortedSet.orderedBy(new Comparator<TypeMirror>() {
-            @Override
-            public int compare(TypeMirror first, TypeMirror second) {
-              String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
-              String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
-              return firstName.compareTo(secondName);
-            }
-          });
+          ImmutableSortedSet.orderedBy(
+              new Comparator<TypeMirror>() {
+                @Override
+                public int compare(TypeMirror first, TypeMirror second) {
+                  String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
+                  String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
+                  return firstName.compareTo(secondName);
+                }
+              });
       boolean publicType = false;
       Boolean allowSubclasses = null;
       boolean skipCreation = false;
@@ -211,6 +171,32 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         }
       }
     }
+  }
+
+  private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
+      TypeElement supertype, Element autoFactoryElement) {
+    ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
+        ImmutableSet.builder();
+    for (ExecutableElement implementationMethod :
+        ElementFilter.methodsIn(elements.getAllMembers(supertype))) {
+      if (implementationMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+        ExecutableType methodType =
+            Elements2.getExecutableElementAsMemberOf(
+                types, implementationMethod, supertype);
+        ImmutableSet<Parameter> passedParameters =
+            Parameter.forParameterList(
+                implementationMethod.getParameters(), methodType.getParameterTypes(), types);
+        implementationMethodsBuilder.add(
+            ImplementationMethodDescriptor.builder()
+                .name(implementationMethod.getSimpleName().toString())
+                .returnType(getAnnotatedType(autoFactoryElement))
+                .publicMethod()
+                .passedParameters(passedParameters)
+                .isVarArgs(implementationMethod.isVarArgs())
+                .build());
+      }
+    }
+    return implementationMethodsBuilder.build();
   }
 
   private TypeMirror getAnnotatedType(Element element) {

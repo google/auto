@@ -15,6 +15,13 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.tools.Diagnostic.Kind.ERROR;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
@@ -35,13 +42,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
 import javax.lang.model.util.Types;
-
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.PUBLIC;
-import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * A service that traverses an element and returns the set of factory methods defined therein.
@@ -142,6 +142,7 @@ final class FactoryDescriptorGenerator {
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
+        .isVarArgs(constructor.isVarArgs())
         .build();
   }
 

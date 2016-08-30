@@ -21,21 +21,18 @@ import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.common.reflect.Reflection;
 import com.google.testing.compile.JavaFileObjects;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javax.annotation.Generated;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests that {@link AutoValueProcessor} works even if run in a context where the

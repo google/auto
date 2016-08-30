@@ -15,6 +15,15 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreElements.getPackage;
+import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Iterables.getOnlyElement;
+import static javax.lang.model.util.ElementFilter.typesIn;
+import static javax.tools.Diagnostic.Kind.ERROR;
+
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
@@ -35,15 +44,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
-
-import static com.google.auto.common.MoreElements.getPackage;
-import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Iterables.getOnlyElement;
-import static javax.lang.model.util.ElementFilter.typesIn;
-import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * This is a value object that mirrors the static declaration of an {@link AutoFactory} annotation.

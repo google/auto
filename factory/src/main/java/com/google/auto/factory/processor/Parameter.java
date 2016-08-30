@@ -15,73 +15,72 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
+import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.auto.common.MoreTypes;
+import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Equivalence;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import java.util.List;
 import java.util.Set;
-
 import javax.inject.Provider;
-import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 
+/**
+ * Model for a parameter from an {@link com.google.auto.factory.AutoFactory} constructor or
+ * implementation method.
+ */
 @AutoValue
 abstract class Parameter {
 
-  static Function<Parameter, TypeMirror> parameterToType = new Function<Parameter, TypeMirror>() {
+  static final Function<Parameter, TypeMirror> TYPE = new Function<Parameter, TypeMirror>() {
       @Override
       public TypeMirror apply(Parameter parameter) {
         return parameter.type();
       }
     };
 
+  /**
+   * The original type of the parameter, while {@code key().type()} erases the wrapped {@link
+   * Provider}, if any.
+   */
   abstract TypeMirror type();
+
+  /** The name of the parameter. */
   abstract String name();
-  abstract boolean providerOfType();
+
   abstract Key key();
+  abstract Optional<Equivalence.Wrapper<AnnotationMirror>> nullableWrapper();
+
+  Optional<AnnotationMirror> nullable() {
+    return unwrapOptionalEquivalence(nullableWrapper());
+  }
 
   static Parameter forVariableElement(VariableElement variable, TypeMirror type, Types types) {
-    ImmutableSet.Builder<AnnotationMirror> qualifiers = ImmutableSet.builder();
-    for (AnnotationMirror annotationMirror : variable.getAnnotationMirrors()) {
-      DeclaredType annotationType = annotationMirror.getAnnotationType();
-      if (isAnnotationPresent(annotationType.asElement(), Qualifier.class)) {
-        qualifiers.add(annotationMirror);
+    Optional<AnnotationMirror> nullable = Optional.absent();
+    Iterable<? extends AnnotationMirror> annotations = variable.getAnnotationMirrors();
+    for (AnnotationMirror annotation : annotations) {
+      if (annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable")) {
+        nullable = Optional.of(annotation);
+        break;
       }
     }
 
-    boolean provider = MoreTypes.isType(type) && MoreTypes.isTypeOf(Provider.class, type);
-    TypeMirror providedType =
-        provider ? MoreTypes.asDeclared(type).getTypeArguments().get(0) : type;
-
-    // TODO(gak): check for only one qualifier rather than using the first
-    Optional<AnnotationMirror> qualifier = FluentIterable.from(qualifiers.build()).first();
-    Key key = new Key(qualifier, boxedType(providedType, types));
-
+    Key key = Key.create(type, annotations, types);
     return new AutoValue_Parameter(
-        providedType, variable.getSimpleName().toString(), provider, key);
-  }
-
-  /**
-   * If {@code type} is a primitive type, returns the boxed equivalent; otherwise returns
-   * {@code type}.
-   */
-  private static TypeMirror boxedType(TypeMirror type, Types types) {
-    return type.getKind().isPrimitive()
-        ? types.boxedClass(MoreTypes.asPrimitiveType(type)).asType()
-        : type;
+        type,
+        variable.getSimpleName().toString(),
+        key,
+        wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), nullable));
   }
 
   static ImmutableSet<Parameter> forParameterList(

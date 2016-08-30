@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Primitives;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
@@ -33,7 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -53,6 +51,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
@@ -484,6 +483,34 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
     public TypeKind getKind() {
       return getTypeMirror().getKind();
+    }
+
+    public boolean isArrayOfClassWithBounds() {
+      if (getTypeMirror().getKind() != TypeKind.ARRAY) {
+        return false;
+      }
+      TypeMirror componentType = ((ArrayType) getTypeMirror()).getComponentType();
+      if (componentType.getKind() != TypeKind.DECLARED) {
+        return false;
+      }
+      DeclaredType declared = (DeclaredType) componentType;
+      if (!((TypeElement) processingEnv.getTypeUtils().asElement(componentType))
+          .getQualifiedName()
+          .contentEquals("java.lang.Class")) {
+        return false;
+      }
+      if (declared.getTypeArguments().size() != 1) {
+        return false;
+      }
+      TypeMirror parameter = declared.getTypeArguments().get(0);
+      if (parameter.getKind() != TypeKind.WILDCARD) {
+        return true;  // for Class<Foo>
+      }
+      WildcardType wildcard = (WildcardType) parameter;
+      // In theory, we should check if getExtendsBound() != Object, since '?' is equivalent to
+      // '? extends Object', but, experimentally, neither javac or ecj will sets getExtendsBound()
+      // to 'Object', so there isn't a point in checking.
+      return wildcard.getSuperBound() != null || wildcard.getExtendsBound() != null;
     }
 
     public String getDefaultValue() {

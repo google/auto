@@ -17,6 +17,7 @@ package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.auto.value.annotation.Nullable;
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
@@ -25,9 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
-
-import junit.framework.TestCase;
-
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
@@ -43,8 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-import com.google.auto.value.annotation.Nullable;
+import junit.framework.TestCase;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

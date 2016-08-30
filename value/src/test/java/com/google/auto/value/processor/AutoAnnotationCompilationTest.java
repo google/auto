@@ -21,20 +21,17 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
-
-import junit.framework.TestCase;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
-
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
+import junit.framework.TestCase;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
@@ -118,7 +115,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    return ((127 * " + "value".hashCode() + ") ^ (value.hashCode()));",
+        "    return (" + 127 * "value".hashCode() + " ^ (value.hashCode()));",
         "  }",
         "}"
     );
@@ -208,7 +205,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    return ((127 * " + "value".hashCode() + ") ^ (Arrays.hashCode(value)));",
+        "    return (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)));",
         "  }",
         "}"
     );
@@ -285,7 +282,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "    if (enums == null) {",
         "      throw new NullPointerException(\"Null enums\");",
         "    }",
-        "    this.enums = enums.toArray(new MyEnum[enums.size()];",
+        "    this.enums = enums.toArray(new MyEnum[0];",
         "  }",
         "",
         "  @Override public Class<? extends MyAnnotation> annotationType() {",
@@ -330,8 +327,8 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "",
         "  @Override public int hashCode() {",
         "    return ",
-        "        ((127 * " + "value".hashCode() + ") ^ (Arrays.hashCode(value))) +",
-        "        ((127 * " + "enums".hashCode() + ") ^ (Arrays.hashCode(enums)));",
+        "        (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value))) +",
+        "        (" + 127 * "enums".hashCode() + " ^ (Arrays.hashCode(enums)));",
         "  }",
         "",
         "  private static int[] intArrayFromCollection(Collection<Integer> c) {",

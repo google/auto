@@ -17,12 +17,9 @@ package com.google.auto.value;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
-
-import junit.framework.TestCase;
-
-import org.junit.Ignore;
-
 import java.util.Map;
+import junit.framework.TestCase;
+import org.junit.Ignore;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)

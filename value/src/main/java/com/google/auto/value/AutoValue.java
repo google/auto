@@ -13,6 +13,7 @@
  */
 package com.google.auto.value;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -71,4 +72,21 @@ public @interface AutoValue {
   @Retention(RetentionPolicy.SOURCE)
   @Target(ElementType.TYPE)
   public @interface Builder {}
+
+  /**
+   * Specifies that AutoValue should copy any annotations from the annotated element to the
+   * generated class. This annotation supports classes and methods.
+   *
+   * <p>The following annotations are excluded: 1. AutoValue and its nested annotations. 2. Any
+   * annotation appearing in the {@link AutoValue.CopyAnnotations#exclude} field. 3. Any class
+   * annotation which is itself annotated with the {@link java.lang.annotation.Inherited}
+   * meta-annotation.
+   *
+   * @author Carmi Grushko
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target({ElementType.TYPE, ElementType.METHOD})
+  public @interface CopyAnnotations {
+    Class<? extends Annotation>[] exclude() default {};
+  }
 }

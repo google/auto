@@ -33,8 +33,8 @@ abstract class Animal {
 
   @AutoValue.Builder
   abstract static class Builder {
-    abstract Builder name(String value);
-    abstract Builder numberOfLegs(int value);
+    abstract Builder setName(String value);
+    abstract Builder setNumberOfLegs(int value);
     abstract Animal build();
   }
 }
@@ -48,14 +48,17 @@ examples clean and short.
 
 ```java
 public void testAnimal() {
-  Animal dog = Animal.builder().name("dog").numberOfLegs(4).build();
+  Animal dog = Animal.builder().setName("dog").setNumberOfLegs(4).build();
   assertEquals("dog", dog.name());
   assertEquals(4, dog.numberOfLegs());
 
   // You probably don't need to write assertions like these; just illustrating.
-  assertTrue(Animal.builder().name("dog").numberOfLegs(4).build().equals(dog));
-  assertFalse(Animal.builder().name("cat").numberOfLegs(4).build().equals(dog));
-  assertFalse(Animal.builder().name("dog").numberOfLegs(2).build().equals(dog));
+  assertTrue(
+      Animal.builder().setName("dog").setNumberOfLegs(4).build().equals(dog));
+  assertFalse(
+      Animal.builder().setName("cat").setNumberOfLegs(4).build().equals(dog));
+  assertFalse(
+      Animal.builder().setName("dog").setNumberOfLegs(2).build().equals(dog));
 
   assertEquals("Animal{name=dog, numberOfLegs=4}", dog.toString());
 }

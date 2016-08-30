@@ -15,19 +15,20 @@
  */
 package tests;
 
+import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 final class ConstructorAnnotatedFactory {
   private final Provider<Object> objProvider;
 
   @Inject ConstructorAnnotatedFactory(Provider<Object> objProvider) {
-    this.objProvider = objProvider;
+    this.objProvider = Preconditions.checkNotNull(objProvider, 1);
   }
 
   ConstructorAnnotated create() {
@@ -35,14 +36,14 @@ final class ConstructorAnnotatedFactory {
   }
 
   ConstructorAnnotated create(String s) {
-    return new ConstructorAnnotated(s);
+    return new ConstructorAnnotated(Preconditions.checkNotNull(s, 1));
   }
 
   ConstructorAnnotated create(int i) {
-    return new ConstructorAnnotated(objProvider.get(), i);
+    return new ConstructorAnnotated(Preconditions.checkNotNull(objProvider.get(), 1), i);
   }
 
   ConstructorAnnotated create(char c) {
-    return new ConstructorAnnotated(objProvider.get(), c);
+    return new ConstructorAnnotated(Preconditions.checkNotNull(objProvider.get(), 1), c);
   }
 }

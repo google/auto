@@ -33,16 +33,16 @@ How do I...
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
-Just as you can choose to use JavaBeans-style names for property getters
-(`getFoo()` instead of plain `foo()`) in your value class, you can use them for
-setters in builders too (`setFoo(value)` instead of plain `foo(value)`). As with
-getters, you must use these prefixes consistently or not at all.
+Just as you can choose whether to use JavaBeans-style names for property getters
+(`getFoo()` or just `foo()`) in your value class, you have the same choice for
+setters in builders too (`setFoo(value)` or just `foo(value)`). As with getters,
+you must use these prefixes consistently or not at all.
 
 Using `get`/`is` prefixes for getters and using the `set` prefix for setters are
 independent choices. For example, it is fine to use the `set` prefixes on all
 your builder methods, but omit the `get`/`is` prefixes from all your accessors.
 
-Here is the `Animal` example using both `get` and `set` prefixes:
+Here is the `Animal` example using `get` prefixes but not `set` prefixes:
 
 ```java
 @AutoValue
@@ -56,8 +56,8 @@ abstract class Animal {
 
   @AutoValue.Builder
   abstract static class Builder {
-    abstract Builder setName(String value);
-    abstract Builder setNumberOfLegs(int value);
+    abstract Builder name(String value);
+    abstract Builder numberOfLegs(int value);
     abstract Animal build();
   }
 }
@@ -73,11 +73,11 @@ Use whichever names you like; AutoValue doesn't actually care.
 
 What should happen when a caller does not supply a value for a property before
 calling `build()`? If the property in question is [nullable](howto.md#nullable),
-it will simply default to `null` as you would expect. And if it is
-[Optional](#optional) it will default to an empty `Optional` as you might
-also expect. But if it isn't either of those things (including if it is a
-primitive-valued property, which *can't* be null), then `build()` will throw an
-unchecked exception.
+it will simply default to `null` as you would expect. And if it is [Optional]
+(#optional) it will default to an empty `Optional` as you might also expect. But
+if it isn't either of those things (including if it is a primitive-valued
+property, which *can't* be null), then `build()` will throw an unchecked
+exception.
 
 But this presents a problem, since one of the main *advantages* of a builder in
 the first place is that callers can specify only the properties they care about!
@@ -96,21 +96,21 @@ abstract class Animal {
 
   static Builder builder() {
     return new AutoValue_Animal.Builder()
-        .numberOfLegs(4);
+        .setNumberOfLegs(4);
   }
 
   @AutoValue.Builder
   abstract static class Builder {
-    abstract Builder name(String value);
-    abstract Builder numberOfLegs(int value);
+    abstract Builder setName(String value);
+    abstract Builder setNumberOfLegs(int value);
     abstract Animal build();
   }
 }
 ```
 
-Occasionally you may want to supply a default value, but only if the
-property is not set explicitly. This is covered in the section on
-[normalization](#normalize).
+Occasionally you may want to supply a default value, but only if the property is
+not set explicitly. This is covered in the section on [normalization]
+(#normalize).
 
 ## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
@@ -148,13 +148,13 @@ public abstract class Animal {
   abstract Builder toBuilder();
 
   public Animal withName(String name) {
-    return toBuilder().name(name).build();
+    return toBuilder().setName(name).build();
   }
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder name(String value);
-    public abstract Builder numberOfLegs(int value);
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
     public abstract Animal build();
   }
 }
@@ -189,8 +189,8 @@ public abstract class Animal {
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder name(String value);
-    public abstract Builder numberOfLegs(int value);
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
 
     abstract Animal autoBuild();  // not public
 
@@ -224,7 +224,7 @@ public abstract class Animal {
     public abstract Builder setName(String value);
     public abstract Builder setNumberOfLegs(int value);
 
-    abstract String name(); // matches method name in Animal
+    abstract String name(); // must match method name in Animal
 
     abstract Animal autoBuild(); // not public
 
@@ -236,9 +236,9 @@ public abstract class Animal {
 }
 ```
 
-The getter in your builder must have the same signature as the abstract
-property accessor method in the value class. It will return the value that has
-been set on the `Builder`. If no value has been set for a non-[nullable]
+The getter in your builder must have the same signature as the abstract property
+accessor method in the value class. It will return the value that has been set
+on the `Builder`. If no value has been set for a non-[nullable]
 (howto.md#nullable) property, `IllegalStateException` is thrown.
 
 Getters should generally only be used within the `Builder` as shown, so they are
@@ -274,7 +274,7 @@ public abstract class Animal {
 
     public Animal build() {
       if (!name().isPresent()) {
-        setName(numberOfLegs() + "-legged creature);
+        setName(numberOfLegs() + "-legged creature");
       }
       return autoBuild();
     }
@@ -286,9 +286,9 @@ Notice that this will throw `IllegalStateException` if the `numberOfLegs`
 property hasn't been set either.
 
 The Optional wrapping can be any of the Optional types mentioned in the
-[section](#optional) on `Optional` properties. If your property has type
-`int` it can be wrapped as either `Optional<Integer>` or `OptionalInt`,
-and likewise for `long` and `double`.
+[section](#optional) on `Optional` properties. If your property has type `int`
+it can be wrapped as either `Optional<Integer>` or `OptionalInt`, and likewise
+for `long` and `double`.
 
 ## <a name="both"></a>... expose *both* a builder *and* a factory method?
 
@@ -299,16 +299,16 @@ implementation will have to invoke the builder itself.
 
 ## <a name="optional"></a>... handle `Optional` properties?
 
-Properties of type `Optional` benefit from special treatment. If you
-have a property of type `Optional<String>`, say, then it will default
-to an empty `Optional` without needing to [specify](#default) a default
-explicitly. And, instead of or as well as the normal `setFoo(Optional<String>)`
-method, you can have `setFoo(String)`. Then `setFoo(s)` is equivalent to
+Properties of type `Optional` benefit from special treatment. If you have a
+property of type `Optional<String>`, say, then it will default to an empty
+`Optional` without needing to [specify](#default) a default explicitly. And,
+instead of or as well as the normal `setFoo(Optional<String>)` method, you can
+have `setFoo(String)`. Then `setFoo(s)` is equivalent to
 `setFoo(Optional.of(s))`.
 
-Here, `Optional` means either [`java.util.Optional`] from Java (Java 8
-or later), or [`com.google.common.base.Optional`] from Guava. Java 8
-also introduced related classes in `java.util` called [`OptionalInt`],
+Here, `Optional` means either [`java.util.Optional`] from Java (Java 8 or
+later), or [`com.google.common.base.Optional`] from Guava. Java 8 also
+introduced related classes in `java.util` called [`OptionalInt`],
 [`OptionalLong`], and [`OptionalDouble`]. You can use those in the same way. For
 example a property of type `OptionalInt` will default to `OptionalInt.empty()`
 and you can set it with either `setFoo(OptionalInt)` or `setFoo(int)`.
@@ -354,10 +354,10 @@ public abstract class Animal {
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder name(String value);
-    public abstract Builder numberOfLegs(int value);
-    public abstract Builder countries(Set<String> value);
-    public abstract Builder countries(String... value);
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
+    public abstract Builder setCountries(Set<String> value);
+    public abstract Builder setCountries(String... value);
     public abstract Animal build();
   }
 }
@@ -385,8 +385,8 @@ public abstract class Animal {
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder name(String value);
-    public abstract Builder numberOfLegs(int value);
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
     public abstract ImmutableSet.Builder<String> countriesBuilder();
     public abstract Animal build();
   }
@@ -399,8 +399,8 @@ create their instance in a single chained statement:
 ```java
   // This DOES NOT work!
   Animal dog = Animal.builder()
-      .name("dog")
-      .numberOfLegs(4)
+      .setName("dog")
+      .setNumberOfLegs(4)
       .countriesBuilder()
           .add("Guam")
           .add("Laos")
@@ -412,8 +412,8 @@ Instead they are forced to hold the builder itself in a temporary variable:
 ```java
   // This DOES work... but we have to "break the chain"!
   Animal.Builder builder = Animal.builder()
-      .name("dog")
-      .numberOfLegs(4);
+      .setName("dog")
+      .setNumberOfLegs(4);
   builder.countriesBuilder()
       .add("Guam")
       .add("Laos");
@@ -440,8 +440,8 @@ public abstract class Animal {
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder name(String value);
-    public abstract Builder numberOfLegs(int value);
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
 
     abstract ImmutableSet.Builder<String> countriesBuilder();
     public Builder addCountry(String value) {
@@ -459,8 +459,8 @@ Now the caller can do this:
 ```java
   // This DOES work!
   Animal dog = Animal.builder()
-      .name("dog")
-      .numberOfLegs(4)
+      .setName("dog")
+      .setNumberOfLegs(4)
       .addCountry("Guam")
       .addCountry("Laos") // however many times needed
       .build();

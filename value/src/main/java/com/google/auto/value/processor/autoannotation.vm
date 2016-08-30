@@ -67,9 +67,15 @@ final class $className implements $annotationName {
 
     this.$p = ${members[$p].typeMirror.componentType}ArrayFromCollection($p);
 
+    #elseif ($members[$p].arrayOfClassWithBounds)
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    ${members[$p].componentType}[] ${p}$ = ${p}.toArray(new Class[0]);
+    this.$p = ${p}$;
+
     #else
 
-    this.$p = ${p}.toArray(new ${members[$p].componentType}[${p}.size()]);
+    this.$p = ${p}.toArray(new ${members[$p].componentType}[0]);
 
     #end
   #else
@@ -232,6 +238,13 @@ final class $className implements $annotationName {
   #end
 #end
 
+## Compute the member name's contribution to the hashcode directly in the
+## template engine, to avoid triggering a compiler error for integer overflow.
+#macro (memberNameHash $m)
+  #set ($hc = 127 * $m.toString().hashCode())
+  ${hc} ##
+#end
+
   @Override
   public int hashCode() {
   #if ($members.isEmpty())
@@ -243,13 +256,13 @@ final class $className implements $annotationName {
     return
     #foreach ($m in $members)
 
-        ((127 * ${m.toString().hashCode()}) ^ (#memberHashCodeExpression($m))) ##
+        (#memberNameHash($m) ^ (#memberHashCodeExpression($m))) ##
         #if ($foreach.hasNext) + #end
     #end
         ;
     #foreach ($m in $members)
 
-    // ${m.toString().hashCode()} is "${m}".hashCode()
+    // #memberNameHash($m) is 127 * "${m}".hashCode()
     #end
 
   #end

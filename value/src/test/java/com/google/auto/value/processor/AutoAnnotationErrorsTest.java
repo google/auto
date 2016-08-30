@@ -21,10 +21,8 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
-
-import junit.framework.TestCase;
-
 import javax.tools.JavaFileObject;
+import junit.framework.TestCase;
 
 /**
  * Tests for compilation errors with the AutoAnnotation processor.
@@ -322,5 +320,39 @@ public class AutoAnnotationErrorsTest extends TestCase {
             "@AutoAnnotation cannot yet supply a default value for annotation-valued member "
                 + "'optionalAnnotation'")
         .in(testSource).onLine(7);
+  }
+
+  public void testAnnotationMemberNameConflictWithGeneratedLocal() {
+    JavaFileObject annotationSource = JavaFileObjects.forSourceLines(
+        "com.example.TestAnnotation",
+        "package com.example;",
+        "",
+        "import java.lang.annotation.Annotation;",
+        "",
+        "public @interface TestAnnotation {",
+        "  Class<? extends Annotation>[] value();",
+        "  int value$();",
+        "}");
+    JavaFileObject testSource = JavaFileObjects.forSourceLines(
+        "com.foo.Test",
+        "package com.foo;",
+        "",
+        "import java.lang.annotation.Annotation;",
+        "import java.util.Collection;",
+        "",
+        "import com.example.TestAnnotation;",
+        "import com.google.auto.value.AutoAnnotation;",
+        "",
+        "class Test {",
+        "  @AutoAnnotation static TestAnnotation newTestAnnotation(",
+        "     Collection<Class<? extends Annotation>> value, int value$) {",
+        "    return new AutoAnnotation_Test_newTestAnnotation(value, value$);",
+        "  }",
+        "}");
+    assert_().about(javaSources())
+        .that(ImmutableList.of(annotationSource, testSource))
+        .processedWith(new AutoAnnotationProcessor())
+        .failsToCompile()
+        .withErrorContaining("variable value$ is already defined in constructor");
   }
 }

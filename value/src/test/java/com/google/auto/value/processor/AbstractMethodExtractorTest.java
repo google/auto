@@ -16,10 +16,8 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableMultimap;
-
-import junit.framework.TestCase;
-
 import java.io.StringReader;
+import junit.framework.TestCase;
 
 /**
  * Tests for {@link AbstractMethodExtractor}.

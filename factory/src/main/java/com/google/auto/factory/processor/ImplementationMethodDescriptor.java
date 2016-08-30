@@ -25,9 +25,12 @@ abstract class ImplementationMethodDescriptor {
   abstract TypeMirror returnType();
   abstract boolean publicMethod();
   abstract ImmutableSet<Parameter> passedParameters();
+  abstract boolean isVarArgs();
 
   static Builder builder() {
-    return new AutoValue_ImplementationMethodDescriptor.Builder().publicMethod(true);
+    return new AutoValue_ImplementationMethodDescriptor.Builder()
+        .publicMethod(true)
+        .isVarArgs(false);
   }
 
   @AutoValue.Builder
@@ -36,6 +39,7 @@ abstract class ImplementationMethodDescriptor {
     abstract Builder returnType(TypeMirror returnTypeElement);
     abstract Builder publicMethod(boolean publicMethod);
     abstract Builder passedParameters(Iterable<Parameter> passedParameters);
+    abstract Builder isVarArgs(boolean isVarargs);
     abstract ImplementationMethodDescriptor build();
 
     Builder publicMethod() {

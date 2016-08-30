@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
 
@@ -65,6 +64,13 @@ class AutoValueTemplateVars extends TemplateVars {
    * {@code "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
    */
   String gwtCompatibleAnnotation;
+
+  /**
+   * The full spelling of any annotation to add to this class, or an empty list if there are none. A
+   * non-empty value might look something like {@code
+   * "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   */
+  ImmutableList<String> annotations;
 
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;

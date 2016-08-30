@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -43,7 +42,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -127,8 +125,20 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    */
   protected abstract Iterable<? extends ProcessingStep> initSteps();
 
-  /** An optional hook for logic to be executed at the end of each round. */
+  /**
+   * An optional hook for logic to be executed at the end of each round.
+   *
+   * @deprecated use {@link #postRound(RoundEnvironment)} instead
+   */
+  @Deprecated
   protected void postProcess() {}
+
+  /** An optional hook for logic to be executed at the end of each round. */
+  protected void postRound(RoundEnvironment roundEnv) {
+    if (!roundEnv.processingOver()) {
+      postProcess();
+    }
+  }
 
   private ImmutableSet<? extends Class<? extends Annotation>> getSupportedAnnotationClasses() {
     checkState(steps != null);
@@ -164,13 +174,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     // If this is the last round, report all of the missing elements
     if (roundEnv.processingOver()) {
+      postRound(roundEnv);
       reportMissingElements(deferredElements, elementsDeferredBySteps.values());
       return false;
     }
 
     process(validElements(deferredElements, roundEnv));
 
-    postProcess();
+    postRound(roundEnv);
 
     return false;
   }

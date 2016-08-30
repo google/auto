@@ -17,13 +17,11 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;
-
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-
 import javax.lang.model.type.TypeMirror;
 
 /**

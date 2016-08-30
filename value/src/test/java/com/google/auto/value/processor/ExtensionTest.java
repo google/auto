@@ -22,14 +22,19 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Truth;
+import com.google.testing.compile.CompileTester.SuccessfulCompilationClause;
 import com.google.testing.compile.JavaFileObjects;
-
-import junit.framework.TestCase;
-
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Collections;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import java.util.Set;
-
+import java.util.jar.JarOutputStream;
+import java.util.zip.ZipEntry;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -37,6 +42,8 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
+import junit.framework.TestCase;
 
 public class ExtensionTest extends TestCase {
   public void testExtensionCompilation() throws Exception {
@@ -461,6 +468,50 @@ public class ExtensionTest extends TestCase {
     // The error here comes from the Java compiler rather than AutoValue, so we don't assume
     // much about what it looks like. On the other hand, the warning does come from AutoValue
     // so we know what to expect.
+  }
+
+  /**
+   * Tests that the search for extensions doesn't completely blow AutoValue up if there is a
+   * corrupt jar in the {@code processorpath}. If we're not careful, that can lead to a
+   * ServiceConfigurationError.
+   */
+  public void testBadJarDoesntBlowUp() throws IOException {
+    File badJar = File.createTempFile("bogus", ".jar");
+    try {
+      doTestBadJarDoesntBlowUp(badJar);
+    } finally {
+      badJar.delete();
+    }
+  }
+
+  private void doTestBadJarDoesntBlowUp(File badJar) throws IOException {
+    FileOutputStream fileOutputStream = new FileOutputStream(badJar);
+    JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream);
+    byte[] bogusLine = "bogus line\n".getBytes("UTF-8");
+    ZipEntry zipEntry = new ZipEntry("META-INF/services/" + AutoValueExtension.class.getName());
+    zipEntry.setSize(bogusLine.length);
+    jarOutputStream.putNextEntry(zipEntry);
+    jarOutputStream.write(bogusLine);
+    jarOutputStream.close();
+    ClassLoader badJarLoader = new URLClassLoader(new URL[] {badJar.toURI().toURL()});
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "}");
+    SuccessfulCompilationClause success = assertThat(javaFileObject)
+        .withCompilerOptions("-Xlint:-processing")
+        .processedWith(new AutoValueProcessor(badJarLoader))
+        .compilesWithoutError();
+    success.withWarningContaining(
+        "This may be due to a corrupt jar file in the compiler's classpath. Exception: "
+            + ServiceConfigurationError.class.getName());
+    success.and()
+        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
   }
 
   private static class FooExtension extends AutoValueExtension {

@@ -25,11 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
-
-import junit.framework.TestCase;
-
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
@@ -43,8 +42,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import javax.annotation.Nullable;
+import junit.framework.TestCase;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
@@ -807,6 +806,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("SelfEquals")
   public void testExplicitEquals() throws Exception {
     ExplicitEquals instance = ExplicitEquals.create();
     assertEquals(0, instance.equalsCount);
@@ -1944,28 +1944,98 @@ public class AutoValueTest extends TestCase {
     NestedAnnotation anAnnotation();
   }
 
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface CopiedAnnotation {}
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface ExcludedAnnotation {}
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Inherited
+  @interface InheritedAnnotation {}
+
+  @CopiedAnnotation
+  @ExcludedAnnotation
+  @InheritedAnnotation
   @AutoValue
+  @AutoValue.CopyAnnotations(exclude = {ExcludedAnnotation.class})
   abstract static class CopyAnnotation {
     @HairyAnnotation(
-        aString = "hello",
-        aClass = Integer.class,
-        anEnum = RetentionPolicy.RUNTIME,
-        anAnnotation = @NestedAnnotation(
+      aString = "hello",
+      aClass = Integer.class,
+      anEnum = RetentionPolicy.RUNTIME,
+      anAnnotation =
+          @NestedAnnotation(
             anInt = 73,
-            aClassArray = {String.class, Object.class}))
-    abstract String id();
+            aClassArray = {String.class, Object.class}
+          )
+    )
+    abstract String field1();
 
-    static CopyAnnotation create(String id) {
-      return new AutoValue_AutoValueTest_CopyAnnotation(id);
+    @CopiedAnnotation
+    @ExcludedAnnotation
+    @InheritedAnnotation
+    @AutoValue.CopyAnnotations(exclude = {ExcludedAnnotation.class})
+    abstract String field2();
+
+    static CopyAnnotation create() {
+      return new AutoValue_AutoValueTest_CopyAnnotation("field1", "field2");
     }
   }
 
-  public void testCopyAnnotations() throws Exception {
-    CopyAnnotation x = CopyAnnotation.create("id");
+  public void testCopyClassAnnotations() throws Exception {
+    CopyAnnotation x = CopyAnnotation.create();
     Class<?> c = x.getClass();
     assertNotSame(CopyAnnotation.class, c);
-    Method methodInSubclass = c.getDeclaredMethod("id");
-    Method methodInSuperclass = CopyAnnotation.class.getDeclaredMethod("id");
+
+    // Sanity check: if these don't appear on CopyAnnotation, it makes no sense to assert that they
+    // don't appear on the AutoValue_ subclass.
+    {
+      List<Class<? extends Annotation>> annotationsOnSuperclass =
+          new ArrayList<Class<? extends Annotation>>();
+      for (Annotation annotation : CopyAnnotation.class.getDeclaredAnnotations()) {
+        annotationsOnSuperclass.add(annotation.annotationType());
+      }
+      assertThat(annotationsOnSuperclass)
+          .containsAllOf(
+              CopiedAnnotation.class, ExcludedAnnotation.class, InheritedAnnotation.class);
+    }
+
+    {
+      List<Class<? extends Annotation>> annotationsOnSubclass =
+          new ArrayList<Class<? extends Annotation>>();
+      for (Annotation annotation : c.getDeclaredAnnotations()) {
+        annotationsOnSubclass.add(annotation.annotationType());
+      }
+      assertThat(annotationsOnSubclass).containsExactly(CopiedAnnotation.class);
+    }
+  }
+
+  public void testCopyMethodAnnotations() throws Exception {
+    CopyAnnotation x = CopyAnnotation.create();
+    Class<?> c = x.getClass();
+    assertNotSame(CopyAnnotation.class, c);
+
+    Method methodInSubclass = c.getDeclaredMethod("field2");
+    Method methodInSuperclass = CopyAnnotation.class.getDeclaredMethod("field2");
+
+    // Sanity check: if these don't appear on CopyAnnotation, it makes no sense to assert that they
+    // don't appear on the AutoValue_ subclass.
+    assertThat(methodInSuperclass.isAnnotationPresent(CopiedAnnotation.class)).isTrue();
+    assertThat(methodInSuperclass.isAnnotationPresent(ExcludedAnnotation.class)).isTrue();
+    assertThat(methodInSuperclass.isAnnotationPresent(InheritedAnnotation.class)).isTrue();
+
+    assertThat(methodInSubclass.isAnnotationPresent(CopiedAnnotation.class)).isTrue();
+    assertThat(methodInSubclass.isAnnotationPresent(ExcludedAnnotation.class)).isFalse();
+    assertThat(methodInSubclass.isAnnotationPresent(InheritedAnnotation.class)).isTrue();
+  }
+
+  public void testCopyMethodAnnotationsByDefault() throws Exception {
+    CopyAnnotation x = CopyAnnotation.create();
+    Class<?> c = x.getClass();
+    assertNotSame(CopyAnnotation.class, c);
+    Method methodInSubclass = c.getDeclaredMethod("field1");
+    Method methodInSuperclass = CopyAnnotation.class.getDeclaredMethod("field1");
     assertNotSame(methodInSuperclass, methodInSubclass);
     HairyAnnotation annotationInSubclass =
         methodInSubclass.getAnnotation(HairyAnnotation.class);

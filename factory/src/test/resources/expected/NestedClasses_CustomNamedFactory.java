@@ -19,9 +19,9 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 
 @Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-)
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 final class NestedClasses_CustomNamedFactory {
   @Inject NestedClasses_CustomNamedFactory() {}
 

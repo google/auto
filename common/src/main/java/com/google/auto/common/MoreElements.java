@@ -16,6 +16,8 @@
  */
 package com.google.auto.common;
 
+import static javax.lang.model.element.ElementKind.PACKAGE;
+
 import com.google.common.annotations.Beta;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -23,15 +25,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
-
 import java.lang.annotation.Annotation;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementVisitor;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
@@ -42,8 +41,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
-
-import static javax.lang.model.element.ElementKind.PACKAGE;
 
 /**
  * Static utility methods pertaining to {@link Element} instances.
@@ -65,16 +62,18 @@ public final class MoreElements {
     return (PackageElement) element;
   }
 
-  private static final ElementVisitor<PackageElement, Void> PACKAGE_ELEMENT_VISITOR =
-      new SimpleElementVisitor6<PackageElement, Void>() {
-        @Override protected PackageElement defaultAction(Element e, Void p) {
-          throw new IllegalArgumentException();
-        }
+  private static final class PackageElementVisitor extends CastingElementVisitor<PackageElement> {
+    private static final PackageElementVisitor INSTANCE = new PackageElementVisitor();
 
-        @Override public PackageElement visitPackage(PackageElement e, Void p) {
-          return e;
-        }
-      };
+    PackageElementVisitor() {
+      super("package element");
+    }
+
+    @Override
+    public PackageElement visitPackage(PackageElement e, Void ignore) {
+      return e;
+    }
+  }
 
   /**
    * Returns the given {@link Element} instance as {@link PackageElement}.
@@ -86,19 +85,21 @@ public final class MoreElements {
    * @throws IllegalArgumentException if {@code element} isn't a {@link PackageElement}.
    */
   public static PackageElement asPackage(Element element) {
-    return element.accept(PACKAGE_ELEMENT_VISITOR, null);
+    return element.accept(PackageElementVisitor.INSTANCE, null);
   }
 
-  private static final ElementVisitor<TypeElement, Void> TYPE_ELEMENT_VISITOR =
-      new SimpleElementVisitor6<TypeElement, Void>() {
-        @Override protected TypeElement defaultAction(Element e, Void p) {
-          throw new IllegalArgumentException();
-        }
+  private static final class TypeElementVisitor extends CastingElementVisitor<TypeElement> {
+    private static final TypeElementVisitor INSTANCE = new TypeElementVisitor();
 
-        @Override public TypeElement visitType(TypeElement e, Void p) {
-          return e;
-        }
-      };
+    TypeElementVisitor() {
+      super("type element");
+    }
+
+    @Override
+    public TypeElement visitType(TypeElement e, Void ignore) {
+      return e;
+    }
+  }
 
   /**
    * Returns true if the given {@link Element} instance is a {@link TypeElement}.
@@ -122,19 +123,21 @@ public final class MoreElements {
    * @throws IllegalArgumentException if {@code element} isn't a {@link TypeElement}.
    */
   public static TypeElement asType(Element element) {
-    return element.accept(TYPE_ELEMENT_VISITOR, null);
+    return element.accept(TypeElementVisitor.INSTANCE, null);
   }
 
-  private static final ElementVisitor<VariableElement, Void> VARIABLE_ELEMENT_VISITOR =
-      new SimpleElementVisitor6<VariableElement, Void>() {
-        @Override protected VariableElement defaultAction(Element e, Void p) {
-          throw new IllegalArgumentException();
-        }
+  private static final class VariableElementVisitor extends CastingElementVisitor<VariableElement> {
+    private static final VariableElementVisitor INSTANCE = new VariableElementVisitor();
 
-        @Override public VariableElement visitVariable(VariableElement e, Void p) {
-          return e;
-        }
-      };
+    VariableElementVisitor() {
+      super("variable element");
+    }
+
+    @Override
+    public VariableElement visitVariable(VariableElement e, Void ignore) {
+      return e;
+    }
+  }
 
   /**
    * Returns the given {@link Element} instance as {@link VariableElement}.
@@ -146,19 +149,22 @@ public final class MoreElements {
    * @throws IllegalArgumentException if {@code element} isn't a {@link VariableElement}.
    */
   public static VariableElement asVariable(Element element) {
-    return element.accept(VARIABLE_ELEMENT_VISITOR, null);
+    return element.accept(VariableElementVisitor.INSTANCE, null);
   }
 
-  private static final ElementVisitor<ExecutableElement, Void> EXECUTABLE_ELEMENT_VISITOR =
-      new SimpleElementVisitor6<ExecutableElement, Void>() {
-        @Override protected ExecutableElement defaultAction(Element e, Void p) {
-          throw new IllegalArgumentException();
-        }
+  private static final class ExecutableElementVisitor
+      extends CastingElementVisitor<ExecutableElement> {
+    private static final ExecutableElementVisitor INSTANCE = new ExecutableElementVisitor();
 
-        @Override public ExecutableElement visitExecutable(ExecutableElement e, Void p) {
-          return e;
-        }
-      };
+    ExecutableElementVisitor() {
+      super("executable element");
+    }
+
+    @Override
+    public ExecutableElement visitExecutable(ExecutableElement e, Void label) {
+      return e;
+    }
+  }
 
   /**
    * Returns the given {@link Element} instance as {@link ExecutableElement}.
@@ -170,7 +176,7 @@ public final class MoreElements {
    * @throws IllegalArgumentException if {@code element} isn't a {@link ExecutableElement}.
    */
   public static ExecutableElement asExecutable(Element element) {
-    return element.accept(EXECUTABLE_ELEMENT_VISITOR, null);
+    return element.accept(ExecutableElementVisitor.INSTANCE, null);
   }
 
   /**
@@ -178,6 +184,14 @@ public final class MoreElements {
    * {@linkplain AnnotationMirror#getAnnotationType() annotation type} has the same canonical name
    * as that of {@code annotationClass}. This method is a safer alternative to calling
    * {@link Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
+
+   . This() {
+   super();
+   }
+
+   . This() {
+   super();
+   }
    * annotation proxies.
    */
   public static boolean isAnnotationPresent(Element element,
@@ -323,6 +337,19 @@ public final class MoreElements {
         return getPackage(method).equals(pkg);
       default:
         return true;
+    }
+  }
+
+  private abstract static class CastingElementVisitor<T> extends SimpleElementVisitor6<T, Void> {
+    private final String label;
+
+    CastingElementVisitor(String label) {
+      this.label = label;
+    }
+
+    @Override
+    protected final T defaultAction(Element e, Void ignore) {
+      throw new IllegalArgumentException(e + " does not represent a " + label);
     }
   }
 

@@ -16,7 +16,6 @@
 package com.google.auto.value.processor;
 
 import com.google.common.base.Function;
-
 import javax.lang.model.element.Element;
 
 enum SimpleNameFunction implements Function<Element, String> {
