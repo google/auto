@@ -63,6 +63,11 @@
       <artifactId>asm</artifactId>
       <version>4.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.squareup</groupId>
+      <artifactId>javapoet</artifactId>
+      <version>1.7.0</version>
+    </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>org.apache.velocity</groupId>
@@ -77,12 +82,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.testing.compile</groupId>
-      <artifactId>compile-testing</artifactId>
-      <version>0.9</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
@@ -91,8 +90,21 @@
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <version>0.25</version>
+      <version>0.28</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.testing.compile</groupId>
+      <artifactId>compile-testing</artifactId>
+      <version>0.9</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <!-- Don't drag Truth in transitively -->
+          <groupId>com.google.truth</groupId>
+          <artifactId>truth</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
@@ -154,6 +166,10 @@
                   <excludes>
                     <exclude>com.google.auto.value.**</exclude>
                   </excludes>
+                </relocation>
+                <relocation>
+                  <pattern>com.squareup.javapoet</pattern>
+                  <shadedPattern>autovalue.shaded.com.squareup.javapoet$</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>

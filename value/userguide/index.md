@@ -195,6 +195,7 @@ How do I...
     API?](howto.md#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract class?]
     (howto.md#interface)
+*   ... [**memoize** derived properties?](howto.md#memoize)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
 
