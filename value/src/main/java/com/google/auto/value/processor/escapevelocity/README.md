@@ -41,7 +41,7 @@ if (in == null) {
   throw new IllegalArgumentException("Could not find resource foo.vm");
 }
 Reader reader = new BufferedReader(new InputStreamReader(in));
-Template template = Template.from(reader);
+Template template = Template.parseFrom(reader);
 ```
 
 ## Expanding a template
