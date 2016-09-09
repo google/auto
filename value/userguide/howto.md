@@ -35,6 +35,7 @@ How do I...
 *   ... [expose a **constructor**, not factory method, as my public creation
     API?](#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract class?](#interface)
+*   ... [**memoize** derived properties?](#memoize)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -359,4 +360,78 @@ other hand, you would lose the immutability guarantee, and you'd also invite
 more of the kind of bad behavior described in [this best-practices item]
 (practices.md#simple). On balance, we don't think it's worth it.
 
+## <a name="memoize"></a>... memoize derived properties? {#memoize}
+
+Sometimes your class has properties that are derived from the ones that
+AutoValue implements. You'd typically implement them with a concrete method that
+uses the other properties:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+  
+  String derivedProperty() {
+    return someFunctionOf(barProperty());
+  }
+}
+```
+
+But what if `someFunctionOf(Bar)` is expensive? You'd like to calculate it only
+one time, and reuse the value for future calls. Normal lazy-instantiation is
+straightforward but involves a fair amount of boilerplate, especially to avoid
+concurrency bugs:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+
+  private String derivedProperty;
+  
+  String derivedProperty() {
+    synchronized (this) {
+      if (derivedProperty == null) {
+        derivedProperty = someFunctionOf(barProperty());
+      }
+    }
+    return derivedProperty;
+  }
+}
+```
+
+If `someFunctionOf(Bar)` can return `null` or the derived property is primitive,
+you need more boilerplate.
+
+Instead, just annotate each derived property method with [`@Memoized`]. Then
+AutoValue will override that method to return a stored value after the first
+call:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+
+  @Memoized
+  String derivedProperty() {
+    return someFunctionOf(barProperty());
+  }
+}
+```
+
+`@Memoized` methods may not:
+
+*   be `abstract` (except for `hashCode()` and `toString()`), `final`, or
+    `private`
+*   have parameters
+*   return `void`
+
+If you want to memoize `hashCode()` or `toString()`, you can redeclare them,
+keeping them `abstract`, and annotate them with `@Memoize`.
+
+If a `@Memoized` method is also annotated with `@Nullable`, then `null` values
+will be stored; if not, then the overriding method throws `NullPointerException`
+when the annotated method returns `null`.
+
+[`@Memoized`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/memoized/Memoized.java
 
