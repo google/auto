@@ -395,4 +395,12 @@ public class AutoFactoryProcessorTest {
         .and()
         .generatesSources(JavaFileObjects.forResource("expected/SimpleClassVarargsFactory.java"));
   }
+
+  @Test public void constructorWithException() {
+    assertThat(JavaFileObjects.forResource("good/ConstructorWithException.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(JavaFileObjects.forResource("expected/ConstructorWithExceptionFactory.java"));
+  }
 }

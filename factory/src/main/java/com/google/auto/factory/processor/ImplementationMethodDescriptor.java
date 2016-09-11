@@ -25,6 +25,7 @@ abstract class ImplementationMethodDescriptor {
   abstract TypeMirror returnType();
   abstract boolean publicMethod();
   abstract ImmutableSet<Parameter> passedParameters();
+  abstract ImmutableSet<? extends TypeMirror> thrownTypes();
   abstract boolean isVarArgs();
 
   static Builder builder() {
@@ -39,6 +40,7 @@ abstract class ImplementationMethodDescriptor {
     abstract Builder returnType(TypeMirror returnTypeElement);
     abstract Builder publicMethod(boolean publicMethod);
     abstract Builder passedParameters(Iterable<Parameter> passedParameters);
+    abstract Builder thrownTypes(Iterable<? extends TypeMirror> thrownTypes);
     abstract Builder isVarArgs(boolean isVarargs);
     abstract ImplementationMethodDescriptor build();
 

@@ -38,6 +38,7 @@ abstract class FactoryMethodDescriptor {
   abstract ImmutableSet<Parameter> passedParameters();
   abstract ImmutableSet<Parameter> providedParameters();
   abstract ImmutableSet<Parameter> creationParameters();
+  abstract ImmutableSet<? extends TypeMirror> thrownTypes();
   abstract Builder toBuilder();
   abstract boolean isVarArgs();
 
@@ -63,6 +64,7 @@ abstract class FactoryMethodDescriptor {
     abstract Builder passedParameters(Iterable<Parameter> passedParameters);
     abstract Builder providedParameters(Iterable<Parameter> providedParameters);
     abstract Builder creationParameters(Iterable<Parameter> creationParameters);
+    abstract Builder thrownTypes(Iterable<? extends TypeMirror> thrownTypes);
     abstract Builder isVarArgs(boolean isVarargs);
     abstract FactoryMethodDescriptor buildImpl();
 

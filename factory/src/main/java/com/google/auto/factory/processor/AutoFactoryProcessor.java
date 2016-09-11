@@ -192,6 +192,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                 .returnType(getAnnotatedType(autoFactoryElement))
                 .publicMethod()
                 .passedParameters(passedParameters)
+                .thrownTypes(methodType.getThrownTypes())
                 .isVarArgs(implementationMethod.isVarArgs())
                 .build());
       }

@@ -42,6 +42,9 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
 import javax.lang.model.util.Types;
+import javax.lang.model.type.TypeMirror;
+import com.squareup.javapoet.TypeName;
+import java.util.ArrayList;
 
 /**
  * A service that traverses an element and returns the set of factory methods defined therein.
@@ -141,6 +144,7 @@ final class FactoryDescriptorGenerator {
         .publicMethod(classElement.getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
+        .thrownTypes(constructor.getThrownTypes())
         .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
         .isVarArgs(constructor.isVarArgs())
         .build();

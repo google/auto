@@ -56,6 +56,7 @@ import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleTypeVisitor7;
 import javax.tools.JavaFileObject;
+import java.util.ArrayList;
 
 final class FactoryWriter {
 
@@ -137,6 +138,11 @@ final class FactoryWriter {
       }
       CodeBlock.Builder args = CodeBlock.builder();
       method.addParameters(parameters(methodDescriptor.passedParameters()));
+      ArrayList<TypeName> thrownTypeNames = new ArrayList<TypeName>();
+      for (TypeMirror tm : methodDescriptor.thrownTypes()) {
+        thrownTypeNames.add(TypeName.get(tm));
+      }
+      method.addExceptions(thrownTypeNames);
       Iterator<Parameter> parameters = methodDescriptor.creationParameters().iterator();
       for (int argumentIndex = 1; parameters.hasNext(); argumentIndex++) {
         Parameter parameter = parameters.next();
@@ -182,6 +188,11 @@ final class FactoryWriter {
       if (methodDescriptor.publicMethod()) {
         implementationMethod.addModifiers(PUBLIC);
       }
+      ArrayList<TypeName> thrownTypeNames = new ArrayList<TypeName>();
+      for (TypeMirror tm : methodDescriptor.thrownTypes()) {
+        thrownTypeNames.add(TypeName.get(tm));
+      }
+      implementationMethod.addExceptions(thrownTypeNames);
       implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
       implementationMethod.addStatement(
           "return create($L)",
