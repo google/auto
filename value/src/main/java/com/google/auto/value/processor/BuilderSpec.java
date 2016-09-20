@@ -486,7 +486,7 @@ class BuilderSpec {
   // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
   private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
     Set<ExecutableElement> methods = getLocalAndInheritedMethods(
-        typeElement, processingEnv.getElementUtils());
+        typeElement, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
     ImmutableSet.Builder<ExecutableElement> abstractMethods = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)) {
