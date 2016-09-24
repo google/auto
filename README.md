@@ -17,7 +17,7 @@ Save time.  Save code.  Save sanity.
 
   * [AutoFactory] - JSR-330-compatible factories
 
-    Latest version: `0.1-beta3`
+    Latest version: `1.0-beta3`
 
   * [AutoService] - Provider-configuration files for [`ServiceLoader`]
 
