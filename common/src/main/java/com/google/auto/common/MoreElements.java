@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +42,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
+import javax.lang.model.util.Types;
 
 /**
  * Static utility methods pertaining to {@link Element} instances.
@@ -270,9 +272,50 @@ public final class MoreElements {
    *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
    *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getElementUtils()
    *     getElementUtils()}
+   *
+   * @deprecated The method {@link #getLocalAndInheritedMethods(TypeElement, Types, Elements)}
+   *     has better consistency between Java compilers.
    */
+  @Deprecated
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
       TypeElement type, Elements elementUtils) {
+    Overrides overrides = new Overrides.NativeOverrides(elementUtils);
+    return getLocalAndInheritedMethods(type, overrides);
+  }
+
+  /**
+   * Returns the set of all non-private methods from {@code type}, including methods that it
+   * inherits from its ancestors. Inherited methods that are overridden are not included in the
+   * result. So if {@code type} defines {@code public String toString()}, the returned set will
+   * contain that method, but not the {@code toString()} method defined by {@code Object}.
+   *
+   * <p>The returned set may contain more than one method with the same signature, if
+   * {@code type} inherits those methods from different ancestors. For example, if it
+   * inherits from unrelated interfaces {@code One} and {@code Two} which each define
+   * {@code void foo();}, and if it does not itself override the {@code foo()} method,
+   * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   *
+   * @param type the type whose own and inherited methods are to be returned
+   * @param typeUtils a {@link Types} object, typically returned by
+   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getTypeUtils()
+   *     getTypeUtils()}
+   * @param elementUtils an {@link Elements} object, typically returned by
+   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getElementUtils()
+   *     getElementUtils()}
+   */
+  public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
+      TypeElement type, Types typeUtils, Elements elementUtils) {
+    // TODO(emcmanus): detect if the Types and Elements are the javac ones, and use
+    //   NativeOverrides if so. We may need to adjust the logic further to avoid the bug
+    //   tested for by MoreElementsTest.getLocalAndInheritedMethods_DaggerBug.
+    Overrides overrides = new Overrides.ExplicitOverrides(typeUtils, elementUtils);
+    return getLocalAndInheritedMethods(type, overrides);
+  }
+
+  private static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
+      TypeElement type, Overrides overrides) {
     SetMultimap<String, ExecutableElement> methodMap = LinkedHashMultimap.create();
     getLocalAndInheritedMethods(getPackage(type), type, methodMap);
     // Find methods that are overridden. We do this using `Elements.overrides`, which means
@@ -282,13 +325,13 @@ public final class MoreElements {
     // methods in ancestor types precede those in descendant types, which means we only have to
     // check a method against the ones that follow it in that order.
     Set<ExecutableElement> overridden = new LinkedHashSet<ExecutableElement>();
-    for (String methodName : methodMap.keySet()) {
-      List<ExecutableElement> methodList = ImmutableList.copyOf(methodMap.get(methodName));
+    for (Collection<ExecutableElement> methods : methodMap.asMap().values()) {
+      List<ExecutableElement> methodList = ImmutableList.copyOf(methods);
       for (int i = 0; i < methodList.size(); i++) {
         ExecutableElement methodI = methodList.get(i);
         for (int j = i + 1; j < methodList.size(); j++) {
           ExecutableElement methodJ = methodList.get(j);
-          if (elementUtils.overrides(methodJ, methodI, type)) {
+          if (overrides.overrides(methodJ, methodI, type)) {
             overridden.add(methodI);
           }
         }
@@ -325,7 +368,7 @@ public final class MoreElements {
     }
   }
 
-  private static boolean methodVisibleFromPackage(ExecutableElement method, PackageElement pkg) {
+  static boolean methodVisibleFromPackage(ExecutableElement method, PackageElement pkg) {
     // We use Visibility.ofElement rather than .effectiveVisibilityOfElement because it doesn't
     // really matter whether the containing class is visible. If you inherit a public method
     // then you have a public method, regardless of whether you inherit it from a public class.

@@ -2076,4 +2076,34 @@ public class AutoValueTest extends TestCase {
     InheritSameMethodTwice x = InheritSameMethodTwice.create(23);
     assertThat(x.something()).isEqualTo(23);
   }
+
+  // Make sure we behave correctly when we inherit the same method definition from more than
+  // one parent interface. We expect methods to appear in the order they are seen, with parents
+  // preceding children, the superclass of a class preceding interfaces that class implements,
+  // and an interface mentioned earlier in the "implements" clause preceding one mentioned later.
+  // https://github.com/google/auto/issues/372
+  interface OneTwoThreeFour {
+    String one();
+    String two();
+    boolean three();
+    long four();
+  }
+
+  interface TwoFour {
+    String two();
+    long four();
+  }
+
+  @AutoValue
+  abstract static class OneTwoThreeFourImpl implements OneTwoThreeFour, TwoFour {
+    static OneTwoThreeFourImpl create(String one, String two, boolean three, long four) {
+      return new AutoValue_AutoValueTest_OneTwoThreeFourImpl(one, two, three, four);
+    }
+  }
+
+  public void testOneTwoThreeFour() {
+    OneTwoThreeFour x = OneTwoThreeFourImpl.create("one", "two", false, 4);
+    assertThat(x.toString())
+        .isEqualTo("OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}");
+  }
 }

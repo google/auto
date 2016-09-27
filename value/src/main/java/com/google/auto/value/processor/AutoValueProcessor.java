@@ -437,8 +437,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     // If there are abstract methods that don't fit any of the categories above, that is an error
     // which we signal explicitly to avoid confusion.
 
-    ImmutableSet<ExecutableElement> methods =
-        getLocalAndInheritedMethods(type, processingEnv.getElementUtils());
+    ImmutableSet<ExecutableElement> methods = getLocalAndInheritedMethods(
+        type, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
     ImmutableSet<ExecutableElement> abstractMethods = abstractMethodsIn(methods);
 
     BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter);
