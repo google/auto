@@ -84,7 +84,7 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   Boolean gwtCompatible;
 
-  private static final Template TEMPLATE = parsedTemplateForResource("autoannotation.vm");
+  private static final Template TEMPLATE = parsedTemplateForString(AutoAnnotationVm.VM);
 
   @Override
   Template parsedTemplate() {

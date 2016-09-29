@@ -187,7 +187,7 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   ImmutableList<String> toBuilderMethods;
 
-  private static final Template TEMPLATE = parsedTemplateForResource("autovalue.vm");
+  private static final Template TEMPLATE = parsedTemplateForString(AutoValueVm.VM);
 
   @Override
   Template parsedTemplate() {
