@@ -19,11 +19,10 @@ import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import java.io.BufferedReader;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -96,13 +95,9 @@ abstract class TemplateVars {
     return ImmutableMap.copyOf(vars);
   }
 
-  static Template parsedTemplateForResource(String resourceName) {
-    InputStream in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
-    if (in == null) {
-      throw new IllegalArgumentException("Could not find resource: " + resourceName);
-    }
+  static Template parsedTemplateForString(String templateString) {
     try {
-      Reader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+      Reader reader = new StringReader(templateString);
       return Template.parseFrom(reader);
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);

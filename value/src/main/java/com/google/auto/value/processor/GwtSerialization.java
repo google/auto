@@ -215,7 +215,7 @@ class GwtSerialization {
     /** A string that should change if any salient details of the serialized class change. */
     String classHashString;
 
-    private static final Template TEMPLATE = parsedTemplateForResource("gwtserializer.vm");
+    private static final Template TEMPLATE = parsedTemplateForString(GwtSerializerVm.VM);
 
     @Override
     Template parsedTemplate() {
