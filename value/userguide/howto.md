@@ -435,3 +435,5 @@ when the annotated method returns `null`.
 
 [`@Memoized`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/memoized/Memoized.java
 
+This feature is unavailable in the version 1.3 and older.
+
