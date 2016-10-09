@@ -19,7 +19,9 @@ import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,7 +29,10 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.URL;
 import java.util.Map;
+import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
 
 /**
  * A template and a set of variables to be substituted into that template. A concrete subclass of
@@ -97,7 +102,23 @@ abstract class TemplateVars {
   }
 
   static Template parsedTemplateForResource(String resourceName) {
-    InputStream in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
+    String jar = getJARFromURL(AutoValueTemplateVars.class);
+    InputStream in = null;
+    if (jar != null) {
+      // Prefer fetching from the jar file if available
+      File file = new File(jar);
+      try {
+        JarFile jarFile = new JarFile(file);
+        ZipEntry entry = jarFile.getEntry("com/google/auto/value/processor/".replace('/', File.separatorChar) + resourceName);
+        in = jarFile.getInputStream(entry);
+      } catch (Exception ignored) {
+        // ignore and fall through
+      }
+    }
+    if (in == null) {
+        in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
+    }
+
     if (in == null) {
       throw new IllegalArgumentException("Could not find resource: " + resourceName);
     }
@@ -109,6 +130,17 @@ abstract class TemplateVars {
     } catch (IOException e) {
       throw new AssertionError(e);
     }
+  }
+
+  private static String getJARFromURL(Class<?> clazz) {
+    URL url = clazz.getResource('/' + clazz.getName().replace('.', '/') + ".class");
+    if (!url.getProtocol().equals("jar")) {
+      return null;
+    }
+    String fileName = url.getFile();
+    fileName = fileName.substring(0, fileName.lastIndexOf('!'));
+    fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+    return fileName;
   }
 
   private static Object fieldValue(Field field, Object container) {
