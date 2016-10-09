@@ -111,8 +111,8 @@ abstract class TemplateVars {
         JarFile jarFile = new JarFile(file);
         ZipEntry entry = jarFile.getEntry("com/google/auto/value/processor/".replace('/', File.separatorChar) + resourceName);
         in = jarFile.getInputStream(entry);
-      } catch (IOException e) {
-        // ignore
+      } catch (Exception ignored) {
+        // ignore and fall through
       }
     }
     if (in == null) {
