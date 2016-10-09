@@ -109,9 +109,7 @@ abstract class TemplateVars {
       File file = new File(jar);
       try {
         JarFile jarFile = new JarFile(file);
-        System.out.println("Found jarfile: " + jarFile);
         ZipEntry entry = jarFile.getEntry("com/google/auto/value/processor/".replace('/', File.separatorChar) + resourceName);
-        System.out.println("Found entry: " + entry);
         in = jarFile.getInputStream(entry);
       } catch (IOException e) {
         // ignore
