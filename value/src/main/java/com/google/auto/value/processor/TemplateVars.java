@@ -103,7 +103,7 @@ abstract class TemplateVars {
 
   static Template parsedTemplateForResource(String resourceName) {
     String jar = getJARFromURL(AutoValueTemplateVars.class);
-    InputStream in;
+    InputStream in = null;
     if (jar != null) {
       // Prefer fetching from the jar file if available
       File file = new File(jar);
@@ -114,10 +114,11 @@ abstract class TemplateVars {
         System.out.println("Found entry: " + entry);
         in = jarFile.getInputStream(entry);
       } catch (IOException e) {
-        throw new AssertionError(e);
+        // ignore
       }
-    } else {
-      in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
+    }
+    if (in == null) {
+        in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
     }
 
     if (in == null) {
