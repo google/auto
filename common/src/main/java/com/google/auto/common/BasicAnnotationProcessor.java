@@ -64,7 +64,7 @@ import javax.lang.model.util.SimpleElementVisitor6;
  * access the {@link ProcessingEnvironment} using {@link #processingEnv}.
  *
  * Any logic that needs to happen once per round can be specified by overriding
- * {@link #postProcess()}.
+ * {@link #postRound(RoundEnvironment)}.
  *
  * <h3>Ill-formed elements are deferred</h3>
  * Any annotated element whose nearest enclosing type is not well-formed is deferred, and not passed
