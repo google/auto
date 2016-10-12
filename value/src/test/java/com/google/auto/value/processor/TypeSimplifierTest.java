@@ -413,19 +413,20 @@ public class TypeSimplifierTest extends TestCase {
       Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeMirrorOf("java.lang.String"),
-          typeMirrorOf("java.util.Map"),
-          typeMirrorOf("java.util.Map.Entry"),
+          typeMirrorOf("java.net.Proxy"),
+          typeMirrorOf("java.net.Proxy.Type"),
           typeMirrorOf("java.util.regex.Pattern"),
           typeMirrorOf("javax.management.MBeanServer"));
       List<String> expectedImports = ImmutableList.of(
-          "java.util.Map",
-          "java.util.Map.Entry",
+          "java.net.Proxy",
           "java.util.regex.Pattern",
           "javax.management.MBeanServer"
       );
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
-      assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
+      assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
+      assertEquals("Proxy", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy")));
+      assertEquals("Proxy.Type", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy.Type")));
     }
 
     public void testImportsForComplicatedTypes() {
@@ -449,7 +450,7 @@ public class TypeSimplifierTest extends TestCase {
       );
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
-      assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
+      assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
     }
 
     public void testImportsForArrayTypes() {
@@ -473,7 +474,7 @@ public class TypeSimplifierTest extends TestCase {
       );
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
-      assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
+      assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
     }
 
     public void testImportsForDefaultPackage() {
@@ -486,20 +487,32 @@ public class TypeSimplifierTest extends TestCase {
       types.addAll(typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
           typeMirrorOf("java.lang.String"),
-          typeMirrorOf("java.util.Map"),
-          typeMirrorOf("java.util.Map.Entry"),
+          typeMirrorOf("java.net.Proxy"),
+          typeMirrorOf("java.net.Proxy.Type"),
           typeMirrorOf("java.util.regex.Pattern"),
           typeMirrorOf("javax.management.MBeanServer")));
       List<String> expectedImports = ImmutableList.of(
+          "java.net.Proxy",
           "java.util.List",
-          "java.util.Map",
-          "java.util.Map.Entry",
           "java.util.regex.Pattern",
           "javax.management.MBeanServer"
       );
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "", types, baseWithoutContainedTypes());
-      assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
+      assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
+      assertEquals("Proxy", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy")));
+      assertEquals("Proxy.Type", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy.Type")));
+    }
+
+    public void testImportNestedType() {
+      Set<TypeMirror> types = typeMirrorSet(typeMirrorOf("java.net.Proxy.Type"));
+      List<String> expectedImports = ImmutableList.of(
+          "java.net.Proxy"
+      );
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
+      assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
+      assertEquals("Proxy.Type", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy.Type")));
     }
 
     public void testImportsForAmbiguousNames() {
@@ -513,9 +526,9 @@ public class TypeSimplifierTest extends TestCase {
       List<String> expectedImports = ImmutableList.of(
           "java.util.Map"
       );
-      TypeSimplifier typeSimplifier
-          = new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
-      assertEquals(expectedImports, ImmutableList.copyOf(typeSimplifier.typesToImport()));
+      TypeSimplifier typeSimplifier =
+          new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
+      assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
     }
 
     public void testSimplifyJavaLangString() {
@@ -544,22 +557,15 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(javaUtilList.toString(), typeSimplifier.simplify(javaUtilList));
     }
 
-    public void testSimplifyAmbiguityFromWithinClass() {
-      TypeMirror otherEntry = typeMirrorOf(TypeSimplifierTest.class.getCanonicalName() + ".Entry");
-      Set<TypeMirror> types = typeMirrorSet(otherEntry);
-      TypeSimplifier typeSimplifier =
-          new TypeSimplifier(typeUtil, "foo.bar", types, baseDeclaresEntry());
-      assertEquals(otherEntry.toString(), typeSimplifier.simplify(otherEntry));
-    }
-
     public void testSimplifyJavaLangNamesake() {
-      TypeMirror javaLangDouble = typeMirrorOf("java.lang.Double");
-      TypeMirror awtDouble = typeMirrorOf("java.awt.geom.Arc2D.Double");
-      Set<TypeMirror> types = typeMirrorSet(javaLangDouble, awtDouble);
+      TypeMirror javaLangType = typeMirrorOf("java.lang.RuntimePermission");
+      TypeMirror notJavaLangType = typeMirrorOf(
+          com.google.auto.value.processor.testclasses.RuntimePermission.class.getName());
+      Set<TypeMirror> types = typeMirrorSet(javaLangType, notJavaLangType);
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", types, baseWithoutContainedTypes());
-      assertEquals(javaLangDouble.toString(), typeSimplifier.simplify(javaLangDouble));
-      assertEquals(awtDouble.toString(), typeSimplifier.simplify(awtDouble));
+      assertEquals(javaLangType.toString(), typeSimplifier.simplify(javaLangType));
+      assertEquals(notJavaLangType.toString(), typeSimplifier.simplify(notJavaLangType));
     }
 
     public void testSimplifyComplicatedTypes() {

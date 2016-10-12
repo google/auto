@@ -270,7 +270,7 @@ public final class MoreElements {
    * @param type the type whose own and inherited methods are to be returned
    * @param elementUtils an {@link Elements} object, typically returned by
    *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getElementUtils()
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getElementUtils
    *     getElementUtils()}
    *
    * @deprecated The method {@link #getLocalAndInheritedMethods(TypeElement, Types, Elements)}
@@ -298,11 +298,11 @@ public final class MoreElements {
    * @param type the type whose own and inherited methods are to be returned
    * @param typeUtils a {@link Types} object, typically returned by
    *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getTypeUtils()
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getTypeUtils
    *     getTypeUtils()}
    * @param elementUtils an {@link Elements} object, typically returned by
    *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment.getElementUtils()
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getElementUtils
    *     getElementUtils()}
    */
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(

@@ -2106,4 +2106,46 @@ public class AutoValueTest extends TestCase {
     assertThat(x.toString())
         .isEqualTo("OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}");
   }
+
+  /** Fake ApkVersionCode class. */
+  public static class ApkVersionCode {}
+
+  /**
+   * Illustrates a potential problem that showed up while generalizing builders. If our
+   * imports are not accurate we may end up importing ImmutableList.Builder, which won't work
+   * because the generated Builder subclass of ReleaseInfoBuilder will supersede it. Normally
+   * we wouldn't import ImmutableList.Builder because the nested Builder class in the
+   * {@code @AutoValue} class would prevent us trying. But in this case the nested
+   * class is called ReleaseInfoBuilder so we might import anyway if we're not careful. This is one
+   * reason why we moved away from importing nested classes to only importing top-level classes.
+   */
+  @AutoValue
+  public abstract static class ReleaseInfo {
+    public static ReleaseInfoBuilder newBuilder() {
+      return new AutoValue_AutoValueTest_ReleaseInfo.Builder();
+    }
+
+    public abstract ImmutableList<ApkVersionCode> apkVersionCodes();
+
+    ReleaseInfo() {}
+
+    /** Notice that this is called ReleaseInfoBuilder and not Builder. */
+    @AutoValue.Builder
+    public abstract static class ReleaseInfoBuilder {
+      public ReleaseInfoBuilder addApkVersionCode(ApkVersionCode code) {
+        apkVersionCodesBuilder().add(code);
+        return this;
+      }
+
+      abstract ImmutableList.Builder<ApkVersionCode> apkVersionCodesBuilder();
+
+      public abstract ReleaseInfo build();
+    }
+  }
+
+  public void testUnusualBuilderName() {
+    ApkVersionCode apkVersionCode = new ApkVersionCode();
+    ReleaseInfo x = ReleaseInfo.newBuilder().addApkVersionCode(apkVersionCode).build();
+    assertThat(x.apkVersionCodes()).containsExactly(apkVersionCode);
+  }
 }

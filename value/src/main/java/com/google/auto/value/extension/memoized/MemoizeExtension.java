@@ -35,8 +35,10 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -45,7 +47,9 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+
 import java.util.Map;
+
 import javax.annotation.Generated;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
@@ -65,6 +69,9 @@ public final class MemoizeExtension extends AutoValueExtension {
       AnnotationSpec.builder(Generated.class)
           .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
           .build();
+
+  private static final ClassName LAZY_INIT =
+      ClassName.get("com.google.errorprone.annotations.concurrent", "LazyInit");
 
   @Override
   public boolean applicable(Context context) {
@@ -94,6 +101,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     private final boolean isFinal;
     private final Elements elements;
     private final Messager messager;
+    private final Optional<AnnotationSpec> lazyInitAnnotation;
     private boolean hasErrors;
 
     Generator(Context context, String className, String classToExtend, boolean isFinal) {
@@ -103,6 +111,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       this.isFinal = isFinal;
       this.elements = context.processingEnvironment().getElementUtils();
       this.messager = context.processingEnvironment().getMessager();
+      this.lazyInitAnnotation = getLazyInitAnnotation(elements);
     }
 
     String generate() {
@@ -148,12 +157,8 @@ public final class MemoizeExtension extends AutoValueExtension {
         this.method = method;
         validate();
         cacheField =
-            FieldSpec.builder(
-                    TypeName.get(method.getReturnType()),
-                    method.getSimpleName().toString(),
-                    PRIVATE,
-                    VOLATILE)
-                .build();
+            buildCacheField(
+                TypeName.get(method.getReturnType()), method.getSimpleName().toString());
         fields.add(cacheField);
         override =
             methodBuilder(method.getSimpleName().toString())
@@ -201,7 +206,7 @@ public final class MemoizeExtension extends AutoValueExtension {
         checkIllegalModifier(PRIVATE);
         checkIllegalModifier(FINAL);
         checkIllegalModifier(STATIC);
-        
+
         if (!overridesObjectMethod("hashCode") && !overridesObjectMethod("toString")) {
           checkIllegalModifier(ABSTRACT);
         }
@@ -219,7 +224,7 @@ public final class MemoizeExtension extends AutoValueExtension {
         }
         messager.printMessage(kind, String.format(format, args), method);
       }
-      
+
       private boolean overridesObjectMethod(String methodName) {
         return elements.overrides(method, objectMethod(methodName), context.autoValueClass());
       }
@@ -240,6 +245,19 @@ public final class MemoizeExtension extends AutoValueExtension {
             MoreElements.asType(annotation.getAnnotationType().asElement())
                 .getQualifiedName()
                 .toString());
+      }
+
+      /**
+       * Builds a {@link FieldSpec} for use in property caching. Field will be {@code private
+       * volatile} and have the given type and name. If the @LazyInit annotation is available it is
+       * added as well.
+       */
+      private FieldSpec buildCacheField(TypeName type, String name) {
+        FieldSpec.Builder builder = FieldSpec.builder(type, name, PRIVATE, VOLATILE);
+        if (lazyInitAnnotation.isPresent()) {
+          builder.addAnnotation(lazyInitAnnotation.get());
+        }
+        return builder.build();
       }
 
       InitializationStrategy strategy() {
@@ -293,9 +311,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       private final class CheckBooleanField extends InitializationStrategy {
 
         private final FieldSpec field =
-            FieldSpec.builder(
-                    TypeName.BOOLEAN, method.getSimpleName() + "$Memoized", PRIVATE, VOLATILE)
-                .build();
+            buildCacheField(TypeName.BOOLEAN, method.getSimpleName() + "$Memoized");
 
         @Override
         Iterable<FieldSpec> additionalFields() {
@@ -313,5 +329,15 @@ public final class MemoizeExtension extends AutoValueExtension {
         }
       }
     }
+  }
+
+  /**
+   * Returns the errorprone {@code @LazyInit} annotation if it is found on the classpath.
+   */
+  private static Optional<AnnotationSpec> getLazyInitAnnotation(Elements elements) {
+    if (elements.getTypeElement(LAZY_INIT.toString()) == null) {
+      return Optional.absent();
+    }
+    return Optional.of(AnnotationSpec.builder(LAZY_INIT).build());
   }
 }

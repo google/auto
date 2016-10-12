@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
 
+import com.google.auto.common.MoreElements;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -26,9 +27,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
-import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
@@ -38,7 +38,6 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
-import javax.lang.model.util.AbstractTypeVisitor6;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
@@ -116,7 +115,7 @@ final class TypeSimplifier {
    * {@link #typesToImport}.
    */
   String simplify(TypeMirror type) {
-    return type.accept(TO_STRING_TYPE_VISITOR, new StringBuilder()).toString();
+    return type.accept(toStringTypeVisitor, new StringBuilder()).toString();
   }
 
   /**
@@ -125,7 +124,7 @@ final class TypeSimplifier {
    * returned here will not include type parameters.
    */
   String simplifyRaw(TypeMirror type) {
-    return type.accept(TO_STRING_RAW_TYPE_VISITOR, new StringBuilder()).toString();
+    return type.accept(toStringRawTypeVisitor, new StringBuilder()).toString();
   }
 
   // The formal type parameters of the given type.
@@ -180,13 +179,13 @@ final class TypeSimplifier {
       if (!bound.toString().equals("java.lang.Object")) {
         sb.append(sep);
         sep = " & ";
-        bound.accept(TO_STRING_TYPE_VISITOR, sb);
+        bound.accept(toStringTypeVisitor, sb);
       }
     }
   }
 
-  private final ToStringTypeVisitor TO_STRING_TYPE_VISITOR = new ToStringTypeVisitor();
-  private final ToStringTypeVisitor TO_STRING_RAW_TYPE_VISITOR = new ToStringRawTypeVisitor();
+  private final ToStringTypeVisitor toStringTypeVisitor = new ToStringTypeVisitor();
+  private final ToStringTypeVisitor toStringRawTypeVisitor = new ToStringRawTypeVisitor();
 
   /**
    * Visitor that produces a string representation of a type for use in generated code.
@@ -210,11 +209,13 @@ final class TypeSimplifier {
 
     @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
       TypeElement typeElement = (TypeElement) typeUtils.asElement(type);
-      String typeString = typeElement.getQualifiedName().toString();
-      if (imports.containsKey(typeString)) {
-        sb.append(imports.get(typeString).spelling);
+      TypeElement top = topLevelType(typeElement);
+      String topString = top.getQualifiedName().toString();
+      if (imports.containsKey(topString)) {
+        String suffix = typeElement.getQualifiedName().toString().substring(topString.length());
+        sb.append(imports.get(topString).spelling).append(suffix);
       } else {
-        sb.append(typeString);
+        sb.append(typeElement.getQualifiedName());
       }
       appendTypeArguments(type, sb);
       return sb;
@@ -264,18 +265,19 @@ final class TypeSimplifier {
     return pkgName.isEmpty() ? name : name.substring(pkgName.length() + 1);
   }
 
+  private static TypeElement topLevelType(TypeElement type) {
+    while (type.getNestingKind() != NestingKind.TOP_LEVEL) {
+      type = MoreElements.asType(type.getEnclosingElement());
+    }
+    return type;
+  }
+
   /**
    * Returns the name of the package that the given type is in. If the type is in the default
    * (unnamed) package then the name is the empty string.
    */
   static String packageNameOf(TypeElement type) {
-    while (true) {
-      Element enclosing = type.getEnclosingElement();
-      if (enclosing instanceof PackageElement) {
-        return ((PackageElement) enclosing).getQualifiedName().toString();
-      }
-      type = (TypeElement) enclosing;
-    }
+    return MoreElements.getPackage(type).getQualifiedName().toString();
   }
 
   static String simpleNameOf(String s) {
@@ -344,15 +346,24 @@ final class TypeSimplifier {
    * but also ones that appear in type parameters and the like. For example, if the set contains
    * {@code java.util.List<? extends java.lang.Number>} then both {@code java.util.List} and
    * {@code java.lang.Number} will be in the resulting set.
+   *
+   * <p>The returned set contains only top-level types. If we reference {@code java.util.Map.Entry}
+   * then the returned set will contain {@code java.util.Map}. This is because we want to write
+   * {@code Map.Entry} everywhere rather than {@code Entry}.
    */
   private static Set<TypeMirror> referencedClassTypes(Types typeUtil, Set<TypeMirror> types) {
-    Set<TypeMirror> referenced = new TypeMirrorSet();
+    Set<TypeMirror> allReferenced = new TypeMirrorSet();
     ReferencedClassTypeVisitor referencedClassVisitor =
-        new ReferencedClassTypeVisitor(typeUtil, referenced);
+        new ReferencedClassTypeVisitor(typeUtil, allReferenced);
     for (TypeMirror type : types) {
       referencedClassVisitor.visit(type);
     }
-    return referenced;
+    Set<TypeMirror> topLevelReferenced = new TypeMirrorSet();
+    for (TypeMirror type : allReferenced) {
+      TypeElement typeElement = MoreElements.asType(typeUtil.asElement(type));
+      topLevelReferenced.add(topLevelType(typeElement).asType());
+    }
+    return topLevelReferenced;
   }
 
   private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor6<Void, Void> {
@@ -459,7 +470,7 @@ final class TypeSimplifier {
    * no warning if the type's only generic parameters are simple wildcards, as in {@code Map<?, ?>}.
    */
   static boolean isCastingUnchecked(TypeMirror type) {
-    return CASTING_UNCHECKED_VISITOR.visit(type, false);
+    return new CastingUncheckedVisitor().visit(type, false);
   }
 
   /**
@@ -467,8 +478,7 @@ final class TypeSimplifier {
    * visitX method returns true if its input parameter is true or if the type being visited is
    * erased.
    */
-  private static final AbstractTypeVisitor6<Boolean, Boolean> CASTING_UNCHECKED_VISITOR =
-      new SimpleTypeVisitor6<Boolean, Boolean>() {
+  private static class CastingUncheckedVisitor extends SimpleTypeVisitor6<Boolean, Boolean> {
     @Override protected Boolean defaultAction(TypeMirror e, Boolean p) {
       return p;
     }
@@ -494,7 +504,8 @@ final class TypeSimplifier {
     // If a type has a type argument, then casting to the type is unchecked, except if the argument
     // is <?> or <? extends Object>. The same applies to all type arguments, so casting to Map<?, ?>
     // does not produce an unchecked warning for example.
-    private final Predicate<TypeMirror> UNCHECKED_TYPE_ARGUMENT = new Predicate<TypeMirror>() {
+    private static final Predicate<TypeMirror> UNCHECKED_TYPE_ARGUMENT =
+        new Predicate<TypeMirror>() {
       @Override public boolean apply(TypeMirror arg) {
         if (arg.getKind() == TypeKind.WILDCARD) {
           WildcardType wildcard = (WildcardType) arg;
@@ -508,7 +519,7 @@ final class TypeSimplifier {
       }
     };
 
-    private boolean isJavaLangObject(TypeMirror type) {
+    private static boolean isJavaLangObject(TypeMirror type) {
       if (type.getKind() != TypeKind.DECLARED) {
         return false;
       }

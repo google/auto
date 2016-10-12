@@ -55,7 +55,7 @@ class AbstractMethodLister {
     private final ImmutableList.Builder<String> abstractNoArgMethods = ImmutableList.builder();
 
     RecordingClassVisitor() {
-      super(Opcodes.ASM4);
+      super(Opcodes.ASM5);
     }
 
     @Override

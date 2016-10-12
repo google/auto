@@ -32,17 +32,14 @@ import junit.framework.TestCase;
  * @author jmcampanini
  */
 public class PropertyAnnotationsTest extends TestCase {
-
-  private static final String PROPERTY_ANNOTATION_TEST =
-      new Object(){}.getClass().getEnclosingClass().getName();
-  private static final String IMPORT_TEST_ANNOTATION =
-      "import " + PROPERTY_ANNOTATION_TEST + ".TestAnnotation;";
+  private static final String PROPERTY_ANNOTATIONS_TEST =
+      PropertyAnnotationsTest.class.getName();
+  private static final String IMPORT_PROPERTY_ANNOTATIONS_TEST =
+      "import " + PROPERTY_ANNOTATIONS_TEST + ";";
   private static final String TEST_ANNOTATION =
-      "@TestAnnotation";
-  private static final String IMPORT_TEST_ARRAY_ANNOTATION =
-      "import " + PROPERTY_ANNOTATION_TEST + ".TestArrayAnnotation;";
+      "@PropertyAnnotationsTest.TestAnnotation";
   private static final String TEST_ARRAY_ANNOTATION =
-      "@TestArrayAnnotation";
+      "@PropertyAnnotationsTest.TestArrayAnnotation";
 
   public static enum TestEnum {
     A, B;
@@ -220,29 +217,25 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   public void testNumberValueAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION + "(testShort = 1, testInt = 2, testLong = 3L)"),
         ImmutableList.of(TEST_ANNOTATION + "(testShort = 1, testInt = 2, testLong = 3L)"));
   }
 
   public void testByteValueAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION + "(testByte = 0)"),
         ImmutableList.of(TEST_ANNOTATION + "(testByte = 0)"));
   }
 
   public void testDecimalValueAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION + "(testDouble = 1.2d, testFloat = 3.4f)"),
         ImmutableList.of(TEST_ANNOTATION + "(testDouble = 1.2d, testFloat = 3.4f)"));
   }
 
   public void testOtherValuesAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION
             + "(testBoolean = true, testString = \"hallo\", testChar = 'a')"),
         ImmutableList.of(TEST_ANNOTATION
@@ -250,8 +243,7 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   public void testClassAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION
             + "(testClass = String.class)"),
         ImmutableList.of(TEST_ANNOTATION
@@ -259,35 +251,32 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   public void testEnumAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testEnum = " + PROPERTY_ANNOTATION_TEST + ".TestEnum.A)"),
+            + "(testEnum = " + PROPERTY_ANNOTATIONS_TEST + ".TestEnum.A)"),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testEnum = " + PROPERTY_ANNOTATION_TEST + ".TestEnum.A)"));
+            + "(testEnum = PropertyAnnotationsTest.TestEnum.A)"));
   }
 
   public void testEmptyAnnotationAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testAnnotation = @" + PROPERTY_ANNOTATION_TEST + ".OtherAnnotation)"),
+            + "(testAnnotation = @PropertyAnnotationsTest.OtherAnnotation)"),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testAnnotation = @" + PROPERTY_ANNOTATION_TEST + ".OtherAnnotation)"));
+            + "(testAnnotation = @PropertyAnnotationsTest.OtherAnnotation)"));
   }
 
   public void testValuedAnnotationAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testAnnotation = @" + PROPERTY_ANNOTATION_TEST + ".OtherAnnotation(foo=999))"),
+            + "(testAnnotation = @PropertyAnnotationsTest.OtherAnnotation(foo=999))"),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testAnnotation = @" + PROPERTY_ANNOTATION_TEST + ".OtherAnnotation(foo=999))"));
+            + "(testAnnotation = @PropertyAnnotationsTest.OtherAnnotation(foo=999))"));
   }
 
   public void testNumberArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
             + "(testShorts = {2, 3}, testInts = {4, 5}, testLongs = {6L, 7L})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
@@ -296,14 +285,14 @@ public class PropertyAnnotationsTest extends TestCase {
 
   public void testByteArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION + "(testBytes = {0, 1})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION + "(testBytes = {0, 1})"));
   }
 
   public void testDecimalArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
             + "(testDoubles = {1.2d, 3.4d}, testFloats = {5.6f, 7.8f})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
@@ -312,7 +301,7 @@ public class PropertyAnnotationsTest extends TestCase {
 
   public void testOtherArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
             + "(testBooleans = {false, false},"
             + " testStrings = {\"aaa\", \"bbb\"}, testChars={'x', 'y'})"),
@@ -323,7 +312,7 @@ public class PropertyAnnotationsTest extends TestCase {
 
   public void testClassArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION + "(testClasses = {String.class, Long.class})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
             + "(testClasses = {java.lang.String.class, java.lang.Long.class})"));
@@ -331,7 +320,7 @@ public class PropertyAnnotationsTest extends TestCase {
 
   public void testImportedClassArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
             + "(testClasses = {javax.annotation.Nullable.class, Long.class})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
@@ -339,32 +328,27 @@ public class PropertyAnnotationsTest extends TestCase {
   }
 
   public void testEnumArrayAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testEnums = {" + PROPERTY_ANNOTATION_TEST + ".TestEnum.A})"),
+            + "(testEnums = {PropertyAnnotationsTest.TestEnum.A})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testEnums = {" + PROPERTY_ANNOTATION_TEST + ".TestEnum.A})"));
+            + "(testEnums = {PropertyAnnotationsTest.TestEnum.A})"));
   }
 
   public void testArrayOfEmptyAnnotationAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testAnnotations = {@" + PROPERTY_ANNOTATION_TEST + ".OtherAnnotation})"),
+            + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testAnnotations = {@" + PROPERTY_ANNOTATION_TEST + ".OtherAnnotation})"));
+            + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation})"));
   }
 
   public void testArrayOfValuedAnnotationAnnotation() {
-    assertGeneratedMatches(
-        ImmutableList.of(IMPORT_TEST_ARRAY_ANNOTATION),
+    assertGeneratedMatches(ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testAnnotations = {@" + PROPERTY_ANNOTATION_TEST
-            + ".OtherAnnotation(foo = 999)})"),
+            + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation(foo = 999)})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testAnnotations = {@" + PROPERTY_ANNOTATION_TEST
-            + ".OtherAnnotation(foo = 999)})"));
+            + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation(foo = 999)})"));
   }
 
   /**
@@ -374,22 +358,20 @@ public class PropertyAnnotationsTest extends TestCase {
    */
   public void testCopyingMethodAnnotations() {
     ImmutableList<String> sourceImports =
-        ImmutableList.of(
-            "import javax.annotation.Resource;",
-            IMPORT_TEST_ANNOTATION,
-            "import " + PROPERTY_ANNOTATION_TEST + ".InheritedAnnotation;");
+        ImmutableList.of("import javax.annotation.Resource;",
+            IMPORT_PROPERTY_ANNOTATIONS_TEST);
     ImmutableList<String> sourceAnnotations =
         ImmutableList.of(
-            "@AutoValue.CopyAnnotations(exclude={TestAnnotation.class})",
+            "@AutoValue.CopyAnnotations(exclude={PropertyAnnotationsTest.TestAnnotation.class})",
             "@Resource",
-            "@TestAnnotation",
-            "@InheritedAnnotation");
+            "@PropertyAnnotationsTest.TestAnnotation",
+            "@PropertyAnnotationsTest.InheritedAnnotation");
 
     ImmutableList<String> expectedImports = ImmutableList.of("import javax.annotation.Resource;");
     ImmutableList<String> expectedAnnotations =
         ImmutableList.of(
             "@Resource",
-            "@com.google.auto.value.processor.PropertyAnnotationsTest.InheritedAnnotation");
+            "@" + PROPERTY_ANNOTATIONS_TEST + ".InheritedAnnotation");
 
     JavaFileObject javaFileObject = sourceCode(sourceImports, sourceAnnotations);
     JavaFileObject expectedOutput = expectedCode(expectedImports, expectedAnnotations);

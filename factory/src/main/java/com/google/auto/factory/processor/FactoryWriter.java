@@ -26,14 +26,9 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import com.google.auto.factory.internal.Preconditions;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.io.CharSink;
-import com.google.common.io.CharSource;
-import com.google.googlejavaformat.java.Formatter;
-import com.google.googlejavaformat.java.FormatterException;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -44,18 +39,15 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
-import java.io.Writer;
 import java.util.Iterator;
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Element;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleTypeVisitor7;
-import javax.tools.JavaFileObject;
 
 final class FactoryWriter {
 
@@ -93,7 +85,10 @@ final class FactoryWriter {
     addFactoryMethods(factory, descriptor);
     addImplementationMethods(factory, descriptor);
 
-    writeFile(factory.build(), descriptor);
+    JavaFile.builder(getPackage(descriptor.name()), factory.build())
+        .skipJavaLangImports(true)
+        .build()
+        .writeTo(filer);
   }
 
   private void addConstructorAndProviderFields(
@@ -195,27 +190,6 @@ final class FactoryWriter {
                   })
               .join(ARGUMENT_JOINER));
       factory.addMethod(implementationMethod.build());
-    }
-  }
-
-  private void writeFile(TypeSpec factory, FactoryDescriptor descriptor)
-      throws IOException {
-    JavaFile javaFile =
-        JavaFile.builder(getPackage(descriptor.name()), factory).skipJavaLangImports(true).build();
-
-    final JavaFileObject sourceFile = filer.createSourceFile(
-        ClassName.get(javaFile.packageName, javaFile.typeSpec.name).toString(),
-        Iterables.toArray(javaFile.typeSpec.originatingElements, Element.class));
-    try {
-      new Formatter().formatSource(
-          CharSource.wrap(javaFile.toString()),
-          new CharSink() {
-            @Override public Writer openStream() throws IOException {
-              return sourceFile.openWriter();
-            }
-          });
-    } catch (FormatterException e) {
-      Throwables.propagate(e);
     }
   }
 
