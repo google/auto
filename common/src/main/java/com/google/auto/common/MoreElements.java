@@ -310,7 +310,7 @@ public final class MoreElements {
     // TODO(emcmanus): detect if the Types and Elements are the javac ones, and use
     //   NativeOverrides if so. We may need to adjust the logic further to avoid the bug
     //   tested for by MoreElementsTest.getLocalAndInheritedMethods_DaggerBug.
-    Overrides overrides = new Overrides.ExplicitOverrides(typeUtils, elementUtils);
+    Overrides overrides = new Overrides.ExplicitOverrides(typeUtils);
     return getLocalAndInheritedMethods(type, overrides);
   }
 
