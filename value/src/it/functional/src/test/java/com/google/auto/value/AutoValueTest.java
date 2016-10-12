@@ -2107,6 +2107,38 @@ public class AutoValueTest extends TestCase {
         .isEqualTo("OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}");
   }
 
+  static class VersionId {}
+
+  static class ItemVersionId extends VersionId {}
+
+  interface VersionedPersistent {
+    VersionId getVersionId();
+  }
+
+  interface Item extends VersionedPersistent {
+    @Override
+    ItemVersionId getVersionId();
+  }
+
+  @AutoValue
+  abstract static class FakeItem implements Item {
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_FakeItem.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setVersionId(ItemVersionId x);
+      abstract FakeItem build();
+    }
+  }
+
+  public void testParentInterfaceOverridesGrandparent() {
+    ItemVersionId version = new ItemVersionId();
+    FakeItem fakeItem = FakeItem.builder().setVersionId(version).build();
+    assertThat(fakeItem.getVersionId()).isSameAs(version);
+  }
+
   /** Fake ApkVersionCode class. */
   public static class ApkVersionCode {}
 
