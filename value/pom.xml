@@ -33,6 +33,7 @@
   </description>
 
   <properties>
+    <additionalparam>-Xdoclint:none</additionalparam>
     <guava.version>19.0</guava.version>
   </properties>
   <scm>
