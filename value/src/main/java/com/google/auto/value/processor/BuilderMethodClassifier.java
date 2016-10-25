@@ -416,8 +416,8 @@ class BuilderMethodClassifier {
       return canMakeCopyUsing(copyOfMethods, valueGetter, setter);
     }
     String error = String.format(
-        "Parameter type of setter method should be %s to match getter %s.%s",
-        targetType, autoValueClass, valueGetter.getSimpleName());
+        "Parameter type %s of setter method should be %s to match getter %s.%s",
+        parameterType, targetType, autoValueClass, valueGetter.getSimpleName());
     errorReporter.reportError(error, setter);
     return false;
   }

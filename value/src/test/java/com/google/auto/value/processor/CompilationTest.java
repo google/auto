@@ -1068,7 +1068,7 @@ public class CompilationTest {
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
         .withErrorContaining(
-            "Parameter type of setter method should be int to match getter foo.bar.Baz.blim")
+            "Parameter type java.lang.String of setter method should be int to match getter foo.bar.Baz.blim")
         .in(javaFileObject).onLine(12);
   }
 
@@ -1165,7 +1165,7 @@ public class CompilationTest {
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
         .withErrorContaining(
-            "Parameter type of setter method should be int to match getter foo.bar.Baz.getBlim")
+            "Parameter type java.lang.String of setter method should be int to match getter foo.bar.Baz.getBlim")
         .in(javaFileObject).onLine(12);
   }
 
