@@ -18,7 +18,7 @@ package com.google.auto.value;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.auto.value.annotation.Nullable;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -66,11 +66,13 @@ public class AutoValueTest extends TestCase {
     assertEquals("example", instance1a.publicString());
     assertEquals(23, instance1a.protectedInt());
     assertEquals(ImmutableMap.of("twenty-three", 23L), instance1a.packageMap());
-    Objects.ToStringHelper toStringHelper = Objects.toStringHelper(Simple.class);
-    toStringHelper.add("publicString", "example");
-    toStringHelper.add("protectedInt", 23);
-    toStringHelper.add("packageMap", ImmutableMap.of("twenty-three", 23L));
-    assertEquals(toStringHelper.toString(), instance1a.toString());
+    String expectedToString =
+        MoreObjects.toStringHelper(Simple.class)
+            .add("publicString", "example")
+            .add("protectedInt", 23)
+            .add("packageMap", ImmutableMap.of("twenty-three", 23L))
+            .toString();
+    assertEquals(expectedToString, instance1a.toString());
     new EqualsTester()
         .addEqualityGroup(instance1a, instance1b)
         .addEqualityGroup(instance2)

@@ -360,7 +360,7 @@ other hand, you would lose the immutability guarantee, and you'd also invite
 more of the kind of bad behavior described in [this best-practices item]
 (practices.md#simple). On balance, we don't think it's worth it.
 
-## <a name="memoize"></a>... memoize derived properties? {#memoize}
+## <a name="memoize"></a>... memoize derived properties?
 
 Sometimes your class has properties that are derived from the ones that
 AutoValue implements. You'd typically implement them with a concrete method that

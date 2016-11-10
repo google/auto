@@ -23,7 +23,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
 /**
- * This API is not final and WILL CHANGE in a future release.
  * An AutoValueExtension allows for extra functionality to be created during the generation
  * of an AutoValue class.
  *

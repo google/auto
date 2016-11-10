@@ -55,7 +55,6 @@ import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.regex.Pattern;
-import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -747,7 +746,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.addAll(builder.get().referencedTypes());
     }
     TypeElement generatedTypeElement =
-        processingEnv.getElementUtils().getTypeElement(Generated.class.getName());
+        processingEnv.getElementUtils().getTypeElement("javax.annotation.Generated");
     if (generatedTypeElement != null) {
       types.add(generatedTypeElement.asType());
     }

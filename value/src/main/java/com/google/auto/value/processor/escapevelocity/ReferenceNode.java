@@ -217,7 +217,7 @@ abstract class ReferenceNode extends ExpressionNode {
      * <p>The method to be invoked must be visible in a public class or interface that is either the
      * class of {@code $x} itself or one of its supertypes. Allowing supertypes is important because
      * you may want to invoke a public method like {@link List#size()} on a list whose class is not
-     * public, such as the list returned by {@link Collections#singletonList}.
+     * public, such as the list returned by {@link java.util.Collections#singletonList}.
      */
     @Override Object evaluate(EvaluationContext context) {
       Object lhsValue = lhs.evaluate(context);
@@ -326,7 +326,7 @@ abstract class ReferenceNode extends ExpressionNode {
    * will run will be the same.
    */
   Object invokeMethod(Method method, Object target, List<Object> argValues) {
-    if (!Modifier.isPublic(target.getClass().getModifiers())) {
+    if (!classIsPublic(target.getClass())) {
       method = visibleMethod(method, target.getClass());
       if (method == null) {
         throw evaluationException(
@@ -342,13 +342,17 @@ abstract class ReferenceNode extends ExpressionNode {
     }
   }
 
-    private static final String THIS_PACKAGE;
-    static {
-      String nodeClassName = Node.class.getName();
-      int lastDot = nodeClassName.lastIndexOf('.');
-      THIS_PACKAGE = nodeClassName.substring(0, lastDot + 1);
-      // Package name plus trailing dot.
+  private static String packageNameOf(Class<?> c) {
+    String name = c.getName();
+    int lastDot = name.lastIndexOf('.');
+    if (lastDot > 0) {
+      return name.substring(0, lastDot);
+    } else {
+      return "";
     }
+  }
+
+  private static final String THIS_PACKAGE = packageNameOf(Node.class) + ".";
 
   /**
    * Returns a Method with the same name and parameter types as the given one, but that is in a
@@ -367,7 +371,7 @@ abstract class ReferenceNode extends ExpressionNode {
     } catch (NoSuchMethodException e) {
       return null;
     }
-    if (Modifier.isPublic(in.getModifiers()) || in.getName().startsWith(THIS_PACKAGE)) {
+    if (classIsPublic(in) || in.getName().startsWith(THIS_PACKAGE)) {
       // The second disjunct is a hack to allow us to use the methods of $foreach without having
       // to make the ForEachVar class public. We can invoke those methods from here since they
       // are in the same package.
@@ -384,5 +388,51 @@ abstract class ReferenceNode extends ExpressionNode {
       }
     }
     return null;
+  }
+
+  /**
+   * Returns whether the given class is public as seen from this class. Prior to Java 9, a class
+   * was either public or not public. But with the introduction of modules in Java 9, a class can
+   * be marked public and yet not be visible, if it is not exported from the module it appears in.
+   * So, on Java 9, we perform an additional check on class {@code c}, which is effectively
+   * {@code c.getModule().isExported(c.getPackageName())}. We use reflection so that the code can
+   * compile on earlier Java versions.
+   */
+  private static boolean classIsPublic(Class<?> c) {
+    if (!Modifier.isPublic(c.getModifiers())) {
+      return false;
+    }
+    if (CLASS_GET_MODULE_METHOD != null) {
+      return classIsExported(c);
+    }
+    return true;
+  }
+
+  private static boolean classIsExported(Class<?> c) {
+    try {
+      String pkg = packageNameOf(c);
+      Object module = CLASS_GET_MODULE_METHOD.invoke(c);
+      return (Boolean) MODULE_IS_EXPORTED_METHOD.invoke(module, pkg);
+    } catch (ReflectiveOperationException e) {
+      return false;
+    }
+  }
+
+  private static final Method CLASS_GET_MODULE_METHOD;
+  private static final Method MODULE_IS_EXPORTED_METHOD;
+
+  static {
+    Method classGetModuleMethod;
+    Method moduleIsExportedMethod;
+    try {
+      classGetModuleMethod = Class.class.getMethod("getModule");
+      Class<?> moduleClass = classGetModuleMethod.getReturnType();
+      moduleIsExportedMethod = moduleClass.getMethod("isExported", String.class);
+    } catch (ReflectiveOperationException e) {
+      classGetModuleMethod = null;
+      moduleIsExportedMethod = null;
+    }
+    CLASS_GET_MODULE_METHOD = classGetModuleMethod;
+    MODULE_IS_EXPORTED_METHOD = moduleIsExportedMethod;
   }
 }
