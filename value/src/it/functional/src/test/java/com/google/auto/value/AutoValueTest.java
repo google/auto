@@ -39,6 +39,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -2105,6 +2107,152 @@ public class AutoValueTest extends TestCase {
     OneTwoThreeFour x = OneTwoThreeFourImpl.create("one", "two", false, 4);
     assertThat(x.toString())
         .isEqualTo("OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}");
+  }
+
+  @AutoValue
+  abstract static class OuterWithBuilder {
+    abstract String foo();
+    abstract InnerWithBuilder inner();
+    abstract Builder toBuilder();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_OuterWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder foo(String x);
+      abstract Builder inner(InnerWithBuilder x);
+      abstract InnerWithBuilder.Builder innerBuilder();
+
+      abstract OuterWithBuilder build();
+    }
+  }
+
+  @AutoValue
+  abstract static class InnerWithBuilder {
+    abstract int bar();
+    abstract Builder toBuilder();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_InnerWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setBar(int x);
+
+      abstract InnerWithBuilder build();
+    }
+  }
+
+  public void testBuilderWithinBuilder() {
+    OuterWithBuilder x = OuterWithBuilder.builder()
+        .inner(InnerWithBuilder.builder()
+            .setBar(23)
+            .build())
+        .foo("yes")
+        .build();
+    assertThat(x.toString()).isEqualTo("OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=23}}");
+
+    OuterWithBuilder.Builder xBuilder = x.toBuilder();
+    xBuilder.innerBuilder().setBar(17);
+    OuterWithBuilder y = xBuilder.build();
+    assertThat(y.toString()).isEqualTo("OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=17}}");
+  }
+
+  public static class MyMap<K, V> extends HashMap<K, V> {
+    public MyMap() {}
+
+    public MyMap(Map<K, V> map) {
+      super(map);
+    }
+
+    public MyMapBuilder<K, V> toBuilder() {
+      return new MyMapBuilder<K, V>(this);
+    }
+  }
+
+  public static class MyMapBuilder<K, V> extends LinkedHashMap<K, V> {
+    public MyMapBuilder() {}
+
+    public MyMapBuilder(Map<K, V> map) {
+      super(map);
+    }
+
+    public MyMap<K, V> build() {
+      return new MyMap<K, V>(this);
+    }
+  }
+
+  @AutoValue
+  abstract static class BuildMyMap<K, V> {
+    abstract MyMap<K, V> map();
+
+    static <K, V> Builder<K, V> builder() {
+      return new AutoValue_AutoValueTest_BuildMyMap.Builder<K, V>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<K, V> {
+      abstract MyMapBuilder<K, V> mapBuilder();
+      abstract BuildMyMap<K, V> build();
+    }
+  }
+
+  public void testMyMapBuilder() {
+    BuildMyMap.Builder<String, Integer> builder = BuildMyMap.builder();
+    MyMapBuilder<String, Integer> mapBuilder = builder.mapBuilder();
+    mapBuilder.put("23", 23);
+    BuildMyMap<String, Integer> built = builder.build();
+    assertThat(built.map()).containsExactly("23", 23);
+  }
+
+  public static class MyStringMap<V> extends MyMap<String, V> {
+    public MyStringMap() {}
+
+    public MyStringMap(Map<String, V> map) {
+      super(map);
+    }
+
+    @Override public MyStringMapBuilder<V> toBuilder() {
+      return new MyStringMapBuilder<V>(this);
+    }
+  }
+
+  public static class MyStringMapBuilder<V> extends MyMapBuilder<String, V> {
+    public MyStringMapBuilder() {}
+
+    public MyStringMapBuilder(Map<String, V> map) {
+      super(map);
+    }
+
+    @Override public MyStringMap<V> build() {
+      return new MyStringMap<V>(this);
+    }
+  }
+
+  @AutoValue
+  abstract static class BuildMyStringMap<V> {
+    abstract MyStringMap<V> map();
+
+    static <V> Builder<V> builder() {
+      return new AutoValue_AutoValueTest_BuildMyStringMap.Builder<V>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<V> {
+      abstract MyStringMapBuilder<V> mapBuilder();
+      abstract BuildMyStringMap<V> build();
+    }
+  }
+
+  public void testMyStringMapBuilder() {
+    BuildMyStringMap.Builder<Integer> builder = BuildMyStringMap.builder();
+    MyStringMapBuilder<Integer> mapBuilder = builder.mapBuilder();
+    mapBuilder.put("23", 23);
+    BuildMyStringMap<Integer> built = builder.build();
+    assertThat(built.map()).containsExactly("23", 23);
   }
 
   static class VersionId {}

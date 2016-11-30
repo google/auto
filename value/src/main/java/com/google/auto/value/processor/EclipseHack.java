@@ -15,11 +15,13 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.AutoValueProcessor.Property;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,6 +78,16 @@ class EclipseHack {
     this.processingEnv = processingEnv;
   }
 
+  TypeMirror methodReturnType(ExecutableElement method, DeclaredType in) {
+    Types typeUtils = processingEnv.getTypeUtils();
+    try {
+      TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
+      return MoreTypes.asExecutable(methodMirror).getReturnType();
+    } catch (IllegalArgumentException e) {
+      return methodReturnTypes(ImmutableSet.of(method), in).get(method);
+    }
+  }
+
   /**
    * Returns a map containing the real return types of the given methods, knowing that they appear
    * in the given type. This means that if the given type is say
@@ -91,20 +103,19 @@ class EclipseHack {
    * buggy, and only if we get IllegalArgumentException do we use {@code getAllMembers}.
    */
   ImmutableMap<ExecutableElement, TypeMirror> methodReturnTypes(
-      Set<ExecutableElement> methods, TypeElement autoValueType) {
-    DeclaredType autoValueTypeMirror = MoreTypes.asDeclared(autoValueType.asType());
+      Set<ExecutableElement> methods, DeclaredType in) {
     Types typeUtils = processingEnv.getTypeUtils();
     ImmutableMap.Builder<ExecutableElement, TypeMirror> map = ImmutableMap.builder();
     Map<Name, ExecutableElement> noArgMethods = null;
     for (ExecutableElement method : methods) {
       TypeMirror returnType = null;
       try {
-        TypeMirror methodMirror = typeUtils.asMemberOf(autoValueTypeMirror, method);
+        TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
         returnType = MoreTypes.asExecutable(methodMirror).getReturnType();
       } catch (IllegalArgumentException e) {
         if (method.getParameters().isEmpty()) {
           if (noArgMethods == null) {
-            noArgMethods = noArgMethodsIn(autoValueType);
+            noArgMethods = noArgMethodsIn(in);
           }
           returnType = noArgMethods.get(method.getSimpleName()).getReturnType();
         }
@@ -123,10 +134,12 @@ class EclipseHack {
    * equal to the original ExecutableElement if {@code getAllMembers} substituted type parameters,
    * as it does in Eclipse.
    */
-  private Map<Name, ExecutableElement> noArgMethodsIn(TypeElement autoValueType) {
+  private Map<Name, ExecutableElement> noArgMethodsIn(DeclaredType in) {
+    Types typeUtils = processingEnv.getTypeUtils();
     Elements elementUtils = processingEnv.getElementUtils();
+    TypeElement autoValueType = MoreElements.asType(typeUtils.asElement(in));
     List<ExecutableElement> allMethods =
-      ElementFilter.methodsIn(elementUtils.getAllMembers(autoValueType));
+        ElementFilter.methodsIn(elementUtils.getAllMembers(autoValueType));
     Map<Name, ExecutableElement> map = new LinkedHashMap<Name, ExecutableElement>();
     for (ExecutableElement method : allMethods) {
       if (method.getParameters().isEmpty()) {
@@ -254,7 +267,7 @@ class EclipseHack {
     ImmutableList<String> determinePropertyOrder() throws IOException;
   }
 
-  private class SourcePropertyOrderer implements PropertyOrderer {
+  private static class SourcePropertyOrderer implements PropertyOrderer {
     private final TypeElement type;
     private final Callable<Reader> readerProvider;
 
@@ -293,7 +306,7 @@ class EclipseHack {
     }
   }
 
-  private class BinaryPropertyOrderer implements PropertyOrderer {
+  private static class BinaryPropertyOrderer implements PropertyOrderer {
     private final URI classFileUri;
 
     BinaryPropertyOrderer(URI classFileUri) {

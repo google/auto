@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -157,10 +158,11 @@ class AutoValueTemplateVars extends TemplateVars {
   /**
    * A map from property names to information about the associated property builder. A property
    * called foo (defined by a method foo() or getFoo()) can have a property builder called
-   * fooBuilder(). The type of foo must be an immutable Guava type, like ImmutableSet, and
-   * fooBuilder() must return the corresponding builder, like ImmutableSet.Builder.
+   * fooBuilder(). The type of foo must be a type that has an associated builder following
+   * certain conventions. Guava immutable types such as ImmutableList follow those conventions,
+   * as do many {@code @AutoValue} types.
    */
-  ImmutableMap<String, BuilderSpec.PropertyBuilder> builderPropertyBuilders =
+  ImmutableMap<String, PropertyBuilder> builderPropertyBuilders =
       ImmutableMap.of();
 
   /**
