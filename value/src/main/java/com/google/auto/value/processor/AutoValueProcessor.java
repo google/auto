@@ -20,6 +20,7 @@ import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.collect.Sets.union;
 
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
@@ -740,6 +741,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       ImmutableSet<ExecutableElement> toBuilderMethods,
       ImmutableSet<ExecutableElement> propertyMethods,
       Optional<BuilderSpec.Builder> builder) {
+    DeclaredType declaredType = MoreTypes.asDeclared(type.asType());
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(propertyMethods));
     if (builder.isPresent()) {
@@ -762,7 +764,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         allMethodExcludedAnnotations(propertyMethods);
     types.addAll(allMethodAnnotationTypes(propertyMethods, excludedAnnotationsMap));
     String pkg = TypeSimplifier.packageNameOf(type);
-    TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, type.asType());
+    TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, declaredType);
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = generatedTypeElement == null
         ? ""
@@ -775,7 +777,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     List<Property> props = new ArrayList<Property>();
     EclipseHack eclipseHack = eclipseHack();
     ImmutableMap<ExecutableElement, TypeMirror> returnTypes =
-        eclipseHack.methodReturnTypes(propertyMethods, type);
+        eclipseHack.methodReturnTypes(propertyMethods, declaredType);
     for (ExecutableElement method : propertyMethods) {
       TypeMirror returnType = returnTypes.get(method);
       String propertyType = typeSimplifier.simplify(returnType);
