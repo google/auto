@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
 import javax.annotation.Nullable;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,6 +30,7 @@ import org.junit.runners.JUnit4;
 public class MemoizedTest {
 
   private Value value;
+  private ListValue<Integer, String> listValue;
 
   @AutoValue
   abstract static class Value {
@@ -39,13 +41,14 @@ public class MemoizedTest {
     private int notNullableButReturnsNullCount;
 
     abstract String string();
+
     abstract HashCodeAndToStringCounter counter();
 
     @Memoized
     int primitive() {
       return ++primitiveCount;
     }
-    
+
     @Memoized
     String notNullable() {
       notNullableCount++;
@@ -71,7 +74,7 @@ public class MemoizedTest {
       notNullableButReturnsNullCount++;
       return null;
     }
-    
+
     @Override
     @Memoized
     public abstract int hashCode();
@@ -80,16 +83,29 @@ public class MemoizedTest {
     @Memoized
     public abstract String toString();
   }
-  
+
+  @AutoValue
+  abstract static class ListValue<T extends Number, K> {
+
+    abstract T value();
+
+    abstract K otherValue();
+
+    @Memoized
+    ImmutableList<T> myTypedList() {
+      return ImmutableList.of(value());
+    }
+  }
+
   static class HashCodeAndToStringCounter {
     int hashCodeCount;
     int toStringCount;
-    
+
     @Override
     public int hashCode() {
       return ++hashCodeCount;
     }
-    
+
     @Override
     public String toString() {
       return "a string" + ++toStringCount;
@@ -99,6 +115,17 @@ public class MemoizedTest {
   @Before
   public void setUp() {
     value = new AutoValue_MemoizedTest_Value("string", new HashCodeAndToStringCounter());
+    listValue = new AutoValue_MemoizedTest_ListValue<Integer, String>(0, "hello");
+  }
+
+  @Test
+  public void listValueList() {
+    assertThat(listValue.myTypedList()).containsExactly(listValue.value());
+  }
+
+  @Test
+  public void listValueString() {
+    assertThat(listValue.otherValue()).isEqualTo("hello");
   }
 
   @Test
@@ -139,13 +166,15 @@ public class MemoizedTest {
     }
     assertThat(value.notNullableButReturnsNullCount).isEqualTo(1);
   }
-  
-  @Test public void testHashCode() {
+
+  @Test
+  public void testHashCode() {
     assertThat(value.hashCode()).isEqualTo(value.hashCode());
     assertThat(value.counter().hashCodeCount).isEqualTo(1);
   }
-  
-  @Test public void testToString() {
+
+  @Test
+  public void testToString() {
     assertThat(value.toString()).isEqualTo(value.toString());
     assertThat(value.counter().toStringCount).isEqualTo(1);
   }
