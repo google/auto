@@ -38,24 +38,24 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
+import com.squareup.javapoet.TypeVariableName;
 import java.util.Map;
-
 import javax.annotation.Generated;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic.Kind;
 
@@ -117,12 +117,15 @@ public final class MemoizeExtension extends AutoValueExtension {
     String generate() {
       TypeSpec.Builder generated =
           classBuilder(className)
-              .superclass(ClassName.get(context.packageName(), classToExtend))
+              .superclass(superType())
+              .addTypeVariables(typeVariableNames())
               .addModifiers(isFinal ? FINAL : ABSTRACT)
               .addMethod(constructor());
+
       if (generatedAnnotation.isPresent()) {
         generated.addAnnotation(generatedAnnotation.get());
       }
+
       for (ExecutableElement method : memoizedMethods(context)) {
         MethodOverrider methodOverrider = new MethodOverrider(method);
         generated.addFields(methodOverrider.fields());
@@ -133,6 +136,23 @@ public final class MemoizeExtension extends AutoValueExtension {
         return "";
       }
       return JavaFile.builder(context.packageName(), generated.build()).build().toString();
+    }
+
+    private TypeName superType() {
+      ClassName superType = ClassName.get(context.packageName(), classToExtend);
+      ImmutableList<TypeVariableName> typeVariableNames = typeVariableNames();
+
+      return typeVariableNames.isEmpty()
+          ? superType
+          : ParameterizedTypeName.get(superType, typeVariableNames.toArray(new TypeName[] {}));
+    }
+
+    private ImmutableList<TypeVariableName> typeVariableNames() {
+      ImmutableList.Builder<TypeVariableName> typeVariableNamesBuilder = ImmutableList.builder();
+      for (TypeParameterElement typeParameter : context.autoValueClass().getTypeParameters()) {
+        typeVariableNamesBuilder.add(TypeVariableName.get(typeParameter));
+      }
+      return typeVariableNamesBuilder.build();
     }
 
     private MethodSpec constructor() {
@@ -146,8 +166,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     }
 
     /**
-     * Determines the required fields and overriding method for a {@link Memoized @Memoized}
-     * method.
+     * Determines the required fields and overriding method for a {@link Memoized @Memoized} method.
      */
     private final class MethodOverrider {
       private final ExecutableElement method;
@@ -333,9 +352,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     }
   }
 
-  /**
-   * Returns the errorprone {@code @LazyInit} annotation if it is found on the classpath.
-   */
+  /** Returns the errorprone {@code @LazyInit} annotation if it is found on the classpath. */
   private static Optional<AnnotationSpec> getLazyInitAnnotation(Elements elements) {
     if (elements.getTypeElement(LAZY_INIT.toString()) == null) {
       return Optional.absent();
@@ -351,7 +368,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       return Optional.absent();
     }
     return Optional.of(AnnotationSpec.builder(GENERATED)
-            .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
-            .build());
+        .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
+        .build());
   }
 }
