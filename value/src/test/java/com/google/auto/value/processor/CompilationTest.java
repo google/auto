@@ -758,7 +758,7 @@ public class CompilationTest {
         "      this.anImmutableList = ImmutableList.of();",
         "    }",
         "",
-        "    Builder(Baz<T> source) {",
+        "    private Builder(Baz<T> source) {",
         "      this.anInt = source.anInt();",
         "      this.aByteArray = source.aByteArray();",
         "      this.aNullableIntArray = source.aNullableIntArray();",

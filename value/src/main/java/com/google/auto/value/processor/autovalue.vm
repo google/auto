@@ -234,7 +234,7 @@ $a
 
     }
 
-    Builder(${origClass}${actualTypes} source) {
+    private Builder(${origClass}${actualTypes} source) {
 
   #foreach ($p in $props)
 
