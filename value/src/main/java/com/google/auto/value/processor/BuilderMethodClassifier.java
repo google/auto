@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
@@ -40,6 +41,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 /**
@@ -52,6 +54,7 @@ class BuilderMethodClassifier {
 
   private final ErrorReporter errorReporter;
   private final Types typeUtils;
+  private final Elements elementUtils;
   private final TypeElement autoValueClass;
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
@@ -65,8 +68,10 @@ class BuilderMethodClassifier {
       LinkedListMultimap.create();
   private final Multimap<String, ExecutableElement> propertyNameToUnprefixedSetters =
       LinkedListMultimap.create();
-  private final Map<String, ExecutableElement> propertyNameToPropertyBuilder =
+  private final Map<String, PropertyBuilder> propertyNameToPropertyBuilder =
       Maps.newLinkedHashMap();
+  private final EclipseHack eclipseHack;
+
   private boolean settersPrefixed;
 
   private BuilderMethodClassifier(
@@ -78,6 +83,7 @@ class BuilderMethodClassifier {
       TypeSimplifier typeSimplifier) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
+    this.elementUtils = processingEnv.getElementUtils();
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
@@ -88,6 +94,7 @@ class BuilderMethodClassifier {
     }
     this.getterNameToGetter = getterToPropertyNameBuilder.build();
     this.typeSimplifier = typeSimplifier;
+    this.eclipseHack = new EclipseHack(processingEnv);
   }
 
   /**
@@ -136,7 +143,7 @@ class BuilderMethodClassifier {
         settersPrefixed ? propertyNameToPrefixedSetters : propertyNameToUnprefixedSetters);
   }
 
-  Map<String, ExecutableElement> propertyNameToPropertyBuilder() {
+  Map<String, PropertyBuilder> propertyNameToPropertyBuilder() {
     return propertyNameToPropertyBuilder;
   }
 
@@ -240,7 +247,17 @@ class BuilderMethodClassifier {
     if (methodName.endsWith("Builder")) {
       String property = methodName.substring(0, methodName.length() - "Builder".length());
       if (getterToPropertyName.containsValue(property)) {
-        return classifyPropertyBuilder(method, property);
+        PropertyBuilderClassifier propertyBuilderClassifier = new PropertyBuilderClassifier(
+            errorReporter, typeUtils, elementUtils, this, getterToPropertyName, typeSimplifier,
+            eclipseHack);
+        Optional<PropertyBuilder> propertyBuilder =
+            propertyBuilderClassifier.makePropertyBuilder(method, property);
+        if (propertyBuilder.isPresent()) {
+          propertyNameToPropertyBuilder.put(property, propertyBuilder.get());
+          return true;
+        } else {
+          return false;
+        }
       }
     }
 
@@ -293,48 +310,6 @@ class BuilderMethodClassifier {
         autoValueClass, builderGetterType, originalGetter.getReturnType());
     errorReporter.reportError(error, builderGetter);
     return false;
-  }
-
-  // Construct this string so it won't be found by Maven shading and renamed, which is not what
-  // we want.
-  private static final String COM_GOOGLE_COMMON_COLLECT_IMMUTABLE =
-      "com.".concat("google.common.collect.Immutable");
-
-  private boolean classifyPropertyBuilder(ExecutableElement method, String property) {
-    TypeMirror builderTypeMirror = builderMethodReturnType(method);
-    TypeElement builderTypeElement = MoreTypes.asTypeElement(builderTypeMirror);
-    String builderTypeString = builderTypeElement.getQualifiedName().toString();
-    boolean isGuavaBuilder = (builderTypeString.startsWith(COM_GOOGLE_COMMON_COLLECT_IMMUTABLE)
-        && builderTypeString.endsWith(".Builder"));
-    if (!isGuavaBuilder) {
-      errorReporter.reportError("Method looks like a property builder, but its return type "
-          + "is not a builder for an immutable type in com.google.common.collect", method);
-      return false;
-    }
-    // Given, e.g. ImmutableSet.Builder<String>, construct ImmutableSet<String> and check that
-    // it is indeed the type of the property.
-    DeclaredType builderTypeDeclared = MoreTypes.asDeclared(builderTypeMirror);
-    TypeMirror[] builderTypeArgs =
-        builderTypeDeclared.getTypeArguments().toArray(new TypeMirror[0]);
-    if (builderTypeArgs.length == 0) {
-      errorReporter.reportError("Property builder type cannot be raw (missing <...>)", method);
-      return false;
-    }
-    TypeElement enclosingTypeElement =
-        MoreElements.asType(builderTypeElement.getEnclosingElement());
-    TypeMirror expectedPropertyType =
-        typeUtils.getDeclaredType(enclosingTypeElement, builderTypeArgs);
-    TypeMirror actualPropertyType = getterToPropertyName.inverse().get(property).getReturnType();
-    if (!TYPE_EQUIVALENCE.equivalent(expectedPropertyType, actualPropertyType)) {
-      String error = String.format(
-          "Return type of property-builder method implies a property of type %s, but property "
-              + "%s has type %s",
-          expectedPropertyType, property, actualPropertyType);
-      errorReporter.reportError(error, method);
-      return false;
-    }
-    propertyNameToPropertyBuilder.put(property, method);
-    return true;
   }
 
   /**
@@ -528,7 +503,7 @@ class BuilderMethodClassifier {
    * {@code ParentBuilder} from an interface to an abstract class to make it work, but you'll often
    * need to do that anyway.
    */
-  private TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
+  TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
     DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
     TypeMirror methodMirror;
     try {

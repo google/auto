@@ -16,7 +16,6 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.common.base.Preconditions.checkState;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -228,7 +227,7 @@ class BuilderSpec {
       vars.builderSetters = setterBuilder.build();
 
       vars.builderPropertyBuilders =
-          makeBuilderPropertyBuilderMap(classifier, typeSimplifier, getterToPropertyName);
+          ImmutableMap.copyOf(classifier.propertyNameToPropertyBuilder());
 
       Set<Property> required = Sets.newLinkedHashSet(vars.props);
       for (Property property : vars.props) {
@@ -239,23 +238,6 @@ class BuilderSpec {
         }
       }
       vars.builderRequiredProperties = ImmutableSet.copyOf(required);
-    }
-
-    private ImmutableMap<String, PropertyBuilder> makeBuilderPropertyBuilderMap(
-        BuilderMethodClassifier classifier,
-        TypeSimplifier typeSimplifier,
-        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      ImmutableMap.Builder<String, PropertyBuilder> map = ImmutableMap.builder();
-      for (Map.Entry<String, ExecutableElement> entry :
-          classifier.propertyNameToPropertyBuilder().entrySet()) {
-        String property = entry.getKey();
-        ExecutableElement autoValuePropertyMethod = getterToPropertyName.inverse().get(property);
-        ExecutableElement propertyBuilderMethod = entry.getValue();
-        PropertyBuilder propertyBuilder = new PropertyBuilder(
-            autoValuePropertyMethod, propertyBuilderMethod, typeSimplifier);
-        map.put(property, propertyBuilder);
-      }
-      return map.build();
     }
   }
 
@@ -359,92 +341,9 @@ class BuilderSpec {
   }
 
   /**
-   * Information about a property builder, referenced from the autovalue.vm template. A property
-   * called foo (defined by a method foo() or getFoo()) can have a property builder called
-   * fooBuilder(). The type of foo must be an immutable Guava type, like ImmutableSet, and
-   * fooBuilder() must return the corresponding builder, like ImmutableSet.Builder.
-   */
-  public class PropertyBuilder {
-    private final String name;
-    private final String builderType;
-    private final String initializer;
-    private final String copyAll;
-    private final String empty;
-
-    PropertyBuilder(
-        ExecutableElement autoValuePropertyMethod,
-        ExecutableElement propertyBuilderMethod,
-        TypeSimplifier typeSimplifier) {
-      this.name = propertyBuilderMethod.getSimpleName() + "$";
-      String immutableType = typeSimplifier.simplify(autoValuePropertyMethod.getReturnType());
-      int typeParamIndex = immutableType.indexOf('<');
-      checkState(typeParamIndex > 0, immutableType);
-      String rawImmutableType = immutableType.substring(0, typeParamIndex);
-      this.builderType =
-          rawImmutableType + ".Builder" + immutableType.substring(typeParamIndex);
-      this.initializer = rawImmutableType + ".builder()";
-      this.empty = rawImmutableType + ".of()";
-      // TODO(emcmanus): clean up TypeSimplifier and remove this hack.
-      // We want it to simplify com.google.common.collect.ImmutableSet.Builder<E>
-      // the same way it would simplify com.google.common.collect.ImmutableSet<E>.
-      // The issue is that getEnclosingElement tends to do the wrong thing in Eclipse
-      // so we end up with ImmutableSet<E>.Builder<E>.
-      TypeElement builderTypeElement = MoreElements.asType(
-          processingEnv.getTypeUtils().asElement(propertyBuilderMethod.getReturnType()));
-      Set<String> methodNames = Sets.newHashSet();
-      for (ExecutableElement builderMethod :
-          ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
-        methodNames.add(builderMethod.getSimpleName().toString());
-      }
-      if (methodNames.contains("addAll")) {
-        this.copyAll = "addAll";
-      } else if (methodNames.contains("putAll")) {
-        this.copyAll = "putAll";
-      } else {
-        throw new AssertionError("Builder contains neither addAll nor putAll: " + methodNames);
-      }
-    }
-
-    /** The name of the field to hold this builder. */
-    public String getName() {
-      return name;
-    }
-
-    /** The type of the builder, for example {@code ImmutableSet.Builder<String>}. */
-    public String getBuilderType() {
-      return builderType;
-    }
-
-    /** An initializer for the builder field, for example {@code ImmutableSet.builder()}. */
-    public String getInitializer() {
-      return initializer;
-    }
-
-    /**
-     * A method to return an empty collection of the type that this builder builds. For example,
-     * if this is an {@code ImmutableList<String>} then the method {@code ImmutableList.of()} will
-     * correctly return an empty {@code ImmutableList<String>}, assuming the appropriate context for
-     * type inference.
-     */
-    public String getEmpty() {
-      return empty;
-    }
-
-    /**
-     * The method to copy another collection into this builder. It is {@code addAll} for
-     * one-dimensional collections like {@code ImmutableList} and {@code ImmutableSet}, and it is
-     * {@code putAll} for two-dimensional collections like {@code ImmutableMap} and
-     * {@code ImmutableTable}.
-     */
-    public String getCopyAll() {
-      return copyAll;
-    }
-  }
-
-  /**
    * Returns a representation of the given {@code @AutoValue.Builder} class or interface. If the
    * class or interface has abstract methods that could not be part of any builder, emits error
-   * messages and returns null.
+   * messages and returns Optional.absent().
    */
   private Optional<Builder> builderFrom(TypeElement builderTypeElement) {
 
@@ -454,33 +353,33 @@ class BuilderSpec {
     // the return type of Foo<U> build() was really the same as the declaration of Foo<T>. This
     // check produces a better error message in that case and similar ones.
 
-    boolean ok = true;
-    int nTypeParameters = autoValueClass.getTypeParameters().size();
-    if (nTypeParameters != builderTypeElement.getTypeParameters().size()) {
-      ok = false;
-    } else {
-      for (int i = 0; i < nTypeParameters; i++) {
-        TypeParameterElement autoValueParam = autoValueClass.getTypeParameters().get(i);
-        TypeParameterElement builderParam = builderTypeElement.getTypeParameters().get(i);
-        if (!autoValueParam.getSimpleName().equals(builderParam.getSimpleName())) {
-          ok = false;
-          break;
-        }
-        Set<TypeMirror> autoValueBounds = new TypeMirrorSet(autoValueParam.getBounds());
-        Set<TypeMirror> builderBounds = new TypeMirrorSet(builderParam.getBounds());
-        if (!autoValueBounds.equals(builderBounds)) {
-          ok = false;
-          break;
-        }
-      }
-    }
-    if (!ok) {
+    if (!sameTypeParameters(autoValueClass, builderTypeElement)) {
       errorReporter.reportError(
           "Type parameters of " + builderTypeElement + " must have same names and bounds as "
               + "type parameters of " + autoValueClass, builderTypeElement);
       return Optional.absent();
     }
     return Optional.of(new Builder(builderTypeElement));
+  }
+
+  private static boolean sameTypeParameters(TypeElement a, TypeElement b) {
+    int nTypeParameters = a.getTypeParameters().size();
+    if (nTypeParameters != b.getTypeParameters().size()) {
+      return false;
+    }
+    for (int i = 0; i < nTypeParameters; i++) {
+      TypeParameterElement aParam = a.getTypeParameters().get(i);
+      TypeParameterElement bParam = b.getTypeParameters().get(i);
+      if (!aParam.getSimpleName().equals(bParam.getSimpleName())) {
+        return false;
+      }
+      Set<TypeMirror> autoValueBounds = new TypeMirrorSet(aParam.getBounds());
+      Set<TypeMirror> builderBounds = new TypeMirrorSet(bParam.getBounds());
+      if (!autoValueBounds.equals(builderBounds)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.

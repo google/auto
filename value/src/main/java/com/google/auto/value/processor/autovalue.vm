@@ -220,17 +220,21 @@ $a
 
     Builder() {
 
-  #foreach ($p in $props)
-    #if ($builderPropertyBuilders[$p.name])
+  ## For collection builders, like ImmutableList.Builder<String> stringsBuilder(), we default the
+  ## built property to empty (ImmutableList.of()). But for custom builders we don't know how to
+  ## do that so we leave them uninitialized and the caller must build or set them explicitly.
 
-      this.$p = ${builderPropertyBuilders[$p.name].empty};
+  #foreach ($p in $props)
+    #if ($builderPropertyBuilders[$p.name] && ${builderPropertyBuilders[$p.name].initEmpty})
+
+      this.$p = ${builderPropertyBuilders[$p.name].initEmpty};
 
     #end
   #end
 
     }
 
-    Builder(${origClass}${actualTypes} source) {
+    private Builder(${origClass}${actualTypes} source) {
 
   #foreach ($p in $props)
 
@@ -272,9 +276,29 @@ $a
     @Override
     public $propertyBuilder.builderType ${p.name}Builder() {
       if (${propertyBuilder.name} == null) {
-        ${propertyBuilder.name} = ${propertyBuilder.initializer};
-        ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
-        $p = null;
+
+        ## This is the first time someone has asked for the builder. If the property it sets already
+        ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
+        ## there is also a setter for this property) then we copy that value into the builder.
+        ## Otherwise the builder starts out empty.
+
+        if ($p == null) {
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
+        } else {
+
+          #if (${propertyBuilder.builtToBuilder})
+
+          ${propertyBuilder.name} = ${p}.${propertyBuilder.builtToBuilder}();
+
+          #else
+
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
+          ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
+
+          #end
+
+          $p = null;
+        }
       }
       return $propertyBuilder.name;
     }
