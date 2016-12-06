@@ -166,7 +166,7 @@ public class ExtensionTest extends TestCase {
         "  }",
         "}");
     assertThat(impl)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutWarnings();
   }
@@ -187,7 +187,7 @@ public class ExtensionTest extends TestCase {
         "  }",
         "}");
     assertThat(impl)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutWarnings();
   }
@@ -332,7 +332,7 @@ public class ExtensionTest extends TestCase {
         "  abstract void writeToParcel(Object parcel, int flags);",
         "}");
     assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(
             new AutoValueProcessor(ImmutableList.of(new FakeWriteToParcelExtension())))
         .compilesWithoutWarnings();
@@ -504,7 +504,7 @@ public class ExtensionTest extends TestCase {
         "public abstract class Baz {",
         "}");
     SuccessfulCompilationClause success = assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(badJarLoader))
         .compilesWithoutError();
     success.withWarningContaining(
