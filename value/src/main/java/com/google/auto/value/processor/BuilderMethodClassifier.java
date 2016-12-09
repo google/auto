@@ -102,9 +102,13 @@ class BuilderMethodClassifier {
    *
    * @param methods the methods in {@code builderType} and its ancestors.
    * @param errorReporter where to report errors.
+   * @param processingEnv the ProcessingEnvironment for annotation processing.
    * @param autoValueClass the {@code AutoValue} class containing the builder.
    * @param builderType the builder class or interface within {@code autoValueClass}.
    * @param getterToPropertyName a map from getter methods to the properties they get.
+   * @param typeSimplifier the TypeSimplifier that will be used to control imports.
+   * @param autoValueHasToBuilder true if the containing {@code @AutoValue} class has a
+   *     {@code toBuilder()} method.
    *
    * @return an {@code Optional} that contains the results of the classification if it was
    *     successful or nothing if it was not.
@@ -116,7 +120,8 @@ class BuilderMethodClassifier {
       TypeElement autoValueClass,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      TypeSimplifier typeSimplifier) {
+      TypeSimplifier typeSimplifier,
+      boolean autoValueHasToBuilder) {
     BuilderMethodClassifier classifier = new BuilderMethodClassifier(
         errorReporter,
         processingEnv,
@@ -124,7 +129,7 @@ class BuilderMethodClassifier {
         builderType,
         getterToPropertyName,
         typeSimplifier);
-    if (classifier.classifyMethods(methods)) {
+    if (classifier.classifyMethods(methods, autoValueHasToBuilder)) {
       return Optional.of(classifier);
     } else {
       return Optional.absent();
@@ -169,7 +174,8 @@ class BuilderMethodClassifier {
   /**
    * Classifies the given methods and sets the state of this object based on what is found.
    */
-  private boolean classifyMethods(Iterable<ExecutableElement> methods) {
+  private boolean classifyMethods(
+      Iterable<ExecutableElement> methods, boolean autoValueHasToBuilder) {
     boolean ok = true;
     for (ExecutableElement method : methods) {
       ok &= classifyMethod(method);
@@ -191,16 +197,37 @@ class BuilderMethodClassifier {
     }
     for (Map.Entry<ExecutableElement, String> getterEntry : getterToPropertyName.entrySet()) {
       String property = getterEntry.getValue();
+      String propertyType = typeSimplifier.simplify(getterEntry.getKey().getReturnType());
       boolean hasSetter = propertyNameToSetter.containsKey(property);
-      boolean hasBuilder = propertyNameToPropertyBuilder.containsKey(property);
-      if (!hasSetter && !hasBuilder) {
-        // TODO(emcmanus): also mention the possible builder method if the property type allows one
+      PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
+      boolean hasBuilder = propertyBuilder != null;
+      if (hasBuilder) {
+        // If property bar of type Bar has a barBuilder() that returns BarBuilder, then it must be
+        // possible to make a BarBuilder from a Bar if either (1) the @AutoValue class has a
+        // toBuilder() or (2) there is also a setBar(Bar). Making BarBuilder from Bar is possible
+        // if Bar either has a toBuilder() method or is a Guava immutable collection (in which case
+        // we can use addAll or putAll).
+        boolean canMakeBarBuilder =
+            (propertyBuilder.getBuiltToBuilder() != null || propertyBuilder.getCopyAll() != null);
+        boolean needToMakeBarBuilder = (autoValueHasToBuilder || hasSetter);
+        if (needToMakeBarBuilder && !canMakeBarBuilder) {
+          String error = String.format(
+              "Property builder method returns %1$s but there is no way to make that type from "
+                  + "%2$s: %2$s does not have a non-static toBuilder() method that returns %1$s",
+              propertyBuilder.getBuilderType(),
+              propertyType);
+          errorReporter.reportError(error, propertyBuilder.getPropertyBuilderMethod());
+        }
+      } else if (!hasSetter) {
+        // We have neither barBuilder() nor setBar(Bar), so we should complain.
         String setterName = settersPrefixed ? prefixWithSet(property) : property;
-        String error = String.format("Expected a method with this signature: %s%s %s(%s)",
+        String error = String.format(
+            "Expected a method with this signature: %s%s %s(%s), or a %sBuilder() method",
             builderType,
             typeParamsString(),
             setterName,
-            getterEntry.getKey().getReturnType());
+            propertyType,
+            property);
         errorReporter.reportError(error, builderType);
         ok = false;
       }

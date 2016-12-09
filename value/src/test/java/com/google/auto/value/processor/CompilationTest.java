@@ -1558,6 +1558,7 @@ public class CompilationTest {
         "@AutoValue",
         "public abstract class Baz<E> {",
         "  abstract String blim();",
+        "  abstract Builder toBuilder();",
         "",
         "  public static class StringFactory {",
         "    public String build() {",
@@ -1576,10 +1577,47 @@ public class CompilationTest {
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
         .withErrorContaining(
-            "Property builder method returns foo.bar.Baz.StringFactory but there is no way to make "
-                + "that type from java.lang.String: java.lang.String does not have a non-static "
-                + "toBuilder() method that returns foo.bar.Baz.StringFactory")
-        .in(javaFileObject).onLine(18);
+            "Property builder method returns Baz.StringFactory but there is no way to make "
+                + "that type from String: String does not have a non-static "
+                + "toBuilder() method that returns Baz.StringFactory")
+        .in(javaFileObject).onLine(19);
+  }
+
+  @Test
+  public void autoValueBuilderPropertyBuilderCantSet() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableSet;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<E> {",
+        "  abstract String blim();",
+        "",
+        "  public static class StringFactory {",
+        "    public String build() {",
+        "      return null;",
+        "    }",
+        "  }",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<E> {",
+        "    Builder<E> setBlim(String s);",
+        "    StringFactory blimBuilder();",
+        "    Baz<E> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining(
+            "Property builder method returns Baz.StringFactory but there is no way to make "
+                + "that type from String: String does not have a non-static "
+                + "toBuilder() method that returns Baz.StringFactory")
+        .in(javaFileObject).onLine(19);
   }
 
   @Test
@@ -1594,6 +1632,7 @@ public class CompilationTest {
         "@AutoValue",
         "public abstract class Baz<E> {",
         "  abstract Buh blim();",
+        "  abstract Builder<E> toBuilder();",
         "",
         "  public static class Buh {",
         "    StringBuilder toBuilder() {",
@@ -1618,10 +1657,10 @@ public class CompilationTest {
         .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
         .failsToCompile()
         .withErrorContaining(
-            "Property builder method returns foo.bar.Baz.BuhBuilder but there is no way to make "
-                + "that type from foo.bar.Baz.Buh: foo.bar.Baz.Buh does not have a non-static "
-                + "toBuilder() method that returns foo.bar.Baz.BuhBuilder")
-        .in(javaFileObject).onLine(24);
+            "Property builder method returns Baz.BuhBuilder but there is no way to make "
+                + "that type from Baz.Buh: Baz.Buh does not have a non-static "
+                + "toBuilder() method that returns Baz.BuhBuilder")
+        .in(javaFileObject).onLine(25);
   }
 
   @Test
