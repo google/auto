@@ -72,7 +72,11 @@
         <configuration>
           <source>1.6</source>
           <target>1.6</target>
-          <compilerArgument>-Xlint:all</compilerArgument>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <arg>-encoding</arg>
+            <arg>utf8</arg>
+          </compilerArgs>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
         </configuration>
@@ -95,6 +99,8 @@
               <compilerArgs>
                 <arg>-Xlint:all</arg>
                 <arg>-Acom.google.auto.value.EclipseHackTest=1</arg>
+                <arg>-encoding</arg>
+                <arg>utf8</arg>
               </compilerArgs>
               <showWarnings>true</showWarnings>
               <showDeprecation>true</showDeprecation>
