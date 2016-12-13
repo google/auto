@@ -82,6 +82,7 @@ class PropertyBuilderClassifier {
    * {@code barBuilder()} might return {@code ImmutableSet.Builder<String>}.
    */
   public static class PropertyBuilder {
+    private final ExecutableElement propertyBuilderMethod;
     private final String name;
     private final String builderType;
     private final String initializer;
@@ -96,12 +97,18 @@ class PropertyBuilderClassifier {
         String initEmpty,
         String builtToBuilder,
         String copyAll) {
+      this.propertyBuilderMethod = propertyBuilderMethod;
       this.name = propertyBuilderMethod.getSimpleName() + "$";
       this.builderType = builderType;
       this.initializer = initializer;
       this.initEmpty = initEmpty;
       this.builtToBuilder = builtToBuilder;
       this.copyAll = copyAll;
+    }
+
+    /** The property builder method, for example {@code barBuilder()}. */
+    public ExecutableElement getPropertyBuilderMethod() {
+      return propertyBuilderMethod;
     }
 
     /** The name of the field to hold this builder. */
@@ -238,19 +245,6 @@ class PropertyBuilderClassifier {
       Optional<ExecutableElement> maybeCopyAll = addAllPutAll(barBuilderTypeElement);
       if (maybeCopyAll.isPresent() && isGuavaBuilder) {
         copyAll = maybeCopyAll.get().getSimpleName().toString();
-      } else {
-        // TODO(emcmanus): relax the condition here by not requiring that there be a way to make
-        // BarBuilder from Bar. That is needed if the containing @AutoValue class Foo has a
-        // toBuilder() method, or if there is also a setter for bar. Unfortunately we emit a
-        // second package-private constructor AutoValue_Foo.Builder(Foo) which can be used instead
-        // of toBuilder(). That's not documented, and we should stop doing it, because we can't
-        // know if anyone calls the constructor and therefore we have to assume that we'll need
-        // to make BarBuilder from Bar.
-        errorReporter.reportError("Property builder method returns " + barBuilderTypeMirror
-            + " but there is no way to make that type from " + barTypeMirror + ": "
-            + barTypeMirror + " does not have a non-static toBuilder() method that returns "
-            + barBuilderTypeMirror, method);
-        return Optional.absent();
       }
     }
     ExecutableElement barOf = barNoArgMethods.get("of");

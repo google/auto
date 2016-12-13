@@ -281,6 +281,14 @@ $a
         ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
         ## there is also a setter for this property) then we copy that value into the builder.
         ## Otherwise the builder starts out empty.
+        ## If we have neither a setter nor a toBuilder() method, then the builder always starts
+        ## off empty.
+
+        #if ($builderSetters[$p.name].empty && $toBuilderMethods.empty)
+
+        ${propertyBuilder.name} = ${propertyBuilder.initializer};
+
+        #else
 
         if ($p == null) {
           ${propertyBuilder.name} = ${propertyBuilder.initializer};
@@ -299,6 +307,9 @@ $a
 
           $p = null;
         }
+
+        #end
+
       }
       return $propertyBuilder.name;
     }

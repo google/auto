@@ -102,6 +102,7 @@ class BuilderSpec {
    */
   class Builder {
     private final TypeElement builderTypeElement;
+    private ImmutableSet<ExecutableElement> toBuilderMethods;
 
     Builder(TypeElement builderTypeElement) {
       this.builderTypeElement = builderTypeElement;
@@ -157,6 +158,7 @@ class BuilderSpec {
         errorReporter.reportError(
             "There can be at most one builder converter method", builderMethods.iterator().next());
       }
+      this.toBuilderMethods = builderMethods;
       return builderMethods;
     }
 
@@ -183,6 +185,7 @@ class BuilderSpec {
         TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
+      boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
       Optional<BuilderMethodClassifier> optionalClassifier = BuilderMethodClassifier.classify(
           builderMethods,
           errorReporter,
@@ -190,7 +193,8 @@ class BuilderSpec {
           autoValueClass,
           builderTypeElement,
           getterToPropertyName,
-          typeSimplifier);
+          typeSimplifier,
+          autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
       }

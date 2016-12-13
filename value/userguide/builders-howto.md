@@ -30,6 +30,7 @@ How do I...
         **breaking the chain**?](#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
+*   ... [access nested builders while building?](#nested_builders)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
@@ -466,8 +467,88 @@ Now the caller can do this:
       .build();
 ```
 
-### ... offer both accumulation and set-at-once methods for the same collection-valued property?
+### <a name="collection_both"></a>... offer both accumulation and set-at-once methods for the same collection-valued property?
 
 You can have both. If the caller uses `setFoos` after `foosBuilder` has been
 called, an unchecked exception will be thrown.
 
+## <a name="nested_builders"></a>... access nested builders while building?
+
+Often a property of an `@AutoValue` class is itself an immutable class,
+perhaps another `@AutoValue`. In such cases your builder can expose a builder
+for that nested class. This is very similar to exposing a builder for a
+collection property, as described [earlier](#accumulate).
+
+Suppose the `Animal` class has a property of type `Species`:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract Species species();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setName(String name);
+    public abstract Species.Builder speciesBuilder();
+    public abstract Animal build();
+  }
+}
+
+@AutoValue
+public abstract class Species {
+  public abstract String genus();
+  public abstract String epithet();
+
+  public static Builder builder() {
+    return new AutoValue_Species.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setGenus(String genus);
+    public abstract Builder setEpithet(String epithet);
+    public abstract Species build();
+  }
+}
+```
+
+Now you can access the builder of the nested `Species` while you are building
+the `Animal`:
+
+```java
+  Animal.Builder catBuilder = Animal.builder()
+      .setName("cat");
+  catBuilder.speciesBuilder()
+      .setGenus("Felis")
+      .setEpithet("catus");
+  Animal cat = catBuilder.build();
+```
+
+Although the nested class in the example (`Species`) is also an `@AutoValue`
+class, it does not have to be. For example, it could be a [protobuf]. The
+requirements are:
+
+* The nested class must have a way to make a new builder. This can be
+  `new Species.Builder()`, or `Species.builder()`, or `Species.newBuilder()`.
+
+* There must be a way to build an instance from the builder: `Species.Builder`
+  must have a method `Species build()`.
+
+* If there is a need to convert `Species` back into its builder, then `Species`
+  must have a method `Species.Builder toBuilder()`.
+
+  In the example, if `Animal` has an abstract [`toBuilder()`](#to_builder)
+  method then `Species` must also have a `toBuilder()` method. That also applies
+  if there is an abstract `setSpecies` method in addition to the
+  `speciesBuilder` method.
+
+There are no requirements on the name of the builder class. Instead of
+`Species.Builder`, it could be `Species.Factory` or `SpeciesBuilder`.
+
+
+[protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders

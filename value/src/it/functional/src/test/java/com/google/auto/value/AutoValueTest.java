@@ -2155,10 +2155,6 @@ public class AutoValueTest extends TestCase {
     public MyMap(Map<K, V> map) {
       super(map);
     }
-
-    public MyMapBuilder<K, V> toBuilder() {
-      return new MyMapBuilder<K, V>(this);
-    }
   }
 
   public static class MyMapBuilder<K, V> extends LinkedHashMap<K, V> {
@@ -2203,7 +2199,7 @@ public class AutoValueTest extends TestCase {
       super(map);
     }
 
-    @Override public MyStringMapBuilder<V> toBuilder() {
+    public MyStringMapBuilder<V> toBuilder() {
       return new MyStringMapBuilder<V>(this);
     }
   }
