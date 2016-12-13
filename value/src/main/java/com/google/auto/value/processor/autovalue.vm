@@ -360,17 +360,17 @@ $a
 
   #if (!$builderRequiredProperties.empty)
 
-      String missing = "";
+      StringBuilder missing = new StringBuilder();
 
     #foreach ($p in $builderRequiredProperties)
 
       if ($p == null) {
-        missing += " $p.name";
+        missing.append(" $p.name");
       }
 
     #end
 
-      if (!missing.isEmpty()) {
+      if (missing.length() > 0) {
         throw new IllegalStateException("Missing required properties:" + missing);
       }
   #end

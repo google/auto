@@ -857,17 +857,17 @@ public class CompilationTest {
         "      if (anImmutableListBuilder$ != null) {",
         "        anImmutableList = anImmutableListBuilder$.build();",
         "      }",
-        "      String missing = \"\";",
+        "      StringBuilder missing = new StringBuilder();",
         "      if (anInt == null) {",
-        "        missing += \" anInt\";",
+        "        missing.append(\" anInt\");",
         "      }",
         "      if (aByteArray == null) {",
-        "        missing += \" aByteArray\";",
+        "        missing.append(\" aByteArray\");",
         "      }",
         "      if (aList == null) {",
-        "        missing += \" aList\";",
+        "        missing.append(\" aList\");",
         "      }",
-        "      if (!missing.isEmpty()) {",
+        "      if (missing.length() > 0) {",
         "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
         "      }",
         "      return new AutoValue_Baz<T>(",
@@ -2122,3 +2122,4 @@ public class CompilationTest {
         .compilesWithoutError();
   }
 }
+
