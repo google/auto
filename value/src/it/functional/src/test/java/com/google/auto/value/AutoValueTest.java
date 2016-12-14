@@ -1398,6 +1398,32 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  public abstract static class PropertyNamedMissing {
+    public abstract String missing();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_PropertyNamedMissing.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setMissing(String x);
+      public abstract PropertyNamedMissing build();
+    }
+  }
+
+  // https://github.com/google/auto/issues/412
+  public void testPropertyNamedMissing() {
+    try {
+      PropertyNamedMissing.builder().build();
+      fail();
+    } catch (IllegalStateException expected) {
+    }
+    PropertyNamedMissing x = PropertyNamedMissing.builder().setMissing("foo").build();
+    assertThat(x.missing()).isEqualTo("foo");
+  }
+
+  @AutoValue
   public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
     public abstract List<T> list();
     public abstract U u();
