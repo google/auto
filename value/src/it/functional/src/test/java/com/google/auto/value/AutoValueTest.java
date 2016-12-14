@@ -1525,6 +1525,8 @@ public class AutoValueTest extends TestCase {
     @SuppressWarnings("mutable")
     public abstract int[] ints();
     public abstract int noGetter();
+    public abstract String oAuth();
+    public abstract String oBrien();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
       return new AutoValue_AutoValueTest_BuilderWithUnprefixedGetters.Builder<T>();
@@ -1536,10 +1538,14 @@ public class AutoValueTest extends TestCase {
       Builder<T> setT(T t);
       Builder<T> setInts(int[] ints);
       Builder<T> setNoGetter(int x);
+      Builder<T> setoAuth(String x);  // this ugly spelling is for compatibility
+      Builder<T> setOBrien(String x);
 
       ImmutableList<T> list();
       T t();
       int[] ints();
+      String oAuth();
+      String oBrien();
 
       BuilderWithUnprefixedGetters<T> build();
     }
@@ -1569,6 +1575,10 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.list()).isSameAs(names);
     builder.setInts(ints);
     assertThat(builder.ints()).isEqualTo(ints);
+    builder.setoAuth("OAuth");
+    assertThat(builder.oAuth()).isEqualTo("OAuth");
+    builder.setOBrien("Flann");
+    assertThat(builder.oBrien()).isEqualTo("Flann");
     // The array is not cloned by the getter, so the client can modify it (but shouldn't).
     ints[0] = 0;
     assertThat(builder.ints()[0]).isEqualTo(0);
@@ -1579,6 +1589,8 @@ public class AutoValueTest extends TestCase {
     assertThat(instance.t()).isNull();
     assertThat(instance.ints()).isEqualTo(ints);
     assertThat(instance.noGetter()).isEqualTo(noGetter);
+    assertThat(instance.oAuth()).isEqualTo("OAuth");
+    assertThat(instance.oBrien()).isEqualTo("Flann");
   }
 
   @AutoValue
@@ -1587,6 +1599,7 @@ public class AutoValueTest extends TestCase {
     public abstract T getT();
     @SuppressWarnings("mutable")
     @Nullable public abstract int[] getInts();
+    public abstract String getOAuth();
     public abstract int getNoGetter();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
@@ -1599,6 +1612,7 @@ public class AutoValueTest extends TestCase {
       public abstract Builder<T> setT(T t);
       public abstract Builder<T> setInts(int[] ints);
       public abstract Builder<T> setNoGetter(int x);
+      public abstract Builder<T> setOAuth(String x);
 
       abstract ImmutableList<T> getList();
       abstract T getT();
@@ -1626,12 +1640,14 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.getList()).isSameAs(names);
     builder.setT(name);
     assertThat(builder.getInts()).isNull();
+    builder.setOAuth("OAuth");
 
     BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
     assertThat(instance.getList()).isSameAs(names);
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
+    assertThat(instance.getOAuth()).isEqualTo("OAuth");
   }
 
   @AutoValue

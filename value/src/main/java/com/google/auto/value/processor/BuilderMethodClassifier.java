@@ -353,12 +353,22 @@ class BuilderMethodClassifier {
     ExecutableElement valueGetter = propertyNameToGetter.get(methodName);
     Multimap<String, ExecutableElement> propertyNameToSetters = null;
     if (valueGetter != null) {
-      propertyName = methodName;
       propertyNameToSetters = propertyNameToUnprefixedSetters;
+      propertyName = methodName;
     } else if (valueGetter == null && methodName.startsWith("set") && methodName.length() > 3) {
-      propertyName = Introspector.decapitalize(methodName.substring(3));
       propertyNameToSetters = propertyNameToPrefixedSetters;
+      propertyName = Introspector.decapitalize(methodName.substring(3));
       valueGetter = propertyNameToGetter.get(propertyName);
+      if (valueGetter == null) {
+        // If our property is defined by a getter called getOAuth() then it is called "OAuth"
+        // because of Introspector.decapitalize. Therefore we want Introspector.decapitalize to
+        // be used for the setter too, so that you can write setOAuth(x). Meanwhile if the property
+        // is defined by a getter called oAuth() then it is called "oAuth", but you would still
+        // expect to be able to set it using setOAuth(x). Hence the second try using a decapitalize
+        // method without the quirky two-leading-capitals rule.
+        propertyName = decapitalize(methodName.substring(3));
+        valueGetter = propertyNameToGetter.get(propertyName);
+      }
     }
     if (valueGetter == null || propertyNameToSetters == null) {
       // The second disjunct isn't needed but convinces control-flow checkers that
@@ -542,10 +552,17 @@ class BuilderMethodClassifier {
     return MoreTypes.asExecutable(methodMirror).getReturnType();
   }
 
-  private String prefixWithSet(String propertyName) {
+  private static String prefixWithSet(String propertyName) {
     // This is not internationalizationally correct, but it corresponds to what
     // Introspector.decapitalize does.
     return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+  }
+
+  // Equivalent to Introspector.decapitalize but without the quirky exception whereby
+  // Introspector.decapitalize("OAuth").equals("OAuth"). (If the first two letters are capitals
+  // then Introspector.decapitalize does nothing.)
+  private static String decapitalize(String propertyName) {
+    return Character.toLowerCase(propertyName.charAt(0)) + propertyName.substring(1);
   }
 
   private String typeParamsString() {
