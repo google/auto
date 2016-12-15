@@ -15,19 +15,24 @@
  */
 package com.google.auto.value.processor;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests for {@link AbstractMethodLister}.
  *
  * @author Éamonn McManus
  */
-public class AbstractMethodListerTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AbstractMethodListerTest {
   /** Test class for the abstractNoArgMethods() test cases. */
-  public abstract class Abstract {
+  public abstract static class Abstract {
     abstract int foo();
     abstract String baz(int x);
     abstract boolean bar();
@@ -40,7 +45,7 @@ public class AbstractMethodListerTest extends TestCase {
   }
 
   /** Test class for the abstractNoArgMethods() test cases. */
-  abstract class AbstractSub extends Abstract {
+  abstract static class AbstractSub extends Abstract {
     @Override boolean bar() {
       return false;
     }
@@ -61,10 +66,12 @@ public class AbstractMethodListerTest extends TestCase {
     assertEquals(Arrays.asList(expectedMethods), methods);
   }
 
+  @Test
   public void testAbstractNoParent() throws Exception {
     testAbstractNoArgMethods(Abstract.class, "foo", "bar", "baz");
   }
 
+  @Test
   public void testAbstractWithParent() throws Exception {
     testAbstractNoArgMethods(AbstractSub.class, "buh");
   }

@@ -15,15 +15,23 @@
  */
 package com.google.auto.value.processor;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+
 import java.io.StringReader;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Unit tests for {@link EclipseHackTokenizer}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class EclipseHackTokenizerTest extends TestCase {
+@RunWith(JUnit4.class)
+public class EclipseHackTokenizerTest {
+  @Test
   public void testSimple() {
     // Construct a string containing the tokens produced from this source code, with a space after
     // each one, and compare it with what we expect from the tokenization.

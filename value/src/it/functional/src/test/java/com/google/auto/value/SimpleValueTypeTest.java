@@ -15,15 +15,22 @@
  */
 package com.google.auto.value;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
 import java.util.Map;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class SimpleValueTypeTest extends TestCase {
+@RunWith(JUnit4.class)
+public class SimpleValueTypeTest {
+  @Test
   public void testSimpleValueType() {
     final String happy = "happy";
     final int testInt = 23;
@@ -41,12 +48,14 @@ public class SimpleValueTypeTest extends TestCase {
     assertEquals(expectedHashCode, simple.hashCode());
   }
 
+  @Test
   public void testNestedValueType() {
     ImmutableMap<Integer, String> numberNames = ImmutableMap.of(1, "un", 2, "deux");
     NestedValueType.Nested nested = NestedValueType.Nested.create(numberNames);
     assertEquals(numberNames, nested.numberNames());
   }
 
+  @Test
   public void testNull() {
     NullPointerTester tester = new NullPointerTester();
     tester.testAllPublicStaticMethods(SimpleValueType.class);

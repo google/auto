@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
@@ -31,12 +32,16 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class AutoAnnotationCompilationTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AutoAnnotationCompilationTest {
+  @Test
   public void testSimple() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",
@@ -126,6 +131,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  @Test
   public void testGwtSimple() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",
@@ -217,6 +223,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  @Test
   public void testCollectionsForArrays() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",
@@ -348,6 +355,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  @Test
   public void testMissingClass() throws IOException {
     File tempDir = File.createTempFile("AutoAnnotationCompilationTest", "");
     assertTrue(tempDir.delete());

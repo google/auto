@@ -15,18 +15,23 @@
  */
 package com.google.auto.value;
 
+import static org.junit.Assert.assertTrue;
+
 import com.google.auto.value.enums.MyEnum;
 import com.google.common.testing.EqualsTester;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class AutoAnnotationDefaultsTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AutoAnnotationDefaultsTest {
   @Retention(RetentionPolicy.RUNTIME)
   @interface EverythingWithDefaults {
     byte aByte() default 1;
@@ -60,6 +65,7 @@ public class AutoAnnotationDefaultsTest extends TestCase {
     return new AutoAnnotation_AutoAnnotationDefaultsTest_newEverythingWithDefaults();
   }
 
+  @Test
   public void testDefaults() throws Exception {
     @EverythingWithDefaults class Annotated {}
     EverythingWithDefaults expected = Annotated.class.getAnnotation(EverythingWithDefaults.class);

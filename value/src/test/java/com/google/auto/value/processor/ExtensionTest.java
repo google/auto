@@ -16,6 +16,9 @@
 package com.google.auto.value.processor;
 
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Joiner;
@@ -43,9 +46,13 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-public class ExtensionTest extends TestCase {
+@RunWith(JUnit4.class)
+public class ExtensionTest {
+  @Test
   public void testExtensionCompilation() throws Exception {
 
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
@@ -80,6 +87,7 @@ public class ExtensionTest extends TestCase {
         .and().generatesSources(expectedExtensionOutput);
   }
 
+  @Test
   public void testExtensionConsumesProperties() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -151,6 +159,7 @@ public class ExtensionTest extends TestCase {
         .and().generatesSources(expectedExtensionOutput);
   }
 
+  @Test
   public void testDoesntRaiseWarningForConsumedProperties() {
     JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
         "package foo.bar;",
@@ -171,6 +180,7 @@ public class ExtensionTest extends TestCase {
         .compilesWithoutWarnings();
   }
 
+  @Test
   public void testDoesntRaiseWarningForToBuilder() {
     JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
         "package foo.bar;",
@@ -192,6 +202,7 @@ public class ExtensionTest extends TestCase {
         .compilesWithoutWarnings();
   }
 
+  @Test
   public void testCantConsumeTwice() throws Exception {
     class ConsumeDizzle extends NonFinalExtension {
       @Override public Set<String> consumeProperties(Context context) {
@@ -216,6 +227,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(5);
   }
 
+  @Test
   public void testCantConsumeNonExistentProperty() throws Exception {
     class ConsumeDizzle extends NonFinalExtension {
       @Override public Set<String> consumeProperties(Context context) {
@@ -235,6 +247,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(3);
   }
 
+  @Test
   public void testCantConsumeConcreteMethod() throws Exception {
     class ConsumeConcreteMethod extends NonFinalExtension {
       @Override public Set<ExecutableElement> consumeMethods(Context context) {
@@ -266,6 +279,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(3);
   }
 
+  @Test
   public void testCantConsumeNonExistentMethod() throws Exception {
     class ConsumeBogusMethod extends NonFinalExtension {
       @Override public Set<ExecutableElement> consumeMethods(Context context) {
@@ -298,6 +312,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(3);
   }
 
+  @Test
   public void testExtensionWithoutConsumedPropertiesFails() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -319,6 +334,7 @@ public class ExtensionTest extends TestCase {
             + "it is a primitive array");
   }
 
+  @Test
   public void testConsumeMethodWithArguments() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -338,8 +354,8 @@ public class ExtensionTest extends TestCase {
         .compilesWithoutWarnings();
   }
 
+  @Test
   public void testExtensionWithBuilderCompilation() throws Exception {
-
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -378,6 +394,7 @@ public class ExtensionTest extends TestCase {
         .and().generatesSources(expectedExtensionOutput);
   }
 
+  @Test
   public void testTwoExtensionsBothWantToBeFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -398,6 +415,7 @@ public class ExtensionTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
+  @Test
   public void testNonFinalThenFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -421,6 +439,7 @@ public class ExtensionTest extends TestCase {
     assertTrue(nonFinalExtension.generated);
   }
 
+  @Test
   public void testFinalThenNonFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -444,6 +463,7 @@ public class ExtensionTest extends TestCase {
     assertTrue(nonFinalExtension.generated);
   }
 
+  @Test
   public void testUnconsumedMethod() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -475,6 +495,7 @@ public class ExtensionTest extends TestCase {
    * corrupt jar in the {@code processorpath}. If we're not careful, that can lead to a
    * ServiceConfigurationError.
    */
+  @Test
   public void testBadJarDoesntBlowUp() throws IOException {
     File badJar = File.createTempFile("bogus", ".jar");
     try {

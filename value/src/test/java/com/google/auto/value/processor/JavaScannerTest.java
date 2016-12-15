@@ -19,12 +19,15 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class JavaScannerTest extends TestCase {
+@RunWith(JUnit4.class)
+public class JavaScannerTest {
   private static final ImmutableList<String> TOKENS = ImmutableList.of(
       "  ", "\"hello \\\" world\\n\"", "'a'", "  ", "'\\t'", "  ", "`com.google.Foo`", "   ",
       "\n  ", "/* comment * comment \" whatever\n     comment continued */",
@@ -35,6 +38,7 @@ public class JavaScannerTest extends TestCase {
    * Tests basic scanner functionality. The test concatenates the tokens in {@link #TOKENS}
    * and then retokenizes that string, checking that the same list of tokens is produced.
    */
+  @Test
   public void testScanner() {
     String input = Joiner.on("").join(TOKENS);
     ImmutableList.Builder<String> tokensBuilder = ImmutableList.builder();
