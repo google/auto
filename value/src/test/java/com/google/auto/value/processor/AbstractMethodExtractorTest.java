@@ -15,16 +15,22 @@
  */
 package com.google.auto.value.processor;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableMultimap;
 import java.io.StringReader;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests for {@link AbstractMethodExtractor}.
  *
  * @author Éamonn McManus
  */
-public class AbstractMethodExtractorTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AbstractMethodExtractorTest {
+  @Test
   public void testSimple() {
     String source = "package com.example;\n"
         + "import com.google.auto.value.AutoValue;\n"
@@ -48,6 +54,7 @@ public class AbstractMethodExtractorTest extends TestCase {
     assertEquals(expected, actual);
   }
 
+  @Test
   public void testNested() {
     String source = "package com.example;\n"
         + "import com.google.auto.value.AutoValue;\n"
@@ -83,6 +90,7 @@ public class AbstractMethodExtractorTest extends TestCase {
     assertEquals(expected, actual);
   }
 
+  @Test
   public void testClassConstants() {
     // Regression test for a bug where String.class was parsed as introducing a class definition
     // of a later identifier.

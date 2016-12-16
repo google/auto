@@ -15,6 +15,8 @@
  */
 package com.google.auto.value;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.auto.value.annotations.Empty;
 import com.google.auto.value.annotations.GwtArrays;
 import com.google.auto.value.annotations.StringValues;
@@ -36,12 +38,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class AutoAnnotationTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AutoAnnotationTest {
   @AutoAnnotation private static StringValues newStringValues(String[] value) {
     return new AutoAnnotation_AutoAnnotationTest_newStringValues(value);
   }
@@ -50,6 +55,7 @@ public class AutoAnnotationTest extends TestCase {
   @StringValues("oops")
   class AnnotatedClass {}
 
+  @Test
   public void testSimple() {
     StringValues expectedStringValues = AnnotatedClass.class.getAnnotation(StringValues.class);
     StringValues actualStringValues = newStringValues(new String[] {"oops"});
@@ -60,6 +66,7 @@ public class AutoAnnotationTest extends TestCase {
         .testEquals();
   }
 
+  @Test
   public void testArraysAreCloned() {
     String[] array = {"Jekyll"};
     StringValues stringValues = newStringValues(array);
@@ -69,6 +76,7 @@ public class AutoAnnotationTest extends TestCase {
     assertEquals("Jekyll", stringValues.value()[0]);
   }
 
+  @Test
   public void testGwtArraysAreCloned() {
     String[] strings = {"Jekyll"};
     int[] ints = {2, 3, 5};
@@ -89,6 +97,7 @@ public class AutoAnnotationTest extends TestCase {
     return new AutoAnnotation_AutoAnnotationTest_newStringValuesVarArgs(value);
   }
 
+  @Test
   public void testSimpleVarArgs() {
     StringValues expectedStringValues = AnnotatedClass.class.getAnnotation(StringValues.class);
     StringValues actualStringValues = newStringValuesVarArgs("oops");
@@ -103,6 +112,7 @@ public class AutoAnnotationTest extends TestCase {
     return new AutoAnnotation_AutoAnnotationTest_newEmpty();
   }
 
+  @Test
   public void testEmpty() {
     Empty expectedEmpty = AnnotatedClass.class.getAnnotation(Empty.class);
     Empty actualEmpty = newEmpty();
@@ -286,6 +296,7 @@ public class AutoAnnotationTest extends TestCase {
       ImmutableSet.<RetentionPolicy>of(),
       Collections.<StringValues>emptySet());
 
+  @Test
   public void testEqualsAndHashCode() {
     new EqualsTester()
         .addEqualityGroup(
@@ -323,6 +334,7 @@ public class AutoAnnotationTest extends TestCase {
    * primitive wrapper type even though it's hidden in this way. We need to generate a helper method
    * for every primitive wrapper.
    */
+  @Test
   public void testDerivedPrimitiveCollection() {
     IntList intList = new IntList(ImmutableList.of(1, 2, 3));
     IntArray actual = newIntArray(intList);
@@ -330,6 +342,7 @@ public class AutoAnnotationTest extends TestCase {
     assertEquals(expected, actual);
   }
 
+  @Test
   public void testToString() {
     String expected = "@com.google.auto.value.AutoAnnotationTest.Everything("
         + "aByte=1, aShort=2, anInt=3, aLong=-4, aFloat=NaN, aDouble=NaN, aChar='#', "
@@ -350,6 +363,7 @@ public class AutoAnnotationTest extends TestCase {
     assertEquals(expected, EVERYTHING_FROM_AUTO_COLLECTIONS.toString());
   }
 
+  @Test
   public void testStringQuoting() {
     StringValues instance = newStringValues(
         new String[] {
@@ -377,6 +391,7 @@ public class AutoAnnotationTest extends TestCase {
     return new AutoAnnotation_AutoAnnotationTest_newAnnotationsAnnotation(value);
   }
 
+  @Test
   public void testGenericArray() {
     AnnotationsAnnotation generated =
         newAnnotationsAnnotation(
@@ -399,6 +414,7 @@ public class AutoAnnotationTest extends TestCase {
     return new AutoAnnotation_AutoAnnotationTest_newClassesAnnotation(value);
   }
 
+  @Test
   public void testWildcardArray() {
     ClassesAnnotation generated =
         newClassesAnnotation(

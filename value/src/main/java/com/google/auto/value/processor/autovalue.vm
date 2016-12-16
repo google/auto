@@ -363,7 +363,7 @@ $a
     #if ($builderPropertyBuilders[$p.name])
 
       if (${builderPropertyBuilders[$p.name].name} != null) {
-        $p = ${builderPropertyBuilders[$p.name].name}.build();
+        this.$p = ${builderPropertyBuilders[$p.name].name}.build();
       }
 
     #end
@@ -375,7 +375,7 @@ $a
 
     #foreach ($p in $builderRequiredProperties)
 
-      if ($p == null) {
+      if (this.$p == null) {
         missing += " $p.name";
       }
 

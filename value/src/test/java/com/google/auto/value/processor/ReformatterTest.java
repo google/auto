@@ -15,14 +15,20 @@
  */
 package com.google.auto.value.processor;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Unit tests for {@link Reformatter}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class ReformatterTest extends TestCase {
+@RunWith(JUnit4.class)
+public class ReformatterTest {
+  @Test
   public void testSimple() {
     String input =
         "\n"
@@ -60,6 +66,7 @@ public class ReformatterTest extends TestCase {
     assertEquals(output, Reformatter.fixup(input));
   }
 
+  @Test
   public void testSpecialSpaces() {
     String input =
         "\n"

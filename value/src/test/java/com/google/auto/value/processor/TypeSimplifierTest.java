@@ -15,6 +15,11 @@
  */
 package com.google.auto.value.processor;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -55,14 +60,17 @@ import javax.tools.JavaFileObject.Kind;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests for {@link TypeSimplifier}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class TypeSimplifierTest extends TestCase {
+@RunWith(JUnit4.class)
+public class TypeSimplifierTest {
   private static final ImmutableMap<String, String> CLASS_TO_SOURCE = ImmutableMap.of(
       "Test",
           "public class Test {}\n",
@@ -106,10 +114,13 @@ public class TypeSimplifierTest extends TestCase {
   // annotation processor, converting test failures into compiler errors. Then testTypeSimplifier()
   // passes if there were no compiler errors, and otherwise fails with a message that is a
   // concatenation of all the individual failures.
+  // TODO(emcmanus): Use compile-testing to make all this unnecessary.
+  @Test
   public void testTypeSimplifier() throws Exception {
     doTestTypeSimplifierWithSources(new MainTestProcessor(), CLASS_TO_SOURCE);
   }
 
+  @Test
   public void testTypeSimplifierErrorTypes() throws IOException {
     doTestTypeSimplifierWithSources(new ErrorTestProcessor(), ERROR_CLASS_TO_SOURCE);
   }
@@ -219,7 +230,7 @@ public class TypeSimplifierTest extends TestCase {
 
     private void runTests() {
       for (Method method : getClass().getMethods()) {
-        if (method.getName().startsWith("test")) {
+        if (method.isAnnotationPresent(Test.class)) {
           try {
             method.invoke(this);
           } catch (Exception e) {
@@ -287,6 +298,7 @@ public class TypeSimplifierTest extends TestCase {
      * if this particular case stops being a problem (which means this test would fail), we would
      * need TypeMirrorSet for complete correctness.
      */
+    @Test
     public void testQuirkyTypeMirrors() {
       TypeMirror objectMirror = objectMirror();
       TypeMirror cloneReturnTypeMirror = cloneReturnTypeMirror();
@@ -294,6 +306,7 @@ public class TypeSimplifierTest extends TestCase {
       assertTrue(typeUtil.isSameType(objectMirror, cloneReturnTypeMirror));
     }
 
+    @Test
     public void testTypeMirrorSet() {
       TypeMirror objectMirror = objectMirror();
       TypeMirror otherObjectMirror = cloneReturnTypeMirror();
@@ -336,6 +349,7 @@ public class TypeSimplifierTest extends TestCase {
       assertTrue(set.isEmpty());
     }
 
+    @Test
     public void testTypeMirrorSetWildcardCapture() {
       // TODO(emcmanus): this test should really be in MoreTypesTest.
       // This test checks the assumption made by MoreTypes that you can find the
@@ -378,25 +392,30 @@ public class TypeSimplifierTest extends TestCase {
       assertTrue(typeMirrorSet.add(superU.getLowerBound()));
     }
 
+    @Test
     public void testPackageNameOfString() {
       assertEquals("java.lang", TypeSimplifier.packageNameOf(typeElementOf("java.lang.String")));
     }
 
+    @Test
     public void testPackageNameOfMapEntry() {
       assertEquals("java.util", TypeSimplifier.packageNameOf(typeElementOf("java.util.Map.Entry")));
     }
 
+    @Test
     public void testPackageNameOfDefaultPackage() {
       String aClassName = CLASS_TO_SOURCE.keySet().iterator().next();
       assertEquals("", TypeSimplifier.packageNameOf(typeElementOf(aClassName)));
     }
 
+    @Test
     public void testImportsForNoTypes() {
       TypeSimplifier typeSimplifier =
           new TypeSimplifier(typeUtil, "foo.bar", typeMirrorSet(), baseWithoutContainedTypes());
       assertEquals(ImmutableSet.of(), typeSimplifier.typesToImport());
     }
 
+    @Test
     public void testImportsForImplicitlyImportedTypes() {
       Set<TypeMirror> types = typeMirrorSet(
           typeMirrorOf("java.lang.String"),
@@ -409,6 +428,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(ImmutableSet.of(), typeSimplifier.typesToImport());
     }
 
+    @Test
     public void testImportsForPlainTypes() {
       Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
@@ -429,6 +449,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("Proxy.Type", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy.Type")));
     }
 
+    @Test
     public void testImportsForComplicatedTypes() {
       TypeElement list = typeElementOf("java.util.List");
       TypeElement map = typeElementOf("java.util.Map");
@@ -453,6 +474,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
     }
 
+    @Test
     public void testImportsForArrayTypes() {
       TypeElement list = typeElementOf("java.util.List");
       TypeElement set = typeElementOf("java.util.Set");
@@ -477,6 +499,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
     }
 
+    @Test
     public void testImportsForDefaultPackage() {
       Set<TypeMirror> types = typeMirrorSet();
       for (String className : CLASS_TO_SOURCE.keySet()) {
@@ -504,6 +527,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("Proxy.Type", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy.Type")));
     }
 
+    @Test
     public void testImportNestedType() {
       Set<TypeMirror> types = typeMirrorSet(typeMirrorOf("java.net.Proxy.Type"));
       List<String> expectedImports = ImmutableList.of(
@@ -515,6 +539,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("Proxy.Type", typeSimplifier.simplify(typeMirrorOf("java.net.Proxy.Type")));
     }
 
+    @Test
     public void testImportsForAmbiguousNames() {
       Set<TypeMirror> types = typeMirrorSet(
           typeUtil.getPrimitiveType(TypeKind.INT),
@@ -531,6 +556,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(expectedImports, typeSimplifier.typesToImport().asList());
     }
 
+    @Test
     public void testSimplifyJavaLangString() {
       TypeMirror string = typeMirrorOf("java.lang.String");
       Set<TypeMirror> types = typeMirrorSet(string);
@@ -539,6 +565,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("String", typeSimplifier.simplify(string));
     }
 
+    @Test
     public void testSimplifyJavaLangThreadState() {
       TypeMirror threadState = typeMirrorOf("java.lang.Thread.State");
       Set<TypeMirror> types = typeMirrorSet(threadState);
@@ -547,6 +574,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals("Thread.State", typeSimplifier.simplify(threadState));
     }
 
+    @Test
     public void testSimplifyAmbiguousNames() {
       TypeMirror javaAwtList = typeMirrorOf("java.awt.List");
       TypeMirror javaUtilList = typeMirrorOf("java.util.List");
@@ -557,6 +585,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(javaUtilList.toString(), typeSimplifier.simplify(javaUtilList));
     }
 
+    @Test
     public void testSimplifyJavaLangNamesake() {
       TypeMirror javaLangType = typeMirrorOf("java.lang.RuntimePermission");
       TypeMirror notJavaLangType = typeMirrorOf(
@@ -568,6 +597,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(notJavaLangType.toString(), typeSimplifier.simplify(notJavaLangType));
     }
 
+    @Test
     public void testSimplifyComplicatedTypes() {
       TypeElement list = typeElementOf("java.util.List");
       TypeElement map = typeElementOf("java.util.Map");
@@ -607,6 +637,7 @@ public class TypeSimplifierTest extends TestCase {
       assertEquals(expectedSimplifications, actualSimplifications);
     }
 
+    @Test
     public void testSimplifyMultipleBounds() {
       TypeElement multipleBoundsElement = typeElementOf("MultipleBounds");
       TypeMirror multipleBoundsMirror = multipleBoundsElement.asType();
@@ -622,6 +653,7 @@ public class TypeSimplifierTest extends TestCase {
     // class that is defined in CLASS_TO_SOURCE. A field whose name ends with Yes has a type where
     // isCastingUnchecked should return true, and one whose name ends with No has a type where
     // isCastingUnchecked should return false.
+    @Test
     public void testIsCastingUnchecked() {
       TypeElement erasureClass = typeElementOf("Erasure");
       List<VariableElement> fields = ElementFilter.fieldsIn(erasureClass.getEnclosedElements());

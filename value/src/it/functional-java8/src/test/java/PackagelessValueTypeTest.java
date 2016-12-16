@@ -14,16 +14,23 @@
  * limitations under the License.
  */
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
 import java.util.Map;
-import junit.framework.TestCase;
 import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class PackagelessValueTypeTest extends TestCase {
+@RunWith(JUnit4.class)
+public class PackagelessValueTypeTest {
+  @Test
   public void testPackagelessValueType() {
     final String happy = "happy";
     final int testInt = 23;
