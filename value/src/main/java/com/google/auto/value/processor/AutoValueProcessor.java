@@ -557,16 +557,20 @@ public class AutoValueProcessor extends AbstractProcessor {
    * @return a set of fully-qualified names of classes appearing in 'fieldName' on 'annotation' on
    *     'element'.
    */
-  private static ImmutableSet<String> getFieldOfClasses(
+  private ImmutableSet<String> getFieldOfClasses(
       Element element,
       Class<? extends Annotation> annotation,
       String fieldName,
       Elements elementUtils) {
-    TypeMirror annotationMirror =
-        elementUtils.getTypeElement(annotation.getCanonicalName()).asType();
+    TypeElement annotationElement = elementUtils.getTypeElement(annotation.getCanonicalName());
+    if (annotationElement == null) {
+      // This can happen if the annotation is on the -processorpath but not on the -classpath.
+      return ImmutableSet.of();
+    }
+    TypeMirror annotationMirror = annotationElement.asType();
 
     for (AnnotationMirror annot : element.getAnnotationMirrors()) {
-      if (!annot.getAnnotationType().equals(annotationMirror)) {
+      if (!typeUtils.isSameType(annot.getAnnotationType(), annotationMirror)) {
         continue;
       }
       for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
