@@ -34,6 +34,8 @@
 
   <properties>
     <guava.version>19.0</guava.version>
+    <compile.testing.version>0.10</compile.testing.version>
+    <exclude.tests>this-matches-nothing</exclude.tests>
   </properties>
   <scm>
     <url>http://github.com/google/auto</url>
@@ -96,7 +98,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.10</version>
+      <version>${compile.testing.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -108,6 +110,16 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <testExcludes>
+            <exclude>${exclude.tests}</exclude>
+          </testExcludes>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.6</version>
@@ -179,6 +191,18 @@
       </activation>
       <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
+      </properties>
+    </profile>
+    <profile>
+      <!-- If we're testing on an old JDK, we can't use the latest Compile Testing,
+           and we can't build tests that require it. -->
+      <id>older-compile-testing</id>
+      <activation>
+        <jdk>(,1.7]</jdk>
+      </activation>
+      <properties>
+        <compile.testing.version>0.9</compile.testing.version>
+        <exclude.tests>**/TypeSimplifierTest.java</exclude.tests>
       </properties>
     </profile>
   </profiles>
