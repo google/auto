@@ -22,6 +22,9 @@
   <artifactId>functional</artifactId>
   <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
+  <properties>
+    <exclude.tests>this-matches-nothing</exclude.tests>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.google.auto.value</groupId>
@@ -58,6 +61,13 @@
       <version>0.28</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.testing.compile</groupId>
+      <artifactId>compile-testing</artifactId>
+      <version>0.10</version>
+      <scope>test</scope>
+      <type>jar</type>
+    </dependency>
   </dependencies>
 
   <build>
@@ -70,8 +80,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>${java.specification.version}</source>
+          <target>${java.specification.version}</target>
           <compilerArgs>
             <arg>-Xlint:all</arg>
             <arg>-encoding</arg>
@@ -79,6 +89,9 @@
           </compilerArgs>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
+          <testExcludes>
+            <exclude>${exclude.tests}</exclude>
+          </testExcludes>
         </configuration>
       </plugin>
     </plugins>
@@ -94,20 +107,29 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <version>3.1</version>
             <configuration>
-              <source>1.6</source>
-              <target>1.6</target>
               <compilerArgs>
                 <arg>-Xlint:all</arg>
-                <arg>-Acom.google.auto.value.EclipseHackTest=1</arg>
                 <arg>-encoding</arg>
                 <arg>utf8</arg>
               </compilerArgs>
               <showWarnings>true</showWarnings>
               <showDeprecation>true</showDeprecation>
+              <testExcludes>
+                <exclude>${exclude.tests}</exclude>
+              </testExcludes>
             </configuration>
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>exclude-java8-tests</id>
+      <activation>
+        <jdk>(,1.7]</jdk>
+      </activation>
+      <properties>
+        <exclude.tests>**/AutoValueJava8Test.java</exclude.tests>
+      </properties>
     </profile>
   </profiles>
 </project>
