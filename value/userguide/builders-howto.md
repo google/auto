@@ -1,5 +1,6 @@
 # How do I... (Builder edition)
 
+
 This page answers common how-to questions that may come up when using AutoValue
 **with the builder option**. You should read and understand [AutoValue with
 builders](builders.md) first.
