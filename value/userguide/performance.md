@@ -1,5 +1,7 @@
 # Performance notes
 
+go/autovalue/performance
+
 TODO: write a real page
 
 *   should perform like a hand-written class after HotSpot compiles it
