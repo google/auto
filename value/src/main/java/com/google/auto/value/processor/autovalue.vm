@@ -185,7 +185,7 @@ $a
   #foreach ($m in $toBuilderMethods)
 
   @Override
-  public ${builderTypeName}${builderActualTypes} ${m}() {
+  ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
     return new Builder${builderActualTypes}(this);
   }
 
@@ -254,7 +254,7 @@ $a
     #foreach ($setter in $builderSetters[$p.name])
 
     @Override
-    public ${builderTypeName}${builderActualTypes} ##
+    ${setter.access}${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
 
       #if ($propertyBuilder)
@@ -274,7 +274,7 @@ $a
     #if ($propertyBuilder)
 
     @Override
-    public $propertyBuilder.builderType ${p.name}Builder() {
+    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder() {
       if (${propertyBuilder.name} == null) {
 
         ## This is the first time someone has asked for the builder. If the property it sets already
@@ -321,7 +321,7 @@ $a
     #if ($builderGetters[$p.name])
 
     @Override
-    ${p.nullableAnnotation}public $builderGetters[$p.name].type ${p.getter}() {
+    ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
       #if ($builderGetters[$p.name].optional)
 
       if ($p == null) {
@@ -357,7 +357,7 @@ $a
   #end
 
     @Override
-    public ${origClass}${actualTypes} ${buildMethodName}() {
+    ${buildMethod.get().access}${origClass}${actualTypes} ${buildMethod.get().name}() {
 
   #foreach ($p in $props)
     #if ($builderPropertyBuilders[$p.name])

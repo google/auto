@@ -217,7 +217,7 @@ class BuilderSpec {
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
-      vars.buildMethodName = buildMethod.getSimpleName().toString();
+      vars.buildMethod = Optional.of(new AutoValueProcessor.SimpleMethod(buildMethod));
       vars.builderGetters = classifier.builderGetters();
 
       ImmutableMultimap.Builder<String, PropertySetter> setterBuilder = ImmutableMultimap.builder();
@@ -257,23 +257,30 @@ class BuilderSpec {
    * five) then {@code Optional<T>} can be the corresponding boxed type.
    */
   public static class PropertyGetter {
+    private final String access;
     private final String type;
     private final Optionalish optional;
 
     /**
      * Makes a new {@code PropertyGetter} instance.
      *
+     * @param method the source method which this getter is implementing.
      * @param type the type that the getter returns. This is written to take imports into account,
-     *     so it might be {@code List<String>} for example. It is either identical to the type
-     *     of the corresponding getter in the {@code @AutoValue} class, or it is an optional
-     *     wrapper, like {@code Optional<List<String>>}.
+     *     so it might be {@code List<String>} for example. It is either identical to the type of
+     *     the corresponding getter in the {@code @AutoValue} class, or it is an optional wrapper,
+     *     like {@code Optional<List<String>>}.
      * @param optional a representation of the {@code Optional} type that the getter returns, if
      *     this is an optional getter, or null otherwise. An optional getter is one that returns
      *     {@code Optional<T>} rather than {@code T}, as explained above.
      */
-    PropertyGetter(String type, Optionalish optional) {
+    PropertyGetter(ExecutableElement method, String type, Optionalish optional) {
+      this.access = AutoValueProcessor.access(method);
       this.type = type;
       this.optional = optional;
+    }
+
+    public String getAccess() {
+      return access;
     }
 
     public String getType() {
@@ -295,12 +302,14 @@ class BuilderSpec {
    * it can have a setter with a type that can be copied to {@code T} through {@code Optional.of}.
    */
   public class PropertySetter {
+    private final String access;
     private final String name;
     private final String parameterTypeString;
     private final String copyOf;
 
     public PropertySetter(
         ExecutableElement setter, TypeMirror propertyType, TypeSimplifier typeSimplifier) {
+      this.access = AutoValueProcessor.access(setter);
       this.name = setter.getSimpleName().toString();
       TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
       String simplifiedParameterType = typeSimplifier.simplify(parameterType);
@@ -320,6 +329,10 @@ class BuilderSpec {
       }
     }
 
+    public String getAccess() {
+      return access;
+    }
+
     public String getName() {
       return name;
     }
@@ -332,14 +345,14 @@ class BuilderSpec {
       if (copyOf == null) {
         return property.toString();
       }
-      
+
       String copy = String.format(copyOf, property);
-      
+
       // Add a null guard only in cases where we are using copyOf and the property is @Nullable.
       if (property.isNullable()) {
         copy = String.format("(%s == null ? null : %s)", property, copy);
       }
-      
+
       return copy;
     }
   }

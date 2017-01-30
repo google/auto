@@ -16,6 +16,7 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -41,6 +42,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -2382,6 +2384,75 @@ public class AutoValueTest {
     mapBuilder.put("23", 23);
     BuildMyStringMap<Integer> built = builder.build();
     assertThat(built.map()).containsExactly("23", 23);
+  }
+
+  @AutoValue
+  abstract static class BuilderOfManyAccessLevels {
+    public abstract int publicGetterProtectedBuilderGetterPackageProtectedSetterInt();
+
+    protected abstract int protectedGetterPackageProtectedBuilderGetterPublicSetterInt();
+
+    abstract int packageProtectedGetterPublicBuilderGetterProtectedSetterInt();
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      protected abstract int publicGetterProtectedBuilderGetterPackageProtectedSetterInt();
+
+      abstract int protectedGetterPackageProtectedBuilderGetterPublicSetterInt();
+
+      public abstract int packageProtectedGetterPublicBuilderGetterProtectedSetterInt();
+
+      abstract Builder setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt(int x);
+
+      public abstract Builder setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt(int x);
+
+      protected abstract Builder setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt(
+          int x);
+
+      public abstract BuilderOfManyAccessLevels build();
+    }
+  }
+
+  @Test
+  public void testBuilderOfManyAccessLevels_accessLevels() throws NoSuchMethodException {
+    Class<?> builderClass = AutoValue_AutoValueTest_BuilderOfManyAccessLevels.Builder.class;
+
+    testIsProtected(builderClass, "publicGetterProtectedBuilderGetterPackageProtectedSetterInt");
+    testIsPackageProtected(
+        builderClass, "protectedGetterPackageProtectedBuilderGetterPublicSetterInt");
+    testIsPublic(builderClass, "packageProtectedGetterPublicBuilderGetterProtectedSetterInt");
+
+    testIsPackageProtected(
+        builderClass, "setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt", int.class);
+    testIsPublic(
+        builderClass, "setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt", int.class);
+    testIsProtected(
+        builderClass, "setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt", int.class);
+  }
+
+  private static void testIsPublic(Class<?> clazz, String methodName, Class<?>... parameterTypes)
+      throws NoSuchMethodException {
+    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
+    assertWithMessage("%s should be public", methodName)
+        .that(Modifier.isPublic(method.getModifiers()))
+        .isTrue();
+  }
+
+  private static void testIsProtected(Class<?> clazz, String methodName, Class<?>... parameterTypes)
+      throws NoSuchMethodException {
+    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
+    assertWithMessage("%s should be protected", methodName)
+        .that(Modifier.isProtected(method.getModifiers()))
+        .isTrue();
+  }
+
+  private static void testIsPackageProtected(
+      Class<?> clazz, String methodName, Class<?>... parameterTypes) throws NoSuchMethodException {
+    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
+    int mods = method.getModifiers();
+    assertWithMessage("%s should be package-protected", methodName)
+        .that(!Modifier.isPublic(mods) && !Modifier.isProtected(mods) && !Modifier.isPrivate(mods))
+        .isTrue();
   }
 
   static class VersionId {}

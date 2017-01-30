@@ -350,14 +350,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public String getAccess() {
-      Set<Modifier> mods = method.getModifiers();
-      if (mods.contains(Modifier.PUBLIC)) {
-        return "public ";
-      } else if (mods.contains(Modifier.PROTECTED)) {
-        return "protected ";
-      } else {
-        return "";
-      }
+      return access(method);
     }
 
     @Override
@@ -368,6 +361,42 @@ public class AutoValueProcessor extends AbstractProcessor {
     @Override
     public int hashCode() {
       return method.hashCode();
+    }
+  }
+
+  /**
+   * A basic method on an @AutoValue class with no specific attached information, such as a {@code
+   * toBuilder()} method, or a {@code build()} method, where only the name and access type is needed
+   * in context.
+   *
+   * <p>It implements JavaBean-style getters akin to {@link Property}.
+   */
+  public static class SimpleMethod {
+    private final String access;
+    private final String name;
+
+    SimpleMethod(ExecutableElement method) {
+      this.access = access(method);
+      this.name = method.getSimpleName().toString();
+    }
+
+    public String getAccess() {
+      return access;
+    }
+
+    public String getName() {
+      return name;
+    }
+  }
+
+  static String access(ExecutableElement method) {
+    Set<Modifier> mods = method.getModifiers();
+    if (mods.contains(Modifier.PUBLIC)) {
+      return "public ";
+    } else if (mods.contains(Modifier.PROTECTED)) {
+      return "protected ";
+    } else {
+      return "";
     }
   }
 
@@ -739,6 +768,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
+  private enum SimpleMethodFunction implements Function<ExecutableElement, SimpleMethod> {
+    INSTANCE;
+
+    @Override
+    public SimpleMethod apply(ExecutableElement input) {
+      return new SimpleMethod(input);
+    }
+  }
+
   private TypeSimplifier defineVarsForType(
       TypeElement type,
       AutoValueTemplateVars vars,
@@ -763,7 +801,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.add(javaUtilArrays);
     }
     vars.toBuilderMethods =
-        FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
+        FluentIterable.from(toBuilderMethods).transform(SimpleMethodFunction.INSTANCE).toList();
     ImmutableSetMultimap<ExecutableElement, String> excludedAnnotationsMap =
         allMethodExcludedAnnotations(propertyMethods);
     types.addAll(allMethodAnnotationTypes(propertyMethods, excludedAnnotationsMap));

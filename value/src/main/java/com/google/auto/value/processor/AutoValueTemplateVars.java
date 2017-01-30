@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -143,10 +144,8 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   Boolean builderIsInterface = false;
 
-  /**
-   * The simple name of the builder's build method, often {@code "build"}.
-   */
-  String buildMethodName = "";
+  /** The builder's build method, often {@code "build"}. */
+  Optional<AutoValueProcessor.SimpleMethod> buildMethod = Optional.absent();
 
   /**
    * A multimap from property names (like foo) to the corresponding setters. The same property may
@@ -184,10 +183,8 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   ImmutableMap<String, BuilderSpec.PropertyGetter> builderGetters = ImmutableMap.of();
 
-  /**
-   * The names of any {@code toBuilder()} methods, that is methods that return the builder type.
-   */
-  ImmutableList<String> toBuilderMethods;
+  /** The names of any {@code toBuilder()} methods, that is methods that return the builder type. */
+  ImmutableList<AutoValueProcessor.SimpleMethod> toBuilderMethods;
 
   private static final Template TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
