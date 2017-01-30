@@ -1,7 +1,5 @@
 # Generated builder example
 
-go/autovalue/generated-builder-example
-
 For the code shown in the [builder documentation](builders.md), the following is
 typical code AutoValue might generate:
 
