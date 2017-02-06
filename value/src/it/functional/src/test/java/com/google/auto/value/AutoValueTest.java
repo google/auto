@@ -2417,42 +2417,47 @@ public class AutoValueTest {
   public void testBuilderOfManyAccessLevels_accessLevels() throws NoSuchMethodException {
     Class<?> builderClass = AutoValue_AutoValueTest_BuilderOfManyAccessLevels.Builder.class;
 
-    testIsProtected(builderClass, "publicGetterProtectedBuilderGetterPackageProtectedSetterInt");
-    testIsPackageProtected(
+    testMethodAccess(
+        Access.PROTECTED,
+        builderClass, "publicGetterProtectedBuilderGetterPackageProtectedSetterInt");
+    testMethodAccess(
+        Access.PACKAGE,
         builderClass, "protectedGetterPackageProtectedBuilderGetterPublicSetterInt");
-    testIsPublic(builderClass, "packageProtectedGetterPublicBuilderGetterProtectedSetterInt");
+    testMethodAccess(
+        Access.PUBLIC,
+        builderClass, "packageProtectedGetterPublicBuilderGetterProtectedSetterInt");
 
-    testIsPackageProtected(
+    testMethodAccess(
+        Access.PACKAGE,
         builderClass, "setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt", int.class);
-    testIsPublic(
+    testMethodAccess(
+        Access.PUBLIC,
         builderClass, "setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt", int.class);
-    testIsProtected(
+    testMethodAccess(
+        Access.PROTECTED,
         builderClass, "setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt", int.class);
   }
 
-  private static void testIsPublic(Class<?> clazz, String methodName, Class<?>... parameterTypes)
-      throws NoSuchMethodException {
-    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
-    assertWithMessage("%s should be public", methodName)
-        .that(Modifier.isPublic(method.getModifiers()))
-        .isTrue();
-  }
+  private enum Access {PRIVATE, PACKAGE, PROTECTED, PUBLIC}
 
-  private static void testIsProtected(Class<?> clazz, String methodName, Class<?>... parameterTypes)
-      throws NoSuchMethodException {
-    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
-    assertWithMessage("%s should be protected", methodName)
-        .that(Modifier.isProtected(method.getModifiers()))
-        .isTrue();
-  }
+  private static final ImmutableMap<Integer, Access> MODIFIER_BITS_TO_ACCESS =
+      ImmutableMap.of(
+          Modifier.PUBLIC, Access.PUBLIC,
+          Modifier.PROTECTED, Access.PROTECTED,
+          Modifier.PRIVATE, Access.PRIVATE,
+          0, Access.PACKAGE);
 
-  private static void testIsPackageProtected(
-      Class<?> clazz, String methodName, Class<?>... parameterTypes) throws NoSuchMethodException {
+  private static void testMethodAccess(
+      Access expectedAccess,
+      Class<?> clazz,
+      String methodName,
+      Class<?>... parameterTypes) throws NoSuchMethodException {
     Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
-    int mods = method.getModifiers();
-    assertWithMessage("%s should be package-protected", methodName)
-        .that(!Modifier.isPublic(mods) && !Modifier.isProtected(mods) && !Modifier.isPrivate(mods))
-        .isTrue();
+    int modBits = method.getModifiers() & (Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE);
+    Access actualAccess = MODIFIER_BITS_TO_ACCESS.get(modBits);
+    assertWithMessage("Wrong access for %s", methodName)
+        .that(actualAccess)
+        .isEqualTo(expectedAccess);
   }
 
   static class VersionId {}
