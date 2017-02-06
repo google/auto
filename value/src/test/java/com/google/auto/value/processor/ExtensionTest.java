@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -25,11 +26,14 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Truth;
+import com.google.testing.compile.Compilation;
 import com.google.testing.compile.CompileTester.SuccessfulCompilationClause;
+import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collections;
@@ -38,12 +42,14 @@ import java.util.ServiceConfigurationError;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
+import javax.annotation.processing.Filer;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import org.junit.Test;
@@ -395,6 +401,39 @@ public class ExtensionTest {
   }
 
   @Test
+  public void testLastExtensionGeneratesNoCode() {
+    doTestNoCode(new FooExtension(), new NonFinalExtension(), new SideFileExtension());
+  }
+
+  @Test
+  public void testFirstExtensionGeneratesNoCode() {
+    doTestNoCode(new SideFileExtension(), new FooExtension(), new NonFinalExtension());
+  }
+
+  @Test
+  public void testMiddleExtensionGeneratesNoCode() {
+    doTestNoCode(new FooExtension(), new SideFileExtension(), new NonFinalExtension());
+  }
+
+  private void doTestNoCode(AutoValueExtension... extensions) {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract String foo();",
+        "}");
+    Compilation compilation = Compiler.javac()
+        .withProcessors(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
+        .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation).generatedSourceFile("foo.bar.Side_Baz");
+  }
+
+  @Test
   public void testTwoExtensionsBothWantToBeFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -660,6 +699,42 @@ public class ExtensionTest {
     @Override
     public boolean mustBeFinal(Context context) {
       return true;
+    }
+  }
+
+  private static class SideFileExtension extends AutoValueExtension {
+    @Override
+    public boolean applicable(Context context) {
+      return true;
+    }
+
+    @Override
+    public boolean mustBeFinal(Context context) {
+      return false;
+    }
+
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      String sideClassName = "Side_" + context.autoValueClass().getSimpleName().toString();
+      String sideClass =
+          "package " + context.packageName() + ";\n"
+          + "class " + sideClassName + " {}\n";
+      Filer filer = context.processingEnvironment().getFiler();
+      try {
+        String sideClassFqName = context.packageName() + "." + sideClassName;
+        JavaFileObject sourceFile = filer.createSourceFile(
+            sideClassFqName, context.autoValueClass());
+        // TODO(emcmanus): use try-with-resources when we dump Java 6 source compatibility.
+        // (We will still *generate* code that is Java 6 compatible.)
+        Writer sourceWriter = sourceFile.openWriter();
+        sourceWriter.write(sideClass);
+        sourceWriter.close();
+      } catch (IOException e) {
+        context.processingEnvironment().getMessager()
+            .printMessage(Diagnostic.Kind.ERROR, e.toString());
+      }
+      return null;
     }
   }
 
