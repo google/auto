@@ -18,10 +18,10 @@ How do I...
 *   ... [use a property of a **mutable** type?](#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](#custom)
 *   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
-*   ... [have multiple **create** methods, or name it/them differently?]
-    (#create)
-*   ... [have AutoValue also implement abstract methods from my **supertypes**?]
-    (#supertypes)
+*   ... [have multiple **create** methods, or name it/them
+    differently?](#create)
+*   ... [have AutoValue also implement abstract methods from my
+    **supertypes**?](#supertypes)
 *   ... [use AutoValue with a **generic** class?](#generic)
 *   ... [make my class Java- or GWT- **serializable**?](#serialize)
 *   ... [apply an **annotation** to a generated **field**?](#annotate_field)
@@ -35,7 +35,9 @@ How do I...
 *   ... [expose a **constructor**, not factory method, as my public creation
     API?](#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract class?](#interface)
-*   ... [**memoize** derived properties?](#memoize)
+*   ... [**memoize** ("cache") derived properties?](#memoize)
+*   ... [memoize the result of `hashCode` or
+    `toString`?](#memoize_hash_tostring)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -193,33 +195,18 @@ Just do it! AutoValue doesn't actually care. This [best practice item]
 ## <a name="ignore"></a>... ignore certain properties in `equals`, etc.?
 
 Suppose your value class has an extra field that shouldn't be included in
-`equals` or `hashCode` computations. One common reason is that it is a "cached"
-or derived value based on other properties. In this case, simply define the
-field in your abstract class directly; AutoValue will have nothing to do with
-it:
+`equals` or `hashCode` computations.
 
-```java
-@AutoValue
-abstract class DerivedExample {
-  static DerivedExample create(String realProperty) {
-    return new AutoValue_DerivedExample(realProperty);
-  }
+If this is because it is a derived value based on other properties, see [How do
+I memoize derived properties?](#memoize).
 
-  abstract String realProperty();
+Otherwise, first make certain that you really want to do this. It is often, but
+not always, a mistake. Remember that libraries will treat two equal instances as
+absolutely *interchangeable* with each other. Whatever information is present in
+this extra field could essentially "disappear" when you aren't expecting it, for
+example when your value is stored and retrieved from certain collections.
 
-  private String derivedProperty;
-
-  final String derivedProperty() {
-    // non-thread-safe example
-    if (derivedProperty == null) {
-      derivedProperty = realProperty().toLowerCase();
-    }
-  }
-}
-```
-
-On the other hand, if the value is user-specified, not derived, the solution is
-slightly more elaborate (but still reasonable):
+If you're sure, here is how to do it:
 
 ```java
 @AutoValue
@@ -240,8 +227,8 @@ abstract class IgnoreExample {
 }
 ```
 
-Note that in both cases the field ignored for `equals` and `hashCode` is also
-ignored by `toString`; to AutoValue it simply doesn't exist.
+Note that this means the field is also ignored by `toString`; to AutoValue
+it simply doesn't exist.
 
 ## <a name="supertypes"></a>... have AutoValue also implement abstract methods from my supertypes?
 
@@ -360,7 +347,7 @@ other hand, you would lose the immutability guarantee, and you'd also invite
 more of the kind of bad behavior described in [this best-practices item]
 (practices.md#simple). On balance, we don't think it's worth it.
 
-## <a name="memoize"></a>... memoize derived properties?
+## <a name="memoize"></a>... memoize ("cache") derived properties?
 
 Sometimes your class has properties that are derived from the ones that
 AutoValue implements. You'd typically implement them with a concrete method that
@@ -370,7 +357,7 @@ uses the other properties:
 @AutoValue
 abstract class Foo {
   abstract Bar barProperty();
-  
+
   String derivedProperty() {
     return someFunctionOf(barProperty());
   }
@@ -378,34 +365,12 @@ abstract class Foo {
 ```
 
 But what if `someFunctionOf(Bar)` is expensive? You'd like to calculate it only
-one time, and reuse the value for future calls. Normal lazy-instantiation is
-straightforward but involves a fair amount of boilerplate, especially to avoid
-concurrency bugs:
+one time, then cache and reuse that value for all future calls. Normally,
+thread-safe lazy initialization involves a lot of tricky boilerplate.
 
-```java
-@AutoValue
-abstract class Foo {
-  abstract Bar barProperty();
-
-  private String derivedProperty;
-  
-  String derivedProperty() {
-    synchronized (this) {
-      if (derivedProperty == null) {
-        derivedProperty = someFunctionOf(barProperty());
-      }
-    }
-    return derivedProperty;
-  }
-}
-```
-
-If `someFunctionOf(Bar)` can return `null` or the derived property is primitive,
-you need more boilerplate.
-
-Instead, just annotate each derived property method with [`@Memoized`]. Then
-AutoValue will override that method to return a stored value after the first
-call:
+Instead, just write the derived-property accessor method as above, and
+annotate it with [`@Memoized`]. Then AutoValue will override that method to
+return a stored value after the first call:
 
 ```java
 @AutoValue
@@ -419,19 +384,35 @@ abstract class Foo {
 }
 ```
 
-`@Memoized` methods may not:
+The annotated method must have the usual form of an accessor method, and may not
+be `abstract`, `final`, or `private`.
 
-*   be `abstract` (except for `hashCode()` and `toString()`), `final`, or
-    `private`
-*   have parameters
-*   return `void`
-
-If you want to memoize `hashCode()` or `toString()`, you can redeclare them,
-keeping them `abstract`, and annotate them with `@Memoize`.
+The stored value will not be used in the implementation of `equals`, `hashCode`,
+or `toString`.
 
 If a `@Memoized` method is also annotated with `@Nullable`, then `null` values
 will be stored; if not, then the overriding method throws `NullPointerException`
 when the annotated method returns `null`.
 
 [`@Memoized`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/memoized/Memoized.java
+
+## <a name="memoize_hash_tostring"></a>... memoize the result of `hashCode` or `toString`?
+
+You can also make your class remember and reuse the result of `hashCode`,
+`toString`, or both, like this:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+
+  @Memoized
+  @Override
+  public abstract int hashCode();
+
+  @Memoized
+  @Override
+  public abstract String toString();
+}
+```
 
