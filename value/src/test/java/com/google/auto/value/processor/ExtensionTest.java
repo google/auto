@@ -15,7 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -26,9 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Truth;
-import com.google.testing.compile.Compilation;
 import com.google.testing.compile.CompileTester.SuccessfulCompilationClause;
-import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -426,11 +423,12 @@ public class ExtensionTest {
         "public abstract class Baz {",
         "  abstract String foo();",
         "}");
-    Compilation compilation = Compiler.javac()
-        .withProcessors(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
-        .compile(javaFileObject);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation).generatedSourceFile("foo.bar.Side_Baz");
+    assertThat(javaFileObject)
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
+        .processedWith(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
+        .compilesWithoutWarnings()
+        .and()
+        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "Side_Baz.java");
   }
 
   @Test
