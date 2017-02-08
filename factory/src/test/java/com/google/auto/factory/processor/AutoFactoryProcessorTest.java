@@ -177,10 +177,10 @@ public class AutoFactoryProcessorTest {
         .failsToCompile()
         .withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(22).atColumn(3)
+            .in(file).onLine(24)
          .and().withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(23).atColumn(3);
+            .in(file).onLine(27);
   }
 
   @Test public void failsOnGenericClass() {

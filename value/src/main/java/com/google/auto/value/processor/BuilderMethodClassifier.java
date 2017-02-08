@@ -309,7 +309,8 @@ class BuilderMethodClassifier {
     TypeMirror originalGetterType = originalGetter.getReturnType();
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
       builderGetters.put(
-          propertyName, new BuilderSpec.PropertyGetter(builderGetterTypeString, null));
+          propertyName,
+          new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, null));
       return true;
     }
     Optionalish optional = Optionalish.createIfOptional(
@@ -327,7 +328,7 @@ class BuilderMethodClassifier {
           || TYPE_EQUIVALENCE.equivalent(containedType, boxedOriginalType)) {
         builderGetters.put(
             propertyName,
-            new BuilderSpec.PropertyGetter(builderGetterTypeString, optional));
+            new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, optional));
         return true;
       }
     }

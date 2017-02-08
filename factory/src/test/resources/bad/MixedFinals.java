@@ -18,7 +18,12 @@ package tests;
 import com.google.auto.factory.AutoFactory;
 
 final class MixedFinals {
-  @AutoFactory(allowSubclasses = false) MixedFinals() {}
-  @AutoFactory(allowSubclasses = true) MixedFinals(String s) {}
-  @AutoFactory(allowSubclasses = true) MixedFinals(String s, Integer i) {}
+  @AutoFactory(allowSubclasses = false)
+  MixedFinals() {}
+
+  @AutoFactory(allowSubclasses = true)
+  MixedFinals(String s) {}
+
+  @AutoFactory(allowSubclasses = true)
+  MixedFinals(String s, Integer i) {}
 }

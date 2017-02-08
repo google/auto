@@ -25,7 +25,7 @@ Save time.  Save code.  Save sanity.
 
   * [AutoValue] - Immutable [value-type] code generation for Java 1.6+.
 
-    Latest version: `1.2`
+    Latest version: `1.3`
 
   * [Common] - Helper utilities for writing annotation processors.
 

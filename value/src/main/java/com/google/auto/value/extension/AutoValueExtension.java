@@ -164,20 +164,36 @@ public abstract class AutoValueExtension {
   }
 
   /**
-   * Generates the source code of the class named {@code className} to extend
-   * {@code classToExtend}. The generated class should be final if {@code isFinal}
+   * Returns the generated source code of the class named {@code className} to extend
+   * {@code classToExtend}, or {@code null} if this extension does not generate a class in the
+   * hierarchy. If there is a generated class, it should be final if {@code isFinal}
    * is true; otherwise it should be abstract. The returned string should be a complete
    * Java class definition of the class {@code className} in the package
    * {@link Context#packageName() context.packageName()}.
    *
+   * <p>The returned string will typically look like this:
+   *
+   * <pre>{@code
+   * package <package>;
+   * ...
+   * <finalOrAbstract> class <className> extends <classToExtend> {...}
+   * }</pre>
+   *
+   * <p>Here, {@code <package>} is {@link Context#packageName()}; {@code <finalOrAbstract>} is the
+   * keyword {@code final} if {@code isFinal} is true or {@code abstract} otherwise; and {@code
+   * <className>} and {@code <classToExtend>} are the values of this method's parameters of the same
+   * name.
+   *
    * @param context The {@link Context} of the code generation for this class.
    * @param className The simple name of the resulting class. The returned code will be written to a
    *     file named accordingly.
-   * @param classToExtend The direct parent of the generated class. This could be the AutoValue
-   *     generated class, or a class generated as the result of another Extension.
+   * @param classToExtend The simple name of the direct parent of the generated class.
+   *     This could be the AutoValue generated class, or a class generated as the result of
+   *     another Extension.
    * @param isFinal True if this class is the last class in the chain, meaning it should be
    *     marked as final. Otherwise it should be marked as abstract.
-   * @return The source code of the generated class.
+   * @return The source code of the generated class, or {@code null} if this extension does not
+   *     generate a class in the hierarchy.
    */
   public abstract String generateClass(
       Context context, String className, String classToExtend, boolean isFinal);
