@@ -53,7 +53,7 @@ public class AutoAnnotationTest {
 
   @Empty
   @StringValues("oops")
-  class AnnotatedClass {}
+  static class AnnotatedClass {}
 
   @Test
   public void testSimple() {
@@ -422,5 +422,72 @@ public class AutoAnnotationTest {
     ClassesAnnotation fromReflect =
         AnnotatedWithClassesAnnotation.class.getAnnotation(ClassesAnnotation.class);
     assertEquals(fromReflect, generated);
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface IntegersAnnotation {
+    int one() default Integer.MAX_VALUE;
+    int two() default Integer.MAX_VALUE;
+    int three();
+  }
+
+  @IntegersAnnotation(three = 23)
+  static class AnnotatedWithIntegersAnnotation {}
+
+  @AutoAnnotation static IntegersAnnotation newIntegersAnnotation(int three) {
+    return new AutoAnnotation_AutoAnnotationTest_newIntegersAnnotation(three);
+  }
+
+  @Test
+  public void testConstantOverflowInHashCode() {
+    IntegersAnnotation generated = newIntegersAnnotation(23);
+    IntegersAnnotation fromReflect =
+        AnnotatedWithIntegersAnnotation.class.getAnnotation(IntegersAnnotation.class);
+    new EqualsTester().addEqualityGroup(generated, fromReflect).testEquals();
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface EverythingWithDefaults {
+    byte aByte() default 5;
+    short aShort() default 17;
+    int anInt() default 23;
+    long aLong() default 1729;
+    float aFloat() default 5;
+    double aDouble() default 17;
+    char aChar() default 'x';
+    boolean aBoolean() default true;
+    String aString() default "whatever";
+    RetentionPolicy anEnum() default RetentionPolicy.CLASS;
+    // We don't yet support defaulting annotation values.
+    // StringValues anAnnotation() default @StringValues({"foo", "bar"});
+    byte[] bytes() default {1, 2};
+    short[] shorts() default {3, 4};
+    int[] ints() default {5, 6};
+    long[] longs() default {7, 8};
+    float[] floats() default {9, 10};
+    double[] doubles() default {11, 12};
+    char[] chars() default {'D', 'E'};
+    boolean[] booleans() default {true, false};
+    String[] strings() default {"vrai", "faux"};
+    RetentionPolicy[] enums() default {RetentionPolicy.SOURCE, RetentionPolicy.CLASS};
+    // We don't yet support defaulting annotation values.
+    // StringValues[] annotations() default {
+    //   @StringValues({"foo", "bar"}), @StringValues({"baz", "buh"})
+    // };
+  }
+
+  @EverythingWithDefaults
+  static class AnnotatedWithEverythingWithDefaults {}
+
+  @AutoAnnotation static EverythingWithDefaults newEverythingWithDefaults() {
+    return new AutoAnnotation_AutoAnnotationTest_newEverythingWithDefaults();
+  }
+
+  @Test
+  public void testDefaultedValues() {
+    EverythingWithDefaults generated = newEverythingWithDefaults();
+    EverythingWithDefaults fromReflect =
+        AnnotatedWithEverythingWithDefaults.class.getAnnotation(EverythingWithDefaults.class);
+    new EqualsTester().addEqualityGroup(generated, fromReflect).testEquals();
   }
 }

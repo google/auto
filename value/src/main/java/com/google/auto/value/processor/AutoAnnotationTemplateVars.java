@@ -84,6 +84,17 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   Boolean gwtCompatible;
 
+  /**
+   * The names of members that are defaulted (not mentioned) in this {@code @AutoAnnotation},
+   * and whose hash codes are invariable.
+   */
+  Set<String> invariableHashes;
+
+  /**
+   * The sum of the hash code contributions from the members in {@link #invariableHashes}.
+   */
+  Integer invariableHashSum;
+
   private static final Template TEMPLATE = parsedTemplateForResource("autoannotation.vm");
 
   @Override
