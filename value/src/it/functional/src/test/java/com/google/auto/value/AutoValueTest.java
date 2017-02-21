@@ -16,6 +16,7 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -41,6 +42,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -2382,6 +2384,80 @@ public class AutoValueTest {
     mapBuilder.put("23", 23);
     BuildMyStringMap<Integer> built = builder.build();
     assertThat(built.map()).containsExactly("23", 23);
+  }
+
+  @AutoValue
+  abstract static class BuilderOfManyAccessLevels {
+    public abstract int publicGetterProtectedBuilderGetterPackageProtectedSetterInt();
+
+    protected abstract int protectedGetterPackageProtectedBuilderGetterPublicSetterInt();
+
+    abstract int packageProtectedGetterPublicBuilderGetterProtectedSetterInt();
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      protected abstract int publicGetterProtectedBuilderGetterPackageProtectedSetterInt();
+
+      abstract int protectedGetterPackageProtectedBuilderGetterPublicSetterInt();
+
+      public abstract int packageProtectedGetterPublicBuilderGetterProtectedSetterInt();
+
+      abstract Builder setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt(int x);
+
+      public abstract Builder setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt(int x);
+
+      protected abstract Builder setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt(
+          int x);
+
+      public abstract BuilderOfManyAccessLevels build();
+    }
+  }
+
+  @Test
+  public void testBuilderOfManyAccessLevels_accessLevels() throws NoSuchMethodException {
+    Class<?> builderClass = AutoValue_AutoValueTest_BuilderOfManyAccessLevels.Builder.class;
+
+    testMethodAccess(
+        Access.PROTECTED,
+        builderClass, "publicGetterProtectedBuilderGetterPackageProtectedSetterInt");
+    testMethodAccess(
+        Access.PACKAGE,
+        builderClass, "protectedGetterPackageProtectedBuilderGetterPublicSetterInt");
+    testMethodAccess(
+        Access.PUBLIC,
+        builderClass, "packageProtectedGetterPublicBuilderGetterProtectedSetterInt");
+
+    testMethodAccess(
+        Access.PACKAGE,
+        builderClass, "setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt", int.class);
+    testMethodAccess(
+        Access.PUBLIC,
+        builderClass, "setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt", int.class);
+    testMethodAccess(
+        Access.PROTECTED,
+        builderClass, "setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt", int.class);
+  }
+
+  private enum Access {PRIVATE, PACKAGE, PROTECTED, PUBLIC}
+
+  private static final ImmutableMap<Integer, Access> MODIFIER_BITS_TO_ACCESS =
+      ImmutableMap.of(
+          Modifier.PUBLIC, Access.PUBLIC,
+          Modifier.PROTECTED, Access.PROTECTED,
+          Modifier.PRIVATE, Access.PRIVATE,
+          0, Access.PACKAGE);
+
+  private static void testMethodAccess(
+      Access expectedAccess,
+      Class<?> clazz,
+      String methodName,
+      Class<?>... parameterTypes) throws NoSuchMethodException {
+    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
+    int modBits = method.getModifiers() & (Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE);
+    Access actualAccess = MODIFIER_BITS_TO_ACCESS.get(modBits);
+    assertWithMessage("Wrong access for %s", methodName)
+        .that(actualAccess)
+        .isEqualTo(expectedAccess);
   }
 
   static class VersionId {}

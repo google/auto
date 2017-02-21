@@ -19,6 +19,7 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoAnnotation;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -177,9 +178,68 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.pkg = pkg;
     vars.wrapperTypesUsedInCollections = wrapperTypesUsedInCollections;
     vars.gwtCompatible = isGwtCompatible(annotationElement);
+    ImmutableMap<String, Integer> invariableHashes = invariableHashes(members, parameters.keySet());
+    vars.invariableHashSum = 0;
+    for (int h : invariableHashes.values()) {
+      vars.invariableHashSum += h;
+    }
+    vars.invariableHashes = invariableHashes.keySet();
     String text = vars.toText();
     text = Reformatter.fixup(text);
     writeSourceFile(pkg + "." + generatedClassName, text, methodClass);
+  }
+
+  /**
+   * Returns the hashCode of the given AnnotationValue, if that hashCode is guaranteed to be always
+   * the same. The hashCode of a String or primitive type never changes. The hashCode of a Class
+   * or an enum constant does potentially change in different runs of the same program. The hashCode
+   * of an array doesn't change if the hashCodes of its elements don't. Although we could have a
+   * similar rule for nested annotation values, we currently don't.
+   */
+  private static Optional<Integer> invariableHash(AnnotationValue annotationValue) {
+    Object value = annotationValue.getValue();
+    if (value instanceof String || Primitives.isWrapperType(value.getClass())) {
+      return Optional.of(value.hashCode());
+    } else if (value instanceof List<?>) {
+      @SuppressWarnings("unchecked")  // by specification
+      List<? extends AnnotationValue> list = (List<? extends AnnotationValue>) value;
+      return invariableHash(list);
+    } else {
+      return Optional.absent();
+    }
+  }
+
+  private static Optional<Integer> invariableHash(
+      List<? extends AnnotationValue> annotationValues) {
+    int h = 1;
+    for (AnnotationValue annotationValue : annotationValues) {
+      Optional<Integer> maybeHash = invariableHash(annotationValue);
+      if (!maybeHash.isPresent()) {
+        return Optional.absent();
+      }
+      h = h * 31 + maybeHash.get();
+    }
+    return Optional.of(h);
+  }
+
+  /**
+   * Returns a map from the names of members with invariable hashCodes to the values of those
+   * hashCodes.
+   */
+  private static ImmutableMap<String, Integer> invariableHashes(
+      ImmutableMap<String, Member> members, ImmutableSet<String> parameters) {
+    ImmutableMap.Builder<String, Integer> builder = ImmutableMap.builder();
+    for (String element : members.keySet()) {
+      if (!parameters.contains(element)) {
+        Member member = members.get(element);
+        AnnotationValue annotationValue = member.method.getDefaultValue();
+        Optional<Integer> invariableHash = invariableHash(annotationValue);
+        if (invariableHash.isPresent()) {
+          builder.put(element, (element.hashCode() * 127) ^ invariableHash.get());
+        }
+      }
+    }
+    return builder.build();
   }
 
   private boolean methodsAreOverloaded(List<ExecutableElement> methods) {

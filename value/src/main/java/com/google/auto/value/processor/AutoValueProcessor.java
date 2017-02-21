@@ -350,14 +350,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public String getAccess() {
-      Set<Modifier> mods = method.getModifiers();
-      if (mods.contains(Modifier.PUBLIC)) {
-        return "public ";
-      } else if (mods.contains(Modifier.PROTECTED)) {
-        return "protected ";
-      } else {
-        return "";
-      }
+      return access(method);
     }
 
     @Override
@@ -368,6 +361,42 @@ public class AutoValueProcessor extends AbstractProcessor {
     @Override
     public int hashCode() {
       return method.hashCode();
+    }
+  }
+
+  /**
+   * A basic method on an @AutoValue class with no specific attached information, such as a {@code
+   * toBuilder()} method, or a {@code build()} method, where only the name and access type is needed
+   * in context.
+   *
+   * <p>It implements JavaBean-style getters akin to {@link Property}.
+   */
+  public static class SimpleMethod {
+    private final String access;
+    private final String name;
+
+    SimpleMethod(ExecutableElement method) {
+      this.access = access(method);
+      this.name = method.getSimpleName().toString();
+    }
+
+    public String getAccess() {
+      return access;
+    }
+
+    public String getName() {
+      return name;
+    }
+  }
+
+  static String access(ExecutableElement method) {
+    Set<Modifier> mods = method.getModifiers();
+    if (mods.contains(Modifier.PUBLIC)) {
+      return "public ";
+    } else if (mods.contains(Modifier.PROTECTED)) {
+      return "protected ";
+    } else {
+      return "";
     }
   }
 
@@ -474,12 +503,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     validateMethods(type, abstractMethods, toBuilderMethods, propertyMethods, extensionsPresent);
 
     String finalSubclass = generatedSubclassName(type, 0);
-    String subclass = generatedSubclassName(type, applicableExtensions.size());
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
-    vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.isFinal = applicableExtensions.isEmpty();
     vars.types = processingEnv.getTypeUtils();
@@ -505,13 +532,15 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
+
+    String subclass = writeExtensions(type, context, applicableExtensions);
+    vars.subclass = TypeSimplifier.simpleNameOf(subclass);
+
     String text = vars.toText();
     text = Reformatter.fixup(text);
     writeSourceFile(subclass, text, type);
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
     gwtSerialization.maybeWriteGwtSerializer(vars);
-
-    writeExtensions(type, context, applicableExtensions, subclass);
   }
 
   /** Implements the semantics of {@link AutoValue.CopyAnnotations}; see its javadoc. */
@@ -605,27 +634,35 @@ public class AutoValueProcessor extends AbstractProcessor {
     return result.build();
   }
 
-  private void writeExtensions(
+  // Invokes each of the given extensions to generate its subclass, and returns the name of the
+  // class that the AutoValue implementation should go in. Assume the @AutoValue class is
+  // com.example.Foo.Bar. Then if there are no extensions, or at least no extensions that generate
+  // a subclass, the returned name will be com.example.AutoValue_Foo_Bar. If there is one extension,
+  // it will be asked to generate AutoValue_Foo_Bar with parent $AutoValue_Foo_Bar. If it does so
+  // (returns non-null) then the returned name will be com.example.$AutoValue_Foo_Bar. Otherwise,
+  // the returned name will still be com.example.AutoValue_Foo_Bar. Likewise, if there is a second
+  // extension and both extensions return non-null, the first one will generate AutoValue_Foo_Bar
+  // with parent $AutoValue_Foo_Bar, the second will generate $AutoValue_Foo_Bar with parent
+  // $$AutoValue_Foo_Bar, and the returned name will be com.example.$$AutoValue_Foo_Bar.
+  private String writeExtensions(
       TypeElement type,
       ExtensionContext context,
-      ImmutableList<AutoValueExtension> applicableExtensions,
-      String subclass) {
-    String extClass = TypeSimplifier.simpleNameOf(subclass);
-    for (int i = applicableExtensions.size() - 1; i >= 0; i--) {
-      AutoValueExtension extension = applicableExtensions.get(i);
-      String fqClassName = generatedSubclassName(type, i);
-      String className = TypeSimplifier.simpleNameOf(fqClassName);
-      boolean isFinal = (i == 0);
-      String source = extension.generateClass(context, className, extClass, isFinal);
-      if (source == null || source.isEmpty()) {
-        errorReporter.reportError("Extension returned no source code.", type);
-        return;
+      ImmutableList<AutoValueExtension> applicableExtensions) {
+    int writtenSoFar = 0;
+    for (AutoValueExtension extension : applicableExtensions) {
+      String parentFqName = generatedSubclassName(type, writtenSoFar + 1);
+      String parentSimpleName = TypeSimplifier.simpleNameOf(parentFqName);
+      String classFqName = generatedSubclassName(type, writtenSoFar);
+      String classSimpleName = TypeSimplifier.simpleNameOf(classFqName);
+      boolean isFinal = (writtenSoFar == 0);
+      String source = extension.generateClass(context, classSimpleName, parentSimpleName, isFinal);
+      if (source != null) {
+        source = Reformatter.fixup(source);
+        writeSourceFile(classFqName, source, type);
+        writtenSoFar++;
       }
-      source = Reformatter.fixup(source);
-      writeSourceFile(fqClassName, source, type);
-
-      extClass = className;
     }
+    return generatedSubclassName(type, writtenSoFar);
   }
 
   private ImmutableList<AutoValueExtension> applicableExtensions(
@@ -739,6 +776,15 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
+  private enum SimpleMethodFunction implements Function<ExecutableElement, SimpleMethod> {
+    INSTANCE;
+
+    @Override
+    public SimpleMethod apply(ExecutableElement input) {
+      return new SimpleMethod(input);
+    }
+  }
+
   private TypeSimplifier defineVarsForType(
       TypeElement type,
       AutoValueTemplateVars vars,
@@ -763,7 +809,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.add(javaUtilArrays);
     }
     vars.toBuilderMethods =
-        FluentIterable.from(toBuilderMethods).transform(SimpleNameFunction.INSTANCE).toList();
+        FluentIterable.from(toBuilderMethods).transform(SimpleMethodFunction.INSTANCE).toList();
     ImmutableSetMultimap<ExecutableElement, String> excludedAnnotationsMap =
         allMethodExcludedAnnotations(propertyMethods);
     types.addAll(allMethodAnnotationTypes(propertyMethods, excludedAnnotationsMap));

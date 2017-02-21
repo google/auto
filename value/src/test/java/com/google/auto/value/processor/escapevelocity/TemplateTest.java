@@ -229,6 +229,11 @@ public class TemplateTest {
   }
 
   @Test
+  public void newlineInSet() {
+    compare("foo #set ($x\n  = 17)\nbar $x", ImmutableMap.<String, Object>of());
+  }
+
+  @Test
   public void expressions() {
     compare("#set ($x = 1 + 1) $x");
     compare("#set ($x = 1 + 2 * 3) $x");
