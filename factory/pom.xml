@@ -27,7 +27,7 @@
 
   <groupId>com.google.auto.factory</groupId>
   <artifactId>auto-factory</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0-beta4</version>
   <name>AutoFactory</name>
   <description>
     JSR-330-compatible factories.
