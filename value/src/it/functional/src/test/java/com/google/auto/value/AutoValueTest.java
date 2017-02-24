@@ -1307,6 +1307,12 @@ public class AutoValueTest {
         .addEqualityGroup(a1, a2, a3)
         .addEqualityGroup(b)
         .testEquals();
+
+    try {
+      TwoPropertiesWithBuilderClass.builder().string(null);
+      fail("Did not get expected exception");
+    } catch (NullPointerException expected) {
+    }
   }
 
   @AutoValue
@@ -1358,88 +1364,95 @@ public class AutoValueTest {
   }
 
   @AutoValue
-  public abstract static class OptionalPropertyWithBuilder {
+  public abstract static class OptionalPropertiesWithBuilder {
     public abstract com.google.common.base.Optional<String> optionalString();
+    public abstract com.google.common.base.Optional<Integer> optionalInteger();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilder.Builder();
+      return new AutoValue_AutoValueTest_OptionalPropertiesWithBuilder.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
       Builder setOptionalString(String s);
-      OptionalPropertyWithBuilder build();
+      Builder setOptionalInteger(com.google.common.base.Optional<Integer> i);
+      Builder setOptionalInteger(int i);
+      OptionalPropertiesWithBuilder build();
     }
   }
 
   @Test
   public void testOmitOptionalWithBuilder() {
-    OptionalPropertyWithBuilder omitted = OptionalPropertyWithBuilder.builder().build();
+    OptionalPropertiesWithBuilder omitted = OptionalPropertiesWithBuilder.builder().build();
     assertThat(omitted.optionalString()).isAbsent();
+    assertThat(omitted.optionalInteger()).isAbsent();
 
-    OptionalPropertyWithBuilder supplied = OptionalPropertyWithBuilder.builder()
+    OptionalPropertiesWithBuilder supplied = OptionalPropertiesWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
+    assertThat(omitted.optionalInteger()).isAbsent();
 
-    OptionalPropertyWithBuilder suppliedDirectly = OptionalPropertyWithBuilder.builder()
+    OptionalPropertiesWithBuilder suppliedDirectly = OptionalPropertiesWithBuilder.builder()
         .setOptionalString("foo")
+        .setOptionalInteger(23)
         .build();
     assertThat(suppliedDirectly.optionalString()).hasValue("foo");
+    assertThat(suppliedDirectly.optionalInteger()).hasValue(23);
   }
 
   @AutoValue
-  public abstract static class NullableOptionalPropertyWithBuilder {
+  public abstract static class NullableOptionalPropertiesWithBuilder {
     @Nullable
     public abstract com.google.common.base.Optional<String> optionalString();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_NullableOptionalPropertyWithBuilder.Builder();
+      return new AutoValue_AutoValueTest_NullableOptionalPropertiesWithBuilder.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
-      NullableOptionalPropertyWithBuilder build();
+      NullableOptionalPropertiesWithBuilder build();
     }
   }
 
   @Test
   public void testOmitNullableOptionalWithBuilder() {
-    NullableOptionalPropertyWithBuilder omitted =
-        NullableOptionalPropertyWithBuilder.builder().build();
+    NullableOptionalPropertiesWithBuilder omitted =
+        NullableOptionalPropertiesWithBuilder.builder().build();
     assertThat(omitted.optionalString()).isNull();
 
-    NullableOptionalPropertyWithBuilder supplied = NullableOptionalPropertyWithBuilder.builder()
+    NullableOptionalPropertiesWithBuilder supplied = NullableOptionalPropertiesWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
   }
 
   @AutoValue
-  public abstract static class OptionalPropertyWithBuilderSimpleSetter {
+  public abstract static class OptionalPropertiesWithBuilderSimpleSetter {
     public abstract com.google.common.base.Optional<String> optionalString();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilderSimpleSetter.Builder();
+      return new AutoValue_AutoValueTest_OptionalPropertiesWithBuilderSimpleSetter.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(String s);
-      OptionalPropertyWithBuilderSimpleSetter build();
+      OptionalPropertiesWithBuilderSimpleSetter build();
     }
   }
 
   @Test
   public void testOptionalPropertySimpleSetter() {
-    OptionalPropertyWithBuilderSimpleSetter omitted =
-        OptionalPropertyWithBuilderSimpleSetter.builder().build();
+    OptionalPropertiesWithBuilderSimpleSetter omitted =
+        OptionalPropertiesWithBuilderSimpleSetter.builder().build();
     assertThat(omitted.optionalString()).isAbsent();
 
-    OptionalPropertyWithBuilderSimpleSetter supplied =
-        OptionalPropertyWithBuilderSimpleSetter.builder()
+    OptionalPropertiesWithBuilderSimpleSetter supplied =
+        OptionalPropertiesWithBuilderSimpleSetter.builder()
             .setOptionalString("foo")
             .build();
     assertThat(supplied.optionalString()).hasValue("foo");
@@ -1763,6 +1776,8 @@ public class AutoValueTest {
         return this;
       }
 
+      abstract Builder<FooT> setStrings(ImmutableList<String> strings);
+
       abstract ImmutableSet.Builder<String> stringsBuilder();
 
       public Builder<FooT> addToStrings(String element) {
@@ -1817,6 +1832,14 @@ public class AutoValueTest {
         BuilderWithPropertyBuilders.<Integer>builder().build();
     assertEquals(ImmutableList.of(), empty.getFoos());
     assertEquals(ImmutableSet.of(), empty.getStrings());
+
+    try {
+      BuilderWithPropertyBuilders.<Integer>builder().setStrings(null).build();
+      fail("Did not get expected exception");
+    } catch (RuntimeException expected) {
+      // We don't specify whether you get the exception on setStrings(null) or on build(), nor
+      // which exception it is exactly.
+    }
   }
 
   @AutoValue

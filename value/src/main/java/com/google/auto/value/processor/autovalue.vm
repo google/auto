@@ -257,6 +257,14 @@ $a
     ${setter.access}${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
 
+      #if (!$setter.primitiveParameter && !$p.nullable)
+
+      if ($p == null) {
+        throw new NullPointerException("Null $p.name");
+      }
+
+      #end
+
       #if ($propertyBuilder)
 
       if (${propertyBuilder.name} != null) {

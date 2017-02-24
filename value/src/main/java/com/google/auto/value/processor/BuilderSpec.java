@@ -305,6 +305,7 @@ class BuilderSpec {
     private final String access;
     private final String name;
     private final String parameterTypeString;
+    private final boolean primitiveParameter;
     private final String copyOf;
 
     public PropertySetter(
@@ -312,6 +313,7 @@ class BuilderSpec {
       this.access = AutoValueProcessor.access(setter);
       this.name = setter.getSimpleName().toString();
       TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
+      primitiveParameter = parameterType.getKind().isPrimitive();
       String simplifiedParameterType = typeSimplifier.simplify(parameterType);
       if (setter.isVarArgs()) {
         simplifiedParameterType = simplifiedParameterType.replaceAll("\\[\\]$", "...");
@@ -339,6 +341,10 @@ class BuilderSpec {
 
     public String getParameterType() {
       return parameterTypeString;
+    }
+
+    public boolean getPrimitiveParameter() {
+      return primitiveParameter;
     }
 
     public String copy(AutoValueProcessor.Property property) {
