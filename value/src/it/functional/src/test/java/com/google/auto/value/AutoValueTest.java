@@ -2558,4 +2558,109 @@ public class AutoValueTest {
     ReleaseInfo x = ReleaseInfo.newBuilder().addApkVersionCode(apkVersionCode).build();
     assertThat(x.apkVersionCodes()).containsExactly(apkVersionCode);
   }
+
+  @AutoValue
+  public abstract static class OuterWithDefaultableInner {
+    public abstract ImmutableList<String> names();
+    public abstract DefaultableInner inner();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_OuterWithDefaultableInner.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract ImmutableList<String> names();
+      public abstract ImmutableList.Builder<String> namesBuilder();
+      public abstract DefaultableInner inner();
+      public abstract DefaultableInner.Builder innerBuilder();
+      public abstract OuterWithDefaultableInner build();
+    }
+  }
+
+  @AutoValue
+  public abstract static class DefaultableInner {
+    public abstract int bar();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_DefaultableInner.Builder()
+          .setBar(23);
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setBar(int x);
+      public abstract DefaultableInner build();
+    }
+  }
+
+  @Test
+  public void testOuterWithDefaultableInner_Defaults() {
+    DefaultableInner defaultInner = DefaultableInner.builder().build();
+    OuterWithDefaultableInner x = OuterWithDefaultableInner.builder().build();
+    assertThat(x.names()).isEmpty();
+    assertThat(x.inner()).isEqualTo(defaultInner);
+  }
+
+  @Test
+  public void testOuterWithDefaultableInner_Getters() {
+    DefaultableInner defaultInner = DefaultableInner.builder().build();
+
+    OuterWithDefaultableInner.Builder builder = OuterWithDefaultableInner.builder();
+    assertThat(builder.names()).isEmpty();
+    assertThat(builder.inner()).isEqualTo(defaultInner);
+
+    OuterWithDefaultableInner x1 = builder.build();
+    assertThat(x1.names()).isEmpty();
+    assertThat(x1.inner()).isEqualTo(defaultInner);
+
+    builder.namesBuilder().add("Fred");
+    builder.innerBuilder().setBar(17);
+    OuterWithDefaultableInner x2 = builder.build();
+    assertThat(x2.names()).containsExactly("Fred");
+    assertThat(x2.inner().bar()).isEqualTo(17);
+  }
+
+  @AutoValue
+  public abstract static class OuterWithNonDefaultableInner<T> {
+    public abstract int foo();
+    public abstract NonDefaultableInner<T> inner();
+
+    public static <T> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_OuterWithNonDefaultableInner.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T> {
+      public abstract Builder<T> setFoo(int x);
+      public abstract NonDefaultableInner.Builder<T> innerBuilder();
+      public abstract OuterWithNonDefaultableInner<T> build();
+    }
+  }
+
+  @AutoValue
+  public abstract static class NonDefaultableInner<E> {
+    public abstract E bar();
+
+    public static <E> Builder<E> builder() {
+      return new AutoValue_AutoValueTest_NonDefaultableInner.Builder<E>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<E> {
+      public abstract Builder<E> setBar(E x);
+      public abstract NonDefaultableInner<E> build();
+    }
+  }
+
+  @Test
+  public void testOuterWithNonDefaultableInner() {
+    OuterWithNonDefaultableInner.Builder<String> builder = OuterWithNonDefaultableInner.builder();
+    builder.setFoo(23);
+    try {
+      builder.build();
+      fail("Did not get expected exception for unbuilt inner instance");
+    } catch (IllegalStateException expected) {
+    }
+  }
 }
