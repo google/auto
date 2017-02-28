@@ -1252,6 +1252,15 @@ public class AutoValueTest {
     }
   }
 
+  @Test
+  public void testBasicWithBuilderHasOnlyOneConstructor() throws Exception {
+    Class<?> builderClass = AutoValue_AutoValueTest_BasicWithBuilder.Builder.class;
+    Constructor<?>[] constructors = builderClass.getDeclaredConstructors();
+    assertThat(constructors).hasLength(1);
+    Constructor<?> constructor = constructors[0];
+    assertThat(constructor.getParameterTypes()).isEmpty();
+  }
+
   @AutoValue
   public abstract static class EmptyWithBuilder {
     public static Builder builder() {

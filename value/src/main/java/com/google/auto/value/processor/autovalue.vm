@@ -221,15 +221,19 @@ $a
     Builder() {
     }
 
+  #if (!$toBuilderMethods.empty)
+
     private Builder(${origClass}${actualTypes} source) {
 
-  #foreach ($p in $props)
+    #foreach ($p in $props)
 
       this.$p = source.${p.getter}();
 
-  #end
+    #end
 
     }
+
+  #end
 
   #foreach ($p in $props)
 
