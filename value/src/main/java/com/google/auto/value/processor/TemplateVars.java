@@ -135,7 +135,12 @@ abstract class TemplateVars {
   private static Template templateFromInputStream(InputStream in)
       throws UnsupportedEncodingException, IOException {
     Reader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-    return Template.parseFrom(reader);
+    try {
+      return Template.parseFrom(reader);
+    } catch (NullPointerException e) {
+      // Inflater for zips will throw an NPE if the Inflater stream is closed. It's silly.
+      throw new IOException(e);
+    }
   }
 
   // This is an ugly workaround for https://bugs.openjdk.java.net/browse/JDK-6947916, as
