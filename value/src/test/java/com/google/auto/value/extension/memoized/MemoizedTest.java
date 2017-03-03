@@ -33,6 +33,22 @@ public class MemoizedTest {
   private ListValue<Integer, String> listValue;
 
   @AutoValue
+  abstract static class ValueWithKeywordName {
+    abstract boolean getNative();
+    abstract boolean getNative0();
+
+    @Memoized
+    boolean getMemoizedNative() {
+      return getNative();
+    }
+
+    @Memoized
+    boolean getMemoizedNative0() {
+      return getNative0();
+    }
+  }
+
+  @AutoValue
   abstract static class Value {
     private int primitiveCount;
     private int notNullableCount;
@@ -177,5 +193,14 @@ public class MemoizedTest {
   public void testToString() {
     assertThat(value.toString()).isEqualTo(value.toString());
     assertThat(value.counter().toStringCount).isEqualTo(1);
+  }
+
+  @Test
+  public void keywords() {
+    ValueWithKeywordName value = new AutoValue_MemoizedTest_ValueWithKeywordName(true, false);
+    assertThat(value.getNative()).isTrue();
+    assertThat(value.getMemoizedNative()).isTrue();
+    assertThat(value.getNative0()).isFalse();
+    assertThat(value.getMemoizedNative0()).isFalse();
   }
 }
