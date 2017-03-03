@@ -412,6 +412,11 @@ public class ExtensionTest {
     doTestNoCode(new FooExtension(), new SideFileExtension(), new NonFinalExtension());
   }
 
+  @Test
+  public void testLoneExtensionGeneratesNoCode() {
+    doTestNoCode(new SideFileExtension());
+  }
+
   private void doTestNoCode(AutoValueExtension... extensions) {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -421,7 +426,11 @@ public class ExtensionTest {
         "",
         "@AutoValue",
         "public abstract class Baz {",
-        "  abstract String foo();",
+        "  public abstract String foo();",
+        "",
+        "  public static Baz create(String foo) {",
+        "    return new AutoValue_Baz(foo);",
+        "  }",
         "}");
     assertThat(javaFileObject)
         .withCompilerOptions("-Xlint:-processing", "-implicit:class")
