@@ -113,22 +113,30 @@ abstract class TemplateVars {
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);
     } catch (IOException e) {
-      try {
-        return parsedTemplateFromUrl(resourceName);
-      } catch (Throwable t) {
-        // Chain the original exception so we can see both problems.
-        Throwable cause;
-        for (cause = e; cause.getCause() != null; cause = cause.getCause()) {
-        }
-        cause.initCause(t);
-        throw new AssertionError(e);
-      }
+      return retryParseAfterException(resourceName, e);
+    } catch (NullPointerException e) {
+      // https://github.com/google/auto/pull/439 says that we can also get this exception.
+      // TODO(emcmanus): use IOException | NullPointerException when we drop Java 6 source compat.
+      return retryParseAfterException(resourceName, e);
     } finally {
       try {
         in.close();
       } catch (IOException ignored) {
         // We probably already got an IOException which we're propagating.
       }
+    }
+  }
+
+  private static Template retryParseAfterException(String resourceName, Exception exception) {
+    try {
+      return parsedTemplateFromUrl(resourceName);
+    } catch (Throwable t) {
+      // Chain the original exception so we can see both problems.
+      Throwable cause;
+      for (cause = exception; cause.getCause() != null; cause = cause.getCause()) {
+      }
+      cause.initCause(t);
+      throw new AssertionError(exception);
     }
   }
 

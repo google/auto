@@ -150,18 +150,27 @@ public class TemplateVarsTest {
     }
   }
 
-  // This is a complicated test that tries to simulate the failure that is worked around in
-  // Template.parsedTemplateForResource. That failure means that the InputStream returned by
-  // ClassLoader.getResourceAsStream sometimes throws IOException while it is being read. To
-  // simulate that, we make a second ClassLoader with the same configuration as the one that
-  // runs this test, and we override getResourceAsStream so that it wraps the returned InputStream
-  // in a BrokenInputStream, which throws an exception after a certain number of characters.
-  // We check that that exception was indeed seen, and that we did indeed try to read the resource
-  // we're interested in, and that we succeeded in loading a Template nevertheless.
   @Test
-  public void testBrokenInputStream() throws Exception {
+  public void testBrokenInputStream_IOException() throws Exception {
+    doTestBrokenInputStream(new IOException("BrokenInputStream"));
+  }
+
+  @Test
+  public void testBrokenInputStream_NullPointerException() throws Exception {
+    doTestBrokenInputStream(new NullPointerException("BrokenInputStream"));
+  }
+
+  // This is a complicated test that tries to simulates the failures that are worked around in
+  // Template.parsedTemplateForResource. Those failures means that the InputStream returned by
+  // ClassLoader.getResourceAsStream sometimes throws IOException or NullPointerException while it
+  // is being read. To simulate that, we make a second ClassLoader with the same configuration as
+  // the one that runs this test, and we override getResourceAsStream so that it wraps the returned
+  // InputStream in a BrokenInputStream, which throws an exception after a certain number of
+  // characters.  We check that that exception was indeed seen, and that we did indeed try to read
+  // the resource we're interested in, and that we succeeded in loading a Template nevertheless.
+  private void doTestBrokenInputStream(Exception exception) throws Exception {
     URLClassLoader myLoader = (URLClassLoader) getClass().getClassLoader();
-    URLClassLoader shadowLoader = new ShadowLoader(myLoader);
+    URLClassLoader shadowLoader = new ShadowLoader(myLoader, exception);
     Runnable brokenInputStreamTest =
         (Runnable) shadowLoader
             .loadClass(BrokenInputStreamTest.class.getName())
@@ -171,10 +180,12 @@ public class TemplateVarsTest {
   }
 
   private static class ShadowLoader extends URLClassLoader implements Callable<Set<String>> {
+    private final Exception exception;
     private final Set<String> result = new TreeSet<String>();
 
-    ShadowLoader(URLClassLoader original) {
+    ShadowLoader(URLClassLoader original, Exception exception) {
       super(original.getURLs(), original.getParent());
+      this.exception = exception;
     }
 
     @Override
@@ -200,7 +211,10 @@ public class TemplateVarsTest {
       public int read() throws IOException {
         if (++count > 10) {
           result.add("threw");
-          throw new IOException("BrokenInputStream");
+          if (exception instanceof IOException) {
+            throw (IOException) exception;
+          }
+          throw (RuntimeException) exception;
         }
         return original.read();
       }
