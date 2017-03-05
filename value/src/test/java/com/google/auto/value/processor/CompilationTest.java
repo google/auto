@@ -1016,6 +1016,38 @@ public class CompilationTest {
   }
 
   @Test
+  public void autoValueBuilderNotStatic() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Example",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "class Example {",
+        "  @AutoValue",
+        "  abstract static class Baz {",
+        "    abstract int foo();",
+        "",
+        "    static Builder builder() {",
+        "      return new AutoValue_Example_Baz.Builder();",
+        "    }",
+        "",
+        "    @AutoValue.Builder",
+        "    abstract class Builder {",
+        "      abstract Builder foo(int x);",
+        "      abstract Baz build();",
+        "    }",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("@AutoValue.Builder cannot be applied to a non-static class")
+        .in(javaFileObject).onLine(15);
+  }
+
+  @Test
   public void autoValueBuilderOnEnum() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
