@@ -424,6 +424,8 @@ public class AutoValueProcessor extends AbstractProcessor {
           return ObjectMethodToOverride.EQUALS;
         }
         break;
+      default:
+        // No relevant Object methods have more than one parameter.
     }
     return ObjectMethodToOverride.NONE;
   }
@@ -508,7 +510,6 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
-    vars.isFinal = applicableExtensions.isEmpty();
     vars.types = processingEnv.getTypeUtils();
     determineObjectMethodsToGenerate(methods, vars);
     TypeSimplifier typeSimplifier =
@@ -533,8 +534,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
 
-    String subclass = writeExtensions(type, context, applicableExtensions);
+    int subclassDepth = writeExtensions(type, context, applicableExtensions);
+    String subclass = generatedSubclassName(type, subclassDepth);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
+    vars.isFinal = (subclassDepth == 0);
 
     String text = vars.toText();
     text = Reformatter.fixup(text);
@@ -634,17 +637,20 @@ public class AutoValueProcessor extends AbstractProcessor {
     return result.build();
   }
 
-  // Invokes each of the given extensions to generate its subclass, and returns the name of the
-  // class that the AutoValue implementation should go in. Assume the @AutoValue class is
-  // com.example.Foo.Bar. Then if there are no extensions, or at least no extensions that generate
-  // a subclass, the returned name will be com.example.AutoValue_Foo_Bar. If there is one extension,
-  // it will be asked to generate AutoValue_Foo_Bar with parent $AutoValue_Foo_Bar. If it does so
-  // (returns non-null) then the returned name will be com.example.$AutoValue_Foo_Bar. Otherwise,
-  // the returned name will still be com.example.AutoValue_Foo_Bar. Likewise, if there is a second
-  // extension and both extensions return non-null, the first one will generate AutoValue_Foo_Bar
-  // with parent $AutoValue_Foo_Bar, the second will generate $AutoValue_Foo_Bar with parent
-  // $$AutoValue_Foo_Bar, and the returned name will be com.example.$$AutoValue_Foo_Bar.
-  private String writeExtensions(
+  // Invokes each of the given extensions to generate its subclass, and returns the number of
+  // hierarchy classes that extensions generated. This number is then the number of $ characters
+  // that should precede the name of the AutoValue implementation class.
+  // Assume the @AutoValue class is com.example.Foo.Bar. Then if there are no
+  // extensions the returned value will be 0, so the AutoValue implementation will be
+  // com.example.AutoValue_Foo_Bar. If there is one extension, it will be asked to
+  // generate AutoValue_Foo_Bar with parent $AutoValue_Foo_Bar. If it does so (returns
+  // non-null) then the returned value will be 1, so the AutoValue implementation will be
+  // com.example.$AutoValue_Foo_Bar. Otherwise, the returned value will still be 0. Likewise,
+  // if there is a second extension and both extensions return non-null, the first one will
+  // generate AutoValue_Foo_Bar with parent $AutoValue_Foo_Bar, the second will generate
+  // $AutoValue_Foo_Bar with parent $$AutoValue_Foo_Bar, and the returned value will be 2 for
+  // com.example.$$AutoValue_Foo_Bar.
+  private int writeExtensions(
       TypeElement type,
       ExtensionContext context,
       ImmutableList<AutoValueExtension> applicableExtensions) {
@@ -662,7 +668,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         writtenSoFar++;
       }
     }
-    return generatedSubclassName(type, writtenSoFar);
+    return writtenSoFar;
   }
 
   private ImmutableList<AutoValueExtension> applicableExtensions(

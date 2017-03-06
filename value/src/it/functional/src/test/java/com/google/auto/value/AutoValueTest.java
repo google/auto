@@ -1252,6 +1252,15 @@ public class AutoValueTest {
     }
   }
 
+  @Test
+  public void testBasicWithBuilderHasOnlyOneConstructor() throws Exception {
+    Class<?> builderClass = AutoValue_AutoValueTest_BasicWithBuilder.Builder.class;
+    Constructor<?>[] constructors = builderClass.getDeclaredConstructors();
+    assertThat(constructors).hasLength(1);
+    Constructor<?> constructor = constructors[0];
+    assertThat(constructor.getParameterTypes()).isEmpty();
+  }
+
   @AutoValue
   public abstract static class EmptyWithBuilder {
     public static Builder builder() {
@@ -1307,6 +1316,12 @@ public class AutoValueTest {
         .addEqualityGroup(a1, a2, a3)
         .addEqualityGroup(b)
         .testEquals();
+
+    try {
+      TwoPropertiesWithBuilderClass.builder().string(null);
+      fail("Did not get expected exception");
+    } catch (NullPointerException expected) {
+    }
   }
 
   @AutoValue
@@ -1358,88 +1373,95 @@ public class AutoValueTest {
   }
 
   @AutoValue
-  public abstract static class OptionalPropertyWithBuilder {
+  public abstract static class OptionalPropertiesWithBuilder {
     public abstract com.google.common.base.Optional<String> optionalString();
+    public abstract com.google.common.base.Optional<Integer> optionalInteger();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilder.Builder();
+      return new AutoValue_AutoValueTest_OptionalPropertiesWithBuilder.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
       Builder setOptionalString(String s);
-      OptionalPropertyWithBuilder build();
+      Builder setOptionalInteger(com.google.common.base.Optional<Integer> i);
+      Builder setOptionalInteger(int i);
+      OptionalPropertiesWithBuilder build();
     }
   }
 
   @Test
   public void testOmitOptionalWithBuilder() {
-    OptionalPropertyWithBuilder omitted = OptionalPropertyWithBuilder.builder().build();
+    OptionalPropertiesWithBuilder omitted = OptionalPropertiesWithBuilder.builder().build();
     assertThat(omitted.optionalString()).isAbsent();
+    assertThat(omitted.optionalInteger()).isAbsent();
 
-    OptionalPropertyWithBuilder supplied = OptionalPropertyWithBuilder.builder()
+    OptionalPropertiesWithBuilder supplied = OptionalPropertiesWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
+    assertThat(omitted.optionalInteger()).isAbsent();
 
-    OptionalPropertyWithBuilder suppliedDirectly = OptionalPropertyWithBuilder.builder()
+    OptionalPropertiesWithBuilder suppliedDirectly = OptionalPropertiesWithBuilder.builder()
         .setOptionalString("foo")
+        .setOptionalInteger(23)
         .build();
     assertThat(suppliedDirectly.optionalString()).hasValue("foo");
+    assertThat(suppliedDirectly.optionalInteger()).hasValue(23);
   }
 
   @AutoValue
-  public abstract static class NullableOptionalPropertyWithBuilder {
+  public abstract static class NullableOptionalPropertiesWithBuilder {
     @Nullable
     public abstract com.google.common.base.Optional<String> optionalString();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_NullableOptionalPropertyWithBuilder.Builder();
+      return new AutoValue_AutoValueTest_NullableOptionalPropertiesWithBuilder.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
-      NullableOptionalPropertyWithBuilder build();
+      NullableOptionalPropertiesWithBuilder build();
     }
   }
 
   @Test
   public void testOmitNullableOptionalWithBuilder() {
-    NullableOptionalPropertyWithBuilder omitted =
-        NullableOptionalPropertyWithBuilder.builder().build();
+    NullableOptionalPropertiesWithBuilder omitted =
+        NullableOptionalPropertiesWithBuilder.builder().build();
     assertThat(omitted.optionalString()).isNull();
 
-    NullableOptionalPropertyWithBuilder supplied = NullableOptionalPropertyWithBuilder.builder()
+    NullableOptionalPropertiesWithBuilder supplied = NullableOptionalPropertiesWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
   }
 
   @AutoValue
-  public abstract static class OptionalPropertyWithBuilderSimpleSetter {
+  public abstract static class OptionalPropertiesWithBuilderSimpleSetter {
     public abstract com.google.common.base.Optional<String> optionalString();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilderSimpleSetter.Builder();
+      return new AutoValue_AutoValueTest_OptionalPropertiesWithBuilderSimpleSetter.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(String s);
-      OptionalPropertyWithBuilderSimpleSetter build();
+      OptionalPropertiesWithBuilderSimpleSetter build();
     }
   }
 
   @Test
   public void testOptionalPropertySimpleSetter() {
-    OptionalPropertyWithBuilderSimpleSetter omitted =
-        OptionalPropertyWithBuilderSimpleSetter.builder().build();
+    OptionalPropertiesWithBuilderSimpleSetter omitted =
+        OptionalPropertiesWithBuilderSimpleSetter.builder().build();
     assertThat(omitted.optionalString()).isAbsent();
 
-    OptionalPropertyWithBuilderSimpleSetter supplied =
-        OptionalPropertyWithBuilderSimpleSetter.builder()
+    OptionalPropertiesWithBuilderSimpleSetter supplied =
+        OptionalPropertiesWithBuilderSimpleSetter.builder()
             .setOptionalString("foo")
             .build();
     assertThat(supplied.optionalString()).hasValue("foo");
@@ -1763,6 +1785,8 @@ public class AutoValueTest {
         return this;
       }
 
+      abstract Builder<FooT> setStrings(ImmutableList<String> strings);
+
       abstract ImmutableSet.Builder<String> stringsBuilder();
 
       public Builder<FooT> addToStrings(String element) {
@@ -1817,6 +1841,14 @@ public class AutoValueTest {
         BuilderWithPropertyBuilders.<Integer>builder().build();
     assertEquals(ImmutableList.of(), empty.getFoos());
     assertEquals(ImmutableSet.of(), empty.getStrings());
+
+    try {
+      BuilderWithPropertyBuilders.<Integer>builder().setStrings(null).build();
+      fail("Did not get expected exception");
+    } catch (RuntimeException expected) {
+      // We don't specify whether you get the exception on setStrings(null) or on build(), nor
+      // which exception it is exactly.
+    }
   }
 
   @AutoValue
@@ -2534,5 +2566,110 @@ public class AutoValueTest {
     ApkVersionCode apkVersionCode = new ApkVersionCode();
     ReleaseInfo x = ReleaseInfo.newBuilder().addApkVersionCode(apkVersionCode).build();
     assertThat(x.apkVersionCodes()).containsExactly(apkVersionCode);
+  }
+
+  @AutoValue
+  public abstract static class OuterWithDefaultableInner {
+    public abstract ImmutableList<String> names();
+    public abstract DefaultableInner inner();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_OuterWithDefaultableInner.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract ImmutableList<String> names();
+      public abstract ImmutableList.Builder<String> namesBuilder();
+      public abstract DefaultableInner inner();
+      public abstract DefaultableInner.Builder innerBuilder();
+      public abstract OuterWithDefaultableInner build();
+    }
+  }
+
+  @AutoValue
+  public abstract static class DefaultableInner {
+    public abstract int bar();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_DefaultableInner.Builder()
+          .setBar(23);
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setBar(int x);
+      public abstract DefaultableInner build();
+    }
+  }
+
+  @Test
+  public void testOuterWithDefaultableInner_Defaults() {
+    DefaultableInner defaultInner = DefaultableInner.builder().build();
+    OuterWithDefaultableInner x = OuterWithDefaultableInner.builder().build();
+    assertThat(x.names()).isEmpty();
+    assertThat(x.inner()).isEqualTo(defaultInner);
+  }
+
+  @Test
+  public void testOuterWithDefaultableInner_Getters() {
+    DefaultableInner defaultInner = DefaultableInner.builder().build();
+
+    OuterWithDefaultableInner.Builder builder = OuterWithDefaultableInner.builder();
+    assertThat(builder.names()).isEmpty();
+    assertThat(builder.inner()).isEqualTo(defaultInner);
+
+    OuterWithDefaultableInner x1 = builder.build();
+    assertThat(x1.names()).isEmpty();
+    assertThat(x1.inner()).isEqualTo(defaultInner);
+
+    builder.namesBuilder().add("Fred");
+    builder.innerBuilder().setBar(17);
+    OuterWithDefaultableInner x2 = builder.build();
+    assertThat(x2.names()).containsExactly("Fred");
+    assertThat(x2.inner().bar()).isEqualTo(17);
+  }
+
+  @AutoValue
+  public abstract static class OuterWithNonDefaultableInner<T> {
+    public abstract int foo();
+    public abstract NonDefaultableInner<T> inner();
+
+    public static <T> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_OuterWithNonDefaultableInner.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T> {
+      public abstract Builder<T> setFoo(int x);
+      public abstract NonDefaultableInner.Builder<T> innerBuilder();
+      public abstract OuterWithNonDefaultableInner<T> build();
+    }
+  }
+
+  @AutoValue
+  public abstract static class NonDefaultableInner<E> {
+    public abstract E bar();
+
+    public static <E> Builder<E> builder() {
+      return new AutoValue_AutoValueTest_NonDefaultableInner.Builder<E>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<E> {
+      public abstract Builder<E> setBar(E x);
+      public abstract NonDefaultableInner<E> build();
+    }
+  }
+
+  @Test
+  public void testOuterWithNonDefaultableInner() {
+    OuterWithNonDefaultableInner.Builder<String> builder = OuterWithNonDefaultableInner.builder();
+    builder.setFoo(23);
+    try {
+      builder.build();
+      fail("Did not get expected exception for unbuilt inner instance");
+    } catch (IllegalStateException expected) {
+    }
   }
 }

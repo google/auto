@@ -1,5 +1,6 @@
 # AutoValue with Builders
 
+
 The [introduction](index.md) of this User Guide covers the basic usage of
 AutoValue using a static factory method as your public creation API. But in many
 circumstances (such as those laid out in *Effective Java, 2nd Edition* Item 2),

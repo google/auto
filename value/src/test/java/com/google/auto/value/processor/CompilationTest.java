@@ -601,6 +601,7 @@ public class CompilationTest {
         "  public abstract List<T> aList();",
         "  public abstract ImmutableList<T> anImmutableList();",
         "  public abstract Optional<String> anOptionalString();",
+        "  public abstract NestedAutoValue<T> aNestedAutoValue();",
         "",
         "  public abstract Builder<T> toBuilder();",
         "",
@@ -614,6 +615,7 @@ public class CompilationTest {
         "    public abstract ImmutableList.Builder<T> anImmutableListBuilder();",
         "    public abstract Builder<T> anOptionalString(Optional<String> s);",
         "    public abstract Builder<T> anOptionalString(String s);",
+        "    public abstract NestedAutoValue.Builder<T> aNestedAutoValueBuilder();",
         "",
         "    public Builder<T> aList(ArrayList<T> x) {",
              // ArrayList should not be imported in the generated class.
@@ -629,6 +631,28 @@ public class CompilationTest {
         "",
         "  public static <T extends Number> Builder<T> builder() {",
         "    return AutoValue_Baz.builder();",
+        "  }",
+        "}");
+    JavaFileObject nestedJavaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.NestedAutoValue",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class NestedAutoValue<T extends Number> {",
+        "  public abstract T t();",
+        "",
+        "  public abstract Builder<T> toBuilder();",
+        "",
+        "  @AutoValue.Builder",
+        "  public abstract static class Builder<T extends Number> {",
+        "    public abstract Builder<T> t(T t);",
+        "    public abstract NestedAutoValue<T> build();",
+        "  }",
+        "",
+        "  public static <T extends Number> Builder<T> builder() {",
+        "    return AutoValue_NestedAutoValue.builder();",
         "  }",
         "}");
     JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
@@ -650,6 +674,7 @@ public class CompilationTest {
         "  private final List<T> aList;",
         "  private final ImmutableList<T> anImmutableList;",
         "  private final Optional<String> anOptionalString;",
+        "  private final NestedAutoValue<T> aNestedAutoValue;",
         "",
         "  private AutoValue_Baz(",
         "      int anInt,",
@@ -657,13 +682,15 @@ public class CompilationTest {
         "      @Nullable int[] aNullableIntArray,",
         "      List<T> aList,",
         "      ImmutableList<T> anImmutableList,",
-        "      Optional<String> anOptionalString) {",
+        "      Optional<String> anOptionalString,",
+        "      NestedAutoValue<T> aNestedAutoValue) {",
         "    this.anInt = anInt;",
         "    this.aByteArray = aByteArray;",
         "    this.aNullableIntArray = aNullableIntArray;",
         "    this.aList = aList;",
         "    this.anImmutableList = anImmutableList;",
         "    this.anOptionalString = anOptionalString;",
+        "    this.aNestedAutoValue = aNestedAutoValue;",
         "  }",
         "",
         "  @Override public int anInt() {",
@@ -693,6 +720,10 @@ public class CompilationTest {
         "    return anOptionalString;",
         "  }",
         "",
+        "  @Override public NestedAutoValue<T> aNestedAutoValue() {",
+        "    return aNestedAutoValue;",
+        "  }",
+        "",
         "  @Override public String toString() {",
         "    return \"Baz{\"",
         "        + \"anInt=\" + anInt + \", \"",
@@ -700,7 +731,8 @@ public class CompilationTest {
         "        + \"aNullableIntArray=\" + Arrays.toString(aNullableIntArray) + \", \"",
         "        + \"aList=\" + aList + \", \"",
         "        + \"anImmutableList=\" + anImmutableList + \", \"",
-        "        + \"anOptionalString=\" + anOptionalString",
+        "        + \"anOptionalString=\" + anOptionalString + \", \"",
+        "        + \"aNestedAutoValue=\" + aNestedAutoValue",
         "        + \"}\";",
         "  }",
         "",
@@ -719,7 +751,8 @@ public class CompilationTest {
                         + "? ((AutoValue_Baz) that).aNullableIntArray : that.aNullableIntArray()))",
         "          && (this.aList.equals(that.aList()))",
         "          && (this.anImmutableList.equals(that.anImmutableList()))",
-        "          && (this.anOptionalString.equals(that.anOptionalString()));",
+        "          && (this.anOptionalString.equals(that.anOptionalString()))",
+        "          && (this.aNestedAutoValue.equals(that.aNestedAutoValue()));",
         "    }",
         "    return false;",
         "  }",
@@ -738,6 +771,8 @@ public class CompilationTest {
         "    h ^= this.anImmutableList.hashCode();",
         "    h *= 1000003;",
         "    h ^= this.anOptionalString.hashCode();",
+        "    h *= 1000003;",
+        "    h ^= this.aNestedAutoValue.hashCode();",
         "    return h;",
         "  }",
         "",
@@ -753,9 +788,10 @@ public class CompilationTest {
         "    private ImmutableList.Builder<T> anImmutableListBuilder$;",
         "    private ImmutableList<T> anImmutableList;",
         "    private Optional<String> anOptionalString = Optional.absent();",
+        "    private NestedAutoValue.Builder<T> aNestedAutoValueBuilder$;",
+        "    private NestedAutoValue<T> aNestedAutoValue;",
         "",
         "    Builder() {",
-        "      this.anImmutableList = ImmutableList.of();",
         "    }",
         "",
         "    private Builder(Baz<T> source) {",
@@ -765,6 +801,7 @@ public class CompilationTest {
         "      this.aList = source.aList();",
         "      this.anImmutableList = source.anImmutableList();",
         "      this.anOptionalString = source.anOptionalString();",
+        "      this.aNestedAutoValue = source.aNestedAutoValue();",
         "    }",
         "",
         "    @Override",
@@ -784,6 +821,9 @@ public class CompilationTest {
         "",
         "    @Override",
         "    public Baz.Builder<T> aByteArray(byte[] aByteArray) {",
+        "      if (aByteArray == null) {",
+        "        throw new NullPointerException(\"Null aByteArray\");",
+        "      }",
         "      this.aByteArray = aByteArray;",
         "      return this;",
         "    }",
@@ -796,6 +836,9 @@ public class CompilationTest {
         "",
         "    @Override",
         "    public Baz.Builder<T> aList(List<T> aList) {",
+        "      if (aList == null) {",
+        "        throw new NullPointerException(\"Null aList\");",
+        "      }",
         "      this.aList = aList;",
         "      return this;",
         "    }",
@@ -810,6 +853,9 @@ public class CompilationTest {
         "",
         "    @Override",
         "    public Baz.Builder<T> anImmutableList(List<T> anImmutableList) {",
+        "      if (anImmutableList == null) {",
+        "        throw new NullPointerException(\"Null anImmutableList\");",
+        "      }",
         "      if (anImmutableListBuilder$ != null) {",
         "        throw new IllegalStateException("
                      + "\"Cannot set anImmutableList after calling anImmutableListBuilder()\");",
@@ -837,25 +883,55 @@ public class CompilationTest {
         "      if (anImmutableListBuilder$ != null) {",
         "        return anImmutableListBuilder$.build();",
         "      }",
+        "      if (anImmutableList == null) {",
+        "        anImmutableList = ImmutableList.of();",
+        "      }",
         "      return anImmutableList;",
         "    }",
         "",
         "    @Override",
         "    public Baz.Builder<T> anOptionalString(Optional<String> anOptionalString) {",
+        "      if (anOptionalString == null) {",
+        "        throw new NullPointerException(\"Null anOptionalString\");",
+        "      }",
         "      this.anOptionalString = anOptionalString;",
         "      return this;",
         "    }",
         "",
         "    @Override",
         "    public Baz.Builder<T> anOptionalString(String anOptionalString) {",
+        "      if (anOptionalString == null) {",
+        "        throw new NullPointerException(\"Null anOptionalString\");",
+        "      }",
         "      this.anOptionalString = Optional.of(anOptionalString);",
         "      return this;",
+        "    }",
+        "",
+        "    @Override",
+        "    public NestedAutoValue.Builder<T> aNestedAutoValueBuilder() {",
+        "      if (aNestedAutoValueBuilder$ == null) {",
+        "        if (aNestedAutoValue == null) {",
+        "          aNestedAutoValueBuilder$ = NestedAutoValue.builder();",
+        "        } else {",
+        "          aNestedAutoValueBuilder$ = aNestedAutoValue.toBuilder();",
+        "          aNestedAutoValue = null;",
+        "        }",
+        "      }",
+        "      return aNestedAutoValueBuilder$;",
         "    }",
         "",
         "    @Override",
         "    public Baz<T> build() {",
         "      if (anImmutableListBuilder$ != null) {",
         "        this.anImmutableList = anImmutableListBuilder$.build();",
+        "      } else if (this.anImmutableList == null) {",
+        "        this.anImmutableList = ImmutableList.of();",
+        "      }",
+        "      if (aNestedAutoValueBuilder$ != null) {",
+        "        this.aNestedAutoValue = aNestedAutoValueBuilder$.build();",
+        "      } else if (this.aNestedAutoValue == null) {",
+        "        NestedAutoValue.Builder<T> aNestedAutoValue$builder = NestedAutoValue.builder();",
+        "        this.aNestedAutoValue = aNestedAutoValue$builder.build();",
         "      }",
         "      String missing = \"\";",
         "      if (this.anInt == null) {",
@@ -876,12 +952,13 @@ public class CompilationTest {
         "          this.aNullableIntArray,",
         "          this.aList,",
         "          this.anImmutableList,",
-        "          this.anOptionalString);",
+        "          this.anOptionalString,",
+        "          this.aNestedAutoValue);",
         "    }",
         "  }",
         "}");
-    assertAbout(javaSource())
-        .that(javaFileObject)
+    assertAbout(javaSources())
+        .that(ImmutableList.of(javaFileObject, nestedJavaFileObject))
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and()
@@ -936,6 +1013,38 @@ public class CompilationTest {
         .failsToCompile()
         .withErrorContaining("can only be applied to a class or interface inside")
         .in(javaFileObject).onLine(13);
+  }
+
+  @Test
+  public void autoValueBuilderNotStatic() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Example",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "class Example {",
+        "  @AutoValue",
+        "  abstract static class Baz {",
+        "    abstract int foo();",
+        "",
+        "    static Builder builder() {",
+        "      return new AutoValue_Example_Baz.Builder();",
+        "    }",
+        "",
+        "    @AutoValue.Builder",
+        "    abstract class Builder {",
+        "      abstract Builder foo(int x);",
+        "      abstract Baz build();",
+        "    }",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("@AutoValue.Builder cannot be applied to a non-static class")
+        .in(javaFileObject).onLine(15);
   }
 
   @Test
@@ -1318,6 +1427,68 @@ public class CompilationTest {
             "Method looks like a property builder, but it returns java.lang.StringBuilder which "
                 + "does not have a non-static build() method")
         .in(javaFileObject).onLine(11);
+  }
+
+  @Test
+  public void autoValueBuilderPropertyBuilderNullable() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  @interface Nullable {}",
+        "  abstract @Nullable ImmutableList<String> strings();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    ImmutableList.Builder<String> stringsBuilder();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Property strings has a property builder so it cannot be @Nullable")
+        .in(javaFileObject).onLine(9);
+  }
+
+  @Test
+  public void autoValueBuilderPropertyBuilderNullableType() {
+    if (System.getProperty("java.specification.version").matches("1\\.[2-7]")) {
+      return;  // No type annotations prior to Java 8.
+    }
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "import java.lang.annotation.ElementType;",
+        "import java.lang.annotation.Target;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz<T, U> {",
+        "  @Target(ElementType.TYPE_USE)",
+        "  @interface Nullable {}",
+        "  abstract @Nullable ImmutableList<String> strings();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder<T, U> {",
+        "    ImmutableList.Builder<String> stringsBuilder();",
+        "    Baz<T, U> build();",
+        "  }",
+        "}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+        .failsToCompile()
+        .withErrorContaining("Property strings has a property builder so it cannot be @Nullable")
+        .in(javaFileObject).onLine(12);
   }
 
   @Test

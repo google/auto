@@ -1,5 +1,6 @@
 # Why use AutoValue?
 
+
 AutoValue is the only solution to the value class problem in Java having all of
 the following characteristics:
 

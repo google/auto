@@ -65,7 +65,7 @@ class BuilderSpec {
     this.errorReporter = errorReporter;
   }
 
-  private static final Set<ElementKind> CLASS_OR_INTERFACE =
+  private static final ImmutableSet<ElementKind> CLASS_OR_INTERFACE =
       Sets.immutableEnumSet(ElementKind.CLASS, ElementKind.INTERFACE);
 
   /**
@@ -80,6 +80,9 @@ class BuilderSpec {
         if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
           errorReporter.reportError(
               "@AutoValue.Builder can only apply to a class or an interface", containedClass);
+        } else if (!containedClass.getModifiers().contains(Modifier.STATIC)) {
+          errorReporter.reportError(
+              "@AutoValue.Builder cannot be applied to a non-static class", containedClass);
         } else if (builderTypeElement.isPresent()) {
           errorReporter.reportError(
               autoValueClass + " already has a Builder: " + builderTypeElement.get(),
@@ -305,6 +308,7 @@ class BuilderSpec {
     private final String access;
     private final String name;
     private final String parameterTypeString;
+    private final boolean primitiveParameter;
     private final String copyOf;
 
     public PropertySetter(
@@ -312,6 +316,7 @@ class BuilderSpec {
       this.access = AutoValueProcessor.access(setter);
       this.name = setter.getSimpleName().toString();
       TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
+      primitiveParameter = parameterType.getKind().isPrimitive();
       String simplifiedParameterType = typeSimplifier.simplify(parameterType);
       if (setter.isVarArgs()) {
         simplifiedParameterType = simplifiedParameterType.replaceAll("\\[\\]$", "...");
@@ -339,6 +344,10 @@ class BuilderSpec {
 
     public String getParameterType() {
       return parameterTypeString;
+    }
+
+    public boolean getPrimitiveParameter() {
+      return primitiveParameter;
     }
 
     public String copy(AutoValueProcessor.Property property) {

@@ -219,34 +219,25 @@ $a
   #end
 
     Builder() {
-
-  ## For collection builders, like ImmutableList.Builder<String> stringsBuilder(), we default the
-  ## built property to empty (ImmutableList.of()). But for custom builders we don't know how to
-  ## do that so we leave them uninitialized and the caller must build or set them explicitly.
-
-  #foreach ($p in $props)
-    #if ($builderPropertyBuilders[$p.name] && ${builderPropertyBuilders[$p.name].initEmpty})
-
-      this.$p = ${builderPropertyBuilders[$p.name].initEmpty};
-
-    #end
-  #end
-
     }
+
+  #if (!$toBuilderMethods.empty)
 
     private Builder(${origClass}${actualTypes} source) {
 
-  #foreach ($p in $props)
+    #foreach ($p in $props)
 
       this.$p = source.${p.getter}();
 
-  #end
+    #end
 
     }
 
+  #end
+
   #foreach ($p in $props)
 
-    ## The following is either null or an instance of BuilderSpec.PropertyBuilder
+    ## The following is either null or an instance of PropertyBuilderClassifier.PropertyBuilder
     #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
 
     ## Setter and/or property builder
@@ -256,6 +247,14 @@ $a
     @Override
     ${setter.access}${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
+
+      #if (!$setter.primitiveParameter && !$p.nullable)
+
+      if ($p == null) {
+        throw new NullPointerException("Null $p.name");
+      }
+
+      #end
 
       #if ($propertyBuilder)
 
@@ -339,10 +338,14 @@ $a
 
         #end
 
-        #if ($builderPropertyBuilders[$p.name])
+        #if ($propertyBuilder)
 
       if (${propertyBuilder.name} != null) {
         return ${propertyBuilder.name}.build();
+      }
+      if ($p == null) {
+        ${propertyBuilder.beforeInitDefault}
+        $p = ${propertyBuilder.initDefault};
       }
 
         #end
@@ -360,10 +363,14 @@ $a
     ${buildMethod.get().access}${origClass}${actualTypes} ${buildMethod.get().name}() {
 
   #foreach ($p in $props)
-    #if ($builderPropertyBuilders[$p.name])
+    #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
+    #if ($propertyBuilder)
 
-      if (${builderPropertyBuilders[$p.name].name} != null) {
-        this.$p = ${builderPropertyBuilders[$p.name].name}.build();
+      if (${propertyBuilder.name} != null) {
+        this.$p = ${propertyBuilder.name}.build();
+      } else if (this.$p == null) {
+        ${propertyBuilder.beforeInitDefault}
+        this.$p = ${propertyBuilder.initDefault};
       }
 
     #end

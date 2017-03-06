@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
@@ -137,6 +138,62 @@ public class AutoAnnotationCompilationTest {
     );
     assert_().about(javaSources())
         .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile, myEnumJavaFile))
+        .processedWith(new AutoAnnotationProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(expectedOutput);
+  }
+
+  @Test
+  public void testEmptyPackage() {
+    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
+        "MyAnnotation",
+        "public @interface MyAnnotation {}"
+    );
+    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
+        "AnnotationFactory",
+        "import com.google.auto.value.AutoAnnotation;",
+        "",
+        "public class AnnotationFactory {",
+        "  @AutoAnnotation",
+        "  public static MyAnnotation newMyAnnotation() {",
+        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation();",
+        "  }",
+        "}");
+    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
+        "AutoAnnotation_AnnotationFactory_newMyAnnotation",
+        "import javax.annotation.Generated;",
+        "",
+        "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
+        "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+        "  AutoAnnotation_AnnotationFactory_newMyAnnotation() {",
+        "  }",
+        "",
+        "  @Override public Class<? extends MyAnnotation> annotationType() {",
+        "    return MyAnnotation.class;",
+        "  }",
+        "",
+        "  @Override public String toString() {",
+        "    StringBuilder sb = new StringBuilder(\"@MyAnnotation(\");",
+        "    return sb.append(')').toString();",
+        "  }",
+        "",
+        "  @Override public boolean equals(Object o) {",
+        "    if (o == this) {",
+        "      return true;",
+        "    }",
+        "    if (o instanceof MyAnnotation) {",
+        "      return true;",
+        "    }",
+        "    return false;",
+        "  }",
+        "",
+        "  @Override public int hashCode() {",
+        "    return 0;",
+        "  }",
+        "}"
+    );
+    assertAbout(javaSources())
+        .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile))
         .processedWith(new AutoAnnotationProcessor())
         .compilesWithoutError()
         .and().generatesSources(expectedOutput);

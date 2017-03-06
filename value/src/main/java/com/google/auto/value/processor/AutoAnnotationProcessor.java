@@ -186,7 +186,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.invariableHashes = invariableHashes.keySet();
     String text = vars.toText();
     text = Reformatter.fixup(text);
-    writeSourceFile(pkg + "." + generatedClassName, text, methodClass);
+    String fullName = fullyQualifiedName(pkg, generatedClassName);
+    writeSourceFile(fullName, text, methodClass);
   }
 
   /**
@@ -246,8 +247,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     boolean overloaded = false;
     Set<String> classNames = new HashSet<String>();
     for (ExecutableElement method : methods) {
-      String qualifiedClassName = MoreElements.getPackage(method).getQualifiedName() + "."
-          + generatedClassName(method);
+      String qualifiedClassName = fullyQualifiedName(
+          MoreElements.getPackage(method).getQualifiedName().toString(),
+          generatedClassName(method));
       if (!classNames.add(qualifiedClassName)) {
         overloaded = true;
         reportError(method, "@AutoAnnotation methods cannot be overloaded");
@@ -478,6 +480,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       }
     }
     return false;
+  }
+
+  private static String fullyQualifiedName(String pkg, String cls) {
+    return pkg.isEmpty() ? cls : pkg + "." + cls;
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
