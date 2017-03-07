@@ -38,7 +38,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -49,12 +48,11 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.annotation.Generated;
 import javax.annotation.processing.Messager;
-import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -158,25 +156,16 @@ public final class MemoizeExtension extends AutoValueExtension {
 
     private MethodSpec constructor() {
       MethodSpec.Builder constructor = constructorBuilder();
-      Set<String> parameterNames = Sets.newLinkedHashSet();
       for (Map.Entry<String, ExecutableElement> property : context.properties().entrySet()) {
-        String sanitizedParameterName = disambiguate(
-            property.getKey(), Sets.union(parameterNames, context.properties().keySet()));
-        parameterNames.add(sanitizedParameterName);
         constructor.addParameter(
-            TypeName.get(property.getValue().getReturnType()), sanitizedParameterName);
+            TypeName.get(property.getValue().getReturnType()), property.getKey() + "$");
       }
-      constructor.addStatement("super($L)", Joiner.on(", ").join(parameterNames));
+      List<String> namesWithDollars = new ArrayList<String>();
+      for (String property : context.properties().keySet()) {
+        namesWithDollars.add(property + "$");
+      }
+      constructor.addStatement("super($L)", Joiner.on(", ").join(namesWithDollars));
       return constructor.build();
-    }
-
-    private static String disambiguate(String name, Collection<String> existingNames) {
-      String candidate = name;
-      int i = 0;
-      while(existingNames.contains(candidate) || SourceVersion.isKeyword(candidate)) {
-        candidate = name + i++;
-      }
-      return candidate;
     }
 
     /**
