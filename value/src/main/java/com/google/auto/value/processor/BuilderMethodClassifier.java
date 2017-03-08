@@ -197,7 +197,16 @@ class BuilderMethodClassifier {
     }
     for (Map.Entry<ExecutableElement, String> getterEntry : getterToPropertyName.entrySet()) {
       String property = getterEntry.getValue();
-      String propertyType = typeSimplifier.simplify(getterEntry.getKey().getReturnType());
+
+      TypeMirror propertyTypeMirror = getterEntry.getKey().getReturnType();
+      // Handle `Optional<Bar>` by replacing the type mirror with the contained type
+      Optionalish propertyOptionalish = Optionalish.createIfOptional(propertyTypeMirror,
+              typeSimplifier.simplifyRaw(propertyTypeMirror));
+      if (propertyOptionalish != null) {
+        propertyTypeMirror = propertyOptionalish.getContainedType(typeUtils);
+      }
+
+      String propertyType = typeSimplifier.simplify(propertyTypeMirror);
       boolean hasSetter = propertyNameToSetter.containsKey(property);
       PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
       boolean hasBuilder = propertyBuilder != null;

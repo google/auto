@@ -686,7 +686,7 @@ public class CompilationTest {
         "      List<T> aList,",
         "      ImmutableList<T> anImmutableList,",
         "      Optional<String> anOptionalString,",
-        "      NestedAutoValue<T> aNestedAutoValue," +
+        "      NestedAutoValue<T> aNestedAutoValue,",
         "      Optional<NestedAutoValue<T>> anOptionalNestedAutoValue) {",
         "    this.anInt = anInt;",
         "    this.aByteArray = aByteArray;",
