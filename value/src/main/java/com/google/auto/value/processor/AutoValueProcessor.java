@@ -349,6 +349,29 @@ public class AutoValueProcessor extends AbstractProcessor {
       return !getNullableAnnotation().isEmpty();
     }
 
+    /**
+     * Returns an expression to check if the property is able to be retrieved as a non-null value
+     * using {@link #getValueRetrieval()}.
+     */
+    public String getPresenseCheck() {
+      if (optional == null) {
+        return identifier + " != null";
+      } else {
+        return identifier + ".isPresent()";
+      }
+    }
+
+    /**
+     * Returns an expression to get the value of the property, unwrapping it if it is an Optional.
+     */
+    public String getValueRetrieval() {
+      if (optional == null) {
+        return identifier;
+      } else {
+        return identifier + ".get()";
+      }
+    }
+
     public String getAccess() {
       return access(method);
     }
