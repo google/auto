@@ -372,7 +372,8 @@ class BuilderSpec {
       String copy = String.format(copyOf, property);
 
       // Add a null guard only in cases where we are using copyOf and the property is @Nullable.
-      if (property.isNullable() || nullableAnnotation != null) {
+      // No guard for the @Nullable annotation case because from/ofNullable doesn't need it
+      if (property.isNullable()) {
         copy = String.format("(%s == null ? null : %s)", property, copy);
       }
 

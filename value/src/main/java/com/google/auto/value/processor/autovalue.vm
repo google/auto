@@ -250,7 +250,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
     ${setter.access}${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${nullableAnnotation}$setter.parameterType $p) {
 
-      #if (!$setter.primitiveParameter && !$nullableAnnotation)
+      #if (!${setter.primitiveParameter} && ${nullableAnnotation.isEmpty()})
 
         #if ($identifiers)
 
