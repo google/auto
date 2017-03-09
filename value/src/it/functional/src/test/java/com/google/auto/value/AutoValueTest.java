@@ -1852,6 +1852,91 @@ public class AutoValueTest {
   }
 
   @AutoValue
+  public abstract static class BuilderWithOptionalPropertyBuilders {
+    public abstract com.google.common.base.Optional<BuilderWithSetAndGet> getFoo();
+
+    public abstract BuilderWithOptionalPropertyBuilders.Builder toBuilder();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_BuilderWithOptionalPropertyBuilders.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract com.google.common.base.Optional<BuilderWithSetAndGet> getFoo();
+
+      public abstract Builder foo(com.google.common.base.Optional<BuilderWithSetAndGet> foo);
+      
+      public abstract BuilderWithSetAndGet.Builder fooBuilder();
+
+      public abstract BuilderWithOptionalPropertyBuilders build();
+    }
+  }
+
+  @Test
+  public void testBuilderWithOptionalPropertyBuilders() {
+    BuilderWithOptionalPropertyBuilders a =
+        BuilderWithOptionalPropertyBuilders.builder()
+            .build();
+
+    assertThat(a.getFoo()).isAbsent();
+    
+    BuilderWithSetAndGet foo = BuilderWithSetAndGet.builder()
+        .setAnInt(0)
+        .setAList(ImmutableList.of(1))
+        .build();
+    BuilderWithOptionalPropertyBuilders b =
+        BuilderWithOptionalPropertyBuilders.builder()
+            .foo(com.google.common.base.Optional.of(foo))
+            .build();
+
+    assertThat(b.getFoo()).hasValue(foo);
+
+    BuilderWithOptionalPropertyBuilders c =
+        BuilderWithOptionalPropertyBuilders.builder()
+            .foo(com.google.common.base.Optional.<BuilderWithSetAndGet>absent())
+            .build();
+
+    assertThat(c.getFoo()).isAbsent();
+
+    BuilderWithOptionalPropertyBuilders.Builder buildD =
+        BuilderWithOptionalPropertyBuilders.builder()
+            .foo(com.google.common.base.Optional.of(foo));
+
+    // get fooBuilder to trigger toBuilder logic
+    buildD.fooBuilder();
+    BuilderWithOptionalPropertyBuilders d = buildD.build();
+
+    assertThat(d.getFoo()).hasValue(foo);
+
+    BuilderWithOptionalPropertyBuilders.Builder buildE =
+        BuilderWithOptionalPropertyBuilders.builder()
+            .foo(com.google.common.base.Optional.of(foo));
+
+    buildE.fooBuilder().setAnInt(1);
+    BuilderWithOptionalPropertyBuilders e = buildE.build();
+
+    assertThat(e.getFoo()).hasValue(foo.toBuilder().setAnInt(1).build());
+
+    BuilderWithOptionalPropertyBuilders.Builder buildF =
+        BuilderWithOptionalPropertyBuilders.builder();
+
+    buildF.fooBuilder().setAList(ImmutableList.of(1)).setAnInt(0);
+    BuilderWithOptionalPropertyBuilders f = buildF.build();
+
+    assertThat(f.getFoo()).hasValue(foo);
+
+    try {
+      BuilderWithOptionalPropertyBuilders.builder().foo(null).build();
+      fail("Did not get expected exception");
+    } catch (RuntimeException expected) {
+      // We don't specify whether you get the exception on foo(null) or on
+      // build(), nor
+      // which exception it is exactly.
+    }
+  }
+
+  @AutoValue
   public abstract static class
       BuilderWithExoticPropertyBuilders<K extends Number, V extends Comparable<K>> {
     public abstract ImmutableMap<String, V> map();
