@@ -2331,4 +2331,36 @@ public class CompilationTest {
         .processedWith(new AutoValueProcessor(), new FooProcessor())
         .compilesWithoutError();
   }
+
+  @Test
+  public void conflictingTypeNames() {
+    JavaFileObject nestedClassFileObject = JavaFileObjects.forSourceLines(
+      "foo.eggs.IdTypes",
+      "package foo.eggs;",
+      "",
+      "public class IdTypes {",
+      "  public class Baz {}",
+      "}");
+
+    JavaFileObject autoValueFileObject = JavaFileObjects.forSourceLines(
+      "foo.bar.Baz",
+      "package foo.bar;",
+      "",
+      "import foo.eggs.IdTypes;",
+      "",
+      "import com.google.auto.value.AutoValue;",
+      "",
+      "public class Baz {",
+      "",
+      "  @AutoValue",
+      "  public static abstract class Spam {",
+      "    public abstract IdTypes.Baz getId();",
+      "  }",
+      "}");
+
+    assertAbout(javaSources())
+      .that(ImmutableList.of(nestedClassFileObject, autoValueFileObject))
+      .processedWith(new AutoValueProcessor())
+      .compilesWithoutError();
+  }
 }
