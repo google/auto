@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
+import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.collect.Sets.union;
@@ -77,6 +79,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.SimpleAnnotationValueVisitor6;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -1103,9 +1106,31 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
+  // Detects whether the visited AnnotationValue is an array that contains the string "mutable".
+  // The simpler approach using Element.getAnnotation(SuppressWarnings.class) doesn't work if
+  // the annotation has an undefined reference, like @SuppressWarnings(UNDEFINED).
+  // TODO(emcmanus): replace with a method from auto-common when that is available.
+  private static class ContainsMutableVisitor extends SimpleAnnotationValueVisitor6<Boolean, Void> {
+    @Override
+    public Boolean visitArray(List<? extends AnnotationValue> list, Void p) {
+      for (AnnotationValue value : list) {
+        if ("mutable".equals(value.getValue())) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
   private void warnAboutPrimitiveArrays(TypeElement autoValueClass, ExecutableElement getter) {
-    SuppressWarnings suppressWarnings = getter.getAnnotation(SuppressWarnings.class);
-    if (suppressWarnings == null || !Arrays.asList(suppressWarnings.value()).contains("mutable")) {
+    boolean suppressed = false;
+    Optional<AnnotationMirror> maybeAnnotation =
+        getAnnotationMirror(getter, SuppressWarnings.class);
+    if (maybeAnnotation.isPresent()) {
+      AnnotationValue listValue = getAnnotationValue(maybeAnnotation.get(), "value");
+      suppressed = listValue.accept(new ContainsMutableVisitor(), null);
+    }
+    if (!suppressed) {
       // If the primitive-array property method is defined directly inside the @AutoValue class,
       // then our error message should point directly to it. But if it is inherited, we don't
       // want to try to make the error message point to the inherited definition, since that would
