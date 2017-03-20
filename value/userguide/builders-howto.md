@@ -551,5 +551,9 @@ requirements are:
 There are no requirements on the name of the builder class. Instead of
 `Species.Builder`, it could be `Species.Factory` or `SpeciesBuilder`.
 
+If `speciesBuilder()` is never called then the final `species()` property will
+be set as if by `speciesBuilder().build()`. In the example, that would result
+in an exception because the required properties of `Species` have not been set.
+
 
 [protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders

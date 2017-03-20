@@ -1,5 +1,95 @@
 # AutoValue Changes
 
+## 1.3 → 1.4
+
+*This is the last AutoValue version that compiles and runs on Java 6.* Future
+versions will require at least Java 8 to run. We will continue to generate code
+that is compatible with Java 7, so AutoValue can be used with `javac -source 7
+-target 7 -bootclasspath <rt.jar-from-jdk7>`, but using the `javac` from jdk8 or
+later.
+
+### Functional changes
+
+* Builder setters now reject a null parameter immediately unless the
+  corresponding property is `@Nullable`. Previously this check happened at
+  `build()` time, and in some cases didn't happen at all. This is the change
+  that is most likely to affect existing code.
+
+* Added `@Memoized`. A `@Memoized` method will be overridden in the generated
+  `AutoValue_Foo` class to save the value returned the first time it was called
+  and reuse that every other time.
+
+* Generalized support for property builders. Now, in addition to being able to
+  say `immutableListBuilder()` for a property of type `ImmutableList<T>`, you
+  can say `fooBuilder()` for a property of an arbitrary type that has a builder
+  following certain conventions. In particular, you can do this if the type of
+  `foo()` is itself an `@AutoValue` class with a builder. The default value of
+  `foo()`, if `fooBuilder()` is never called, is `fooBuilder().build()`.
+
+* If a property `foo()` or `getFoo()` has a builder method `fooBuilder()` then
+  the property can not now be `@Nullable`. An `ImmutableList`, for example,
+  starts off empty, not null, so `@Nullable` was misleading.
+
+* When an `@AutoValue` class `Foo` has a builder, the generated
+  `AutoValue_Foo.Builder` has a constructor `AutoValue_Foo.Builder(Foo)`. That
+  constructor was never documented and is now private. If you want to make a
+  `Foo.Builder` from a `Foo`, `Foo` should have an abstract method `Builder
+  toBuilder()`.
+
+  This change was necessary so that generalized property-builder support could
+  know whether or not the built class needs to be convertible back into its
+  builder. That's only necessary if there is a `toBuilder()`.
+
+* The Extension API is now a committed API, meaning we no longer warn that it is
+  likely to change incompatibly. A
+  [guide](https://github.com/google/auto/blob/master/value/userguide/extensions.md)
+  gives tips on writing extensions.
+
+* Extensions can now return null rather than generated code. In that case the
+  extension does not generate a class in the AutoValue hierarchy, but it can
+  still do other things like error checking or generating side files.
+
+* Access modifiers like `protected` are copied from builder methods to their
+  implementations, instead of the implementations always being public.
+  Change by @torquestomp.
+
+* AutoAnnotation now precomputes parts of the `hashCode` that are constant
+  because they come from defaulted methods. This avoids warnings about integer
+  overflow from tools that check that.
+
+* If a property is called `oAuth()`, its setter can be called
+  `setOAuth(x)`. Previously it had to be `setoAuth(x)`, which is still allowed.
+
+## Bugs fixed
+
+* AutoAnnotation now correctly handles types like `Class<? extends
+  Annotation>[]`. Previously it would try to create a generic array, which Java
+  doesn't allow. Change by @lukesandberg.
+
+* We guard against spurious exceptions due to a JDK bug in reading resources
+  from jars. (#365)
+
+* We don't propagate an exception if a corrupt jar is found in extension
+  loading.
+
+* AutoValue is ready for Java 9, where public classes are not necessarily
+  accessible, and javax.annotation.Generated is not necessarily present.
+
+* AutoValue now works correctly even if the version of AutoValue in the
+  `-classpath` is older than the one in the `-processorpath`.
+
+* Builders now behave correctly when there is a non-optional property called
+  `missing`. Previously a variable-hiding problem meant that we didn't detect
+  when it wasn't set.
+
+* If `@AutoValue class Foo` has a builder, we always generated two constructors,
+  `Builder()` and `Builder(Foo)`, but we only used the second one if `Foo` had a
+  `toBuilder()` method. Now we only generate that constructor if it is
+  needed. That avoids warnings about unused code.
+
+* `@AutoAnnotation` now works when the annotation and the factory method are in
+  the default (unnamed) package.
+
 ## 1.2 → 1.3
 
 ### Functional changes
