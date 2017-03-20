@@ -17,19 +17,19 @@ Save time.  Save code.  Save sanity.
 
   * [AutoFactory] - JSR-330-compatible factories
 
-    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.factory/auto-factory.svg)]()
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.factory/auto-factory.svg)](https://mvnrepository.com/artifact/com.google.auto.factory/auto-factory)
 
   * [AutoService] - Provider-configuration files for [`ServiceLoader`]
 
-    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.service/auto-service.svg)]()
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.service/auto-service.svg)](https://mvnrepository.com/artifact/com.google.auto.service/auto-service)
 
   * [AutoValue] - Immutable [value-type] code generation for Java 1.6+.
 
-    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.value/auto-value.svg)]()
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.value/auto-value.svg)](https://mvnrepository.com/artifact/com.google.auto.value/auto-value)
 
   * [Common] - Helper utilities for writing annotation processors.
 
-    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto/auto-common.svg)]()
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto/auto-common.svg)](https://mvnrepository.com/artifact/com.google.auto/auto-common)
 
 ## License
 
