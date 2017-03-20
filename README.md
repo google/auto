@@ -17,19 +17,19 @@ Save time.  Save code.  Save sanity.
 
   * [AutoFactory] - JSR-330-compatible factories
 
-    Latest version: `0.1-beta4`
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.factory/auto-factory.svg)]()
 
   * [AutoService] - Provider-configuration files for [`ServiceLoader`]
 
-    Latest version: `1.0-rc2`
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.service/auto-service.svg)]()
 
   * [AutoValue] - Immutable [value-type] code generation for Java 1.6+.
 
-    Latest version: `1.4`
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.value/auto-value.svg)]()
 
   * [Common] - Helper utilities for writing annotation processors.
 
-    Latest version: `0.8`
+    [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto/auto-common.svg)]()
 
 ## License
 
