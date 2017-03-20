@@ -38,6 +38,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.JavaFileObject;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -2333,7 +2334,11 @@ public class CompilationTest {
         .compilesWithoutError();
   }
 
+  // Test currently ignored because sometimes we get two UNDEFINED errors and sometimes we
+  // get no warnings if there is an error, depending on the exact JDK version. We may be
+  // able to get something a bit more solid once we require JDK 8.
   @Test
+  @Ignore
   public void annotationReferencesUndefined() {
     // Test that we don't throw an exception if asked to compile @SuppressWarnings(UNDEFINED)
     // where UNDEFINED is an undefined symbol.
