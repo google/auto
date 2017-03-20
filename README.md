@@ -17,7 +17,7 @@ Save time.  Save code.  Save sanity.
 
   * [AutoFactory] - JSR-330-compatible factories
 
-    Latest version: `0.1-beta3`
+    Latest version: `0.1-beta4`
 
   * [AutoService] - Provider-configuration files for [`ServiceLoader`]
 
@@ -25,11 +25,11 @@ Save time.  Save code.  Save sanity.
 
   * [AutoValue] - Immutable [value-type] code generation for Java 1.6+.
 
-    Latest version: `1.3`
+    Latest version: `1.4`
 
   * [Common] - Helper utilities for writing annotation processors.
 
-    Latest version: `0.6`
+    Latest version: `0.8`
 
 ## License
 
