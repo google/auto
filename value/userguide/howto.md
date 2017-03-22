@@ -71,8 +71,8 @@ for the generated constructor's parameter names.
 AutoValue will do exactly this, but only if you are using these prefixes
 *consistently*. In that case, it infers your intended property name by first
 stripping the `get-` or `is-` prefix, then adjusting the case of what remains as
-specified by [Introspector.decapitalize]
-(http://docs.oracle.com/javase/8/docs/api/java/beans/Introspector.html#decapitalize).
+specified by
+[Introspector.decapitalize](http://docs.oracle.com/javase/8/docs/api/java/beans/Introspector.html#decapitalize).
 
 Note that, in keeping with the JavaBeans specification, the `is-` prefix is only
 allowed on `boolean`-returning methods. `get-` is allowed on any type of
@@ -165,8 +165,8 @@ concrete implementation class. We call this *underriding* the method.
 Remember when doing this that you are losing AutoValue's protections. Be careful
 to follow the basic rules of hash codes: equal objects must have equal hash
 codes *always*, and equal hash codes should imply equal objects *almost always*.
-You should now test your class more thoroughly, ideally using [`EqualsTester`]
-(http://static.javadoc.io/com.google.guava/guava-testlib/19.0/com/google/common/testing/EqualsTester.html)
+You should now test your class more thoroughly, ideally using
+[`EqualsTester`](http://static.javadoc.io/com.google.guava/guava-testlib/19.0/com/google/common/testing/EqualsTester.html)
 from [guava-testlib](http://github.com/google/guava).
 
 Best practice: mark your underriding methods `final` to make it clear to future
@@ -190,8 +190,8 @@ class PleaseOverrideExample extends SuperclassThatDefinesToString {
 
 ## <a name="create"></a>... have multiple `create` methods, or name it/them differently?
 
-Just do it! AutoValue doesn't actually care. This [best practice item]
-(practices.md#one_reference) may be relevant.
+Just do it! AutoValue doesn't actually care. This
+[best practice item](practices.md#one_reference) may be relevant.
 
 ## <a name="ignore"></a>... ignore certain properties in `equals`, etc.?
 
@@ -281,8 +281,8 @@ public class Names {
 }
 ```
 
-For more details, see the [`AutoAnnotation` javadoc]
-(http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
+For more details, see the [`AutoAnnotation`
+javadoc](http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 
 ## <a name="setters"></a>... also include setter (mutator) methods?
 
@@ -296,10 +296,9 @@ might be mutated and the other not.
 ## <a name="compareTo"></a>... also generate `compareTo`?
 
 AutoValue intentionally does not provide this feature. It is better for you to
-roll your own comparison logic using the new methods added to [`Comparator`]
-(https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) in Java 8,
-or [`ComparisonChain`]
-(http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ComparisonChain.html)
+roll your own comparison logic using the new methods added to
+[`Comparator`](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) in Java 8,
+or [`ComparisonChain`](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ComparisonChain.html)
 from [Guava](http://github.com/google/guava).
 
 Since these mechanisms are easy to use, require very little code, and give you
@@ -345,8 +344,8 @@ constructors by *Effective Java*, Item 1.
 Interfaces are not allowed. The only advantage of interfaces we're aware of is
 that you can omit `public abstract` from the methods. That's not much. On the
 other hand, you would lose the immutability guarantee, and you'd also invite
-more of the kind of bad behavior described in [this best-practices item]
-(practices.md#simple). On balance, we don't think it's worth it.
+more of the kind of bad behavior described in [this best-practices
+item](practices.md#simple). On balance, we don't think it's worth it.
 
 ## <a name="memoize"></a>... memoize ("cache") derived properties?
 
