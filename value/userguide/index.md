@@ -175,27 +175,27 @@ How do I...
 *   ... [use a property of a **mutable** type?](howto.md#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](howto.md#custom)
 *   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)
-*   ... [have multiple **create** methods, or name it/them differently?]
-    (howto.md#create)
-*   ... [have AutoValue also implement abstract methods from my **supertypes**?]
-    (howto.md#supertypes)
+*   ... [have multiple **create** methods, or name it/them
+    differently?](howto.md#create)
+*   ... [have AutoValue also implement abstract methods from my
+    **supertypes**?](howto.md#supertypes)
 *   ... [use AutoValue with a **generic** class?](howto.md#generic)
 *   ... [make my class Java- or GWT- **serializable**?](howto.md#serialize)
-*   ... [apply an **annotation** to a generated **field**?]
-    (howto.md#annotate_field)
-*   ... [use AutoValue to **implement** an **annotation** type?]
-    (howto.md#annotation)
+*   ... [apply an **annotation** to a generated
+    **field**?](howto.md#annotate_field)
+*   ... [use AutoValue to **implement** an **annotation**
+    type?](howto.md#annotation)
 *   ... [also include **setter** (mutator) methods?](howto.md#setters)
 *   ... [also generate **`compareTo`**?](howto.md#compareTo)
-*   ... [use a **primitive array** for a property value?]
-    (howto.md#primitive_array)
+*   ... [use a **primitive array** for a property
+    value?](howto.md#primitive_array)
 *   ... [use an **object array** for a property value?](howto.md#object_array)
 *   ... [have one `@AutoValue` class **extend** another?](howto.md#inherit)
 *   ... [keep my accessor methods **private**?](howto.md#private_accessors)
 *   ... [expose a **constructor**, not factory method, as my public creation
     API?](howto.md#public_constructor)
-*   ... [use AutoValue on an **interface**, not abstract class?]
-    (howto.md#interface)
+*   ... [use AutoValue on an **interface**, not abstract
+    class?](howto.md#interface)
 *   ... [**memoize** derived properties?](howto.md#memoize)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->

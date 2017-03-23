@@ -5,16 +5,16 @@ This page answers common how-to questions that may come up when using AutoValue
 **with the builder option**. You should read and understand [AutoValue with
 builders](builders.md) first.
 
-If you are not using a builder, see [Introduction](index.md) and [How do I...]
-(howto.md) instead.
+If you are not using a builder, see [Introduction](index.md) and
+[How do I...](howto.md) instead.
 
 ## Contents
 
 How do I...
 
 *   ... [use (or not use) `set` **prefixes**?](#beans)
-*   ... [use different **names** besides `builder()`/`Builder`/`build()`?]
-    (#build_names)
+*   ... [use different **names** besides
+    `builder()`/`Builder`/`build()`?](#build_names)
 *   ... [specify a **default** value for a property?](#default)
 *   ... [initialize a builder to the same property values as an **existing**
     value instance](#to_builder)
@@ -75,11 +75,11 @@ Use whichever names you like; AutoValue doesn't actually care.
 
 What should happen when a caller does not supply a value for a property before
 calling `build()`? If the property in question is [nullable](howto.md#nullable),
-it will simply default to `null` as you would expect. And if it is [Optional]
-(#optional) it will default to an empty `Optional` as you might also expect. But
-if it isn't either of those things (including if it is a primitive-valued
-property, which *can't* be null), then `build()` will throw an unchecked
-exception.
+it will simply default to `null` as you would expect. And if it is
+[Optional](#optional) it will default to an empty `Optional` as you might also
+expect. But if it isn't either of those things (including if it is a
+primitive-valued property, which *can't* be null), then `build()` will throw an
+unchecked exception.
 
 But this presents a problem, since one of the main *advantages* of a builder in
 the first place is that callers can specify only the properties they care about!
@@ -111,8 +111,8 @@ abstract class Animal {
 ```
 
 Occasionally you may want to supply a default value, but only if the property is
-not set explicitly. This is covered in the section on [normalization]
-(#normalize).
+not set explicitly. This is covered in the section on
+[normalization](#normalize).
 
 ## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
@@ -240,8 +240,8 @@ public abstract class Animal {
 
 The getter in your builder must have the same signature as the abstract property
 accessor method in the value class. It will return the value that has been set
-on the `Builder`. If no value has been set for a non-[nullable]
-(howto.md#nullable) property, `IllegalStateException` is thrown.
+on the `Builder`. If no value has been set for a
+non-[nullable](howto.md#nullable) property, `IllegalStateException` is thrown.
 
 Getters should generally only be used within the `Builder` as shown, so they are
 not public.

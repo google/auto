@@ -80,18 +80,18 @@ exposing yourself to initialization-order problems.
 ## <a name="howto"></a>How do I...
 
 *   ... [use (or not use) `set` **prefixes**?](builders-howto.md#beans)
-*   ... [use different **names** besides `builder()`/`Builder`/`build()`?]
-    (builders-howto.md#build_names)
+*   ... [use different **names** besides
+    `builder()`/`Builder`/`build()`?](builders-howto.md#build_names)
 *   ... [specify a **default** value for a property?](builders-howto.md#default)
 *   ... [initialize a builder to the same property values as an **existing**
     value instance](builders-howto.md#to_builder)
 *   ... [include `with-` methods on my value class for creating slightly
     **altered** instances?](builders-howto.md#withers)
 *   ... [**validate** property values?](builders-howto.md#validate)
-*   ... [**normalize** (modify) a property value at `build` time?]
-    (builders-howto.md#normalize)
-*   ... [expose **both** a builder and a factory method?]
-    (builders-howto.md#both)
+*   ... [**normalize** (modify) a property value at `build`
+    time?](builders-howto.md#normalize)
+*   ... [expose **both** a builder and a factory
+    method?](builders-howto.md#both)
 *   ... [use a **collection**-valued property?](builders-howto.md#collection)
     *   ... [let my builder **accumulate** values for a collection-valued
         property (not require them all at once)?](builders-howto.md#accumulate)
