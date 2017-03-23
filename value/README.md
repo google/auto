@@ -20,5 +20,4 @@ AutoValue provides an easier way to create immutable value classes, with a lot
 less code and less room for error, while **not restricting your freedom** to
 code almost any aspect of your class exactly the way you want it.
 
-For more information, consult the [detailed documentation]
-(userguide/index.md)
+For more information, consult the [detailed documentation](userguide/index.md)
