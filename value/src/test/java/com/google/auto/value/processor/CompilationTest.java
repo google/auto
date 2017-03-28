@@ -2392,4 +2392,5 @@ public class CompilationTest {
         .and()
         .withWarningCount(0);
   }
+  // irrelevant change
 }
