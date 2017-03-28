@@ -2338,7 +2338,6 @@ public class CompilationTest {
   // get no warnings if there is an error, depending on the exact JDK version. We may be
   // able to get something a bit more solid once we require JDK 8.
   @Test
-  @Ignore
   public void annotationReferencesUndefined() {
     // Test that we don't throw an exception if asked to compile @SuppressWarnings(UNDEFINED)
     // where UNDEFINED is an undefined symbol.
