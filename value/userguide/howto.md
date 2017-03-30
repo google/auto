@@ -325,7 +325,8 @@ If it's important to accept an object array at construction time, refer to the
 ## <a name="inherit"></a>... have one `@AutoValue` class extend another?
 
 This ability is intentionally not supported, because there is no way to do it
-correctly. See *Effective Java, 2nd Edition* Item 8.
+correctly. See *Effective Java, 2nd Edition* Item 8: "Obey the general contract
+when overriding equals".
 
 ## <a name="private_accessors"></a>... keep my accessor methods private?
 
