@@ -959,7 +959,7 @@ public class CompilationTest {
         "}");
     assertAbout(javaSources())
         .that(ImmutableList.of(javaFileObject, nestedJavaFileObject))
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:none")
         .processedWith(new AutoValueProcessor())
         .compilesWithoutWarnings()
         .and()
