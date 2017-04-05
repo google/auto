@@ -855,8 +855,6 @@ public class AutoValueProcessor extends AbstractProcessor {
         errorReporter.reportError("Primitive types cannot be @Nullable", method);
       }
     }
-    // If we are running from Eclipse, undo the work of its compiler which sorts methods.
-    eclipseHack.reorderProperties(props);
     vars.props = ImmutableSet.copyOf(props);
     vars.serialVersionUID = getSerialVersionUID(type);
     vars.formalTypes = typeSimplifier.formalTypeParametersString(type);

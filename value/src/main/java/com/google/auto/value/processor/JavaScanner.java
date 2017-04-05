@@ -36,14 +36,6 @@ package com.google.auto.value.processor;
  *
  * @author Éamonn McManus
  */
-// This scanner is different from the one in EclipseHackTokenizer (which is only needed for
-// EclipseHack). The needs of the two scanner are very different: EclipseHackTokenizer is only
-// needed to scan through an existing source file to find abstract method declarations, so it
-// can discard everything that isn't needed for that, including comments and string literals for
-// example. Meanwhile, this scanner needs to return a sequence of tokens that can be used to
-// reconstruct the source code. EclipseHackTokenizer also operates on a Reader (which in practice is
-// coming from a file), while here we already have the source code in a String, which means that we
-// can just return token boundaries rather than the tokens themselves.
 class JavaScanner {
   private final String s;
 
