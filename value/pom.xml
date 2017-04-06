@@ -33,7 +33,7 @@
   </description>
 
   <properties>
-    <guava.version>19.0</guava.version>
+    <guava.version>20.0</guava.version>
     <compile.testing.version>0.10</compile.testing.version>
     <exclude.tests>this-matches-nothing</exclude.tests>
   </properties>
@@ -53,7 +53,7 @@
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
-      <version>1.0-rc2</version>
+      <version>1.0-rc3</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
-      <version>1.7.0</version>
+      <version>1.8.0</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -81,13 +81,13 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <version>0.30</version>
+      <version>0.32</version>
       <scope>test</scope>
     </dependency>
     <dependency>
