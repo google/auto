@@ -185,7 +185,7 @@ public final class MoreTypes {
           return true;
         }
         return aElement.equals(bElement)
-            && equal(a.getEnclosingType(), a.getEnclosingType(), newVisiting)
+            && equal(a.getEnclosingType(), b.getEnclosingType(), newVisiting)
             && equalLists(a.getTypeArguments(), b.getTypeArguments(), newVisiting);
       }
       return false;
