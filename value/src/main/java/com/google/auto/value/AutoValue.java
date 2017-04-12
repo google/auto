@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
  * @author Éamonn McManus
  * @author Kevin Bourrillion
  */
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 public @interface AutoValue {
 
