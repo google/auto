@@ -221,6 +221,140 @@ public class CompilationTest {
   }
 
   @Test
+  public void testNoWarningsFromGenerics() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz<T extends Number, U extends T> {",
+        "  public abstract T t();",
+        "  public abstract U u();",
+        "  public static <T extends Number, U extends T> Baz<T, U> create(T t, U u) {",
+        "    return new AutoValue_Baz<T, U>(t, u);",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  // In the following few tests, see AutoValueProcessor.validateMethods for why unrecognized
+  // abstract methods provoke only a warning rather than an error. Compilation will fail anyway
+  // because the generated class is not abstract and does not implement the unrecognized methods.
+
+  @Test
+  public void testAbstractVoid() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract void foo();",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadWarningContaining(
+            "Abstract method is neither a property getter nor a Builder converter")
+        .inFile(javaFileObject)
+        .onLine(5);
+  }
+
+  @Test
+  public void testAbstractWithParams() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract int foo(int bar);",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadWarningContaining(
+            "Abstract method is neither a property getter nor a Builder converter")
+        .inFile(javaFileObject)
+        .onLine(5);
+  }
+
+  @Test
+  public void testPrimitiveArrayWarning() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract byte[] bytes();",
+        "  public static Baz create(byte[] bytes) {",
+        "    return new AutoValue_Baz(bytes);",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .hadWarningContaining(
+            "An @AutoValue property that is a primitive array returns the original array")
+        .inFile(javaFileObject)
+        .onLine(5);
+  }
+
+  @Test
+  public void testPrimitiveArrayWarningFromParent() throws Exception {
+    // If the array-valued property is defined by an ancestor then we shouldn't try to attach
+    // the warning to the method that defined it, but rather to the @AutoValue class itself.
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "public abstract class Baz {",
+        "  public abstract byte[] bytes();",
+        "",
+        "  @AutoValue",
+        "  public abstract static class BazChild extends Baz {",
+        "    public static BazChild create(byte[] bytes) {",
+        "      return new AutoValue_Baz_BazChild(bytes);",
+        "    }",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .hadWarningContainingMatch(
+            "An @AutoValue property that is a primitive array returns the original array"
+                + ".*foo\\.bar\\.Baz\\.bytes")
+        .inFile(javaFileObject)
+        .onLine(7);
+  }
+
+  @Test
+  public void testPrimitiveArrayWarningSuppressed() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "import com.google.auto.value.AutoValue;",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  @SuppressWarnings(\"mutable\")",
+        "  public abstract byte[] bytes();",
+        "  public static Baz create(byte[] bytes) {",
+        "    return new AutoValue_Baz(bytes);",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  @Test
   public void autoValueMustBeStatic() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
