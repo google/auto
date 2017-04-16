@@ -40,6 +40,7 @@ import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
@@ -185,7 +186,7 @@ public final class MoreTypes {
           return true;
         }
         return aElement.equals(bElement)
-            && equal(a.getEnclosingType(), a.getEnclosingType(), newVisiting)
+            && equal(enclosingType(a), enclosingType(b), newVisiting)
             && equalLists(a.getTypeArguments(), b.getTypeArguments(), newVisiting);
       }
       return false;
@@ -309,6 +310,22 @@ public final class MoreTypes {
       }
     }
     return (a == b) || (a != null && b != null && a.accept(EqualVisitor.INSTANCE, p));
+  }
+
+  /**
+   * Returns the type of the innermost enclosing instance, or null if there is none. This is the
+   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than
+   * NoType for a static type. We need this because of
+   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby
+   * the Eclipse compiler returns a value for static classes that is not NoType.
+   */
+  private static TypeMirror enclosingType(DeclaredType t) {
+    TypeMirror enclosing = t.getEnclosingType();
+    if (enclosing.getKind().equals(TypeKind.NONE)
+        || t.asElement().getModifiers().contains(Modifier.STATIC)) {
+      return null;
+    }
+    return enclosing;
   }
 
   private static boolean isIntersectionType(TypeMirror t) {
