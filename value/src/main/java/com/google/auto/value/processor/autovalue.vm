@@ -34,9 +34,6 @@ $a
 
 ## Constructor
 
-#if ($isFinal && $builderTypeName != "")
-  private ##
-#end
   $subclass(
 #foreach ($p in $props)
 

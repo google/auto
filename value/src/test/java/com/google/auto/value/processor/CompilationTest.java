@@ -676,7 +676,7 @@ public class CompilationTest {
         "  private final Optional<String> anOptionalString;",
         "  private final NestedAutoValue<T> aNestedAutoValue;",
         "",
-        "  private AutoValue_Baz(",
+        "  AutoValue_Baz(",
         "      int anInt,",
         "      byte[] aByteArray,",
         "      @Nullable int[] aNullableIntArray,",
