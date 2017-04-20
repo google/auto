@@ -20,6 +20,8 @@ import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.collect.Sets.union;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -27,13 +29,9 @@ import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -79,7 +77,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleAnnotationValueVisitor6;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -269,8 +267,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
       builder.addAll(copyAnnotations(method, typeSimplifier, excludedAnnotations));
 
-      for (AnnotationMirror annotationMirror :
-          Java8Support.getAnnotationMirrors(method.getReturnType())) {
+      for (AnnotationMirror annotationMirror : method.getReturnType().getAnnotationMirrors()) {
         AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
         builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
       }
@@ -696,8 +693,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       default:
         errorReporter.reportError(
             "More than one extension wants to generate the final class: "
-                + FluentIterable.from(finalExtensions).transform(ExtensionName.INSTANCE)
-                    .join(Joiner.on(", ")),
+                + finalExtensions.stream().map(this::extensionName).collect(joining(", ")),
             type);
         break;
     }
@@ -773,25 +769,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private static String extensionName(AutoValueExtension extension) {
+  private String extensionName(AutoValueExtension extension) {
     return extension.getClass().getName();
-  }
-
-  private enum ExtensionName implements Function<AutoValueExtension, String> {
-    INSTANCE;
-
-    @Override public String apply(AutoValueExtension input) {
-      return extensionName(input);
-    }
-  }
-
-  private enum SimpleMethodFunction implements Function<ExecutableElement, SimpleMethod> {
-    INSTANCE;
-
-    @Override
-    public SimpleMethod apply(ExecutableElement input) {
-      return new SimpleMethod(input);
-    }
   }
 
   private TypeSimplifier defineVarsForType(
@@ -817,8 +796,9 @@ public class AutoValueProcessor extends AbstractProcessor {
       // Arrange to import it unless that would introduce ambiguity.
       types.add(javaUtilArrays);
     }
+    // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
-        FluentIterable.from(toBuilderMethods).transform(SimpleMethodFunction.INSTANCE).toList();
+        ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
     ImmutableSetMultimap<ExecutableElement, String> excludedAnnotationsMap =
         allMethodExcludedAnnotations(propertyMethods);
     types.addAll(allMethodAnnotationTypes(propertyMethods, excludedAnnotationsMap));
@@ -938,8 +918,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         }
         annotationTypes.add(annotationMirror.getAnnotationType());
       }
-      for (AnnotationMirror annotationMirror :
-          Java8Support.getAnnotationMirrors(method.getReturnType())) {
+      for (AnnotationMirror annotationMirror : method.getReturnType().getAnnotationMirrors()) {
         annotationTypes.add(annotationMirror.getAnnotationType());
       }
     }
@@ -1108,7 +1087,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   // The simpler approach using Element.getAnnotation(SuppressWarnings.class) doesn't work if
   // the annotation has an undefined reference, like @SuppressWarnings(UNDEFINED).
   // TODO(emcmanus): replace with a method from auto-common when that is available.
-  private static class ContainsMutableVisitor extends SimpleAnnotationValueVisitor6<Boolean, Void> {
+  private static class ContainsMutableVisitor extends SimpleAnnotationValueVisitor8<Boolean, Void> {
     @Override
     public Boolean visitArray(List<? extends AnnotationValue> list, Void p) {
       for (AnnotationValue value : list) {
@@ -1156,11 +1135,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     try {
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);
-      Writer writer = sourceFile.openWriter();
-      try {
+      try (Writer writer = sourceFile.openWriter()) {
         writer.write(text);
-      } finally {
-        writer.close();
       }
     } catch (IOException e) {
       // This should really be an error, but we make it a warning in the hope of resisting Eclipse
@@ -1228,10 +1204,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      return "<"
-          + Joiner.on(", ").join(
-              FluentIterable.from(typeParameters).transform(Functions.constant("?")))
-          + ">";
+      return typeParameters.stream().map(e -> "?").collect(joining(", ", "<", ">"));
     }
   }
 

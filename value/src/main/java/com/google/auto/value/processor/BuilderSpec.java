@@ -16,13 +16,13 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.processor.AutoValueProcessor.Property;
 import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -131,10 +132,10 @@ class BuilderSpec {
     ImmutableSet<ExecutableElement> toBuilderMethods(
         Types typeUtils, Set<ExecutableElement> abstractMethods) {
 
-      ImmutableList<String> builderTypeParamNames =
-          FluentIterable.from(builderTypeElement.getTypeParameters())
-              .transform(SimpleNameFunction.INSTANCE)
-              .toList();
+      List<String> builderTypeParamNames =
+          builderTypeElement.getTypeParameters().stream()
+              .map(e -> e.getSimpleName().toString())
+              .collect(toList());
 
       ImmutableSet.Builder<ExecutableElement> methods = ImmutableSet.builder();
       for (ExecutableElement method : abstractMethods) {

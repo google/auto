@@ -25,7 +25,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.SimpleAnnotationValueVisitor6;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.tools.Diagnostic;
 
 /**
@@ -50,7 +50,7 @@ class AnnotationOutput {
    * abstract class and two concrete subclasses.
    */
   private abstract class SourceFormVisitor
-      extends SimpleAnnotationValueVisitor6<Void, StringBuilder> {
+      extends SimpleAnnotationValueVisitor8<Void, StringBuilder> {
     @Override
     protected Void defaultAction(Object value, StringBuilder sb) {
       sb.append(value);
