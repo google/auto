@@ -87,8 +87,8 @@ these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
 
 ```groovy
 dependencies {
-  compileOnly "com.google.auto.value:auto-value:1.2"
-  apt         "com.google.auto.value:auto-value:1.2"
+  provided 'com.google.auto.value:auto-value:1.2'
+  annotationProcessor 'com.google.auto.value:auto-value:1.2'
 }
 ```
 
