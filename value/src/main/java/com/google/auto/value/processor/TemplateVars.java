@@ -112,11 +112,8 @@ abstract class TemplateVars {
       return templateFromInputStream(in);
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);
-    } catch (IOException e) {
-      return retryParseAfterException(resourceName, e);
-    } catch (NullPointerException e) {
-      // https://github.com/google/auto/pull/439 says that we can also get this exception.
-      // TODO(emcmanus): use IOException | NullPointerException when we drop Java 6 source compat.
+    } catch (IOException | NullPointerException e) {
+      // https://github.com/google/auto/pull/439 says that we can also get NullPointerException.
       return retryParseAfterException(resourceName, e);
     } finally {
       try {
@@ -179,13 +176,10 @@ abstract class TemplateVars {
       entryName = entryName.substring(1);
     }
     URI jarUri = new URI(resourceUrlString.substring(0, bang));
-    JarFile jar = new JarFile(new File(jarUri));
-    try {
+    try (JarFile jar = new JarFile(new File(jarUri))) {
       JarEntry entry = jar.getJarEntry(entryName);
       InputStream in = jar.getInputStream(entry);
       return templateFromInputStream(in);
-    } finally {
-      jar.close();
     }
   }
 
@@ -196,11 +190,8 @@ abstract class TemplateVars {
   private static Template parsedTemplateFromFile(URL resourceUrl)
       throws IOException, URISyntaxException {
     File resourceFile = new File(resourceUrl.toURI());
-    InputStream in = new FileInputStream(resourceFile);
-    try {
+    try (InputStream in = new FileInputStream(resourceFile)) {
       return templateFromInputStream(in);
-    } finally {
-      in.close();
     }
   }
 

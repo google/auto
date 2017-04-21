@@ -227,11 +227,8 @@ class GwtSerialization {
     try {
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);
-      Writer writer = sourceFile.openWriter();
-      try {
+      try (Writer writer = sourceFile.openWriter()) {
         writer.write(text);
-      } finally {
-        writer.close();
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,

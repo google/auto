@@ -15,12 +15,10 @@
  */
 package com.google.auto.value.processor;
 
+import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.PRIVATE;
 
 import com.google.auto.common.MoreElements;
-import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSortedSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,7 +37,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.SimpleTypeVisitor6;
+import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
 
 /**
@@ -164,11 +162,9 @@ final class TypeSimplifier {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      return "<"
-          + FluentIterable.from(typeParameters)
-              .transform(SimpleNameFunction.INSTANCE)
-              .join(Joiner.on(", "))
-          + ">";
+      return typeParameters.stream()
+          .map(e -> e.getSimpleName().toString())
+          .collect(joining(", ", "<", ">"));
     }
   }
 
@@ -198,7 +194,7 @@ final class TypeSimplifier {
    * quirks such as the way it omits the space after the comma in
    * {@code java.util.Map<java.lang.String, java.lang.String>}.
    */
-  private class ToStringTypeVisitor extends SimpleTypeVisitor6<StringBuilder, StringBuilder> {
+  private class ToStringTypeVisitor extends SimpleTypeVisitor8<StringBuilder, StringBuilder> {
     @Override protected StringBuilder defaultAction(TypeMirror type, StringBuilder sb) {
       return sb.append(type);
     }
@@ -366,7 +362,7 @@ final class TypeSimplifier {
     return topLevelReferenced;
   }
 
-  private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor6<Void, Void> {
+  private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor8<Void, Void> {
     private final Types typeUtils;
     private final Set<TypeMirror> referencedTypes;
     private final Set<TypeMirror> seenTypes;
@@ -478,7 +474,7 @@ final class TypeSimplifier {
    * visitX method returns true if its input parameter is true or if the type being visited is
    * erased.
    */
-  private static class CastingUncheckedVisitor extends SimpleTypeVisitor6<Boolean, Boolean> {
+  private static class CastingUncheckedVisitor extends SimpleTypeVisitor8<Boolean, Boolean> {
     @Override protected Boolean defaultAction(TypeMirror e, Boolean p) {
       return p;
     }
@@ -494,7 +490,7 @@ final class TypeSimplifier {
     }
 
     @Override public Boolean visitDeclared(DeclaredType t, Boolean p) {
-      return p || FluentIterable.from(t.getTypeArguments()).anyMatch(UNCHECKED_TYPE_ARGUMENT);
+      return p || t.getTypeArguments().stream().anyMatch(this::uncheckedTypeArgument);
     }
 
     @Override public Boolean visitTypeVariable(TypeVariable t, Boolean p) {
@@ -504,19 +500,16 @@ final class TypeSimplifier {
     // If a type has a type argument, then casting to the type is unchecked, except if the argument
     // is <?> or <? extends Object>. The same applies to all type arguments, so casting to Map<?, ?>
     // does not produce an unchecked warning for example.
-    private static final Predicate<TypeMirror> UNCHECKED_TYPE_ARGUMENT =
-        new Predicate<TypeMirror>() {
-      @Override public boolean apply(TypeMirror arg) {
-        if (arg.getKind() == TypeKind.WILDCARD) {
-          WildcardType wildcard = (WildcardType) arg;
-          if (wildcard.getExtendsBound() == null || isJavaLangObject(wildcard.getExtendsBound())) {
-            // This is <?>, unless there's a super bound, in which case it is <? super Foo> and
-            // is erased.
-            return (wildcard.getSuperBound() != null);
-          }
+    private boolean uncheckedTypeArgument(TypeMirror arg) {
+      if (arg.getKind() == TypeKind.WILDCARD) {
+        WildcardType wildcard = (WildcardType) arg;
+        if (wildcard.getExtendsBound() == null || isJavaLangObject(wildcard.getExtendsBound())) {
+          // This is <?>, unless there's a super bound, in which case it is <? super Foo> and
+          // is erased.
+          return (wildcard.getSuperBound() != null);
         }
-        return true;
       }
+      return true;
     };
 
     private static boolean isJavaLangObject(TypeMirror type) {

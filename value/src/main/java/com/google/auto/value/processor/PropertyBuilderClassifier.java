@@ -353,8 +353,7 @@ class PropertyBuilderClassifier {
   private static boolean isNullable(ExecutableElement getter) {
     List<List<? extends AnnotationMirror>> annotationLists =
         ImmutableList.of(
-            getter.getAnnotationMirrors(),
-            Java8Support.getAnnotationMirrors(getter.getReturnType()));
+            getter.getAnnotationMirrors(), getter.getReturnType().getAnnotationMirrors());
     for (List<? extends AnnotationMirror> annotations : annotationLists) {
       for (AnnotationMirror annotation : annotations) {
         if (annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable")) {
