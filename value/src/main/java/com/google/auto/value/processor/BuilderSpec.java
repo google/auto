@@ -22,9 +22,7 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.processor.AutoValueProcessor.Property;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -32,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -75,7 +74,7 @@ class BuilderSpec {
    * {@code Optional} if so.
    */
   Optional<Builder> getBuilder() {
-    Optional<TypeElement> builderTypeElement = Optional.absent();
+    Optional<TypeElement> builderTypeElement = Optional.empty();
     for (TypeElement containedClass : ElementFilter.typesIn(autoValueClass.getEnclosedElements())) {
       if (MoreElements.isAnnotationPresent(containedClass, AutoValue.Builder.class)) {
         if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
@@ -97,7 +96,7 @@ class BuilderSpec {
     if (builderTypeElement.isPresent()) {
       return builderFrom(builderTypeElement.get());
     } else {
-      return Optional.absent();
+      return Optional.empty();
     }
   }
 
@@ -142,13 +141,11 @@ class BuilderSpec {
         if (builderTypeElement.equals(typeUtils.asElement(method.getReturnType()))) {
           methods.add(method);
           DeclaredType returnType = MoreTypes.asDeclared(method.getReturnType());
-          ImmutableList.Builder<String> typeArguments = ImmutableList.builder();
-          for (TypeMirror typeArgument : returnType.getTypeArguments()) {
-            if (typeArgument.getKind().equals(TypeKind.TYPEVAR)) {
-              typeArguments.add(typeUtils.asElement(typeArgument).getSimpleName().toString());
-            }
-          }
-          if (!builderTypeParamNames.equals(typeArguments.build())) {
+          List<String> typeArguments = returnType.getTypeArguments().stream()
+              .filter(t -> t.getKind().equals(TypeKind.TYPEVAR))
+              .map(t -> typeUtils.asElement(t).getSimpleName().toString())
+              .collect(toList());
+          if (!builderTypeParamNames.equals(typeArguments)) {
             errorReporter.reportError(
                 "Builder converter method should return "
                     + builderTypeElement
@@ -370,7 +367,7 @@ class BuilderSpec {
   /**
    * Returns a representation of the given {@code @AutoValue.Builder} class or interface. If the
    * class or interface has abstract methods that could not be part of any builder, emits error
-   * messages and returns Optional.absent().
+   * messages and returns Optional.empty().
    */
   private Optional<Builder> builderFrom(TypeElement builderTypeElement) {
 
@@ -384,7 +381,7 @@ class BuilderSpec {
       errorReporter.reportError(
           "Type parameters of " + builderTypeElement + " must have same names and bounds as "
               + "type parameters of " + autoValueClass, builderTypeElement);
-      return Optional.absent();
+      return Optional.empty();
     }
     return Optional.of(new Builder(builderTypeElement));
   }

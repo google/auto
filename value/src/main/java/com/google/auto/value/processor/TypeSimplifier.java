@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
 import static javax.lang.model.element.Modifier.PRIVATE;
 
 import com.google.auto.common.MoreElements;
@@ -354,12 +355,10 @@ final class TypeSimplifier {
     for (TypeMirror type : types) {
       referencedClassVisitor.visit(type);
     }
-    Set<TypeMirror> topLevelReferenced = new TypeMirrorSet();
-    for (TypeMirror type : allReferenced) {
-      TypeElement typeElement = MoreElements.asType(typeUtil.asElement(type));
-      topLevelReferenced.add(topLevelType(typeElement).asType());
-    }
-    return topLevelReferenced;
+    return allReferenced.stream()
+        .map(typeMirror -> MoreElements.asType(typeUtil.asElement(typeMirror)))
+        .map(typeElement -> topLevelType(typeElement).asType())
+        .collect(toCollection(TypeMirrorSet::new));
   }
 
   private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor8<Void, Void> {

@@ -19,7 +19,6 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +31,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import java.beans.Introspector;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
@@ -132,7 +132,7 @@ class BuilderMethodClassifier {
     if (classifier.classifyMethods(methods, autoValueHasToBuilder)) {
       return Optional.of(classifier);
     } else {
-      return Optional.absent();
+      return Optional.empty();
     }
   }
 
