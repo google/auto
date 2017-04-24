@@ -15,15 +15,16 @@
  */
 package com.google.auto.value.processor;
 
+import static java.util.stream.Collectors.toList;
+
 import com.google.auto.value.processor.escapevelocity.Template;
-import com.google.common.base.Optional;
 import com.google.common.collect.Multimap;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.zip.CRC32;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -92,10 +93,7 @@ class GwtSerialization {
       String className = (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass
           + "_CustomFieldSerializer";
       vars.serializerClass = TypeSimplifier.simpleNameOf(className);
-      vars.props = new ArrayList<Property>();
-      for (AutoValueProcessor.Property prop : autoVars.props) {
-        vars.props.add(new Property(prop));
-      }
+      vars.props = autoVars.props.stream().map(Property::new).collect(toList());
       vars.classHashString = computeClassHash(autoVars.props);
       String text = vars.toText();
       writeSourceFile(className, text, type);

@@ -17,12 +17,12 @@ package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.auto.value.processor.escapevelocity.Template;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
 
@@ -145,7 +145,7 @@ class AutoValueTemplateVars extends TemplateVars {
   Boolean builderIsInterface = false;
 
   /** The builder's build method, often {@code "build"}. */
-  Optional<AutoValueProcessor.SimpleMethod> buildMethod = Optional.absent();
+  Optional<AutoValueProcessor.SimpleMethod> buildMethod = Optional.empty();
 
   /**
    * A multimap from property names (like foo) to the corresponding setters. The same property may

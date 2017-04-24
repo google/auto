@@ -15,11 +15,12 @@
  */
 package com.google.auto.value.processor;
 
+import static java.util.stream.Collectors.toCollection;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoAnnotation;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +33,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
@@ -39,7 +41,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -206,7 +207,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       List<? extends AnnotationValue> list = (List<? extends AnnotationValue>) value;
       return invariableHash(list);
     } else {
-      return Optional.absent();
+      return Optional.empty();
     }
   }
 
@@ -216,7 +217,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     for (AnnotationValue annotationValue : annotationValues) {
       Optional<Integer> maybeHash = invariableHash(annotationValue);
       if (!maybeHash.isPresent()) {
-        return Optional.absent();
+        return Optional.empty();
       }
       h = h * 31 + maybeHash.get();
     }
@@ -320,11 +321,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private Set<TypeMirror> getMemberTypes(Collection<ExecutableElement> memberMethods) {
-    Set<TypeMirror> types = new TypeMirrorSet();
-    for (ExecutableElement memberMethod : memberMethods) {
-      types.add(memberMethod.getReturnType());
-    }
-    return types;
+    return memberMethods.stream()
+        .map(m -> m.getReturnType())
+        .collect(toCollection(TypeMirrorSet::new));
   }
 
   private ImmutableMap<String, Parameter> getParameters(
@@ -464,22 +463,13 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private static boolean containsArrayType(Set<TypeMirror> types) {
-    for (TypeMirror type : types) {
-      if (type.getKind() == TypeKind.ARRAY) {
-        return true;
-      }
-    }
-    return false;
+    return types.stream().anyMatch(t -> t.getKind().equals(TypeKind.ARRAY));
   }
 
   private static boolean isGwtCompatible(TypeElement annotationElement) {
-    for (AnnotationMirror annotationMirror : annotationElement.getAnnotationMirrors()) {
-      String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
-      if (name.equals("GwtCompatible")) {
-        return true;
-      }
-    }
-    return false;
+    return annotationElement.getAnnotationMirrors().stream()
+        .map(mirror -> mirror.getAnnotationType().asElement())
+        .anyMatch(element -> element.getSimpleName().contentEquals("GwtCompatible"));
   }
 
   private static String fullyQualifiedName(String pkg, String cls) {
@@ -490,11 +480,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     try {
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);
-      Writer writer = sourceFile.openWriter();
-      try {
+      try (Writer writer = sourceFile.openWriter()) {
         writer.write(text);
-      } finally {
-        writer.close();
       }
     } catch (IOException e) {
       // This should really be an error, but we make it a warning in the hope of resisting Eclipse

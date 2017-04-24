@@ -15,12 +15,12 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
+import static java.util.stream.Collectors.joining;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
@@ -31,7 +31,7 @@ class GwtCompatibility {
   private final Optional<AnnotationMirror> gwtCompatibleAnnotation;
 
   GwtCompatibility(TypeElement type) {
-    Optional<AnnotationMirror> gwtCompatibleAnnotation = Optional.absent();
+    Optional<AnnotationMirror> gwtCompatibleAnnotation = Optional.empty();
     List<? extends AnnotationMirror> annotations = type.getAnnotationMirrors();
     for (AnnotationMirror annotation : annotations) {
       Name name = annotation.getAnnotationType().asElement().getSimpleName();
@@ -61,12 +61,9 @@ class GwtCompatibility {
       if (annotation.getElementValues().isEmpty()) {
         annotationArguments = "";
       } else {
-        List<String> elements = Lists.newArrayList();
-        for (Map.Entry<ExecutableElement, AnnotationValue> entry :
-             getElementValues(annotation).entrySet()) {
-          elements.add(entry.getKey().getSimpleName() + " = " + entry.getValue());
-        }
-        annotationArguments = "(" + Joiner.on(", ").join(elements) + ")";
+        annotationArguments = getElementValues(annotation).entrySet().stream()
+            .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
+            .collect(joining(", ", "(", ")"));
       }
       return "@" + annotationElement.getQualifiedName() + annotationArguments;
     } else {

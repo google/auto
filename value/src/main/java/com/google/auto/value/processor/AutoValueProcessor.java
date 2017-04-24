@@ -21,7 +21,9 @@ import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.collect.Sets.union;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -29,7 +31,6 @@ import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableBiMap;
@@ -52,6 +53,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -170,10 +172,9 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    List<TypeElement> deferredTypes = new ArrayList<TypeElement>();
-    for (String deferred : deferredTypeNames) {
-      deferredTypes.add(processingEnv.getElementUtils().getTypeElement(deferred));
-    }
+    List<TypeElement> deferredTypes = deferredTypeNames.stream()
+        .map(name -> processingEnv.getElementUtils().getTypeElement(name))
+        .collect(toList());
     if (roundEnv.processingOver()) {
       // This means that the previous round didn't generate any new sources, so we can't have found
       // any new instances of @AutoValue; and we can't have any new types that are the reason a type
@@ -627,14 +628,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     return ImmutableSet.of();
   }
 
-  private ImmutableSet<String> getAnnotationsMarkedWithInherited(Element element) {
-    ImmutableSet.Builder<String> result = ImmutableSet.builder();
-    for (AnnotationMirror annotation : element.getAnnotationMirrors()) {
-      if (isAnnotationPresent(annotation.getAnnotationType().asElement(), Inherited.class)) {
-        result.add(getAnnotationFqName(annotation));
-      }
-    }
-    return result.build();
+  private Set<String> getAnnotationsMarkedWithInherited(Element element) {
+    return element.getAnnotationMirrors().stream()
+        .filter(a -> isAnnotationPresent(a.getAnnotationType().asElement(), Inherited.class))
+        .map(a -> getAnnotationFqName(a))
+        .collect(toSet());
   }
 
   // Invokes each of the given extensions to generate its subclass, and returns the number of
@@ -980,21 +978,14 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
   }
 
-  private Set<TypeMirror> returnTypesOf(Iterable<ExecutableElement> methods) {
-    Set<TypeMirror> returnTypes = new TypeMirrorSet();
-    for (ExecutableElement method : methods) {
-      returnTypes.add(method.getReturnType());
-    }
-    return returnTypes;
+  private Set<TypeMirror> returnTypesOf(Collection<ExecutableElement> methods) {
+    return methods.stream()
+        .map(m -> m.getReturnType())
+        .collect(toCollection(TypeMirrorSet::new));
   }
 
   private static boolean containsArrayType(Set<TypeMirror> types) {
-    for (TypeMirror type : types) {
-      if (type.getKind() == TypeKind.ARRAY) {
-        return true;
-      }
-    }
-    return false;
+    return types.stream().anyMatch(t -> t.getKind().equals(TypeKind.ARRAY));
   }
 
   /**
@@ -1090,18 +1081,13 @@ public class AutoValueProcessor extends AbstractProcessor {
   private static class ContainsMutableVisitor extends SimpleAnnotationValueVisitor8<Boolean, Void> {
     @Override
     public Boolean visitArray(List<? extends AnnotationValue> list, Void p) {
-      for (AnnotationValue value : list) {
-        if ("mutable".equals(value.getValue())) {
-          return true;
-        }
-      }
-      return false;
+      return list.stream().map(av -> av.getValue()).anyMatch("mutable"::equals);
     }
   }
 
   private void warnAboutPrimitiveArrays(TypeElement autoValueClass, ExecutableElement getter) {
     boolean suppressed = false;
-    Optional<AnnotationMirror> maybeAnnotation =
+    com.google.common.base.Optional<AnnotationMirror> maybeAnnotation =
         getAnnotationMirror(getter, SuppressWarnings.class);
     if (maybeAnnotation.isPresent()) {
       AnnotationValue listValue = getAnnotationValue(maybeAnnotation.get(), "value");

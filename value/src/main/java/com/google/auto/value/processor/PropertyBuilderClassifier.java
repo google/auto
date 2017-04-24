@@ -17,13 +17,13 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -187,14 +187,14 @@ class PropertyBuilderClassifier {
   //      Guava immutable builder like `ImmutableSet.Builder`. (See TODO below for relaxing the
   //      requirement on having a `toBuilder()`.
   //
-  // This method outputs an error and returns Optional.absent() if the barBuilder() method has a
+  // This method outputs an error and returns Optional.empty() if the barBuilder() method has a
   // problem.
   Optional<PropertyBuilder> makePropertyBuilder(ExecutableElement method, String property) {
     TypeMirror barBuilderTypeMirror = builderMethodClassifier.builderMethodReturnType(method);
     if (barBuilderTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError("Method looks like a property builder, but its return type "
           + "is not a class or interface", method);
-      return Optional.absent();
+      return Optional.empty();
     }
     DeclaredType barBuilderDeclaredType = MoreTypes.asDeclared(barBuilderTypeMirror);
     TypeElement barBuilderTypeElement = MoreTypes.asTypeElement(barBuilderTypeMirror);
@@ -205,7 +205,7 @@ class PropertyBuilderClassifier {
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError("Method looks like a property builder, but the type of property "
           + property + " is not a class or interface", method);
-      return Optional.absent();
+      return Optional.empty();
     }
     if (isNullable(barGetter)) {
       errorReporter.reportError("Property " + property + " has a property builder so it cannot "
@@ -219,7 +219,7 @@ class PropertyBuilderClassifier {
     if (build == null || build.getModifiers().contains(Modifier.STATIC)) {
       errorReporter.reportError("Method looks like a property builder, but it returns "
           + barBuilderTypeElement + " which does not have a non-static build() method", method);
-      return Optional.absent();
+      return Optional.empty();
     }
 
     // We've determined that `BarBuilder` has a method `build()`. But it must return `Bar`.
@@ -229,7 +229,7 @@ class PropertyBuilderClassifier {
       errorReporter.reportError("Property builder for " + property + " has type "
           + barBuilderTypeElement + " whose build() method returns " + buildType
           + " instead of " + barTypeMirror, method);
-      return Optional.absent();
+      return Optional.empty();
     }
 
     Optional<ExecutableElement> maybeBuilderMaker =
@@ -239,7 +239,7 @@ class PropertyBuilderClassifier {
           + barBuilderTypeElement + " does not have a public constructor and " + barTypeElement
           + " does not have a static builder() or newBuilder() method that returns "
           + barBuilderTypeElement, method);
-      return Optional.absent();
+      return Optional.empty();
     }
     ExecutableElement builderMaker = maybeBuilderMaker.get();
 
@@ -317,14 +317,10 @@ class PropertyBuilderClassifier {
         return Optional.of(method);
       }
     }
-    for (ExecutableElement constructor :
-        ElementFilter.constructorsIn(barBuilderTypeElement.getEnclosedElements())) {
-      if (constructor.getParameters().isEmpty()
-          && constructor.getModifiers().contains(Modifier.PUBLIC)) {
-        return Optional.of(constructor);
-      }
-    }
-    return Optional.absent();
+    return ElementFilter.constructorsIn(barBuilderTypeElement.getEnclosedElements()).stream()
+        .filter(c -> c.getParameters().isEmpty())
+        .filter(c -> c.getModifiers().contains(Modifier.PUBLIC))
+        .findFirst();
   }
 
   private Map<String, ExecutableElement> noArgMethodsOf(TypeElement type) {
@@ -347,7 +343,7 @@ class PropertyBuilderClassifier {
         return Optional.of(method);
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   private static boolean isNullable(ExecutableElement getter) {
