@@ -39,7 +39,7 @@
   </scm>
   <properties>
     <guava.version>19.0</guava.version>
-    <compile.testing.version>0.9</compile.testing.version>
+    <compile.testing.version>0.10</compile.testing.version>
     <junit.version>4.12</junit.version>
     <truth.version>0.30</truth.version>
   </properties>
