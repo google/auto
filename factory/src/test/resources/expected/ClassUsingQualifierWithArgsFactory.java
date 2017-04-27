@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -29,11 +28,19 @@ final class ClassUsingQualifierWithArgsFactory {
 
   @Inject ClassUsingQualifierWithArgsFactory(
       @QualifierWithArgs(name="Fred", count=3) Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 1);
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
   }
 
   ClassUsingQualifierWithArgs create() {
-    return new ClassUsingQualifierWithArgs(
-        Preconditions.checkNotNull(providedDepAProvider.get(), 1));
+    return new ClassUsingQualifierWithArgs(checkNotNull(providedDepAProvider.get(), 1));
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

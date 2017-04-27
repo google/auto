@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -33,15 +32,15 @@ final class MixedDepsImplementingInterfacesFactory
   private final Provider<String> sProvider;
 
   @Inject MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
-    this.sProvider = Preconditions.checkNotNull(sProvider, 1);
+    this.sProvider = checkNotNull(sProvider, 1);
   }
 
   MixedDepsImplementingInterfaces create(int i) {
-    return new MixedDepsImplementingInterfaces(Preconditions.checkNotNull(sProvider.get(), 1), i);
+    return new MixedDepsImplementingInterfaces(checkNotNull(sProvider.get(), 1), i);
   }
 
   MixedDepsImplementingInterfaces create(Object o) {
-    return new MixedDepsImplementingInterfaces(Preconditions.checkNotNull(o, 1));
+    return new MixedDepsImplementingInterfaces(checkNotNull(o, 1));
   }
 
   @Override public MixedDepsImplementingInterfaces fromInt(int i) {
@@ -50,5 +49,14 @@ final class MixedDepsImplementingInterfacesFactory
 
   @Override public MixedDepsImplementingInterfaces fromObject(Object o) {
     return create(o);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

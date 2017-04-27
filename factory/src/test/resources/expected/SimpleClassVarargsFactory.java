@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
@@ -27,11 +26,20 @@ final class SimpleClassVarargsFactory implements SimpleClassVarargs.InterfaceWit
   @Inject SimpleClassVarargsFactory() {}
 
   SimpleClassVarargs create(String... args) {
-    return new SimpleClassVarargs(Preconditions.checkNotNull(args, 1));
+    return new SimpleClassVarargs(checkNotNull(args, 1));
   }
 
   @Override
   public SimpleClassVarargs build(String... args) {
     return create(args);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

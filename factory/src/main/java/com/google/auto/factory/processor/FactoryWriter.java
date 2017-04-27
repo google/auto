@@ -22,8 +22,8 @@ import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.lang.model.element.Modifier.STATIC;
 
-import com.google.auto.factory.internal.Preconditions;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.FluentIterable;
@@ -37,6 +37,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.util.Iterator;
@@ -45,9 +46,7 @@ import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.SimpleTypeVisitor7;
 
 final class FactoryWriter {
 
@@ -84,6 +83,7 @@ final class FactoryWriter {
     addConstructorAndProviderFields(factory, descriptor);
     addFactoryMethods(factory, descriptor);
     addImplementationMethods(factory, descriptor);
+    addCheckNotNullMethod(factory, descriptor);
 
     JavaFile.builder(getPackage(descriptor.name()), factory.build())
         .skipJavaLangImports(true)
@@ -108,11 +108,7 @@ final class FactoryWriter {
         providerType = providerType.annotated(AnnotationSpec.get(provider.key().qualifier().get()));
       }
       constructor.addParameter(providerType, provider.name());
-      constructor.addStatement(
-          "this.$1L = $2T.checkNotNull($1L, $3L)",
-          provider.name(),
-          Preconditions.class,
-          argumentIndex);
+      constructor.addStatement("this.$1L = checkNotNull($1L, $2L)", provider.name(), argumentIndex);
     }
 
     factory.addMethod(constructor.build());
@@ -139,7 +135,7 @@ final class FactoryWriter {
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
           argument = CodeBlock.of(parameter.name());
-          if (isPrimitive(parameter.type())) {
+          if (parameter.type().getKind().isPrimitive()) {
             checkNotNull = false;
           }
         } else {
@@ -153,8 +149,7 @@ final class FactoryWriter {
           }
         }
         if (checkNotNull) {
-          argument =
-              CodeBlock.of("$T.checkNotNull($L, $L)", Preconditions.class, argument, argumentIndex);
+          argument = CodeBlock.of("checkNotNull($L, $L)", argument, argumentIndex);
         }
         args.add(argument);
         if (parameters.hasNext()) {
@@ -211,6 +206,43 @@ final class FactoryWriter {
     return builder.build();
   }
 
+  private static void addCheckNotNullMethod(
+      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+    if (shouldGenerateCheckNotNull(descriptor)) {
+      TypeVariableName typeVariable = TypeVariableName.get("T");
+      factory.addMethod(
+          methodBuilder("checkNotNull")
+              .addModifiers(PRIVATE, STATIC)
+              .addTypeVariable(typeVariable)
+              .returns(typeVariable)
+              .addParameter(typeVariable, "reference")
+              .addParameter(TypeName.INT, "argumentIndex")
+              .beginControlFlow("if (reference == null)")
+              .addStatement(
+                  "throw new $T($S + argumentIndex)",
+                  NullPointerException.class,
+                  "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+                      + "index: ")
+              .endControlFlow()
+              .addStatement("return reference")
+              .build());
+    }
+  }
+
+  private static boolean shouldGenerateCheckNotNull(FactoryDescriptor descriptor) {
+    if (!descriptor.providers().isEmpty()) {
+      return true;
+    }
+    for (FactoryMethodDescriptor method : descriptor.methodDescriptors()) {
+      for (Parameter parameter : method.creationParameters()) {
+        if (!parameter.nullable().isPresent() && !parameter.type().getKind().isPrimitive()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   private static CharSequence getSimpleName(CharSequence fullyQualifiedName) {
     int lastDot = lastIndexOf(fullyQualifiedName, '.');
     return fullyQualifiedName.subSequence(lastDot + 1, fullyQualifiedName.length());
@@ -228,19 +260,5 @@ final class FactoryWriter {
       }
     }
     return -1;
-  }
-
-  private static boolean isPrimitive(TypeMirror type) {
-    return type.accept(new SimpleTypeVisitor7<Boolean, Void>(){
-      @Override
-      public Boolean visitPrimitive(PrimitiveType t, Void aVoid) {
-        return true;
-      }
-
-      @Override
-      protected Boolean defaultAction(TypeMirror e, Void aVoid) {
-        return false;
-      }
-    }, null);
   }
 }

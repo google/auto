@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -30,10 +29,19 @@ final class CustomNullableFactory {
 
   @Inject
   CustomNullableFactory(Provider<Object> objectProvider) {
-    this.objectProvider = Preconditions.checkNotNull(objectProvider, 1);
+    this.objectProvider = checkNotNull(objectProvider, 1);
   }
 
   CustomNullable create(@CustomNullable.Nullable String string) {
     return new CustomNullable(string, objectProvider.get());
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

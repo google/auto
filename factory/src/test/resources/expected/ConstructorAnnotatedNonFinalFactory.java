@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -28,7 +27,7 @@ class ConstructorAnnotatedNonFinalFactory {
   private final Provider<Object> objProvider;
 
   @Inject ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
-    this.objProvider = Preconditions.checkNotNull(objProvider, 1);
+    this.objProvider = checkNotNull(objProvider, 1);
   }
 
   ConstructorAnnotatedNonFinal create() {
@@ -36,14 +35,23 @@ class ConstructorAnnotatedNonFinalFactory {
   }
 
   ConstructorAnnotatedNonFinal create(String s) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(s, 1));
+    return new ConstructorAnnotatedNonFinal(checkNotNull(s, 1));
   }
 
   ConstructorAnnotatedNonFinal create(int i) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(objProvider.get(), 1), i);
+    return new ConstructorAnnotatedNonFinal(checkNotNull(objProvider.get(), 1), i);
   }
 
   ConstructorAnnotatedNonFinal create(char c) {
-    return new ConstructorAnnotatedNonFinal(Preconditions.checkNotNull(objProvider.get(), 1), c);
+    return new ConstructorAnnotatedNonFinal(checkNotNull(objProvider.get(), 1), c);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

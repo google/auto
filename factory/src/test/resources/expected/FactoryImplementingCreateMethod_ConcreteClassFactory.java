@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import java.util.List;
 import javax.annotation.Generated;
 import javax.inject.Inject;
@@ -43,10 +42,19 @@ final class FactoryImplementingCreateMethod_ConcreteClassFactory
   @Override
   public FactoryImplementingCreateMethod.ConcreteClass create(List<Integer> genericWithDifferentArgumentName) {
     return new FactoryImplementingCreateMethod.ConcreteClass(
-        Preconditions.checkNotNull(genericWithDifferentArgumentName, 1));
+        checkNotNull(genericWithDifferentArgumentName, 1));
   }
 
   FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {
     return new FactoryImplementingCreateMethod.ConcreteClass(a, b);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright (C) 2017 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,31 +17,15 @@ package tests;
 
 import javax.annotation.Generated;
 import javax.inject.Inject;
-import javax.inject.Provider;
 
 @Generated(
   value = "com.google.auto.factory.processor.AutoFactoryProcessor",
   comments = "https://github.com/google/auto/tree/master/factory"
   )
-final class SimpleClassMixedDepsFactory {
-  private final Provider<String> providedDepAProvider;
+final class OnlyPrimitivesFactory {
+  @Inject OnlyPrimitivesFactory() {}
 
-  @Inject SimpleClassMixedDepsFactory(
-      @AQualifier Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
-  }
-
-  SimpleClassMixedDeps create(String depB) {
-    return new SimpleClassMixedDeps(
-        checkNotNull(providedDepAProvider.get(), 1), checkNotNull(depB, 2));
-  }
-
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
-    if (reference == null) {
-      throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
-    }
-    return reference;
+  OnlyPrimitives create(int i, long l) {
+    return new OnlyPrimitives(i, l);
   }
 }
