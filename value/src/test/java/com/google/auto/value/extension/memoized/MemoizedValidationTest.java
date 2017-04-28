@@ -16,7 +16,12 @@
 package com.google.auto.value.extension.memoized;
 
 import static com.google.auto.value.extension.memoized.MemoizedMethodSubjectFactory.assertThatMemoizeMethod;
+import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.testing.compile.Compiler.javac;
 
+import com.google.testing.compile.Compilation;
+import com.google.testing.compile.JavaFileObjects;
+import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -58,5 +63,28 @@ public class MemoizedValidationTest {
   public void parameters() {
     assertThatMemoizeMethod("@Memoized String method(Object param) { return \"\"; }")
         .hasError("@Memoized methods cannot have parameters");
+  }
+  
+  @Test
+  public void notInAutoValueClass() {
+    JavaFileObject source =
+        JavaFileObjects.forSourceLines(
+            "test.EnclosingClass",
+            "package test;",
+            "",
+            "import com.google.auto.value.extension.memoized.Memoized;",
+            "",
+            "abstract class EnclosingClass {",
+            "  @Memoized",
+            "  String string() {",
+            "    return \"\";",
+            "  }",
+            "}");
+    Compilation compilation = javac().withProcessors(new MemoizedValidator()).compile(source);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("@Memoized methods must be declared only in @AutoValue classes")
+        .inFile(source)
+        .onLine(6);
   }
 }
