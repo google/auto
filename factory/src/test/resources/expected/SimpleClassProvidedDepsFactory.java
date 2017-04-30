@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -36,17 +35,26 @@ final class SimpleClassProvidedDepsFactory {
       @BQualifier Provider<Integer> providedPrimitiveBProvider,
       @AQualifier Provider<String> providedDepAProvider,
       @BQualifier Provider<String> providedDepBProvider) {
-    this.providedPrimitiveAProvider = Preconditions.checkNotNull(providedPrimitiveAProvider, 1);
-    this.providedPrimitiveBProvider = Preconditions.checkNotNull(providedPrimitiveBProvider, 2);
-    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 3);
-    this.providedDepBProvider = Preconditions.checkNotNull(providedDepBProvider, 4);
+    this.providedPrimitiveAProvider = checkNotNull(providedPrimitiveAProvider, 1);
+    this.providedPrimitiveBProvider = checkNotNull(providedPrimitiveBProvider, 2);
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 3);
+    this.providedDepBProvider = checkNotNull(providedDepBProvider, 4);
   }
 
   SimpleClassProvidedDeps create() {
     return new SimpleClassProvidedDeps(
-        Preconditions.checkNotNull(providedPrimitiveAProvider.get(), 1),
-        Preconditions.checkNotNull(providedPrimitiveBProvider.get(), 2),
-        Preconditions.checkNotNull(providedDepAProvider.get(), 3),
-        Preconditions.checkNotNull(providedDepBProvider.get(), 4));
+        checkNotNull(providedPrimitiveAProvider.get(), 1),
+        checkNotNull(providedPrimitiveBProvider.get(), 2),
+        checkNotNull(providedDepAProvider.get(), 3),
+        checkNotNull(providedDepBProvider.get(), 4));
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

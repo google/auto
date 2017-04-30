@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -29,11 +28,20 @@ final class ProviderArgumentToCreateMethodFactory
   @Inject ProviderArgumentToCreateMethodFactory() {}
 
   ProviderArgumentToCreateMethod create(Provider<String> stringProvider) {
-    return new ProviderArgumentToCreateMethod(Preconditions.checkNotNull(stringProvider, 1));
+    return new ProviderArgumentToCreateMethod(checkNotNull(stringProvider, 1));
   }
 
   @Override
   public ProviderArgumentToCreateMethod newInstance(Provider<String> stringProvider) {
     return create(stringProvider);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

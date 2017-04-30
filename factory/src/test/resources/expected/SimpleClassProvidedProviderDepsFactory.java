@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -32,11 +31,20 @@ final class SimpleClassProvidedProviderDepsFactory {
   SimpleClassProvidedProviderDepsFactory(
       @AQualifier Provider<String> providedDepAProvider,
       @BQualifier Provider<String> providedDepBProvider) {
-    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 1);
-    this.providedDepBProvider = Preconditions.checkNotNull(providedDepBProvider, 2);
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
+    this.providedDepBProvider = checkNotNull(providedDepBProvider, 2);
   }
 
   SimpleClassProvidedProviderDeps create() {
     return new SimpleClassProvidedProviderDeps(providedDepAProvider, providedDepBProvider);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }
