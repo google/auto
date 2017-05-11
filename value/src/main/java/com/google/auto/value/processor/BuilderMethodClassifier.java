@@ -15,8 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
@@ -89,9 +87,12 @@ class BuilderMethodClassifier {
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
-    this.getterNameToGetter = getterToPropertyName.keySet()
-        .stream()
-        .collect(toImmutableMap(m -> m.getSimpleName().toString(), m -> m));
+    ImmutableMap.Builder<String, ExecutableElement> getterToPropertyNameBuilder =
+        ImmutableMap.builder();
+    for (ExecutableElement getter : getterToPropertyName.keySet()) {
+      getterToPropertyNameBuilder.put(getter.getSimpleName().toString(), getter);
+    }
+    this.getterNameToGetter = getterToPropertyNameBuilder.build();
     this.typeSimplifier = typeSimplifier;
     this.eclipseHack = new EclipseHack(processingEnv);
   }
