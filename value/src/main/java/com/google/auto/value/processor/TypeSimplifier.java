@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
@@ -33,6 +34,7 @@ import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -126,6 +128,15 @@ final class TypeSimplifier {
     return type.accept(toStringRawTypeVisitor, new StringBuilder()).toString();
   }
 
+  /**
+   * Returns a string that can be used to refer to the given type given the imports defined by
+   * {@link #typesToImport}. The difference between this and {@link #simplify} is that the string
+   * returned here includes any type annotations, with appropriate spelling given current imports.
+   */
+  String simplifyWithAnnotations(TypeMirror type) {
+    return type.accept(toStringAnnotatedTypeVisitor, new StringBuilder()).toString();
+  }
+
   // The formal type parameters of the given type.
   // If we have @AutoValue abstract class Foo<T extends SomeClass> then this method will
   // return <T extends Something> for Foo. Likewise it will return the angle-bracket part of:
@@ -183,6 +194,8 @@ final class TypeSimplifier {
 
   private final ToStringTypeVisitor toStringTypeVisitor = new ToStringTypeVisitor();
   private final ToStringTypeVisitor toStringRawTypeVisitor = new ToStringRawTypeVisitor();
+  private final ToStringTypeVisitor toStringAnnotatedTypeVisitor =
+      new ToStringAnnotatedTypeVisitor();
 
   /**
    * Visitor that produces a string representation of a type for use in generated code.
@@ -205,17 +218,23 @@ final class TypeSimplifier {
     }
 
     @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
+      sb.append(declaredTypeName(type));
+      appendTypeArguments(type, sb);
+      return sb;
+    }
+
+    String declaredTypeName(DeclaredType type) {
       TypeElement typeElement = (TypeElement) typeUtils.asElement(type);
       TypeElement top = topLevelType(typeElement);
+      // We always want to write a class name starting from the outermost class. For example,
+      // if the type is java.util.Map.Entry then we will import java.util.Map and write Map.Entry.
       String topString = top.getQualifiedName().toString();
       if (imports.containsKey(topString)) {
         String suffix = typeElement.getQualifiedName().toString().substring(topString.length());
-        sb.append(imports.get(topString).spelling).append(suffix);
+        return imports.get(topString).spelling + suffix;
       } else {
-        sb.append(typeElement.getQualifiedName());
+        return typeElement.getQualifiedName().toString();
       }
-      appendTypeArguments(type, sb);
-      return sb;
     }
 
     void appendTypeArguments(DeclaredType type, StringBuilder sb) {
@@ -248,8 +267,58 @@ final class TypeSimplifier {
   }
 
   private class ToStringRawTypeVisitor extends ToStringTypeVisitor {
-    @Override
-    void appendTypeArguments(DeclaredType type, StringBuilder sb) {
+    @Override void appendTypeArguments(DeclaredType type, StringBuilder sb) {}
+  }
+
+  private class ToStringAnnotatedTypeVisitor extends ToStringTypeVisitor {
+    private final AnnotationOutput annotationOutput = new AnnotationOutput(TypeSimplifier.this);
+
+    @Override public StringBuilder visitPrimitive(PrimitiveType type, StringBuilder sb) {
+      appendAnnotations(type.getAnnotationMirrors(), sb);
+      // We can't just append type.toString(), because that will also have the annotation, but
+      // without using our imports.
+      return sb.append(typeUtils.getPrimitiveType(type.getKind()));
+    }
+
+    @Override public StringBuilder visitTypeVariable(TypeVariable type, StringBuilder sb) {
+      appendAnnotations(type.getAnnotationMirrors(), sb);
+      return sb.append(type.asElement().getSimpleName());
+    }
+
+    @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
+      visit(type.getComponentType(), sb);
+      List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
+      if (!annotationMirrors.isEmpty()) {
+        sb.append(" ");
+        appendAnnotations(annotationMirrors, sb);
+      }
+      return sb.append("[]");
+    }
+
+    @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
+      String name = declaredTypeName(type);
+      List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
+      if (annotationMirrors.isEmpty()) {
+        sb.append(name);
+      } else {
+        // Find the index of the last part of the name, "Map" in "Map" or "Entry" in "Map.Entry".
+        // lastIndexOf might return -1 in which case this is still correct.
+        // The goal here is to produce "@Nullable Foo" for simple type names and
+        // "com.example.@Nullable Foo" or "Bar.@Nullable Foo" for qualified ones.
+        int lastPart = name.lastIndexOf('.') + 1;
+        sb.append(name.substring(0, lastPart));
+        appendAnnotations(annotationMirrors, sb);
+        sb.append(name.substring(lastPart));
+      }
+      appendTypeArguments(type, sb);
+      return sb;
+    }
+
+    private void appendAnnotations(
+        List<? extends AnnotationMirror> annotationMirrors, StringBuilder sb) {
+      for (AnnotationMirror annotationMirror : annotationMirrors) {
+        sb.append(annotationOutput.sourceFormForAnnotation(annotationMirror)).append(" ");
+      }
     }
   }
 
