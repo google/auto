@@ -1032,7 +1032,7 @@ public class AutoValueTest {
       for (int j = 0; j < versions.length; j++) {
         int actual = Integer.signum(versions[i].compareTo(versions[j]));
         int expected = Integer.signum(i - j);
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
       }
     }
   }
