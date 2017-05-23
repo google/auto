@@ -2616,4 +2616,5 @@ public class CompilationTest {
         .onLine(7);
     assertThat(compilation2).hadWarningCount(0);
   }
+  // irrelevant change
 }
