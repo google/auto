@@ -305,7 +305,7 @@ class BuilderMethodClassifier {
       ExecutableElement builderGetter, ExecutableElement originalGetter) {
     String propertyName = getterToPropertyName.get(originalGetter);
     TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
-    String builderGetterTypeString = typeSimplifier.simplify(builderGetterType);
+    String builderGetterTypeString = typeSimplifier.simplifyWithAnnotations(builderGetterType);
     TypeMirror originalGetterType = originalGetter.getReturnType();
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
       builderGetters.put(
