@@ -244,6 +244,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     private final String type;
     private final ImmutableList<String> annotations;
     private final Optionalish optional;
+    private final boolean nullable;
 
     Property(
         String name,
@@ -260,19 +261,30 @@ public class AutoValueProcessor extends AbstractProcessor {
       TypeMirror propertyType = method.getReturnType();
       this.optional =
           Optionalish.createIfOptional(propertyType, typeSimplifier.simplifyRaw(propertyType));
+      this.nullable =
+          !getNullableAnnotation().isEmpty() || nullableType(propertyType);
     }
 
     private ImmutableList<String> buildAnnotations(
         TypeSimplifier typeSimplifier, ImmutableSet<String> excludedAnnotations) {
       ImmutableList.Builder<String> builder = ImmutableList.builder();
 
-      builder.addAll(copyAnnotations(method, typeSimplifier, excludedAnnotations));
+      // We need to exclude type annotations from the ones being output on the method, since
+      // they will be output as part of the method's return type.
+      Set<String> typeAnnotations = method.getReturnType().getAnnotationMirrors().stream()
+          .map(a -> a.getAnnotationType().asElement())
+          .map(MoreElements::asType)
+          .map(e -> e.getQualifiedName().toString())
+          .collect(toSet());
+      Set<String> excluded = Sets.union(excludedAnnotations, typeAnnotations);
+      builder.addAll(copyAnnotations(method, typeSimplifier, excluded));
 
-      for (AnnotationMirror annotationMirror : method.getReturnType().getAnnotationMirrors()) {
-        AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
-        builder.add(annotationOutput.sourceFormForAnnotation(annotationMirror));
-      }
       return builder.build();
+    }
+
+    private static boolean nullableType(TypeMirror type) {
+      return type.getAnnotationMirrors().stream().anyMatch(
+          a -> a.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable"));
     }
 
     /**
@@ -333,11 +345,14 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     /**
-     * Returns the string to use as an annotation to indicate the nullability of this property.
-     * It is either the empty string, if the property is not nullable, or an annotation string
-     * with a trailing space, such as {@code "@Nullable "} or {@code "@javax.annotation.Nullable "}.
+     * Returns the string to use as a method annotation to indicate the nullability of
+     * this property.  It is either the empty string, if the property is not nullable, or
+     * an annotation string with a trailing space, such as {@code "@Nullable "} or {@code
+     * "@javax.annotation.Nullable "}. If the property is nullable by virtue of its <i>type</i>
+     * rather than its method being {@code @Nullable}, this method returns the empty string, because
+     * the {@code @Nullable} will appear when the type is spelled out.
      */
-    public String getNullableAnnotation() {
+    public final String getNullableAnnotation() {
       for (String annotationString : annotations) {
         if (annotationString.equals("@Nullable") || annotationString.endsWith(".Nullable")) {
           return annotationString + " ";
@@ -347,7 +362,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     }
 
     public boolean isNullable() {
-      return !getNullableAnnotation().isEmpty();
+      return nullable;
     }
 
     public String getAccess() {
@@ -549,16 +564,15 @@ public class AutoValueProcessor extends AbstractProcessor {
 
   /** Implements the semantics of {@link AutoValue.CopyAnnotations}; see its javadoc. */
   private static ImmutableList<String> copyAnnotations(
-      Element type, TypeSimplifier typeSimplifier, Set<String> excludedAnnotations) {
+      Element typeOrMethod, TypeSimplifier typeSimplifier, Set<String> excludedAnnotations) {
     ImmutableList.Builder<String> result = ImmutableList.builder();
     AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
-    for (AnnotationMirror annotation : type.getAnnotationMirrors()) {
+    for (AnnotationMirror annotation : typeOrMethod.getAnnotationMirrors()) {
       String annotationFqName = getAnnotationFqName(annotation);
-      if (AUTO_VALUE_CLASSNAME_PATTERN.matcher(annotationFqName).matches()) {
-        // Skip AutoValue itself (and any of its nested annotations).
-        continue;
-      }
-      if (!excludedAnnotations.contains(annotationFqName)) {
+      // To be included, the annotation should not be @AutoValue or any of its nested annotations,
+      // and it should not be in the excludedAnnotations set.
+      if (!AUTO_VALUE_CLASSNAME_PATTERN.matcher(annotationFqName).matches()
+          && !excludedAnnotations.contains(annotationFqName)) {
         result.add(annotationOutput.sourceFormForAnnotation(annotation));
       }
     }
@@ -817,7 +831,7 @@ public class AutoValueProcessor extends AbstractProcessor {
         eclipseHack.methodReturnTypes(propertyMethods, declaredType);
     for (ExecutableElement method : propertyMethods) {
       TypeMirror returnType = returnTypes.get(method);
-      String propertyType = typeSimplifier.simplify(returnType);
+      String propertyType = typeSimplifier.simplifyWithAnnotations(returnType);
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
       ImmutableSet<String> excludedAnnotations =

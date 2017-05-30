@@ -26,11 +26,13 @@ import com.google.common.testing.EqualsTester;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -152,8 +154,14 @@ public class AutoValueJava8Test {
     Constructor<?> constructor =
         AutoValue_AutoValueJava8Test_NullableProperties.class.getDeclaredConstructor(
             String.class, int.class);
-    assertThat(constructor.getAnnotatedParameterTypes()[0].getAnnotations()).asList()
-        .contains(nullable());
+    try {
+      assertThat(constructor.getAnnotatedParameterTypes()[0].getAnnotations()).asList()
+          .contains(nullable());
+    } catch (AssertionError e) {
+      if (javacHandlesTypeAnnotationsCorrectly) {
+        throw e;
+      }
+    }
   }
 
   @AutoValue
@@ -183,6 +191,64 @@ public class AutoValueJava8Test {
         .addEqualityGroup(somethingNull)
         .addEqualityGroup(nothingNull, nothingNullAgain)
         .testEquals();
+  }
+
+  public static class Nested {
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.TYPE_USE)
+  public @interface OtherTypeAnnotation {}
+
+  @AutoAnnotation
+  public static OtherTypeAnnotation otherTypeAnnotation() {
+    return new AutoAnnotation_AutoValueJava8Test_otherTypeAnnotation();
+  }
+
+  @AutoValue
+  abstract static class NestedNullableProperties {
+    abstract @Nullable @OtherTypeAnnotation Nested nullableThing();
+    abstract int randomInt();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_NestedNullableProperties.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setNullableThing(@Nullable @OtherTypeAnnotation Nested thing);
+      abstract Builder setRandomInt(int x);
+      abstract NestedNullableProperties build();
+    }
+  }
+
+  @Test
+  public void testNestedNullablePropertiesCanBeNull() {
+    NestedNullableProperties instance = NestedNullableProperties.builder().setRandomInt(23).build();
+    assertThat(instance.nullableThing()).isNull();
+    assertThat(instance.randomInt()).isEqualTo(23);
+    assertThat(instance.toString())
+        .isEqualTo("NestedNullableProperties{nullableThing=null, randomInt=23}");
+  }
+
+  @Test
+  public void testNestedNullablePropertiesAreCopied() throws Exception {
+    try {
+      Method generatedGetter = AutoValue_AutoValueJava8Test_NestedNullableProperties.class
+          .getDeclaredMethod("nullableThing");
+      Annotation[] getterAnnotations = generatedGetter.getAnnotatedReturnType().getAnnotations();
+      assertThat(getterAnnotations).asList().containsAllOf(nullable(), otherTypeAnnotation());
+
+      Method generatedSetter = AutoValue_AutoValueJava8Test_NestedNullableProperties.Builder.class
+          .getDeclaredMethod("setNullableThing", Nested.class);
+      Annotation[] setterAnnotations =
+          generatedSetter.getAnnotatedParameterTypes()[0].getAnnotations();
+      assertThat(setterAnnotations).asList().containsAllOf(nullable(), otherTypeAnnotation());
+    } catch (AssertionError e) {
+      if (javacHandlesTypeAnnotationsCorrectly) {
+        throw e;
+      }
+    }
   }
 
   @AutoValue
@@ -418,5 +484,32 @@ public class AutoValueJava8Test {
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
+  }
+
+  // This class tests the case where an annotation is both a method annotation and a type
+  // annotation. If we weren't careful, we might emit it twice in the generated code.
+  @AutoValue
+  abstract static class FunkyNullable {
+    @Target({ElementType.METHOD, ElementType.TYPE_USE})
+    @interface Nullable {}
+
+    abstract @Nullable String foo();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_FunkyNullable.Builder();
+    }
+
+    @AutoValue.Builder
+    interface Builder {
+      Builder setFoo(@Nullable String foo);
+      FunkyNullable build();
+    }
+  }
+
+  @Test
+  public void testFunkyNullable() {
+    FunkyNullable explicitNull = FunkyNullable.builder().setFoo(null).build();
+    FunkyNullable implicitNull = FunkyNullable.builder().build();
+    assertThat(explicitNull).isEqualTo(implicitNull);
   }
 }

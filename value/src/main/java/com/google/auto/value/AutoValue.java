@@ -77,10 +77,32 @@ public @interface AutoValue {
    * Specifies that AutoValue should copy any annotations from the annotated element to the
    * generated class. This annotation supports classes and methods.
    *
-   * <p>The following annotations are excluded: 1. AutoValue and its nested annotations. 2. Any
-   * annotation appearing in the {@link AutoValue.CopyAnnotations#exclude} field. 3. Any class
-   * annotation which is itself annotated with the {@link java.lang.annotation.Inherited}
-   * meta-annotation.
+   * <p>The following annotations are excluded:
+   *
+   * <ol>
+   * <li>AutoValue and its nested annotations;
+   * <li>any annotation appearing in the {@link AutoValue.CopyAnnotations#exclude} field;
+   * <li>any class annotation which is itself annotated with the
+   *     {@link java.lang.annotation.Inherited} meta-annotation.
+   * </ol>
+   *
+   * <p>When the <i>type</i> of an {@code @AutoValue} property method has annotations, those are
+   * part of the type, so they are always copied to the implementation of the method.
+   * {@code @CopyAnnotations} has no effect here. For example, suppose {@code @Confidential} is a
+   * {@link java.lang.annotation.ElementType#TYPE_USE TYPE_USE} annotation: <pre>
+   *
+   *   &#64;AutoValue
+   *   abstract class Person {
+   *     static Person create(&#64;Confidential String name, int id) {
+   *       return new AutoValue_Person(name, id);
+   *     }
+   *
+   *     abstract &#64;Confidential String name();
+   *     abstract int id();
+   *   }</pre>
+   *
+   * Then the implementation of the {@code name()} method will also have return type
+   * {@code @Confidential String}.
    *
    * @author Carmi Grushko
    */

@@ -315,7 +315,7 @@ class BuilderSpec {
       this.name = setter.getSimpleName().toString();
       TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
       primitiveParameter = parameterType.getKind().isPrimitive();
-      String simplifiedParameterType = typeSimplifier.simplify(parameterType);
+      String simplifiedParameterType = typeSimplifier.simplifyWithAnnotations(parameterType);
       if (setter.isVarArgs()) {
         simplifiedParameterType = simplifiedParameterType.replaceAll("\\[\\]$", "...");
       }

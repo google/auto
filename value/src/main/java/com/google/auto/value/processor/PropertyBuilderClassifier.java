@@ -243,7 +243,7 @@ class PropertyBuilderClassifier {
     }
     ExecutableElement builderMaker = maybeBuilderMaker.get();
 
-    String barBuilderType = typeSimplifier.simplify(barBuilderTypeMirror);
+    String barBuilderType = typeSimplifier.simplifyWithAnnotations(barBuilderTypeMirror);
     String rawBarType = typeSimplifier.simplifyRaw(barTypeMirror);
     String initializer = (builderMaker.getKind() == ElementKind.CONSTRUCTOR)
         ? "new " + barBuilderType + "()"
