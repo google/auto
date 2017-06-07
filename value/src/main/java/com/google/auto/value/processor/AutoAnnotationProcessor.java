@@ -130,10 +130,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       } catch (AbortProcessingException e) {
         // We abandoned this type, but continue with the next.
       } catch (RuntimeException e) {
-        // Don't propagate this exception, which will confusingly crash the compiler.
-        // Instead, report a compiler error with the stack trace.
         String trace = Throwables.getStackTraceAsString(e);
         reportError(method, "@AutoAnnotation processor threw an exception: %s", trace);
+        throw e;
       }
     }
   }
