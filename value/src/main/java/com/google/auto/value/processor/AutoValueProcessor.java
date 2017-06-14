@@ -206,10 +206,9 @@ public class AutoValueProcessor extends AbstractProcessor {
         // the same TypeElement on the next round.
         deferredTypeNames.add(type.getQualifiedName().toString());
       } catch (RuntimeException e) {
-        // Don't propagate this exception, which will confusingly crash the compiler.
-        // Instead, report a compiler error with the stack trace.
         String trace = Throwables.getStackTraceAsString(e);
         errorReporter.reportError("@AutoValue processor threw an exception: " + trace, type);
+        throw e;
       }
     }
     return false;  // never claim annotation, because who knows what other processors want?
