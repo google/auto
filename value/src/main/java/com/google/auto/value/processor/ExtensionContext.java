@@ -30,16 +30,19 @@ class ExtensionContext implements AutoValueExtension.Context {
   private final TypeElement typeElement;
   private final ImmutableMap<String, ExecutableElement> properties;
   private final ImmutableSet<ExecutableElement> abstractMethods;
+  private final boolean hasBuilder;
 
   ExtensionContext(
       ProcessingEnvironment processingEnvironment,
       TypeElement typeElement,
       ImmutableMap<String, ExecutableElement> properties,
-      ImmutableSet<ExecutableElement> abstractMethods) {
+      ImmutableSet<ExecutableElement> abstractMethods,
+      boolean hasBuilder) {
     this.processingEnvironment = processingEnvironment;
     this.typeElement = typeElement;
     this.properties = properties;
     this.abstractMethods = abstractMethods;
+    this.hasBuilder = hasBuilder;
   }
 
   @Override
@@ -65,5 +68,10 @@ class ExtensionContext implements AutoValueExtension.Context {
   @Override
   public Set<ExecutableElement> abstractMethods() {
     return abstractMethods;
+  }
+
+  @Override
+  public boolean hasBuilder() {
+    return hasBuilder;
   }
 }

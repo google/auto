@@ -30,6 +30,7 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
+import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -502,7 +503,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableBiMap<String, ExecutableElement> properties = propertyNameToMethodMap(propertyMethods);
 
     ExtensionContext context =
-        new ExtensionContext(processingEnv, type, properties, abstractMethods);
+        new ExtensionContext(processingEnv, type, properties, abstractMethods, builder.isPresent());
     ImmutableList<AutoValueExtension> applicableExtensions = applicableExtensions(type, context);
     ImmutableSet<ExecutableElement> consumedMethods = methodsConsumedByExtensions(
         type, applicableExtensions, context, abstractMethods, properties);
@@ -514,7 +515,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       propertyMethods =
           propertyMethodsIn(immutableSetDifference(abstractMethods, toBuilderMethods));
       properties = propertyNameToMethodMap(propertyMethods);
-      context = new ExtensionContext(processingEnv, type, properties, allAbstractMethods);
+      context = new ExtensionContext(
+          processingEnv, type, properties, allAbstractMethods, builder.isPresent());
     }
 
     boolean extensionsPresent = !applicableExtensions.isEmpty();
@@ -550,7 +552,12 @@ public class AutoValueProcessor extends AbstractProcessor {
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
 
-    int subclassDepth = writeExtensions(type, context, applicableExtensions);
+    Optional<BuilderContext> builderContext = Optional.empty();
+    if (builder.isPresent()) {
+      builderContext = builder.get().builderContext(typeSimplifier, properties.inverse());
+    }
+
+    int subclassDepth = writeExtensions(type, context, builderContext, applicableExtensions);
     String subclass = generatedSubclassName(type, subclassDepth);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.isFinal = (subclassDepth == 0);
@@ -665,6 +672,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   private int writeExtensions(
       TypeElement type,
       ExtensionContext context,
+      Optional<BuilderContext> builderContext,
       ImmutableList<AutoValueExtension> applicableExtensions) {
     int writtenSoFar = 0;
     for (AutoValueExtension extension : applicableExtensions) {
@@ -673,7 +681,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       String classFqName = generatedSubclassName(type, writtenSoFar);
       String classSimpleName = TypeSimplifier.simpleNameOf(classFqName);
       boolean isFinal = (writtenSoFar == 0);
-      String source = extension.generateClass(context, classSimpleName, parentSimpleName, isFinal);
+      String source = extension.generateClass(
+          context, builderContext, classSimpleName, parentSimpleName, isFinal);
       if (source != null) {
         source = Reformatter.fixup(source);
         writeSourceFile(classFqName, source, type);
@@ -785,6 +794,36 @@ public class AutoValueProcessor extends AbstractProcessor {
     return extension.getClass().getName();
   }
 
+  private TypeSimplifier typeSimplifier(
+      TypeElement type,
+      ImmutableSet<ExecutableElement> propertyMethods,
+      Optional<BuilderSpec.Builder> builder) {
+    DeclaredType declaredType = MoreTypes.asDeclared(type.asType());
+    String pkg = TypeSimplifier.packageNameOf(type);
+
+    Set<TypeMirror> types = new TypeMirrorSet();
+    types.addAll(returnTypesOf(propertyMethods));
+    if (builder.isPresent()) {
+      types.addAll(builder.get().referencedTypes());
+    }
+    TypeElement generatedTypeElement =
+        processingEnv.getElementUtils().getTypeElement("javax.annotation.Generated");
+    if (generatedTypeElement != null) {
+      types.add(generatedTypeElement.asType());
+    }
+    TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
+    if (containsArrayType(types)) {
+      // If there are array properties then we will be referencing java.util.Arrays.
+      // Arrange to import it unless that would introduce ambiguity.
+      types.add(javaUtilArrays);
+    }
+    ImmutableSetMultimap<ExecutableElement, String> excludedAnnotationsMap =
+        allMethodExcludedAnnotations(propertyMethods);
+    types.addAll(allMethodAnnotationTypes(propertyMethods, excludedAnnotationsMap));
+
+    return new TypeSimplifier(typeUtils, pkg, types, declaredType);
+  }
+
   private TypeSimplifier defineVarsForType(
       TypeElement type,
       AutoValueTemplateVars vars,
@@ -814,8 +853,7 @@ public class AutoValueProcessor extends AbstractProcessor {
     ImmutableSetMultimap<ExecutableElement, String> excludedAnnotationsMap =
         allMethodExcludedAnnotations(propertyMethods);
     types.addAll(allMethodAnnotationTypes(propertyMethods, excludedAnnotationsMap));
-    String pkg = TypeSimplifier.packageNameOf(type);
-    TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, pkg, types, declaredType);
+    TypeSimplifier typeSimplifier = typeSimplifier(type, propertyMethods, builder);
     vars.imports = typeSimplifier.typesToImport();
     vars.generated = generatedTypeElement == null
         ? ""

@@ -21,12 +21,15 @@ import static java.util.stream.Collectors.toList;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
 import com.google.auto.value.processor.AutoValueProcessor.Property;
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Map;
@@ -181,21 +184,35 @@ class BuilderSpec {
       return types;
     }
 
+    Optional<BuilderContext> builderContext(
+        TypeSimplifier typeSimplifier,
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(typeSimplifier, getterToPropertyName);
+
+      if (!optionalClassifier.isPresent()) {
+        return Optional.empty();
+      }
+
+      BuilderMethodClassifier classifier = optionalClassifier.get();
+
+      ImmutableMultimap<String, ExecutableElement> setters = classifier.propertyNameToSetters();
+      Map<String, ExecutableElement> propertyBuilders = Maps.transformValues(
+          classifier.propertyNameToPropertyBuilder(),
+          PropertyBuilder::getPropertyBuilderMethod);
+
+      return Optional.of(
+          new ExtensionBuilderContext(
+              builderTypeElement,
+              Iterables.getOnlyElement(classifier.buildMethods()),
+              setters,
+              propertyBuilders));
+    }
+
     void defineVars(
         AutoValueTemplateVars vars,
         TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
-      boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
-      Optional<BuilderMethodClassifier> optionalClassifier = BuilderMethodClassifier.classify(
-          builderMethods,
-          errorReporter,
-          processingEnv,
-          autoValueClass,
-          builderTypeElement,
-          getterToPropertyName,
-          typeSimplifier,
-          autoValueHasToBuilder);
+      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(typeSimplifier, getterToPropertyName);
       if (!optionalClassifier.isPresent()) {
         return;
       }
@@ -243,6 +260,22 @@ class BuilderSpec {
         }
       }
       vars.builderRequiredProperties = ImmutableSet.copyOf(required);
+    }
+
+    private Optional<BuilderMethodClassifier> builderMethodClassifier(
+        TypeSimplifier typeSimplifier,
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
+      boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
+      return BuilderMethodClassifier.classify(
+          builderMethods,
+          errorReporter,
+          processingEnv,
+          autoValueClass,
+          builderTypeElement,
+          getterToPropertyName,
+          typeSimplifier,
+          autoValueHasToBuilder);
     }
   }
 

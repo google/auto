@@ -15,8 +15,11 @@
  */
 package com.google.auto.value.extension;
 
+import com.google.auto.value.AutoValue;
+
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
@@ -88,6 +91,43 @@ public abstract class AutoValueExtension {
      * other abstract method even if it has been consumed by this or another Extension.
      */
     Set<ExecutableElement> abstractMethods();
+
+    /**
+     * Returns whether there is a Builder annotated with {@link AutoValue.Builder}. If true, the
+     * {@code builderContext} param in {@link #generateClass(Context, Optional, String, String, boolean)}
+     * is guaranteed to be present.
+     */
+    boolean hasBuilder();
+  }
+
+  /**
+   * Represents the Builder properties
+   */
+  public interface BuilderContext {
+    /**
+     * Returns the annotated interface or abstract class that represents this BuilderContext represents.
+     *
+     * <p>Given {@code @AutoValue public class Foo {... @AutoValue.Builder public abstract static class Builder {...}}}
+     * this will be {@code Foo.Builder}
+     */
+    TypeElement builderClass();
+
+    /**
+     * Returns the build method of the Builder
+     */
+    ExecutableElement buildMethod();
+
+    /**
+     * Returns a multimap from property names to the corresponding setters. A property
+     * may have more than one setter. For example, an ImmutableList might be set by
+     * {@code setFoo(ImmutableList<String>)} and {@code setFoo(String[])}.
+     */
+    Map<String, Set<ExecutableElement>> setters();
+
+    /**
+     * Returns a map from property names to information about the associated property builder.
+     */
+    Map<String, ExecutableElement> propertyBuilders();
   }
 
   /**
@@ -185,6 +225,8 @@ public abstract class AutoValueExtension {
    * name.
    *
    * @param context The {@link Context} of the code generation for this class.
+   * @param builderContext The {@link Optional<BuilderContext>} that represents the context of the
+   *     builder defined for this class, or is empty if there is no builder defined
    * @param className The simple name of the resulting class. The returned code will be written to a
    *     file named accordingly.
    * @param classToExtend The simple name of the direct parent of the generated class.
@@ -195,6 +237,17 @@ public abstract class AutoValueExtension {
    * @return The source code of the generated class, or {@code null} if this extension does not
    *     generate a class in the hierarchy.
    */
-  public abstract String generateClass(
-      Context context, String className, String classToExtend, boolean isFinal);
+  public String generateClass(
+      Context context, Optional<BuilderContext> builderContext, String className,
+      String classToExtend, boolean isFinal) {
+    return generateClass(context, className, classToExtend, isFinal);
+  }
+
+  /**
+   * @deprecated use {@link #generateClass(Context, Optional, String, String, boolean)}
+   */
+  @Deprecated
+  public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
+    return null;
+  }
 }

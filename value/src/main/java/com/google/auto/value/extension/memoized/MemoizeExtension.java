@@ -82,7 +82,8 @@ public final class MemoizeExtension extends AutoValueExtension {
 
   @Override
   public String generateClass(
-      Context context, String className, String classToExtend, boolean isFinal) {
+      Context context, java.util.Optional<BuilderContext> builderContext, String className,
+      String classToExtend, boolean isFinal) {
     return new Generator(context, className, classToExtend, isFinal).generate();
   }
 

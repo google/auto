@@ -20,10 +20,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.value.extension.AutoValueExtension;
+import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.truth.Truth;
 import com.google.testing.compile.CompileTester.SuccessfulCompilationClause;
 import com.google.testing.compile.JavaFileObjects;
@@ -34,16 +39,21 @@ import java.io.Writer;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
@@ -398,6 +408,92 @@ public class ExtensionTest {
   }
 
   @Test
+  public void testExtensionWithBuilder() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.util.Optional;",
+            "import com.google.common.collect.ImmutableList;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract Optional<String> foo();",
+            "  abstract String bar();",
+            "  abstract ImmutableList qux();",
+            "",
+            "  @AutoValue.Builder public static abstract class Builder {",
+            "    public abstract Builder foo(String foo);",
+            "    public abstract Builder foo(Optional<String> foo);",
+            "    public abstract Builder bar(String bar);",
+            "    public abstract ImmutableList.Builder quxBuilder();",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
+
+    CaptureBuilderContextExtension extension = new CaptureBuilderContextExtension();
+
+    assertThat(javaFileObject)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
+        .compilesWithoutError();
+
+    assertTrue(extension.hasBuilder);
+
+    assertTrue(extension.builderContext.isPresent());
+    BuilderContext builderContext = extension.builderContext.get();
+    TypeElement builderType = builderContext.builderClass();
+
+    // check build method
+    assertEquals("build()", builderContext.buildMethod().toString());
+    assertEquals("foo.bar.Baz", builderContext.buildMethod().getReturnType().toString());
+
+    // check setters
+    Set<ExecutableElement> expectedSetters = filterByReturnType(
+        ElementFilter.methodsIn(builderType.getEnclosedElements()),
+        builderType.asType()
+    );
+    assertEquals(Sets.newHashSet("foo", "bar"), builderContext.setters().keySet());
+    assertEquals(expectedSetters, Sets.newHashSet(immutableMap(builderContext.setters()).values()));
+
+    // check property builder
+    assertEquals(Sets.newHashSet("qux"), builderContext.propertyBuilders().keySet());
+    assertEquals("quxBuilder()", builderContext.propertyBuilders().get("qux").toString());
+    assertTrue(
+        MoreTypes.isTypeOf(
+            ImmutableList.Builder.class,
+            Iterables.getOnlyElement(builderContext.propertyBuilders().values()).getReturnType())
+    );
+  }
+
+  @Test
+  public void testExtensionWithNoBuilder() throws Exception {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import java.util.Optional;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract Optional<String> foo();",
+        "  abstract String bar();",
+        "  abstract ImmutableList qux();",
+        "}");
+
+    CaptureBuilderContextExtension extension = new CaptureBuilderContextExtension();
+
+    assertThat(javaFileObject)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
+        .compilesWithoutError();
+
+    assertFalse(extension.hasBuilder);
+    assertFalse(extension.builderContext.isPresent());
+  }
+
+  @Test
   public void testLastExtensionGeneratesNoCode() {
     doTestNoCode(new FooExtension(), new NonFinalExtension(), new SideFileExtension());
   }
@@ -581,6 +677,20 @@ public class ExtensionTest {
         .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
   }
 
+  private static Set<ExecutableElement> filterByReturnType(List<ExecutableElement> elements, TypeMirror returnType) {
+    return elements.stream()
+        .filter(executableElement -> executableElement.getReturnType().equals(returnType))
+        .collect(Collectors.toSet());
+  }
+
+  private static <T, U> ImmutableMultimap<T, U> immutableMap(Map<T, Set<U>> map) {
+    ImmutableMultimap.Builder<T, U> builder = ImmutableMultimap.builder();
+    for (Entry<T, Set<U>> entry : map.entrySet()) {
+      builder.putAll(entry.getKey(), entry.getValue());
+    }
+    return builder.build();
+  }
+
   private static class FooExtension extends AutoValueExtension {
 
     @Override
@@ -604,7 +714,7 @@ public class ExtensionTest {
 
     @Override
     public String generateClass(
-        Context context, String className, String classToExtend, boolean isFinal) {
+        Context context, Optional<BuilderContext> builderContext, String className, String classToExtend, boolean isFinal) {
       StringBuilder constructor = new StringBuilder()
           .append("  public ")
           .append(className)
@@ -668,7 +778,7 @@ public class ExtensionTest {
 
     @Override
     public String generateClass(
-        Context context, String className, String classToExtend, boolean isFinal) {
+        Context context, Optional<BuilderContext> builderContext, String className, String classToExtend, boolean isFinal) {
       generated = true;
 
       ImmutableList.Builder<String> typesAndNamesBuilder = ImmutableList.builder();
@@ -722,7 +832,7 @@ public class ExtensionTest {
 
     @Override
     public String generateClass(
-        Context context, String className, String classToExtend, boolean isFinal) {
+        Context context, Optional<BuilderContext> builderContext, String className, String classToExtend, boolean isFinal) {
       String sideClassName = "Side_" + context.autoValueClass().getSimpleName().toString();
       String sideClass =
           "package " + context.packageName() + ";\n"
@@ -773,6 +883,29 @@ public class ExtensionTest {
       return "@Override void "
           + methodToImplement.getSimpleName()
           + "(" + Joiner.on(", ").join(typesAndNamesBuilder.build()) + ") {}";
+    }
+  }
+
+  private static class CaptureBuilderContextExtension extends EmptyExtension {
+    boolean hasBuilder = false;
+    Optional<BuilderContext> builderContext;
+
+    @Override
+    public boolean applicable(Context context) {
+      hasBuilder = context.hasBuilder();
+      return super.applicable(context);
+    }
+
+    @Override
+    public String generateClass(Context context, Optional<BuilderContext> builderContext,
+        String className, String classToExtend, boolean isFinal) {
+      this.builderContext = builderContext;
+      return super.generateClass(context, builderContext, className, classToExtend, isFinal);
+    }
+
+    @Override
+    public boolean mustBeFinal(Context context) {
+      return false;
     }
   }
 }
