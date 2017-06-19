@@ -15,7 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
@@ -23,18 +22,17 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
 import com.google.auto.value.processor.AutoValueProcessor.Property;
-import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -187,29 +185,33 @@ class BuilderSpec {
     Optional<BuilderContext> builderContext(
         TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(typeSimplifier, getterToPropertyName);
+      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(
+          typeSimplifier, getterToPropertyName);
 
       if (!optionalClassifier.isPresent()) {
         return Optional.empty();
       }
 
       BuilderMethodClassifier classifier = optionalClassifier.get();
-
-      ImmutableMultimap<String, ExecutableElement> setters = classifier.propertyNameToSetters();
-      Map<String, ExecutableElement> propertyBuilders = Maps.transformValues(
-          classifier.propertyNameToPropertyBuilder(),
-          PropertyBuilder::getPropertyBuilderMethod);
-
+      
       Set<ExecutableElement> buildMethods = classifier.buildMethods();
+      ImmutableMultimap<String, ExecutableElement> setters = classifier.propertyNameToSetters();
+      Map<String, ExecutableElement> propertyBuilders = classifier.propertyNameToPropertyBuilder()
+          .entrySet().stream()
+          .collect(Collectors.toMap(
+              Map.Entry::getKey,
+              value -> value.getValue().getPropertyBuilderMethod()));
 
-      return Optional.of(new ExtensionBuilderContext(builderTypeElement, buildMethods, setters, propertyBuilders));
+      return Optional.of(
+          new ExtensionBuilderContext(builderTypeElement, buildMethods, setters, propertyBuilders));
     }
 
     void defineVars(
         AutoValueTemplateVars vars,
         TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(typeSimplifier, getterToPropertyName);
+      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(
+          typeSimplifier, getterToPropertyName);
       if (!optionalClassifier.isPresent()) {
         return;
       }
