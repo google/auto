@@ -113,9 +113,9 @@ public abstract class AutoValueExtension {
     TypeElement builderClass();
 
     /**
-     * Returns the build method of the Builder
+     * Returns the build methods
      */
-    ExecutableElement buildMethod();
+    Set<ExecutableElement> buildMethods();
 
     /**
      * Returns a multimap from property names to the corresponding setters. A property

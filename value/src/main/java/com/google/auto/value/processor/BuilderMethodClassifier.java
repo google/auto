@@ -33,6 +33,7 @@ import java.beans.Introspector;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -44,12 +45,15 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+
 /**
  * Classifies methods inside builder types, based on their names and parameter and return types.
  *
  * @author Éamonn McManus
  */
 class BuilderMethodClassifier {
+
   private static final Equivalence<TypeMirror> TYPE_EQUIVALENCE = MoreTypes.equivalence();
 
   private final ErrorReporter errorReporter;
@@ -100,21 +104,18 @@ class BuilderMethodClassifier {
   /**
    * Classifies the given methods from a builder type and its ancestors.
    *
-   * @param methods the methods in {@code builderType} and its ancestors.
    * @param errorReporter where to report errors.
    * @param processingEnv the ProcessingEnvironment for annotation processing.
    * @param autoValueClass the {@code AutoValue} class containing the builder.
    * @param builderType the builder class or interface within {@code autoValueClass}.
    * @param getterToPropertyName a map from getter methods to the properties they get.
    * @param typeSimplifier the TypeSimplifier that will be used to control imports.
-   * @param autoValueHasToBuilder true if the containing {@code @AutoValue} class has a
-   *     {@code toBuilder()} method.
-   *
+   * @param autoValueHasToBuilder true if the containing {@code @AutoValue} class has a {@code
+   * toBuilder()} method.
    * @return an {@code Optional} that contains the results of the classification if it was
-   *     successful or nothing if it was not.
+   * successful or nothing if it was not.
    */
   static Optional<BuilderMethodClassifier> classify(
-      Iterable<ExecutableElement> methods,
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
       TypeElement autoValueClass,
@@ -129,7 +130,7 @@ class BuilderMethodClassifier {
         builderType,
         getterToPropertyName,
         typeSimplifier);
-    if (classifier.classifyMethods(methods, autoValueHasToBuilder)) {
+    if (classifier.classifyMethods(builderType, autoValueHasToBuilder)) {
       return Optional.of(classifier);
     } else {
       return Optional.empty();
@@ -163,9 +164,20 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Returns the methods that were identified as {@code build()} methods. These are methods that
-   * have no parameters and return the {@code @AutoValue} type, conventionally called
-   * {@code build()}.
+   * Returns the abstract methods that were identified as {@code build()} methods. These are methods
+   * that have no parameters and return the {@code @AutoValue} type, conventionally called {@code
+   * build() or {@code autoBuild}}.
+   */
+  Set<ExecutableElement> abstractBuildMethods() {
+    return ImmutableSet.copyOf(buildMethods).stream()
+        .filter(MoreElements.hasModifiers(Modifier.ABSTRACT))
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * Returns the all methods that were identified as {@code build()} methods. These are methods
+   * that have no parameters, are public, and return the {@code AutoValue} type, conventionally
+   * called {@code build() or {@code autoBuild}}.
    */
   Set<ExecutableElement> buildMethods() {
     return ImmutableSet.copyOf(buildMethods);
@@ -175,9 +187,22 @@ class BuilderMethodClassifier {
    * Classifies the given methods and sets the state of this object based on what is found.
    */
   private boolean classifyMethods(
-      Iterable<ExecutableElement> methods, boolean autoValueHasToBuilder) {
+      TypeElement builderType, boolean autoValueHasToBuilder) {
+    Set<ExecutableElement> methods = getLocalAndInheritedMethods(
+        builderType, typeUtils, elementUtils);
+    Set<ExecutableElement> abstractMethods = methods.stream()
+        .filter(MoreElements.hasModifiers(Modifier.ABSTRACT))
+        .collect(Collectors.toSet());
+    Set<ExecutableElement> nonAbstractBuildMethods = methods.stream()
+        .filter(executableElement -> executableElement.getParameters().isEmpty())
+        .filter(method ->
+            TYPE_EQUIVALENCE.equivalent(builderMethodReturnType(method), autoValueClass.asType()))
+        .filter(MoreElements.hasModifiers(Modifier.ABSTRACT).negate())
+        .collect(Collectors.toSet());
+    buildMethods.addAll(nonAbstractBuildMethods);
+
     boolean ok = true;
-    for (ExecutableElement method : methods) {
+    for (ExecutableElement method : abstractMethods) {
       ok &= classifyMethod(method);
     }
     if (!ok) {

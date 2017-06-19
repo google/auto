@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreTypes.equivalence;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -428,7 +429,14 @@ public class ExtensionTest {
             "    public abstract Builder foo(Optional<String> foo);",
             "    public abstract Builder bar(String bar);",
             "    public abstract ImmutableList.Builder quxBuilder();",
-            "    public abstract Baz build();",
+            "    abstract Optional<String> foo();",
+            "    abstract Baz autoBuild();",
+            "    public Baz build() {",
+            "      if (foo().isPresent()) {",
+            "        foo(foo().get() + \" fighters\");",
+            "      }",
+            "      return autoBuild();",
+            "    };",
             "  }",
             "}");
 
@@ -444,9 +452,12 @@ public class ExtensionTest {
     BuilderContext builderContext = extension.builderContext.get();
     TypeElement builderType = builderContext.builderClass();
 
-    // check build method
-    assertEquals("build()", builderContext.buildMethod().toString());
-    assertEquals("foo.bar.Baz", builderContext.buildMethod().getReturnType().toString());
+    // check build methods
+    Set<ExecutableElement> expectedBuildMethods = ElementFilter.methodsIn(builderType.getEnclosedElements())
+            .stream()
+            .filter(method -> equivalence().equivalent(method.getReturnType(), extension.context.autoValueClass().asType()))
+            .collect(Collectors.toSet());
+    assertEquals(expectedBuildMethods, builderContext.buildMethods());
 
     // check setters
     Set<ExecutableElement> expectedSetters = filterByReturnType(
@@ -888,6 +899,7 @@ public class ExtensionTest {
 
   private static class CaptureBuilderContextExtension extends EmptyExtension {
     boolean hasBuilder = false;
+    Context context;
     Optional<BuilderContext> builderContext;
 
     @Override
@@ -899,6 +911,7 @@ public class ExtensionTest {
     @Override
     public String generateClass(Context context, Optional<BuilderContext> builderContext,
         String className, String classToExtend, boolean isFinal) {
+      this.context = context;
       this.builderContext = builderContext;
       return super.generateClass(context, builderContext, className, classToExtend, isFinal);
     }

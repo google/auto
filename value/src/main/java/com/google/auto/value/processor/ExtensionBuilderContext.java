@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
@@ -29,17 +30,17 @@ import javax.lang.model.element.TypeElement;
 public class ExtensionBuilderContext implements AutoValueExtension.BuilderContext {
 
   private final TypeElement builderClass;
-  private final ExecutableElement buildMethod;
+  private final ImmutableSet<ExecutableElement> buildMethods;
   private final ImmutableMultimap<String, ExecutableElement> setters;
   private final ImmutableMap<String, ExecutableElement> propertyBuilders;
 
   ExtensionBuilderContext(
       TypeElement builderClass,
-      ExecutableElement buildMethod,
+      Set<ExecutableElement> buildMethods,
       Multimap<String, ExecutableElement> setters,
       Map<String, ExecutableElement> propertyBuilders) {
     this.builderClass = builderClass;
-    this.buildMethod = buildMethod;
+    this.buildMethods = ImmutableSet.copyOf(buildMethods);
     this.setters = ImmutableMultimap.copyOf(setters);
     this.propertyBuilders = ImmutableMap.copyOf(propertyBuilders);
   }
@@ -50,8 +51,8 @@ public class ExtensionBuilderContext implements AutoValueExtension.BuilderContex
   }
 
   @Override
-  public ExecutableElement buildMethod() {
-    return buildMethod;
+  public Set<ExecutableElement> buildMethods() {
+    return buildMethods;
   }
 
   @Override

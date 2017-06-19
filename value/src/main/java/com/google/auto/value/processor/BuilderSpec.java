@@ -200,12 +200,9 @@ class BuilderSpec {
           classifier.propertyNameToPropertyBuilder(),
           PropertyBuilder::getPropertyBuilderMethod);
 
-      return Optional.of(
-          new ExtensionBuilderContext(
-              builderTypeElement,
-              Iterables.getOnlyElement(classifier.buildMethods()),
-              setters,
-              propertyBuilders));
+      Set<ExecutableElement> buildMethods = classifier.buildMethods();
+
+      return Optional.of(new ExtensionBuilderContext(builderTypeElement, buildMethods, setters, propertyBuilders));
     }
 
     void defineVars(
@@ -217,7 +214,7 @@ class BuilderSpec {
         return;
       }
       BuilderMethodClassifier classifier = optionalClassifier.get();
-      Set<ExecutableElement> buildMethods = classifier.buildMethods();
+      Set<ExecutableElement> buildMethods = classifier.abstractBuildMethods();
       if (buildMethods.size() != 1) {
         Set<? extends Element> errorElements = buildMethods.isEmpty()
             ? ImmutableSet.of(builderTypeElement)
@@ -265,10 +262,8 @@ class BuilderSpec {
     private Optional<BuilderMethodClassifier> builderMethodClassifier(
         TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
       boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
       return BuilderMethodClassifier.classify(
-          builderMethods,
           errorReporter,
           processingEnv,
           autoValueClass,
@@ -437,19 +432,6 @@ class BuilderSpec {
       }
     }
     return true;
-  }
-
-  // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
-  private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
-    Set<ExecutableElement> methods = getLocalAndInheritedMethods(
-        typeElement, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
-    ImmutableSet.Builder<ExecutableElement> abstractMethods = ImmutableSet.builder();
-    for (ExecutableElement method : methods) {
-      if (method.getModifiers().contains(Modifier.ABSTRACT)) {
-        abstractMethods.add(method);
-      }
-    }
-    return abstractMethods.build();
   }
 
   private String typeParamsString() {
