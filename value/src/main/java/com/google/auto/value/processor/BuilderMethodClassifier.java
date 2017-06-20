@@ -190,15 +190,12 @@ class BuilderMethodClassifier {
       TypeElement builderType, boolean autoValueHasToBuilder) {
     Set<ExecutableElement> methods = getLocalAndInheritedMethods(
         builderType, typeUtils, elementUtils);
-    Set<ExecutableElement> abstractMethods = methods.stream()
-        .filter(MoreElements.hasModifiers(Modifier.ABSTRACT))
-        .collect(Collectors.toSet());
-    Set<ExecutableElement> nonAbstractBuildMethods = methods.stream()
-        .filter(executableElement -> executableElement.getParameters().isEmpty())
-        .filter(method ->
-            TYPE_EQUIVALENCE.equivalent(builderMethodReturnType(method), autoValueClass.asType()))
-        .filter(MoreElements.hasModifiers(Modifier.ABSTRACT).negate())
-        .collect(Collectors.toSet());
+    Set<ExecutableElement> abstractMethods = Sets
+        .filter(methods, MoreElements.hasModifiers(Modifier.ABSTRACT));
+    Set<ExecutableElement> nonAbstractBuildMethods = Sets.filter(methods,
+        method -> method.getParameters().isEmpty()
+            && TYPE_EQUIVALENCE.equivalent(builderMethodReturnType(method), autoValueClass.asType())
+            && MoreElements.hasModifiers(Modifier.ABSTRACT).negate().test(method));
     buildMethods.addAll(nonAbstractBuildMethods);
 
     boolean ok = true;
