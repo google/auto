@@ -31,7 +31,9 @@ import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
+import com.google.auto.value.processor.BuilderSpec.Builder;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableBiMap;
@@ -552,10 +554,10 @@ public class AutoValueProcessor extends AbstractProcessor {
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
 
-    Optional<BuilderContext> builderContext = Optional.empty();
-    if (builder.isPresent()) {
-      builderContext = builder.get().builderContext(typeSimplifier, properties.inverse());
-    }
+    ImmutableBiMap<String, ExecutableElement> finalProperties = properties;
+    Optional<BuilderContext> builderContext = builder.map(
+        (Function<Builder, BuilderContext>) input ->
+            input.builderContext(typeSimplifier, finalProperties.inverse()).orElse(null));
 
     int subclassDepth = writeExtensions(type, context, builderContext, applicableExtensions);
     String subclass = generatedSubclassName(type, subclassDepth);
@@ -803,9 +805,7 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     Set<TypeMirror> types = new TypeMirrorSet();
     types.addAll(returnTypesOf(propertyMethods));
-    if (builder.isPresent()) {
-      types.addAll(builder.get().referencedTypes());
-    }
+    builder.ifPresent(b -> types.addAll(b.referencedTypes()));
     TypeElement generatedTypeElement =
         processingEnv.getElementUtils().getTypeElement("javax.annotation.Generated");
     if (generatedTypeElement != null) {

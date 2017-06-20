@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
@@ -44,8 +46,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-
-import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 
 /**
  * Classifies methods inside builder types, based on their names and parameter and return types.
@@ -166,10 +166,10 @@ class BuilderMethodClassifier {
   /**
    * Returns the abstract methods that were identified as {@code build()} methods. These are methods
    * that have no parameters and return the {@code @AutoValue} type, conventionally called {@code
-   * build() or {@code autoBuild}}.
+   * build()} or {@code autoBuild}.
    */
   Set<ExecutableElement> abstractBuildMethods() {
-    return ImmutableSet.copyOf(buildMethods).stream()
+    return buildMethods.stream()
         .filter(MoreElements.hasModifiers(Modifier.ABSTRACT))
         .collect(Collectors.toSet());
   }
@@ -177,7 +177,7 @@ class BuilderMethodClassifier {
   /**
    * Returns the all methods that were identified as {@code build()} methods. These are methods
    * that have no parameters, are public, and return the {@code AutoValue} type, conventionally
-   * called {@code build() or {@code autoBuild}}.
+   * called {@code build()} or {@code autoBuild}.
    */
   Set<ExecutableElement> buildMethods() {
     return ImmutableSet.copyOf(buildMethods);

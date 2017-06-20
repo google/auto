@@ -16,7 +16,6 @@
 package com.google.auto.value.extension;
 
 import com.google.auto.value.AutoValue;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;

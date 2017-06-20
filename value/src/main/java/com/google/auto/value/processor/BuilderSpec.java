@@ -185,25 +185,21 @@ class BuilderSpec {
     Optional<BuilderContext> builderContext(
         TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Optional<BuilderMethodClassifier> optionalClassifier = builderMethodClassifier(
-          typeSimplifier, getterToPropertyName);
+      return builderMethodClassifier(typeSimplifier, getterToPropertyName)
+          .map(classifier -> {
+            Set<ExecutableElement> buildMethods = classifier.buildMethods();
+            ImmutableMultimap<String, ExecutableElement> setters = classifier
+                .propertyNameToSetters();
+            Map<String, ExecutableElement> propertyBuilders = classifier
+                .propertyNameToPropertyBuilder()
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    value -> value.getValue().getPropertyBuilderMethod()));
 
-      if (!optionalClassifier.isPresent()) {
-        return Optional.empty();
-      }
-
-      BuilderMethodClassifier classifier = optionalClassifier.get();
-      
-      Set<ExecutableElement> buildMethods = classifier.buildMethods();
-      ImmutableMultimap<String, ExecutableElement> setters = classifier.propertyNameToSetters();
-      Map<String, ExecutableElement> propertyBuilders = classifier.propertyNameToPropertyBuilder()
-          .entrySet().stream()
-          .collect(Collectors.toMap(
-              Map.Entry::getKey,
-              value -> value.getValue().getPropertyBuilderMethod()));
-
-      return Optional.of(
-          new ExtensionBuilderContext(builderTypeElement, buildMethods, setters, propertyBuilders));
+            return new ExtensionBuilderContext(
+                builderTypeElement, buildMethods, setters, propertyBuilders);
+          });
     }
 
     void defineVars(

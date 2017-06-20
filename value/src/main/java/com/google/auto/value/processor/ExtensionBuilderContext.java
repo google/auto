@@ -17,7 +17,6 @@ package com.google.auto.value.processor;
 
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -27,12 +26,12 @@ import java.util.Set;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
-public class ExtensionBuilderContext implements AutoValueExtension.BuilderContext {
+final class ExtensionBuilderContext implements AutoValueExtension.BuilderContext {
 
   private final TypeElement builderClass;
-  private final ImmutableSet<ExecutableElement> buildMethods;
-  private final ImmutableMultimap<String, ExecutableElement> setters;
-  private final ImmutableMap<String, ExecutableElement> propertyBuilders;
+  private final Set<ExecutableElement> buildMethods;
+  private final Map<String, Set<ExecutableElement>> setters;
+  private final Map<String, ExecutableElement> propertyBuilders;
 
   ExtensionBuilderContext(
       TypeElement builderClass,
@@ -41,7 +40,7 @@ public class ExtensionBuilderContext implements AutoValueExtension.BuilderContex
       Map<String, ExecutableElement> propertyBuilders) {
     this.builderClass = builderClass;
     this.buildMethods = ImmutableSet.copyOf(buildMethods);
-    this.setters = ImmutableMultimap.copyOf(setters);
+    this.setters = Maps.transformValues(ImmutableMap.copyOf(setters.asMap()), Sets::newHashSet);
     this.propertyBuilders = ImmutableMap.copyOf(propertyBuilders);
   }
 
@@ -57,7 +56,7 @@ public class ExtensionBuilderContext implements AutoValueExtension.BuilderContex
 
   @Override
   public Map<String, Set<ExecutableElement>> setters() {
-    return Maps.transformValues(setters.asMap(), Sets::newHashSet);
+    return setters;
   }
 
   @Override

@@ -411,34 +411,34 @@ public class ExtensionTest {
   @Test
   public void testExtensionWithBuilder() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-            "foo.bar.Baz",
-            "package foo.bar;",
-            "",
-            "import com.google.auto.value.AutoValue;",
-            "import java.util.Optional;",
-            "import com.google.common.collect.ImmutableList;",
-            "",
-            "@AutoValue",
-            "public abstract class Baz {",
-            "  abstract Optional<String> foo();",
-            "  abstract String bar();",
-            "  abstract ImmutableList qux();",
-            "",
-            "  @AutoValue.Builder public static abstract class Builder {",
-            "    public abstract Builder foo(String foo);",
-            "    public abstract Builder foo(Optional<String> foo);",
-            "    public abstract Builder bar(String bar);",
-            "    public abstract ImmutableList.Builder quxBuilder();",
-            "    abstract Optional<String> foo();",
-            "    abstract Baz autoBuild();",
-            "    public Baz build() {",
-            "      if (foo().isPresent()) {",
-            "        foo(foo().get() + \" fighters\");",
-            "      }",
-            "      return autoBuild();",
-            "    };",
-            "  }",
-            "}");
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import java.util.Optional;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  abstract Optional<String> foo();",
+        "  abstract String bar();",
+        "  abstract ImmutableList qux();",
+        "",
+        "  @AutoValue.Builder public static abstract class Builder {",
+        "    public abstract Builder foo(String foo);",
+        "    public abstract Builder foo(Optional<String> foo);",
+        "    public abstract Builder bar(String bar);",
+        "    public abstract ImmutableList.Builder quxBuilder();",
+        "    abstract Optional<String> foo();",
+        "    abstract Baz autoBuild();",
+        "    public Baz build() {",
+        "      if (foo().isPresent()) {",
+        "        foo(foo().get() + \" fighters\");",
+        "      }",
+        "      return autoBuild();",
+        "    };",
+        "  }",
+        "}");
 
     CaptureBuilderContextExtension extension = new CaptureBuilderContextExtension();
 
@@ -453,10 +453,12 @@ public class ExtensionTest {
     TypeElement builderType = builderContext.builderClass();
 
     // check build methods
-    Set<ExecutableElement> expectedBuildMethods = ElementFilter.methodsIn(builderType.getEnclosedElements())
-            .stream()
-            .filter(method -> equivalence().equivalent(method.getReturnType(), extension.context.autoValueClass().asType()))
-            .collect(Collectors.toSet());
+    Set<ExecutableElement> expectedBuildMethods = ElementFilter
+        .methodsIn(builderType.getEnclosedElements())
+        .stream()
+        .filter(method -> equivalence()
+            .equivalent(method.getReturnType(), extension.context.autoValueClass().asType()))
+        .collect(Collectors.toSet());
     assertEquals(expectedBuildMethods, builderContext.buildMethods());
 
     // check setters
