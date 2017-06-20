@@ -29,12 +29,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
@@ -2413,71 +2409,6 @@ public class CompilationTest {
         .hadErrorContaining("More than one @AutoValue property called foo")
         .inFile(javaFileObject)
         .onLine(8);
-  }
-
-  private static class PoisonedAutoValueProcessor extends AutoValueProcessor {
-    private final IllegalArgumentException filerException;
-
-    PoisonedAutoValueProcessor(IllegalArgumentException filerException) {
-      this.filerException = filerException;
-    }
-
-    private class ErrorInvocationHandler implements InvocationHandler {
-      private final ProcessingEnvironment originalProcessingEnv;
-
-      ErrorInvocationHandler(ProcessingEnvironment originalProcessingEnv) {
-        this.originalProcessingEnv = originalProcessingEnv;
-      }
-
-      @Override
-      public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (method.getName().equals("getFiler")) {
-          throw filerException;
-        } else {
-          return method.invoke(originalProcessingEnv, args);
-        }
-      }
-    };
-
-    @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-      ProcessingEnvironment poisonedProcessingEnv = (ProcessingEnvironment) Proxy.newProxyInstance(
-          getClass().getClassLoader(),
-          new Class<?>[] {ProcessingEnvironment.class},
-          new ErrorInvocationHandler(processingEnv));
-      processingEnv = poisonedProcessingEnv;
-      return super.process(annotations, roundEnv);
-    }
-  }
-
-  @Test
-  public void exceptionBecomesError() throws Exception {
-    // Ensure that if the annotation processor code gets an unexpected exception, it is converted
-    // into a compiler error rather than being propagated. Otherwise the output can be very
-    // confusing to the user who stumbles into a bug that causes an exception, whether in
-    // AutoValueProcessor or javac.
-    // We inject an exception by subclassing AutoValueProcessor in order to poison its processingEnv
-    // in a way that will cause an exception the first time it tries to get the Filer.
-    IllegalArgumentException exception =
-        new IllegalArgumentException("I don't understand the question, and I won't respond to it");
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  public abstract int foo();",
-        "}");
-    Compilation compilation =
-        javac()
-            .withProcessors(new PoisonedAutoValueProcessor(exception))
-            .compile(javaFileObject);
-    assertThat(compilation)
-        .hadErrorContaining(exception.toString())
-        .inFile(javaFileObject)
-        .onLine(6);
   }
 
   @Retention(RetentionPolicy.SOURCE)
