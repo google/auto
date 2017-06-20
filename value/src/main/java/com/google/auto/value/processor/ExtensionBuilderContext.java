@@ -15,14 +15,15 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.collect.Sets.newHashSet;
+
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
@@ -40,7 +41,8 @@ final class ExtensionBuilderContext implements AutoValueExtension.BuilderContext
       Map<String, ExecutableElement> propertyBuilders) {
     this.builderClass = builderClass;
     this.buildMethods = ImmutableSet.copyOf(buildMethods);
-    this.setters = Maps.transformValues(ImmutableMap.copyOf(setters.asMap()), Sets::newHashSet);
+    this.setters = setters.asMap().entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, v -> newHashSet(v.getValue())));
     this.propertyBuilders = ImmutableMap.copyOf(propertyBuilders);
   }
 
