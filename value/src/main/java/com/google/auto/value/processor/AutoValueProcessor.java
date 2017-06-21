@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.collect.Sets.union;
 import static java.util.stream.Collectors.joining;
@@ -27,6 +28,7 @@ import static java.util.stream.Collectors.toSet;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
@@ -251,34 +253,17 @@ public class AutoValueProcessor extends AbstractProcessor {
         ExecutableElement method,
         String type,
         TypeSimplifier typeSimplifier,
-        ImmutableSet<String> excludedAnnotations) {
+        ImmutableList<String> annotations) {
       this.name = name;
       this.identifier = identifier;
       this.method = method;
       this.type = type;
-      this.annotations = buildAnnotations(typeSimplifier, excludedAnnotations);
+      this.annotations = annotations;
       TypeMirror propertyType = method.getReturnType();
       this.optional =
           Optionalish.createIfOptional(propertyType, typeSimplifier.simplifyRaw(propertyType));
       this.nullable =
           !getNullableAnnotation().isEmpty() || nullableType(propertyType);
-    }
-
-    private ImmutableList<String> buildAnnotations(
-        TypeSimplifier typeSimplifier, ImmutableSet<String> excludedAnnotations) {
-      ImmutableList.Builder<String> builder = ImmutableList.builder();
-
-      // We need to exclude type annotations from the ones being output on the method, since
-      // they will be output as part of the method's return type.
-      Set<String> typeAnnotations = method.getReturnType().getAnnotationMirrors().stream()
-          .map(a -> a.getAnnotationType().asElement())
-          .map(MoreElements::asType)
-          .map(e -> e.getQualifiedName().toString())
-          .collect(toSet());
-      Set<String> excluded = Sets.union(excludedAnnotations, typeAnnotations);
-      builder.addAll(copyAnnotations(method, typeSimplifier, excluded));
-
-      return builder.build();
     }
 
     private static boolean nullableType(TypeMirror type) {
@@ -541,7 +526,7 @@ public class AutoValueProcessor extends AbstractProcessor {
                   processingEnv.getElementUtils()),
               getAnnotationsMarkedWithInherited(type));
 
-      vars.annotations = copyAnnotations(type, typeSimplifier, excludedAnnotations);
+      vars.annotations = copyAnnotations(type, type, typeSimplifier, excludedAnnotations);
     } else {
       vars.annotations = ImmutableList.of();
     }
@@ -562,8 +547,11 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   /** Implements the semantics of {@link AutoValue.CopyAnnotations}; see its javadoc. */
-  private static ImmutableList<String> copyAnnotations(
-      Element typeOrMethod, TypeSimplifier typeSimplifier, Set<String> excludedAnnotations) {
+  private ImmutableList<String> copyAnnotations(
+      Element autoValueType,
+      Element typeOrMethod,
+      TypeSimplifier typeSimplifier,
+      Set<String> excludedAnnotations) {
     ImmutableList.Builder<String> result = ImmutableList.builder();
     AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
     for (AnnotationMirror annotation : typeOrMethod.getAnnotationMirrors()) {
@@ -571,12 +559,40 @@ public class AutoValueProcessor extends AbstractProcessor {
       // To be included, the annotation should not be @AutoValue or any of its nested annotations,
       // and it should not be in the excludedAnnotations set.
       if (!AUTO_VALUE_CLASSNAME_PATTERN.matcher(annotationFqName).matches()
-          && !excludedAnnotations.contains(annotationFqName)) {
+          && !excludedAnnotations.contains(annotationFqName)
+          && annotationVisibleFrom(annotation, autoValueType)) {
         result.add(annotationOutput.sourceFormForAnnotation(annotation));
       }
     }
 
     return result.build();
+  }
+
+  private boolean annotationVisibleFrom(AnnotationMirror annotation, Element from) {
+    Element annotationElement = annotation.getAnnotationType().asElement();
+    Visibility visibility = Visibility.effectiveVisibilityOfElement(annotationElement);
+    switch (visibility) {
+      case PUBLIC:
+        return true;
+      case PROTECTED:
+        // If the annotation is protected, it must be inside another class, call it C. If our
+        // @AutoValue class is Foo then, for the annotation to be visible, either Foo must be in the
+        // same package as C or Foo must be a subclass of C. If the annotation is visible from Foo
+        // then it is also visible from our generated subclass AutoValue_Foo.
+        // The protected case only applies to method annotations. An annotation on the AutoValue_Foo
+        // class itself can't be protected, even if AutoValue_Foo ultimately inherits from the
+        // class that defines the annotation. The JLS says "Access is permitted only within the
+        // body of a subclass":
+        // https://docs.oracle.com/javase/specs/jls/se8/html/jls-6.html#jls-6.6.2.1
+        // AutoValue_Foo is a top-level class, so an annotation on it cannot be in the body of a
+        // subclass of anything.
+        return getPackage(annotationElement).equals(getPackage(from))
+            || typeUtils.isSubtype(from.asType(), annotationElement.getEnclosingElement().asType());
+      case DEFAULT:
+        return getPackage(annotationElement).equals(getPackage(from));
+      default:
+        return false;
+    }
   }
 
   /**
@@ -833,14 +849,11 @@ public class AutoValueProcessor extends AbstractProcessor {
       String propertyType = typeSimplifier.simplifyWithAnnotations(returnType);
       String propertyName = methodToPropertyName.get(method);
       String identifier = methodToIdentifier.get(method);
-      ImmutableSet<String> excludedAnnotations =
-          ImmutableSet.<String>builder()
-              .addAll(excludedAnnotationsMap.get(method))
-              .add(Override.class.getCanonicalName())
-              .build();
+      ImmutableList<String> annotations =
+          propertyMethodAnnotations(type, method, excludedAnnotationsMap, typeSimplifier);
       Property p =
           new Property(
-              propertyName, identifier, method, propertyType, typeSimplifier, excludedAnnotations);
+              propertyName, identifier, method, propertyType, typeSimplifier, annotations);
       props.add(p);
       if (p.isNullable() && returnType.getKind().isPrimitive()) {
         errorReporter.reportError("Primitive types cannot be @Nullable", method);
@@ -856,6 +869,31 @@ public class AutoValueProcessor extends AbstractProcessor {
       builder.get().defineVars(vars, typeSimplifier, methodToPropertyName);
     }
     return typeSimplifier;
+  }
+
+  private ImmutableList<String> propertyMethodAnnotations(
+      TypeElement type,
+      ExecutableElement method,
+      ImmutableSetMultimap<ExecutableElement, String> excludedAnnotationsMap,
+      TypeSimplifier typeSimplifier) {
+    ImmutableSet<String> excludedAnnotations =
+        ImmutableSet.<String>builder()
+            .addAll(excludedAnnotationsMap.get(method))
+            .add(Override.class.getCanonicalName())
+            .build();
+    ImmutableList.Builder<String> builder = ImmutableList.builder();
+
+    // We need to exclude type annotations from the ones being output on the method, since
+    // they will be output as part of the method's return type.
+    Set<String> typeAnnotations = method.getReturnType().getAnnotationMirrors().stream()
+        .map(a -> a.getAnnotationType().asElement())
+        .map(MoreElements::asType)
+        .map(e -> e.getQualifiedName().toString())
+        .collect(toSet());
+    Set<String> excluded = Sets.union(excludedAnnotations, typeAnnotations);
+    builder.addAll(copyAnnotations(type, method, typeSimplifier, excluded));
+
+    return builder.build();
   }
 
   private ImmutableSetMultimap<ExecutableElement, String> allMethodExcludedAnnotations(

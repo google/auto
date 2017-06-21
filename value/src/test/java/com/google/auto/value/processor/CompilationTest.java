@@ -2547,4 +2547,137 @@ public class CompilationTest {
         .onLine(7);
     assertThat(compilation2).hadWarningCount(0);
   }
+
+  @Test
+  public void packagePrivateAnnotationFromOtherPackage() {
+    JavaFileObject bazFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz extends otherpackage.Parent {",
+        "}");
+    JavaFileObject parentFileObject = JavaFileObjects.forSourceLines(
+        "otherpackage.Parent",
+        "package otherpackage;",
+        "",
+        "public abstract class Parent {",
+        "  @PackageAnnotation",
+        "  public abstract String foo();",
+        "",
+        "  @interface PackageAnnotation {}",
+        "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .compile(bazFileObject, parentFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation).generatedSourceFile("foo.bar.AutoValue_Baz");
+  }
+
+  @Test
+  public void visibleProtectedAnnotationFromOtherPackage() {
+    JavaFileObject bazFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz extends otherpackage.Parent {}");
+    JavaFileObject parentFileObject = JavaFileObjects.forSourceLines(
+        "otherpackage.Parent",
+        "package otherpackage;",
+        "",
+        "public abstract class Parent {",
+        "  @ProtectedAnnotation",
+        "  public abstract String foo();",
+        "",
+        "  protected @interface ProtectedAnnotation {}",
+        "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .compile(bazFileObject, parentFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .containsMatch("(?s:@Parent.ProtectedAnnotation\\s*@Override\\s*public String foo\\(\\))");
+  }
+
+  @Test
+  public void nonVisibleProtectedAnnotationFromOtherPackage() {
+    JavaFileObject bazFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz extends otherpackage.Parent {",
+        "}");
+    JavaFileObject parentFileObject = JavaFileObjects.forSourceLines(
+        "otherpackage.Parent",
+        "package otherpackage;",
+        "",
+        "import otherpackage.Annotations.ProtectedAnnotation;",
+        "",
+        "public abstract class Parent {",
+        "  @ProtectedAnnotation",
+        "  public abstract String foo();",
+        "}");
+    JavaFileObject annotationsFileObject = JavaFileObjects.forSourceLines(
+        "otherpackage.Annotations",
+        "package otherpackage;",
+        "",
+        "public class Annotations {",
+        "  protected @interface ProtectedAnnotation {}",
+        "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .compile(bazFileObject, parentFileObject, annotationsFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .doesNotContain("ProtectedAnnotation");
+  }
+
+  @Test
+  public void nonVisibleProtectedClassAnnotationFromOtherPackage() {
+    JavaFileObject bazFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "class Outer extends otherpackage.Parent {",
+        "  @AutoValue",
+        "  @AutoValue.CopyAnnotations",
+        "  @ProtectedAnnotation",
+        "  abstract static class Inner {",
+        "    abstract String foo();",
+        "  }",
+        "}");
+    JavaFileObject parentFileObject = JavaFileObjects.forSourceLines(
+        "otherpackage.Parent",
+        "package otherpackage;",
+        "",
+        "public abstract class Parent {",
+        "  protected @interface ProtectedAnnotation {}",
+        "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .compile(bazFileObject, parentFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Outer_Inner")
+        .contentsAsUtf8String()
+        .doesNotContain("ProtectedAnnotation");
+  }
 }
