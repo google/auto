@@ -49,7 +49,7 @@ public class AutoFactoryProcessorTest {
         .and()
         .generatesSources(
             JavaFileObjects.forResource("expected/NestedClasses_SimpleNestedClassFactory.java"),
-            JavaFileObjects.forResource("expected/NestedClasses_CustomNamedFactory.java"));
+            JavaFileObjects.forResource("expected/NestedClassCustomNamedFactory.java"));
   }
 
   @Test public void simpleClassNonFinal() {

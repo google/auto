@@ -22,8 +22,8 @@ import javax.inject.Inject;
   value = "com.google.auto.factory.processor.AutoFactoryProcessor",
   comments = "https://github.com/google/auto/tree/master/factory"
   )
-final class NestedClasses_CustomNamedFactory {
-  @Inject NestedClasses_CustomNamedFactory() {}
+final class NestedClassCustomNamedFactory {
+  @Inject NestedClassCustomNamedFactory() {}
 
   NestedClasses.SimpleNestedClassWithCustomFactory create() {
     return new NestedClasses.SimpleNestedClassWithCustomFactory();
