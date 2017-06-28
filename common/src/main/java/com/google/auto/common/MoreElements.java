@@ -230,7 +230,7 @@ public final class MoreElements {
    *     .filter(MoreElements.hasModifiers(Modifier.STATIC).toList();
    * }</pre>
    */
-  public static Predicate<Element> hasModifiers(Modifier... modifiers) {
+  public static <T extends Element> Predicate<T> hasModifiers(Modifier... modifiers) {
     return hasModifiers(ImmutableSet.copyOf(modifiers));
   }
 
@@ -246,10 +246,10 @@ public final class MoreElements {
    *     .filter(MoreElements.hasModifiers(modifiers).toList();}
    * </pre>
    */
-  public static Predicate<Element> hasModifiers(final Set<Modifier> modifiers) {
-    return new Predicate<Element>() {
+  public static <T extends Element> Predicate<T> hasModifiers(final Set<Modifier> modifiers) {
+    return new Predicate<T>() {
       @Override
-      public boolean apply(Element input) {
+      public boolean apply(T input) {
         return input.getModifiers().containsAll(modifiers);
       }
     };
