@@ -440,7 +440,7 @@ public class ExtensionTest {
         "  }",
         "}");
 
-    CaptureBuilderContextExtension extension = new CaptureBuilderContextExtension();
+    CaptureContextExtension extension = new CaptureContextExtension();
 
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
@@ -448,8 +448,8 @@ public class ExtensionTest {
 
     assertTrue(extension.hasBuilder);
 
-    assertTrue(extension.builderContext.isPresent());
-    BuilderContext builderContext = extension.builderContext.get();
+    assertTrue(extension.context.builder().isPresent());
+    BuilderContext builderContext = extension.context.builder().get();
     TypeElement builderType = builderContext.builderClass();
 
     // check build methods
@@ -496,14 +496,14 @@ public class ExtensionTest {
         "  abstract ImmutableList qux();",
         "}");
 
-    CaptureBuilderContextExtension extension = new CaptureBuilderContextExtension();
+    CaptureContextExtension extension = new CaptureContextExtension();
 
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
         .compilesWithoutError();
 
     assertFalse(extension.hasBuilder);
-    assertFalse(extension.builderContext.isPresent());
+    assertFalse(extension.context.builder().isPresent());
   }
 
   @Test
@@ -726,8 +726,7 @@ public class ExtensionTest {
     }
 
     @Override
-    public String generateClass(
-        Context context, Optional<BuilderContext> builderContext, String className, String classToExtend, boolean isFinal) {
+    public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
       StringBuilder constructor = new StringBuilder()
           .append("  public ")
           .append(className)
@@ -790,8 +789,7 @@ public class ExtensionTest {
     boolean generated = false;
 
     @Override
-    public String generateClass(
-        Context context, Optional<BuilderContext> builderContext, String className, String classToExtend, boolean isFinal) {
+    public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
       generated = true;
 
       ImmutableList.Builder<String> typesAndNamesBuilder = ImmutableList.builder();
@@ -844,8 +842,7 @@ public class ExtensionTest {
     }
 
     @Override
-    public String generateClass(
-        Context context, Optional<BuilderContext> builderContext, String className, String classToExtend, boolean isFinal) {
+    public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
       String sideClassName = "Side_" + context.autoValueClass().getSimpleName().toString();
       String sideClass =
           "package " + context.packageName() + ";\n"
@@ -899,10 +896,9 @@ public class ExtensionTest {
     }
   }
 
-  private static class CaptureBuilderContextExtension extends EmptyExtension {
+  private static class CaptureContextExtension extends EmptyExtension {
     boolean hasBuilder = false;
     Context context;
-    Optional<BuilderContext> builderContext;
 
     @Override
     public boolean applicable(Context context) {
@@ -911,11 +907,9 @@ public class ExtensionTest {
     }
 
     @Override
-    public String generateClass(Context context, Optional<BuilderContext> builderContext,
-        String className, String classToExtend, boolean isFinal) {
+    public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
       this.context = context;
-      this.builderContext = builderContext;
-      return super.generateClass(context, builderContext, className, classToExtend, isFinal);
+      return null;
     }
 
     @Override

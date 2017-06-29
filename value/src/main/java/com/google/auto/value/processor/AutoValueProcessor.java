@@ -60,6 +60,7 @@ import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -554,11 +555,11 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
 
     ImmutableBiMap<String, ExecutableElement> finalProperties = properties;
-    Optional<BuilderContext> builderContext = builder.map(
-        (Function<Builder, BuilderContext>) input ->
-            input.builderContext(typeSimplifier, finalProperties.inverse()).orElse(null));
+    context = builder
+        .map(input -> input.builderContext(typeSimplifier, finalProperties.inverse()).orElse(null))
+        .map(context::withBuilderContext).orElse(context);
 
-    int subclassDepth = writeExtensions(type, context, builderContext, applicableExtensions);
+    int subclassDepth = writeExtensions(type, context, applicableExtensions);
     String subclass = generatedSubclassName(type, subclassDepth);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.isFinal = (subclassDepth == 0);
@@ -673,7 +674,6 @@ public class AutoValueProcessor extends AbstractProcessor {
   private int writeExtensions(
       TypeElement type,
       ExtensionContext context,
-      Optional<BuilderContext> builderContext,
       ImmutableList<AutoValueExtension> applicableExtensions) {
     int writtenSoFar = 0;
     for (AutoValueExtension extension : applicableExtensions) {
@@ -682,8 +682,7 @@ public class AutoValueProcessor extends AbstractProcessor {
       String classFqName = generatedSubclassName(type, writtenSoFar);
       String classSimpleName = TypeSimplifier.simpleNameOf(classFqName);
       boolean isFinal = (writtenSoFar == 0);
-      String source = extension.generateClass(
-          context, builderContext, classSimpleName, parentSimpleName, isFinal);
+      String source = extension.generateClass(context, classSimpleName, parentSimpleName, isFinal);
       if (source != null) {
         source = Reformatter.fixup(source);
         writeSourceFile(classFqName, source, type);

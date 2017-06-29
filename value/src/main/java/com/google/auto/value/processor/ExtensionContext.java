@@ -16,9 +16,12 @@
 package com.google.auto.value.processor;
 
 import com.google.auto.value.extension.AutoValueExtension;
+import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
@@ -31,6 +34,7 @@ class ExtensionContext implements AutoValueExtension.Context {
   private final ImmutableMap<String, ExecutableElement> properties;
   private final ImmutableSet<ExecutableElement> abstractMethods;
   private final boolean hasBuilder;
+  private final Optional<BuilderContext> builderContext;
 
   ExtensionContext(
       ProcessingEnvironment processingEnvironment,
@@ -43,6 +47,27 @@ class ExtensionContext implements AutoValueExtension.Context {
     this.properties = properties;
     this.abstractMethods = abstractMethods;
     this.hasBuilder = hasBuilder;
+    this.builderContext = Optional.empty();
+  }
+
+  private ExtensionContext(
+      ProcessingEnvironment processingEnvironment,
+      TypeElement typeElement,
+      ImmutableMap<String, ExecutableElement> properties,
+      ImmutableSet<ExecutableElement> abstractMethods,
+      Optional<BuilderContext> builderContext) {
+    this.processingEnvironment = processingEnvironment;
+    this.typeElement = typeElement;
+    this.properties = properties;
+    this.abstractMethods = abstractMethods;
+    this.hasBuilder = builderContext.isPresent();
+    this.builderContext = builderContext;
+  }
+
+  ExtensionContext withBuilderContext(BuilderContext _builderContext) {
+    Preconditions.checkArgument(hasBuilder, "Must have previously indicated a builder is present.");
+    return new ExtensionContext(processingEnvironment, typeElement, properties, abstractMethods,
+        Optional.of(_builderContext));
   }
 
   @Override
@@ -73,5 +98,10 @@ class ExtensionContext implements AutoValueExtension.Context {
   @Override
   public boolean hasBuilder() {
     return hasBuilder;
+  }
+
+  @Override
+  public Optional<BuilderContext> builder() {
+    return builderContext;
   }
 }

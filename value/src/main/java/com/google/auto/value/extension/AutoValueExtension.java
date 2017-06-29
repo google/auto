@@ -92,11 +92,15 @@ public abstract class AutoValueExtension {
     Set<ExecutableElement> abstractMethods();
 
     /**
-     * Returns whether there is a Builder annotated with {@link AutoValue.Builder}. If true, the
-     * {@code builderContext} param in {@link #generateClass(Context, Optional, String, String, boolean)}
-     * is guaranteed to be present.
+     * Returns whether there is a Builder annotated with {@link AutoValue.Builder}.
      */
     boolean hasBuilder();
+
+    /**
+     * Returns information about the class Builder annotated with {@link AutoValue.Builder},
+     * if one is present and only during the {@link AutoValueExtension#generateClass} step.
+     */
+    Optional<BuilderContext> builder();
   }
 
   /**
@@ -224,8 +228,6 @@ public abstract class AutoValueExtension {
    * name.
    *
    * @param context The {@link Context} of the code generation for this class.
-   * @param builderContext The {@link Optional<BuilderContext>} that represents the context of the
-   *     builder defined for this class, or is empty if there is no builder defined
    * @param className The simple name of the resulting class. The returned code will be written to a
    *     file named accordingly.
    * @param classToExtend The simple name of the direct parent of the generated class.
@@ -236,17 +238,6 @@ public abstract class AutoValueExtension {
    * @return The source code of the generated class, or {@code null} if this extension does not
    *     generate a class in the hierarchy.
    */
-  public String generateClass(
-      Context context, Optional<BuilderContext> builderContext, String className,
-      String classToExtend, boolean isFinal) {
-    return generateClass(context, className, classToExtend, isFinal);
-  }
-
-  /**
-   * @deprecated use {@link #generateClass(Context, Optional, String, String, boolean)}
-   */
-  @Deprecated
-  public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
-    return null;
-  }
+  public abstract String generateClass(
+      Context context, String className, String classToExtend, boolean isFinal);
 }
