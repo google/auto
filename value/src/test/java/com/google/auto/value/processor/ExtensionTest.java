@@ -43,7 +43,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
@@ -446,10 +445,12 @@ public class ExtensionTest {
         .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
         .compilesWithoutError();
 
-    assertTrue(extension.hasBuilder);
+    assertTrue(extension.applicableContext.hasBuilder());
+    assertFalse(extension.applicableContext.builder().isPresent());
 
-    assertTrue(extension.context.builder().isPresent());
-    BuilderContext builderContext = extension.context.builder().get();
+    assertTrue(extension.generateClassContext.hasBuilder());
+    assertTrue(extension.generateClassContext.builder().isPresent());
+    BuilderContext builderContext = extension.generateClassContext.builder().get();
     TypeElement builderType = builderContext.builderClass();
 
     // check build methods
@@ -457,7 +458,7 @@ public class ExtensionTest {
         .methodsIn(builderType.getEnclosedElements())
         .stream()
         .filter(method -> equivalence()
-            .equivalent(method.getReturnType(), extension.context.autoValueClass().asType()))
+            .equivalent(method.getReturnType(), extension.generateClassContext.autoValueClass().asType()))
         .collect(Collectors.toSet());
     assertEquals(expectedBuildMethods, builderContext.buildMethods());
 
@@ -502,8 +503,10 @@ public class ExtensionTest {
         .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
         .compilesWithoutError();
 
-    assertFalse(extension.hasBuilder);
-    assertFalse(extension.context.builder().isPresent());
+    assertFalse(extension.applicableContext.hasBuilder());
+    assertFalse(extension.applicableContext.builder().isPresent());
+    assertFalse(extension.generateClassContext.hasBuilder());
+    assertFalse(extension.generateClassContext.builder().isPresent());
   }
 
   @Test
@@ -897,18 +900,18 @@ public class ExtensionTest {
   }
 
   private static class CaptureContextExtension extends EmptyExtension {
-    boolean hasBuilder = false;
-    Context context;
+    Context generateClassContext;
+    Context applicableContext;
 
     @Override
     public boolean applicable(Context context) {
-      hasBuilder = context.hasBuilder();
+      applicableContext = context;
       return super.applicable(context);
     }
 
     @Override
     public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
-      this.context = context;
+      this.generateClassContext = context;
       return null;
     }
 
