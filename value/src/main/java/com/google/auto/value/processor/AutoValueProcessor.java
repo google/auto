@@ -556,8 +556,9 @@ public class AutoValueProcessor extends AbstractProcessor {
 
     ImmutableBiMap<String, ExecutableElement> finalProperties = properties;
     context = builder
-        .map(input -> input.builderContext(typeSimplifier, finalProperties.inverse()).orElse(null))
-        .map(context::withBuilderContext).orElse(context);
+        .flatMap(input -> input.builderContext(typeSimplifier, finalProperties.inverse()))
+        .map(context::withBuilderContext)
+        .orElse(context);
 
     int subclassDepth = writeExtensions(type, context, applicableExtensions);
     String subclass = generatedSubclassName(type, subclassDepth);
