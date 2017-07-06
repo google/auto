@@ -22,6 +22,7 @@ import static com.google.common.collect.Iterables.filter;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
+import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -188,6 +189,8 @@ public final class MemoizeExtension extends AutoValueExtension {
             methodBuilder(method.getSimpleName().toString())
                 .addAnnotation(Override.class)
                 .returns(cacheField.type)
+                .addExceptions(
+                    method.getThrownTypes().stream().map(TypeName::get).collect(toList()))
                 .addModifiers(filter(method.getModifiers(), not(equalTo(ABSTRACT))));
         for (AnnotationMirror annotation : method.getAnnotationMirrors()) {
           AnnotationSpec annotationSpec = AnnotationSpec.get(annotation);
