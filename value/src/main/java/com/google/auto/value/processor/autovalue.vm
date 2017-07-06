@@ -147,11 +147,11 @@ $a
     #if ($p.kind == "BYTE" || $p.kind == "SHORT" || $p.kind == "CHAR" || $p.kind == "INT")
       this.$p ##
     #elseif ($p.kind == "LONG")
-      (this.$p >>> 32) ^ this.$p ##
+      (int) ((this.$p >>> 32) ^ this.$p) ##
     #elseif ($p.kind == "FLOAT")
       Float.floatToIntBits(this.$p) ##
     #elseif ($p.kind == "DOUBLE")
-      (Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p) ##
+      (int) ((Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p)) ##
     #elseif ($p.kind == "BOOLEAN")
       this.$p ? 1231 : 1237 ##
     #elseif ($p.kind == "ARRAY")
