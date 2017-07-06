@@ -55,6 +55,7 @@ public class MemoizedTest {
     private int nullableCount;
     private int returnsNullCount;
     private int notNullableButReturnsNullCount;
+    private int throwsExceptionCount;
 
     abstract String string();
 
@@ -91,6 +92,12 @@ public class MemoizedTest {
       return null;
     }
 
+    @Memoized
+    String throwsException() throws SomeCheckedException {
+      throwsExceptionCount++;
+      throw new SomeCheckedException();
+    }
+
     @Override
     @Memoized
     public abstract int hashCode();
@@ -99,6 +106,8 @@ public class MemoizedTest {
     @Memoized
     public abstract String toString();
   }
+
+  static final class SomeCheckedException extends Exception {}
 
   @AutoValue
   abstract static class ListValue<T extends Number, K> {
@@ -181,6 +190,24 @@ public class MemoizedTest {
       assertThat(expected).hasMessage("notNullableButReturnsNull() cannot return null");
     }
     assertThat(value.notNullableButReturnsNullCount).isEqualTo(1);
+  }
+
+  @Test
+  public void methodThrows() {
+    // The exception is thrown.
+    try {
+      value.throwsException();
+      fail();
+    } catch (SomeCheckedException expected1) {
+      // The exception is not memoized.
+      try {
+        value.throwsException();
+        fail();
+      } catch (SomeCheckedException expected2) {
+        assertThat(expected2).isNotSameAs(expected1);
+      }
+    }
+    assertThat(value.throwsExceptionCount).isEqualTo(2);
   }
 
   @Test
