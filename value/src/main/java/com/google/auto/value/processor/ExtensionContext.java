@@ -34,7 +34,7 @@ class ExtensionContext implements AutoValueExtension.Context {
   private final ImmutableMap<String, ExecutableElement> properties;
   private final ImmutableSet<ExecutableElement> abstractMethods;
   private final boolean hasBuilder;
-  private final Optional<BuilderContext> builderContext;
+  private final BuilderContext builderContext;
 
   ExtensionContext(
       ProcessingEnvironment processingEnvironment,
@@ -47,7 +47,7 @@ class ExtensionContext implements AutoValueExtension.Context {
     this.properties = properties;
     this.abstractMethods = abstractMethods;
     this.hasBuilder = hasBuilder;
-    this.builderContext = Optional.empty();
+    this.builderContext = null;
   }
 
   private ExtensionContext(
@@ -55,19 +55,19 @@ class ExtensionContext implements AutoValueExtension.Context {
       TypeElement typeElement,
       ImmutableMap<String, ExecutableElement> properties,
       ImmutableSet<ExecutableElement> abstractMethods,
-      Optional<BuilderContext> builderContext) {
+      BuilderContext builderContext) {
     this.processingEnvironment = processingEnvironment;
     this.typeElement = typeElement;
     this.properties = properties;
     this.abstractMethods = abstractMethods;
-    this.hasBuilder = builderContext.isPresent();
+    this.hasBuilder = builderContext != null;
     this.builderContext = builderContext;
   }
 
-  ExtensionContext withBuilderContext(BuilderContext _builderContext) {
+  ExtensionContext withBuilderContext(BuilderContext builderContext) {
     Preconditions.checkArgument(hasBuilder, "Must have previously indicated a builder is present.");
     return new ExtensionContext(processingEnvironment, typeElement, properties, abstractMethods,
-        Optional.of(_builderContext));
+        builderContext);
   }
 
   @Override
@@ -101,7 +101,7 @@ class ExtensionContext implements AutoValueExtension.Context {
   }
 
   @Override
-  public Optional<BuilderContext> builder() {
+  public BuilderContext builder() {
     return builderContext;
   }
 }

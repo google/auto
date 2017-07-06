@@ -19,6 +19,8 @@ import static com.google.auto.common.MoreTypes.equivalence;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.auto.common.MoreTypes;
@@ -446,11 +448,11 @@ public class ExtensionTest {
         .compilesWithoutError();
 
     assertTrue(extension.applicableContext.hasBuilder());
-    assertFalse(extension.applicableContext.builder().isPresent());
+    assertNull(extension.applicableContext.builder());
 
     assertTrue(extension.generateClassContext.hasBuilder());
-    assertTrue(extension.generateClassContext.builder().isPresent());
-    BuilderContext builderContext = extension.generateClassContext.builder().get();
+    assertNotNull(extension.generateClassContext.builder());
+    BuilderContext builderContext = extension.generateClassContext.builder();
     TypeElement builderType = builderContext.builderClass();
 
     // check build methods
@@ -504,9 +506,9 @@ public class ExtensionTest {
         .compilesWithoutError();
 
     assertFalse(extension.applicableContext.hasBuilder());
-    assertFalse(extension.applicableContext.builder().isPresent());
+    assertNull(extension.applicableContext.builder());
     assertFalse(extension.generateClassContext.hasBuilder());
-    assertFalse(extension.generateClassContext.builder().isPresent());
+    assertNull(extension.generateClassContext.builder());
   }
 
   @Test

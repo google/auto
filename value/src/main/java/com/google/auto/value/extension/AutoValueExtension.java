@@ -18,7 +18,6 @@ package com.google.auto.value.extension;
 import com.google.auto.value.AutoValue;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
@@ -97,10 +96,11 @@ public abstract class AutoValueExtension {
     boolean hasBuilder();
 
     /**
-     * Returns information about the class Builder annotated with {@link AutoValue.Builder},
-     * if one is present and only during the {@link AutoValueExtension#generateClass} step.
+     * Returns information about the class Builder annotated with {@link AutoValue.Builder}. Will
+     * null unless it is the {@link AutoValueExtension#generateClass} step and
+     * {@link #hasBuilder()} is true.
      */
-    Optional<BuilderContext> builder();
+    BuilderContext builder();
   }
 
   /**
