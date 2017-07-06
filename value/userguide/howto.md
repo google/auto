@@ -385,6 +385,9 @@ abstract class Foo {
 }
 ```
 
+Then your method will be called at most once, even if multiple threads attempt
+to access the property concurrently.
+
 The annotated method must have the usual form of an accessor method, and may not
 be `abstract`, `final`, or `private`.
 
