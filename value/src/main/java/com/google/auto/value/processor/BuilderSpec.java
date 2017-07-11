@@ -226,8 +226,10 @@ class BuilderSpec {
           classifier.propertyNameToSetters().entries()) {
         String property = entry.getKey();
         ExecutableElement setter = entry.getValue();
-        TypeMirror propertyType = getterToPropertyName.inverse().get(property).getReturnType();
-        setterBuilder.put(property, new PropertySetter(setter, propertyType, typeSimplifier));
+        ExecutableElement method = getterToPropertyName.inverse().get(property);
+        TypeMirror propertyType = classifier.getReturnTypeOfGetter(autoValueClass, method);
+        TypeMirror parameterType = classifier.getParameterOfSetter(builderTypeElement, setter);
+        setterBuilder.put(property, new PropertySetter(setter, propertyType, parameterType, typeSimplifier));
       }
       vars.builderSetters = setterBuilder.build();
 
@@ -310,10 +312,12 @@ class BuilderSpec {
     private final String copyOf;
 
     public PropertySetter(
-        ExecutableElement setter, TypeMirror propertyType, TypeSimplifier typeSimplifier) {
+        ExecutableElement setter,
+        TypeMirror propertyType,
+        TypeMirror parameterType,
+        TypeSimplifier typeSimplifier) {
       this.access = AutoValueProcessor.access(setter);
       this.name = setter.getSimpleName().toString();
-      TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
       primitiveParameter = parameterType.getKind().isPrimitive();
       String simplifiedParameterType = typeSimplifier.simplifyWithAnnotations(parameterType);
       if (setter.isVarArgs()) {

@@ -61,6 +61,7 @@ class BuilderMethodClassifier {
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
   private final TypeSimplifier typeSimplifier;
 
+  private final ProcessingEnvironment processingEnv;
   private final Set<ExecutableElement> buildMethods = Sets.newLinkedHashSet();
   private final Map<String, BuilderSpec.PropertyGetter> builderGetters =
       Maps.newLinkedHashMap();
@@ -82,6 +83,7 @@ class BuilderMethodClassifier {
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
       TypeSimplifier typeSimplifier) {
     this.errorReporter = errorReporter;
+    this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.autoValueClass = autoValueClass;
@@ -306,7 +308,7 @@ class BuilderMethodClassifier {
     String propertyName = getterToPropertyName.get(originalGetter);
     TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
     String builderGetterTypeString = typeSimplifier.simplifyWithAnnotations(builderGetterType);
-    TypeMirror originalGetterType = originalGetter.getReturnType();
+    TypeMirror originalGetterType = getReturnTypeOfGetter(autoValueClass, originalGetter);
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
       builderGetters.put(
           propertyName,
@@ -419,8 +421,8 @@ class BuilderMethodClassifier {
    * @return true if the types correspond, false if an error has been reported.
    */
   private boolean checkSetterParameter(ExecutableElement valueGetter, ExecutableElement setter) {
-    TypeMirror targetType = valueGetter.getReturnType();
-    TypeMirror parameterType = setter.getParameters().get(0).asType();
+    TypeMirror targetType = getReturnTypeOfGetter(autoValueClass, valueGetter);
+    TypeMirror parameterType = getParameterOfSetter(builderType, setter);
     if (TYPE_EQUIVALENCE.equivalent(parameterType, targetType)) {
       return true;
     }
@@ -446,7 +448,7 @@ class BuilderMethodClassifier {
       ExecutableElement valueGetter,
       ExecutableElement setter) {
     TypeMirror targetType = valueGetter.getReturnType();
-    TypeMirror parameterType = setter.getParameters().get(0).asType();
+    TypeMirror parameterType = getParameterOfSetter(builderType, setter);
     for (ExecutableElement copyOfMethod : copyOfMethods) {
       if (canMakeCopyUsing(copyOfMethod, targetType, parameterType)) {
         return true;
@@ -460,6 +462,14 @@ class BuilderMethodClassifier {
         targetType, autoValueClass, valueGetter.getSimpleName(), targetTypeSimpleName);
     errorReporter.reportError(error, setter);
     return false;
+  }
+
+  TypeMirror getReturnTypeOfGetter(TypeElement typeElement, ExecutableElement getter) {
+    return MoreTypes.asExecutable(typeUtils.asMemberOf(MoreTypes.asDeclared(typeElement.asType()), getter)).getReturnType();
+  }
+
+  TypeMirror getParameterOfSetter(TypeElement typeElement, ExecutableElement setter) {
+    return MoreTypes.asExecutable(typeUtils.asMemberOf(MoreTypes.asDeclared(typeElement.asType()), setter)).getParameterTypes().get(0);
   }
 
   /**
