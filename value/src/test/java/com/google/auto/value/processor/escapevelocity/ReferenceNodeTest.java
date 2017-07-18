@@ -82,7 +82,7 @@ public class ReferenceNodeTest {
         boolean actual =
             MethodReferenceNode.primitiveTypeIsAssignmentCompatible(to, from);
         expect
-            .withFailureMessage(from + " assignable to " + to)
+            .withMessage(from + " assignable to " + to)
             .that(expected).isEqualTo(actual);
       }
     }
