@@ -85,7 +85,7 @@
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <version>0.32</version>
+      <version>0.34</version>
       <scope>test</scope>
     </dependency>
     <dependency>
