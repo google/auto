@@ -132,8 +132,7 @@ public final class MemoizeExtension extends AutoValueExtension {
         generated.addMethod(methodOverrider.method());
       }
       if (hasErrors) {
-        // TODO(b/28869279) Return null if invalid.
-        return "";
+        return null;
       }
       return JavaFile.builder(context.packageName(), generated.build()).build().toString();
     }
