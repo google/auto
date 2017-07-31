@@ -94,7 +94,7 @@ public class TemplateTest {
     }
     String failure = "from velocity: <" + velocityRendered + ">\n"
         + "from escape velocity: <" + escapeVelocityRendered + ">\n";
-    expect.withFailureMessage(failure).that(escapeVelocityRendered).isEqualTo(velocityRendered);
+    expect.withMessage(failure).that(escapeVelocityRendered).isEqualTo(velocityRendered);
   }
 
   private String velocityRender(String template, Map<String, ?> vars) {
