@@ -33,7 +33,7 @@
   </description>
 
   <properties>
-    <guava.version>21.0</guava.version>
+    <guava.version>23.0</guava.version>
   </properties>
   <scm>
     <url>http://github.com/google/auto</url>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
-      <version>1.8.0</version>
+      <version>1.9.0</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -91,7 +91,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.10</version>
+      <version>0.11</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
