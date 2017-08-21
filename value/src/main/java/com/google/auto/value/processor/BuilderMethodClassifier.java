@@ -17,8 +17,8 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,6 +31,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import java.beans.Introspector;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
@@ -40,6 +41,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 /**
@@ -52,6 +54,7 @@ class BuilderMethodClassifier {
 
   private final ErrorReporter errorReporter;
   private final Types typeUtils;
+  private final Elements elementUtils;
   private final TypeElement autoValueClass;
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
@@ -65,8 +68,10 @@ class BuilderMethodClassifier {
       LinkedListMultimap.create();
   private final Multimap<String, ExecutableElement> propertyNameToUnprefixedSetters =
       LinkedListMultimap.create();
-  private final Map<String, ExecutableElement> propertyNameToPropertyBuilder =
+  private final Map<String, PropertyBuilder> propertyNameToPropertyBuilder =
       Maps.newLinkedHashMap();
+  private final EclipseHack eclipseHack;
+
   private boolean settersPrefixed;
 
   private BuilderMethodClassifier(
@@ -78,6 +83,7 @@ class BuilderMethodClassifier {
       TypeSimplifier typeSimplifier) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
+    this.elementUtils = processingEnv.getElementUtils();
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
@@ -88,6 +94,7 @@ class BuilderMethodClassifier {
     }
     this.getterNameToGetter = getterToPropertyNameBuilder.build();
     this.typeSimplifier = typeSimplifier;
+    this.eclipseHack = new EclipseHack(processingEnv);
   }
 
   /**
@@ -95,9 +102,13 @@ class BuilderMethodClassifier {
    *
    * @param methods the methods in {@code builderType} and its ancestors.
    * @param errorReporter where to report errors.
+   * @param processingEnv the ProcessingEnvironment for annotation processing.
    * @param autoValueClass the {@code AutoValue} class containing the builder.
    * @param builderType the builder class or interface within {@code autoValueClass}.
    * @param getterToPropertyName a map from getter methods to the properties they get.
+   * @param typeSimplifier the TypeSimplifier that will be used to control imports.
+   * @param autoValueHasToBuilder true if the containing {@code @AutoValue} class has a
+   *     {@code toBuilder()} method.
    *
    * @return an {@code Optional} that contains the results of the classification if it was
    *     successful or nothing if it was not.
@@ -109,7 +120,8 @@ class BuilderMethodClassifier {
       TypeElement autoValueClass,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      TypeSimplifier typeSimplifier) {
+      TypeSimplifier typeSimplifier,
+      boolean autoValueHasToBuilder) {
     BuilderMethodClassifier classifier = new BuilderMethodClassifier(
         errorReporter,
         processingEnv,
@@ -117,10 +129,10 @@ class BuilderMethodClassifier {
         builderType,
         getterToPropertyName,
         typeSimplifier);
-    if (classifier.classifyMethods(methods)) {
+    if (classifier.classifyMethods(methods, autoValueHasToBuilder)) {
       return Optional.of(classifier);
     } else {
-      return Optional.absent();
+      return Optional.empty();
     }
   }
 
@@ -136,7 +148,7 @@ class BuilderMethodClassifier {
         settersPrefixed ? propertyNameToPrefixedSetters : propertyNameToUnprefixedSetters);
   }
 
-  Map<String, ExecutableElement> propertyNameToPropertyBuilder() {
+  Map<String, PropertyBuilder> propertyNameToPropertyBuilder() {
     return propertyNameToPropertyBuilder;
   }
 
@@ -162,7 +174,8 @@ class BuilderMethodClassifier {
   /**
    * Classifies the given methods and sets the state of this object based on what is found.
    */
-  private boolean classifyMethods(Iterable<ExecutableElement> methods) {
+  private boolean classifyMethods(
+      Iterable<ExecutableElement> methods, boolean autoValueHasToBuilder) {
     boolean ok = true;
     for (ExecutableElement method : methods) {
       ok &= classifyMethod(method);
@@ -184,16 +197,37 @@ class BuilderMethodClassifier {
     }
     for (Map.Entry<ExecutableElement, String> getterEntry : getterToPropertyName.entrySet()) {
       String property = getterEntry.getValue();
+      String propertyType = typeSimplifier.simplify(getterEntry.getKey().getReturnType());
       boolean hasSetter = propertyNameToSetter.containsKey(property);
-      boolean hasBuilder = propertyNameToPropertyBuilder.containsKey(property);
-      if (!hasSetter && !hasBuilder) {
-        // TODO(emcmanus): also mention the possible builder method if the property type allows one
+      PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
+      boolean hasBuilder = propertyBuilder != null;
+      if (hasBuilder) {
+        // If property bar of type Bar has a barBuilder() that returns BarBuilder, then it must be
+        // possible to make a BarBuilder from a Bar if either (1) the @AutoValue class has a
+        // toBuilder() or (2) there is also a setBar(Bar). Making BarBuilder from Bar is possible
+        // if Bar either has a toBuilder() method or is a Guava immutable collection (in which case
+        // we can use addAll or putAll).
+        boolean canMakeBarBuilder =
+            (propertyBuilder.getBuiltToBuilder() != null || propertyBuilder.getCopyAll() != null);
+        boolean needToMakeBarBuilder = (autoValueHasToBuilder || hasSetter);
+        if (needToMakeBarBuilder && !canMakeBarBuilder) {
+          String error = String.format(
+              "Property builder method returns %1$s but there is no way to make that type from "
+                  + "%2$s: %2$s does not have a non-static toBuilder() method that returns %1$s",
+              propertyBuilder.getBuilderType(),
+              propertyType);
+          errorReporter.reportError(error, propertyBuilder.getPropertyBuilderMethod());
+        }
+      } else if (!hasSetter) {
+        // We have neither barBuilder() nor setBar(Bar), so we should complain.
         String setterName = settersPrefixed ? prefixWithSet(property) : property;
-        String error = String.format("Expected a method with this signature: %s%s %s(%s)",
+        String error = String.format(
+            "Expected a method with this signature: %s%s %s(%s), or a %sBuilder() method",
             builderType,
             typeParamsString(),
             setterName,
-            getterEntry.getKey().getReturnType());
+            propertyType,
+            property);
         errorReporter.reportError(error, builderType);
         ok = false;
       }
@@ -240,7 +274,17 @@ class BuilderMethodClassifier {
     if (methodName.endsWith("Builder")) {
       String property = methodName.substring(0, methodName.length() - "Builder".length());
       if (getterToPropertyName.containsValue(property)) {
-        return classifyPropertyBuilder(method, property);
+        PropertyBuilderClassifier propertyBuilderClassifier = new PropertyBuilderClassifier(
+            errorReporter, typeUtils, elementUtils, this, getterToPropertyName, typeSimplifier,
+            eclipseHack);
+        Optional<PropertyBuilder> propertyBuilder =
+            propertyBuilderClassifier.makePropertyBuilder(method, property);
+        if (propertyBuilder.isPresent()) {
+          propertyNameToPropertyBuilder.put(property, propertyBuilder.get());
+          return true;
+        } else {
+          return false;
+        }
       }
     }
 
@@ -261,11 +305,12 @@ class BuilderMethodClassifier {
       ExecutableElement builderGetter, ExecutableElement originalGetter) {
     String propertyName = getterToPropertyName.get(originalGetter);
     TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
-    String builderGetterTypeString = typeSimplifier.simplify(builderGetterType);
+    String builderGetterTypeString = typeSimplifier.simplifyWithAnnotations(builderGetterType);
     TypeMirror originalGetterType = originalGetter.getReturnType();
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
       builderGetters.put(
-          propertyName, new BuilderSpec.PropertyGetter(builderGetterTypeString, null));
+          propertyName,
+          new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, null));
       return true;
     }
     Optionalish optional = Optionalish.createIfOptional(
@@ -283,7 +328,7 @@ class BuilderMethodClassifier {
           || TYPE_EQUIVALENCE.equivalent(containedType, boxedOriginalType)) {
         builderGetters.put(
             propertyName,
-            new BuilderSpec.PropertyGetter(builderGetterTypeString, optional));
+            new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, optional));
         return true;
       }
     }
@@ -293,48 +338,6 @@ class BuilderMethodClassifier {
         autoValueClass, builderGetterType, originalGetter.getReturnType());
     errorReporter.reportError(error, builderGetter);
     return false;
-  }
-
-  // Construct this string so it won't be found by Maven shading and renamed, which is not what
-  // we want.
-  private static final String COM_GOOGLE_COMMON_COLLECT_IMMUTABLE =
-      "com.".concat("google.common.collect.Immutable");
-
-  private boolean classifyPropertyBuilder(ExecutableElement method, String property) {
-    TypeMirror builderTypeMirror = builderMethodReturnType(method);
-    TypeElement builderTypeElement = MoreTypes.asTypeElement(builderTypeMirror);
-    String builderTypeString = builderTypeElement.getQualifiedName().toString();
-    boolean isGuavaBuilder = (builderTypeString.startsWith(COM_GOOGLE_COMMON_COLLECT_IMMUTABLE)
-        && builderTypeString.endsWith(".Builder"));
-    if (!isGuavaBuilder) {
-      errorReporter.reportError("Method looks like a property builder, but its return type "
-          + "is not a builder for an immutable type in com.google.common.collect", method);
-      return false;
-    }
-    // Given, e.g. ImmutableSet.Builder<String>, construct ImmutableSet<String> and check that
-    // it is indeed the type of the property.
-    DeclaredType builderTypeDeclared = MoreTypes.asDeclared(builderTypeMirror);
-    TypeMirror[] builderTypeArgs =
-        builderTypeDeclared.getTypeArguments().toArray(new TypeMirror[0]);
-    if (builderTypeArgs.length == 0) {
-      errorReporter.reportError("Property builder type cannot be raw (missing <...>)", method);
-      return false;
-    }
-    TypeElement enclosingTypeElement =
-        MoreElements.asType(builderTypeElement.getEnclosingElement());
-    TypeMirror expectedPropertyType =
-        typeUtils.getDeclaredType(enclosingTypeElement, builderTypeArgs);
-    TypeMirror actualPropertyType = getterToPropertyName.inverse().get(property).getReturnType();
-    if (!TYPE_EQUIVALENCE.equivalent(expectedPropertyType, actualPropertyType)) {
-      String error = String.format(
-          "Return type of property-builder method implies a property of type %s, but property "
-              + "%s has type %s",
-          expectedPropertyType, property, actualPropertyType);
-      errorReporter.reportError(error, method);
-      return false;
-    }
-    propertyNameToPropertyBuilder.put(property, method);
-    return true;
   }
 
   /**
@@ -351,12 +354,22 @@ class BuilderMethodClassifier {
     ExecutableElement valueGetter = propertyNameToGetter.get(methodName);
     Multimap<String, ExecutableElement> propertyNameToSetters = null;
     if (valueGetter != null) {
-      propertyName = methodName;
       propertyNameToSetters = propertyNameToUnprefixedSetters;
+      propertyName = methodName;
     } else if (valueGetter == null && methodName.startsWith("set") && methodName.length() > 3) {
-      propertyName = Introspector.decapitalize(methodName.substring(3));
       propertyNameToSetters = propertyNameToPrefixedSetters;
+      propertyName = Introspector.decapitalize(methodName.substring(3));
       valueGetter = propertyNameToGetter.get(propertyName);
+      if (valueGetter == null) {
+        // If our property is defined by a getter called getOAuth() then it is called "OAuth"
+        // because of Introspector.decapitalize. Therefore we want Introspector.decapitalize to
+        // be used for the setter too, so that you can write setOAuth(x). Meanwhile if the property
+        // is defined by a getter called oAuth() then it is called "oAuth", but you would still
+        // expect to be able to set it using setOAuth(x). Hence the second try using a decapitalize
+        // method without the quirky two-leading-capitals rule.
+        propertyName = decapitalize(methodName.substring(3));
+        valueGetter = propertyNameToGetter.get(propertyName);
+      }
     }
     if (valueGetter == null || propertyNameToSetters == null) {
       // The second disjunct isn't needed but convinces control-flow checkers that
@@ -416,8 +429,8 @@ class BuilderMethodClassifier {
       return canMakeCopyUsing(copyOfMethods, valueGetter, setter);
     }
     String error = String.format(
-        "Parameter type of setter method should be %s to match getter %s.%s",
-        targetType, autoValueClass, valueGetter.getSimpleName());
+        "Parameter type %s of setter method should be %s to match getter %s.%s",
+        parameterType, targetType, autoValueClass, valueGetter.getSimpleName());
     errorReporter.reportError(error, setter);
     return false;
   }
@@ -528,7 +541,7 @@ class BuilderMethodClassifier {
    * {@code ParentBuilder} from an interface to an abstract class to make it work, but you'll often
    * need to do that anyway.
    */
-  private TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
+  TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
     DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
     TypeMirror methodMirror;
     try {
@@ -540,10 +553,17 @@ class BuilderMethodClassifier {
     return MoreTypes.asExecutable(methodMirror).getReturnType();
   }
 
-  private String prefixWithSet(String propertyName) {
+  private static String prefixWithSet(String propertyName) {
     // This is not internationalizationally correct, but it corresponds to what
     // Introspector.decapitalize does.
     return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+  }
+
+  // Equivalent to Introspector.decapitalize but without the quirky exception whereby
+  // Introspector.decapitalize("OAuth").equals("OAuth"). (If the first two letters are capitals
+  // then Introspector.decapitalize does nothing.)
+  private static String decapitalize(String propertyName) {
+    return Character.toLowerCase(propertyName.charAt(0)) + propertyName.substring(1);
   }
 
   private String typeParamsString() {

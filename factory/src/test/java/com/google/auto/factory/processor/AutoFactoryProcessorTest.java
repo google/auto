@@ -49,7 +49,7 @@ public class AutoFactoryProcessorTest {
         .and()
         .generatesSources(
             JavaFileObjects.forResource("expected/NestedClasses_SimpleNestedClassFactory.java"),
-            JavaFileObjects.forResource("expected/NestedClasses_CustomNamedFactory.java"));
+            JavaFileObjects.forResource("expected/NestedClassCustomNamedFactory.java"));
   }
 
   @Test public void simpleClassNonFinal() {
@@ -177,10 +177,10 @@ public class AutoFactoryProcessorTest {
         .failsToCompile()
         .withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(22).atColumn(3)
+            .in(file).onLine(24)
          .and().withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(23).atColumn(3);
+            .in(file).onLine(27);
   }
 
   @Test public void failsOnGenericClass() {
@@ -394,5 +394,13 @@ public class AutoFactoryProcessorTest {
         .compilesWithoutError()
         .and()
         .generatesSources(JavaFileObjects.forResource("expected/SimpleClassVarargsFactory.java"));
+  }
+
+  @Test public void onlyPrimitives() {
+    assertThat(JavaFileObjects.forResource("good/OnlyPrimitives.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(JavaFileObjects.forResource("expected/OnlyPrimitivesFactory.java"));
   }
 }

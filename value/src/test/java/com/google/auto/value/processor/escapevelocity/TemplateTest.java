@@ -94,7 +94,7 @@ public class TemplateTest {
     }
     String failure = "from velocity: <" + velocityRendered + ">\n"
         + "from escape velocity: <" + escapeVelocityRendered + ">\n";
-    expect.withFailureMessage(failure).that(escapeVelocityRendered).isEqualTo(velocityRendered);
+    expect.withMessage(failure).that(escapeVelocityRendered).isEqualTo(velocityRendered);
   }
 
   private String velocityRender(String template, Map<String, ?> vars) {
@@ -226,6 +226,11 @@ public class TemplateTest {
   @Test
   public void newlineAfterSet() {
     compare("foo #set ($x = 17)\nbar", ImmutableMap.<String, Object>of());
+  }
+
+  @Test
+  public void newlineInSet() {
+    compare("foo #set ($x\n  = 17)\nbar $x", ImmutableMap.<String, Object>of());
   }
 
   @Test

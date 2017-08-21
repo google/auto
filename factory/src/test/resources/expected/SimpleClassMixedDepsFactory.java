@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -29,12 +28,20 @@ final class SimpleClassMixedDepsFactory {
 
   @Inject SimpleClassMixedDepsFactory(
       @AQualifier Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = Preconditions.checkNotNull(providedDepAProvider, 1);
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
   }
 
   SimpleClassMixedDeps create(String depB) {
     return new SimpleClassMixedDeps(
-        Preconditions.checkNotNull(providedDepAProvider.get(), 1),
-        Preconditions.checkNotNull(depB, 2));
+        checkNotNull(providedDepAProvider.get(), 1), checkNotNull(depB, 2));
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

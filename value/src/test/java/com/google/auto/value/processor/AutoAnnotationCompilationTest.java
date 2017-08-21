@@ -15,9 +15,11 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assert_;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
@@ -31,12 +33,16 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class AutoAnnotationCompilationTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AutoAnnotationCompilationTest {
+  @Test
   public void testSimple() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",
@@ -46,8 +52,10 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "",
         "public @interface MyAnnotation {",
         "  MyEnum value();",
+        "  int defaultedValue() default 23;",
         "}"
     );
+    int invariableHash = ("defaultedValue".hashCode() * 127) ^ 23;
     JavaFileObject myEnumJavaFile = JavaFileObjects.forSourceLines(
         "com.example.enums.MyEnum",
         "package com.example.enums;",
@@ -76,11 +84,12 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "",
         "import com.example.annotations.MyAnnotation;",
         "import com.example.enums.MyEnum;",
-        "import javax.annotation.Generated",
+        "import javax.annotation.Generated;",
         "",
         "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
         "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
         "  private final MyEnum value;",
+        "  private static final int defaultedValue = 23;",
         "",
         "  AutoAnnotation_AnnotationFactory_newMyAnnotation(MyEnum value) {",
         "    if (value == null) {",
@@ -97,6 +106,10 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "    return value;",
         "  }",
         "",
+        "  @Override public int defaultedValue() {",
+        "    return defaultedValue;",
+        "  }",
+        "",
         "  @Override public String toString() {",
         "    StringBuilder sb = new StringBuilder(\"@com.example.annotations.MyAnnotation(\");",
         "    sb.append(value);",
@@ -109,13 +122,17 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "    }",
         "    if (o instanceof MyAnnotation) {",
         "      MyAnnotation that = (MyAnnotation) o;",
-        "      return (value.equals(that.value()));",
+        "      return (value.equals(that.value()))",
+        "          && (defaultedValue == that.defaultedValue());",
         "    }",
         "    return false;",
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    return (" + 127 * "value".hashCode() + " ^ (value.hashCode()));",
+        "    return ",
+        "        " + invariableHash,
+        "        + (" + 127 * "value".hashCode() + " ^ (value.hashCode()))",
+        "    ;",
         "  }",
         "}"
     );
@@ -126,6 +143,63 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  @Test
+  public void testEmptyPackage() {
+    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
+        "MyAnnotation",
+        "public @interface MyAnnotation {}"
+    );
+    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
+        "AnnotationFactory",
+        "import com.google.auto.value.AutoAnnotation;",
+        "",
+        "public class AnnotationFactory {",
+        "  @AutoAnnotation",
+        "  public static MyAnnotation newMyAnnotation() {",
+        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation();",
+        "  }",
+        "}");
+    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
+        "AutoAnnotation_AnnotationFactory_newMyAnnotation",
+        "import javax.annotation.Generated;",
+        "",
+        "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
+        "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+        "  AutoAnnotation_AnnotationFactory_newMyAnnotation() {",
+        "  }",
+        "",
+        "  @Override public Class<? extends MyAnnotation> annotationType() {",
+        "    return MyAnnotation.class;",
+        "  }",
+        "",
+        "  @Override public String toString() {",
+        "    StringBuilder sb = new StringBuilder(\"@MyAnnotation(\");",
+        "    return sb.append(')').toString();",
+        "  }",
+        "",
+        "  @Override public boolean equals(Object o) {",
+        "    if (o == this) {",
+        "      return true;",
+        "    }",
+        "    if (o instanceof MyAnnotation) {",
+        "      return true;",
+        "    }",
+        "    return false;",
+        "  }",
+        "",
+        "  @Override public int hashCode() {",
+        "    return 0;",
+        "  }",
+        "}"
+    );
+    assertAbout(javaSources())
+        .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile))
+        .processedWith(new AutoAnnotationProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(expectedOutput);
+  }
+
+  @Test
   public void testGwtSimple() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",
@@ -205,7 +279,8 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    return (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)));",
+        "    return ",
+        "        + (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)));",
         "  }",
         "}"
     );
@@ -217,6 +292,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  @Test
   public void testCollectionsForArrays() {
     JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
         "com.example.annotations.MyAnnotation",
@@ -327,8 +403,8 @@ public class AutoAnnotationCompilationTest extends TestCase {
         "",
         "  @Override public int hashCode() {",
         "    return ",
-        "        (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value))) +",
-        "        (" + 127 * "enums".hashCode() + " ^ (Arrays.hashCode(enums)));",
+        "        + (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)))",
+        "        + (" + 127 * "enums".hashCode() + " ^ (Arrays.hashCode(enums)));",
         "  }",
         "",
         "  private static int[] intArrayFromCollection(Collection<Integer> c) {",
@@ -348,6 +424,7 @@ public class AutoAnnotationCompilationTest extends TestCase {
         .and().generatesSources(expectedOutput);
   }
 
+  @Test
   public void testMissingClass() throws IOException {
     File tempDir = File.createTempFile("AutoAnnotationCompilationTest", "");
     assertTrue(tempDir.delete());

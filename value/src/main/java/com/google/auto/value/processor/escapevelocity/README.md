@@ -41,7 +41,7 @@ if (in == null) {
   throw new IllegalArgumentException("Could not find resource foo.vm");
 }
 Reader reader = new BufferedReader(new InputStreamReader(in));
-Template template = Template.from(reader);
+Template template = Template.parseFrom(reader);
 ```
 
 ## Expanding a template
@@ -335,5 +335,5 @@ post-process it. For example, if it is Java code, you could use a formatter such
 [google-java-format](https://github.com/google/google-java-format). Then you shouldn't have to
 worry about extraneous spaces.
 
-[VelocityHacks]: https://github.com/google/auto/blob/ca2384d5ad15a0c761b940384083cf5c50c6e839/value/src/main/java/com/google/auto/value/processor/TemplateVars.java#L54]
+[VelocityHacks]: https://github.com/google/auto/blob/ca2384d5ad15a0c761b940384083cf5c50c6e839/value/src/main/java/com/google/auto/value/processor/TemplateVars.java#L54
 [AutoValue]: https://github.com/google/auto/tree/master/value

@@ -146,7 +146,7 @@ class Parser {
    * there are no more characters.
    */
   private void skipSpace() throws IOException {
-    while (Character.isSpaceChar(c)) {
+    while (Character.isWhitespace(c)) {
       next();
     }
   }

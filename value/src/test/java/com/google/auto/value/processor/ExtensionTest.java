@@ -16,6 +16,9 @@
 package com.google.auto.value.processor;
 
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Joiner;
@@ -27,6 +30,7 @@ import com.google.testing.compile.JavaFileObjects;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collections;
@@ -35,17 +39,23 @@ import java.util.ServiceConfigurationError;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
+import javax.annotation.processing.Filer;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-public class ExtensionTest extends TestCase {
+@RunWith(JUnit4.class)
+public class ExtensionTest {
+  @Test
   public void testExtensionCompilation() throws Exception {
 
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
@@ -80,6 +90,7 @@ public class ExtensionTest extends TestCase {
         .and().generatesSources(expectedExtensionOutput);
   }
 
+  @Test
   public void testExtensionConsumesProperties() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -151,6 +162,7 @@ public class ExtensionTest extends TestCase {
         .and().generatesSources(expectedExtensionOutput);
   }
 
+  @Test
   public void testDoesntRaiseWarningForConsumedProperties() {
     JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
         "package foo.bar;",
@@ -166,11 +178,12 @@ public class ExtensionTest extends TestCase {
         "  }",
         "}");
     assertThat(impl)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutWarnings();
   }
 
+  @Test
   public void testDoesntRaiseWarningForToBuilder() {
     JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
         "package foo.bar;",
@@ -187,11 +200,12 @@ public class ExtensionTest extends TestCase {
         "  }",
         "}");
     assertThat(impl)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutWarnings();
   }
 
+  @Test
   public void testCantConsumeTwice() throws Exception {
     class ConsumeDizzle extends NonFinalExtension {
       @Override public Set<String> consumeProperties(Context context) {
@@ -216,6 +230,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(5);
   }
 
+  @Test
   public void testCantConsumeNonExistentProperty() throws Exception {
     class ConsumeDizzle extends NonFinalExtension {
       @Override public Set<String> consumeProperties(Context context) {
@@ -235,6 +250,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(3);
   }
 
+  @Test
   public void testCantConsumeConcreteMethod() throws Exception {
     class ConsumeConcreteMethod extends NonFinalExtension {
       @Override public Set<ExecutableElement> consumeMethods(Context context) {
@@ -266,6 +282,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(3);
   }
 
+  @Test
   public void testCantConsumeNonExistentMethod() throws Exception {
     class ConsumeBogusMethod extends NonFinalExtension {
       @Override public Set<ExecutableElement> consumeMethods(Context context) {
@@ -298,6 +315,7 @@ public class ExtensionTest extends TestCase {
         .in(impl).onLine(3);
   }
 
+  @Test
   public void testExtensionWithoutConsumedPropertiesFails() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -319,6 +337,7 @@ public class ExtensionTest extends TestCase {
             + "it is a primitive array");
   }
 
+  @Test
   public void testConsumeMethodWithArguments() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -332,14 +351,14 @@ public class ExtensionTest extends TestCase {
         "  abstract void writeToParcel(Object parcel, int flags);",
         "}");
     assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(
             new AutoValueProcessor(ImmutableList.of(new FakeWriteToParcelExtension())))
         .compilesWithoutWarnings();
   }
 
+  @Test
   public void testExtensionWithBuilderCompilation() throws Exception {
-
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
         "package foo.bar;",
@@ -378,6 +397,50 @@ public class ExtensionTest extends TestCase {
         .and().generatesSources(expectedExtensionOutput);
   }
 
+  @Test
+  public void testLastExtensionGeneratesNoCode() {
+    doTestNoCode(new FooExtension(), new NonFinalExtension(), new SideFileExtension());
+  }
+
+  @Test
+  public void testFirstExtensionGeneratesNoCode() {
+    doTestNoCode(new SideFileExtension(), new FooExtension(), new NonFinalExtension());
+  }
+
+  @Test
+  public void testMiddleExtensionGeneratesNoCode() {
+    doTestNoCode(new FooExtension(), new SideFileExtension(), new NonFinalExtension());
+  }
+
+  @Test
+  public void testLoneExtensionGeneratesNoCode() {
+    doTestNoCode(new SideFileExtension());
+  }
+
+  private void doTestNoCode(AutoValueExtension... extensions) {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Baz {",
+        "  public abstract String foo();",
+        "",
+        "  public static Baz create(String foo) {",
+        "    return new AutoValue_Baz(foo);",
+        "  }",
+        "}");
+    assertThat(javaFileObject)
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
+        .processedWith(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
+        .compilesWithoutWarnings()
+        .and()
+        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "Side_Baz.java");
+  }
+
+  @Test
   public void testTwoExtensionsBothWantToBeFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -398,6 +461,7 @@ public class ExtensionTest extends TestCase {
         .in(javaFileObject).onLine(6);
   }
 
+  @Test
   public void testNonFinalThenFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -421,6 +485,7 @@ public class ExtensionTest extends TestCase {
     assertTrue(nonFinalExtension.generated);
   }
 
+  @Test
   public void testFinalThenNonFinal() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -444,6 +509,7 @@ public class ExtensionTest extends TestCase {
     assertTrue(nonFinalExtension.generated);
   }
 
+  @Test
   public void testUnconsumedMethod() throws Exception {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
@@ -475,6 +541,7 @@ public class ExtensionTest extends TestCase {
    * corrupt jar in the {@code processorpath}. If we're not careful, that can lead to a
    * ServiceConfigurationError.
    */
+  @Test
   public void testBadJarDoesntBlowUp() throws IOException {
     File badJar = File.createTempFile("bogus", ".jar");
     try {
@@ -504,7 +571,7 @@ public class ExtensionTest extends TestCase {
         "public abstract class Baz {",
         "}");
     SuccessfulCompilationClause success = assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing")
+        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(badJarLoader))
         .compilesWithoutError();
     success.withWarningContaining(
@@ -639,6 +706,42 @@ public class ExtensionTest extends TestCase {
     @Override
     public boolean mustBeFinal(Context context) {
       return true;
+    }
+  }
+
+  private static class SideFileExtension extends AutoValueExtension {
+    @Override
+    public boolean applicable(Context context) {
+      return true;
+    }
+
+    @Override
+    public boolean mustBeFinal(Context context) {
+      return false;
+    }
+
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      String sideClassName = "Side_" + context.autoValueClass().getSimpleName().toString();
+      String sideClass =
+          "package " + context.packageName() + ";\n"
+          + "class " + sideClassName + " {}\n";
+      Filer filer = context.processingEnvironment().getFiler();
+      try {
+        String sideClassFqName = context.packageName() + "." + sideClassName;
+        JavaFileObject sourceFile = filer.createSourceFile(
+            sideClassFqName, context.autoValueClass());
+        // TODO(emcmanus): use try-with-resources when we dump Java 6 source compatibility.
+        // (We will still *generate* code that is Java 6 compatible.)
+        Writer sourceWriter = sourceFile.openWriter();
+        sourceWriter.write(sideClass);
+        sourceWriter.close();
+      } catch (IOException e) {
+        context.processingEnvironment().getMessager()
+            .printMessage(Diagnostic.Kind.ERROR, e.toString());
+      }
+      return null;
     }
   }
 

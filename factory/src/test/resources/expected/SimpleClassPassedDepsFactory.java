@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
@@ -27,7 +26,15 @@ final class SimpleClassPassedDepsFactory {
   @Inject SimpleClassPassedDepsFactory() {}
 
   SimpleClassPassedDeps create(String depA, String depB) {
-    return new SimpleClassPassedDeps(
-        Preconditions.checkNotNull(depA, 1), Preconditions.checkNotNull(depB, 2));
+    return new SimpleClassPassedDeps(checkNotNull(depA, 1), checkNotNull(depB, 2));
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

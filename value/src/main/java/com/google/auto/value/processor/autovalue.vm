@@ -147,11 +147,11 @@ $a
     #if ($p.kind == "BYTE" || $p.kind == "SHORT" || $p.kind == "CHAR" || $p.kind == "INT")
       this.$p ##
     #elseif ($p.kind == "LONG")
-      (this.$p >>> 32) ^ this.$p ##
+      (int) ((this.$p >>> 32) ^ this.$p) ##
     #elseif ($p.kind == "FLOAT")
       Float.floatToIntBits(this.$p) ##
     #elseif ($p.kind == "DOUBLE")
-      (Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p) ##
+      (int) ((Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p)) ##
     #elseif ($p.kind == "BOOLEAN")
       this.$p ? 1231 : 1237 ##
     #elseif ($p.kind == "ARRAY")
@@ -185,7 +185,7 @@ $a
   #foreach ($m in $toBuilderMethods)
 
   @Override
-  public ${builderTypeName}${builderActualTypes} ${m}() {
+  ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
     return new Builder${builderActualTypes}(this);
   }
 
@@ -219,30 +219,25 @@ $a
   #end
 
     Builder() {
-
-  #foreach ($p in $props)
-    #if ($builderPropertyBuilders[$p.name])
-
-      this.$p = ${builderPropertyBuilders[$p.name].empty};
-
-    #end
-  #end
-
     }
 
-    Builder(${origClass}${actualTypes} source) {
+  #if (!$toBuilderMethods.empty)
 
-  #foreach ($p in $props)
+    private Builder(${origClass}${actualTypes} source) {
+
+    #foreach ($p in $props)
 
       this.$p = source.${p.getter}();
 
-  #end
+    #end
 
     }
 
+  #end
+
   #foreach ($p in $props)
 
-    ## The following is either null or an instance of BuilderSpec.PropertyBuilder
+    ## The following is either null or an instance of PropertyBuilderClassifier.PropertyBuilder
     #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
 
     ## Setter and/or property builder
@@ -250,8 +245,16 @@ $a
     #foreach ($setter in $builderSetters[$p.name])
 
     @Override
-    public ${builderTypeName}${builderActualTypes} ##
+    ${setter.access}${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
+
+      #if (!$setter.primitiveParameter && !$p.nullable)
+
+      if ($p == null) {
+        throw new NullPointerException("Null $p.name");
+      }
+
+      #end
 
       #if ($propertyBuilder)
 
@@ -270,11 +273,42 @@ $a
     #if ($propertyBuilder)
 
     @Override
-    public $propertyBuilder.builderType ${p.name}Builder() {
+    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder() {
       if (${propertyBuilder.name} == null) {
+
+        ## This is the first time someone has asked for the builder. If the property it sets already
+        ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
+        ## there is also a setter for this property) then we copy that value into the builder.
+        ## Otherwise the builder starts out empty.
+        ## If we have neither a setter nor a toBuilder() method, then the builder always starts
+        ## off empty.
+
+        #if ($builderSetters[$p.name].empty && $toBuilderMethods.empty)
+
         ${propertyBuilder.name} = ${propertyBuilder.initializer};
-        ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
-        $p = null;
+
+        #else
+
+        if ($p == null) {
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
+        } else {
+
+          #if (${propertyBuilder.builtToBuilder})
+
+          ${propertyBuilder.name} = ${p}.${propertyBuilder.builtToBuilder}();
+
+          #else
+
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
+          ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
+
+          #end
+
+          $p = null;
+        }
+
+        #end
+
       }
       return $propertyBuilder.name;
     }
@@ -286,7 +320,7 @@ $a
     #if ($builderGetters[$p.name])
 
     @Override
-    ${p.nullableAnnotation}public $builderGetters[$p.name].type ${p.getter}() {
+    ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
       #if ($builderGetters[$p.name].optional)
 
       if ($p == null) {
@@ -304,10 +338,14 @@ $a
 
         #end
 
-        #if ($builderPropertyBuilders[$p.name])
+        #if ($propertyBuilder)
 
       if (${propertyBuilder.name} != null) {
         return ${propertyBuilder.name}.build();
+      }
+      if ($p == null) {
+        ${propertyBuilder.beforeInitDefault}
+        $p = ${propertyBuilder.initDefault};
       }
 
         #end
@@ -322,13 +360,17 @@ $a
   #end
 
     @Override
-    public ${origClass}${actualTypes} ${buildMethodName}() {
+    ${buildMethod.get().access}${origClass}${actualTypes} ${buildMethod.get().name}() {
 
   #foreach ($p in $props)
-    #if ($builderPropertyBuilders[$p.name])
+    #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
+    #if ($propertyBuilder)
 
-      if (${builderPropertyBuilders[$p.name].name} != null) {
-        $p = ${builderPropertyBuilders[$p.name].name}.build();
+      if (${propertyBuilder.name} != null) {
+        this.$p = ${propertyBuilder.name}.build();
+      } else if (this.$p == null) {
+        ${propertyBuilder.beforeInitDefault}
+        this.$p = ${propertyBuilder.initDefault};
       }
 
     #end
@@ -340,7 +382,7 @@ $a
 
     #foreach ($p in $builderRequiredProperties)
 
-      if ($p == null) {
+      if (this.$p == null) {
         missing += " $p.name";
       }
 

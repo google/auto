@@ -245,27 +245,31 @@ final class $className implements $annotationName {
   ${hc} ##
 #end
 
+## The hashCode is the sum of two parts, an invariable part and a variable part. The invariable part
+## comes from defaulted members (ones that don't appear in the @AutoAnnotation method parameters)
+## whose values have hash codes that never change. (That doesn't include Class constants, for
+## example.) We precompute the invariable part, as an optimization but also in order to avoid
+## falling afoul of constant-overflow checks in the compiler.
+
   @Override
   public int hashCode() {
-  #if ($members.isEmpty())
-
-    return 0;
-
-  #else
-
     return
-    #foreach ($m in $members)
+    ## If the invariable part is 0, we avoid outputting `return 0 + ...` just because it generates
+    ## unnecessary byte code. But if there are no members then we must say `return 0;` here.
+    #if ($invariableHashSum != 0 || $members.empty)
 
-        (#memberNameHash($m) ^ (#memberHashCodeExpression($m))) ##
-        #if ($foreach.hasNext) + #end
+        $invariableHashSum
+        // $invariableHashSum is the contribution from default members $invariableHashes
     #end
+    #foreach ($m in $members)
+      #if (!$invariableHashes.contains($m.toString()))
+
+        + (#memberNameHash($m) ^ (#memberHashCodeExpression($m)))
+            // #memberNameHash($m) is 127 * "${m}".hashCode()
+      #end
+    #end
+
         ;
-    #foreach ($m in $members)
-
-    // #memberNameHash($m) is 127 * "${m}".hashCode()
-    #end
-
-  #end
 
   }
 

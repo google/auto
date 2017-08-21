@@ -1,19 +1,20 @@
 # How do I... (Builder edition)
 
+
 This page answers common how-to questions that may come up when using AutoValue
 **with the builder option**. You should read and understand [AutoValue with
 builders](builders.md) first.
 
-If you are not using a builder, see [Introduction](index.md) and [How do I...]
-(howto.md) instead.
+If you are not using a builder, see [Introduction](index.md) and
+[How do I...](howto.md) instead.
 
 ## Contents
 
 How do I...
 
 *   ... [use (or not use) `set` **prefixes**?](#beans)
-*   ... [use different **names** besides `builder()`/`Builder`/`build()`?]
-    (#build_names)
+*   ... [use different **names** besides
+    `builder()`/`Builder`/`build()`?](#build_names)
 *   ... [specify a **default** value for a property?](#default)
 *   ... [initialize a builder to the same property values as an **existing**
     value instance](#to_builder)
@@ -30,6 +31,7 @@ How do I...
         **breaking the chain**?](#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
+*   ... [access nested builders while building?](#nested_builders)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
@@ -73,11 +75,11 @@ Use whichever names you like; AutoValue doesn't actually care.
 
 What should happen when a caller does not supply a value for a property before
 calling `build()`? If the property in question is [nullable](howto.md#nullable),
-it will simply default to `null` as you would expect. And if it is [Optional]
-(#optional) it will default to an empty `Optional` as you might also expect. But
-if it isn't either of those things (including if it is a primitive-valued
-property, which *can't* be null), then `build()` will throw an unchecked
-exception.
+it will simply default to `null` as you would expect. And if it is
+[Optional](#optional) it will default to an empty `Optional` as you might also
+expect. But if it isn't either of those things (including if it is a
+primitive-valued property, which *can't* be null), then `build()` will throw an
+unchecked exception.
 
 But this presents a problem, since one of the main *advantages* of a builder in
 the first place is that callers can specify only the properties they care about!
@@ -109,8 +111,8 @@ abstract class Animal {
 ```
 
 Occasionally you may want to supply a default value, but only if the property is
-not set explicitly. This is covered in the section on [normalization]
-(#normalize).
+not set explicitly. This is covered in the section on
+[normalization](#normalize).
 
 ## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
@@ -238,8 +240,8 @@ public abstract class Animal {
 
 The getter in your builder must have the same signature as the abstract property
 accessor method in the value class. It will return the value that has been set
-on the `Builder`. If no value has been set for a non-[nullable]
-(howto.md#nullable) property, `IllegalStateException` is thrown.
+on the `Builder`. If no value has been set for a
+non-[nullable](howto.md#nullable) property, `IllegalStateException` is thrown.
 
 Getters should generally only be used within the `Builder` as shown, so they are
 not public.
@@ -466,8 +468,92 @@ Now the caller can do this:
       .build();
 ```
 
-### ... offer both accumulation and set-at-once methods for the same collection-valued property?
+### <a name="collection_both"></a>... offer both accumulation and set-at-once methods for the same collection-valued property?
 
 You can have both. If the caller uses `setFoos` after `foosBuilder` has been
 called, an unchecked exception will be thrown.
 
+## <a name="nested_builders"></a>... access nested builders while building?
+
+Often a property of an `@AutoValue` class is itself an immutable class,
+perhaps another `@AutoValue`. In such cases your builder can expose a builder
+for that nested class. This is very similar to exposing a builder for a
+collection property, as described [earlier](#accumulate).
+
+Suppose the `Animal` class has a property of type `Species`:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract Species species();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setName(String name);
+    public abstract Species.Builder speciesBuilder();
+    public abstract Animal build();
+  }
+}
+
+@AutoValue
+public abstract class Species {
+  public abstract String genus();
+  public abstract String epithet();
+
+  public static Builder builder() {
+    return new AutoValue_Species.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setGenus(String genus);
+    public abstract Builder setEpithet(String epithet);
+    public abstract Species build();
+  }
+}
+```
+
+Now you can access the builder of the nested `Species` while you are building
+the `Animal`:
+
+```java
+  Animal.Builder catBuilder = Animal.builder()
+      .setName("cat");
+  catBuilder.speciesBuilder()
+      .setGenus("Felis")
+      .setEpithet("catus");
+  Animal cat = catBuilder.build();
+```
+
+Although the nested class in the example (`Species`) is also an `@AutoValue`
+class, it does not have to be. For example, it could be a [protobuf]. The
+requirements are:
+
+* The nested class must have a way to make a new builder. This can be
+  `new Species.Builder()`, or `Species.builder()`, or `Species.newBuilder()`.
+
+* There must be a way to build an instance from the builder: `Species.Builder`
+  must have a method `Species build()`.
+
+* If there is a need to convert `Species` back into its builder, then `Species`
+  must have a method `Species.Builder toBuilder()`.
+
+  In the example, if `Animal` has an abstract [`toBuilder()`](#to_builder)
+  method then `Species` must also have a `toBuilder()` method. That also applies
+  if there is an abstract `setSpecies` method in addition to the
+  `speciesBuilder` method.
+
+There are no requirements on the name of the builder class. Instead of
+`Species.Builder`, it could be `Species.Factory` or `SpeciesBuilder`.
+
+If `speciesBuilder()` is never called then the final `species()` property will
+be set as if by `speciesBuilder().build()`. In the example, that would result
+in an exception because the required properties of `Species` have not been set.
+
+
+[protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders

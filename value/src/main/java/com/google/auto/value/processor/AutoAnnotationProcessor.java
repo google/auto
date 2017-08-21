@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static java.util.stream.Collectors.toCollection;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
@@ -31,6 +33,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
@@ -38,7 +41,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -128,10 +130,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       } catch (AbortProcessingException e) {
         // We abandoned this type, but continue with the next.
       } catch (RuntimeException e) {
-        // Don't propagate this exception, which will confusingly crash the compiler.
-        // Instead, report a compiler error with the stack trace.
         String trace = Throwables.getStackTraceAsString(e);
         reportError(method, "@AutoAnnotation processor threw an exception: %s", trace);
+        throw e;
       }
     }
   }
@@ -177,17 +178,78 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.pkg = pkg;
     vars.wrapperTypesUsedInCollections = wrapperTypesUsedInCollections;
     vars.gwtCompatible = isGwtCompatible(annotationElement);
+    ImmutableMap<String, Integer> invariableHashes = invariableHashes(members, parameters.keySet());
+    vars.invariableHashSum = 0;
+    for (int h : invariableHashes.values()) {
+      vars.invariableHashSum += h;
+    }
+    vars.invariableHashes = invariableHashes.keySet();
     String text = vars.toText();
     text = Reformatter.fixup(text);
-    writeSourceFile(pkg + "." + generatedClassName, text, methodClass);
+    String fullName = fullyQualifiedName(pkg, generatedClassName);
+    writeSourceFile(fullName, text, methodClass);
+  }
+
+  /**
+   * Returns the hashCode of the given AnnotationValue, if that hashCode is guaranteed to be always
+   * the same. The hashCode of a String or primitive type never changes. The hashCode of a Class
+   * or an enum constant does potentially change in different runs of the same program. The hashCode
+   * of an array doesn't change if the hashCodes of its elements don't. Although we could have a
+   * similar rule for nested annotation values, we currently don't.
+   */
+  private static Optional<Integer> invariableHash(AnnotationValue annotationValue) {
+    Object value = annotationValue.getValue();
+    if (value instanceof String || Primitives.isWrapperType(value.getClass())) {
+      return Optional.of(value.hashCode());
+    } else if (value instanceof List<?>) {
+      @SuppressWarnings("unchecked")  // by specification
+      List<? extends AnnotationValue> list = (List<? extends AnnotationValue>) value;
+      return invariableHash(list);
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  private static Optional<Integer> invariableHash(
+      List<? extends AnnotationValue> annotationValues) {
+    int h = 1;
+    for (AnnotationValue annotationValue : annotationValues) {
+      Optional<Integer> maybeHash = invariableHash(annotationValue);
+      if (!maybeHash.isPresent()) {
+        return Optional.empty();
+      }
+      h = h * 31 + maybeHash.get();
+    }
+    return Optional.of(h);
+  }
+
+  /**
+   * Returns a map from the names of members with invariable hashCodes to the values of those
+   * hashCodes.
+   */
+  private static ImmutableMap<String, Integer> invariableHashes(
+      ImmutableMap<String, Member> members, ImmutableSet<String> parameters) {
+    ImmutableMap.Builder<String, Integer> builder = ImmutableMap.builder();
+    for (String element : members.keySet()) {
+      if (!parameters.contains(element)) {
+        Member member = members.get(element);
+        AnnotationValue annotationValue = member.method.getDefaultValue();
+        Optional<Integer> invariableHash = invariableHash(annotationValue);
+        if (invariableHash.isPresent()) {
+          builder.put(element, (element.hashCode() * 127) ^ invariableHash.get());
+        }
+      }
+    }
+    return builder.build();
   }
 
   private boolean methodsAreOverloaded(List<ExecutableElement> methods) {
     boolean overloaded = false;
     Set<String> classNames = new HashSet<String>();
     for (ExecutableElement method : methods) {
-      String qualifiedClassName = MoreElements.getPackage(method).getQualifiedName() + "."
-          + generatedClassName(method);
+      String qualifiedClassName = fullyQualifiedName(
+          MoreElements.getPackage(method).getQualifiedName().toString(),
+          generatedClassName(method));
       if (!classNames.add(qualifiedClassName)) {
         overloaded = true;
         reportError(method, "@AutoAnnotation methods cannot be overloaded");
@@ -258,11 +320,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private Set<TypeMirror> getMemberTypes(Collection<ExecutableElement> memberMethods) {
-    Set<TypeMirror> types = new TypeMirrorSet();
-    for (ExecutableElement memberMethod : memberMethods) {
-      types.add(memberMethod.getReturnType());
-    }
-    return types;
+    return memberMethods.stream()
+        .map(m -> m.getReturnType())
+        .collect(toCollection(TypeMirrorSet::new));
   }
 
   private ImmutableMap<String, Parameter> getParameters(
@@ -402,33 +462,25 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private static boolean containsArrayType(Set<TypeMirror> types) {
-    for (TypeMirror type : types) {
-      if (type.getKind() == TypeKind.ARRAY) {
-        return true;
-      }
-    }
-    return false;
+    return types.stream().anyMatch(t -> t.getKind().equals(TypeKind.ARRAY));
   }
 
   private static boolean isGwtCompatible(TypeElement annotationElement) {
-    for (AnnotationMirror annotationMirror : annotationElement.getAnnotationMirrors()) {
-      String name = annotationMirror.getAnnotationType().asElement().getSimpleName().toString();
-      if (name.equals("GwtCompatible")) {
-        return true;
-      }
-    }
-    return false;
+    return annotationElement.getAnnotationMirrors().stream()
+        .map(mirror -> mirror.getAnnotationType().asElement())
+        .anyMatch(element -> element.getSimpleName().contentEquals("GwtCompatible"));
+  }
+
+  private static String fullyQualifiedName(String pkg, String cls) {
+    return pkg.isEmpty() ? cls : pkg + "." + cls;
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
     try {
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);
-      Writer writer = sourceFile.openWriter();
-      try {
+      try (Writer writer = sourceFile.openWriter()) {
         writer.write(text);
-      } finally {
-        writer.close();
       }
     } catch (IOException e) {
       // This should really be an error, but we make it a warning in the hope of resisting Eclipse

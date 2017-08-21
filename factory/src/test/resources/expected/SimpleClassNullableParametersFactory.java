@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -34,9 +33,8 @@ final class SimpleClassNullableParametersFactory {
   SimpleClassNullableParametersFactory(
       Provider<String> providedNullableProvider,
       @BQualifier Provider<String> providedQualifiedNullableProvider) {
-    this.providedNullableProvider = Preconditions.checkNotNull(providedNullableProvider, 1);
-    this.providedQualifiedNullableProvider =
-        Preconditions.checkNotNull(providedQualifiedNullableProvider, 2);
+    this.providedNullableProvider = checkNotNull(providedNullableProvider, 1);
+    this.providedQualifiedNullableProvider = checkNotNull(providedQualifiedNullableProvider, 2);
   }
 
   SimpleClassNullableParameters create(
@@ -46,5 +44,14 @@ final class SimpleClassNullableParametersFactory {
         qualifiedNullable,
         providedNullableProvider.get(),
         providedQualifiedNullableProvider.get());
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

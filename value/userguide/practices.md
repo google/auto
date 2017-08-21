@@ -1,6 +1,7 @@
 # Best practices
 
 
+
 ## <a name="interchangeable"></a>"Equals means interchangeable"
 
 Don't use AutoValue to implement value semantics unless you really want value

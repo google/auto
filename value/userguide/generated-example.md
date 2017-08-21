@@ -1,5 +1,6 @@
 # Generated example
 
+
 For the code shown in the [introduction](index.md), the following is typical
 code AutoValue might generate:
 

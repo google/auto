@@ -22,6 +22,6 @@ final class NestedClasses {
   @AutoFactory
   static final class SimpleNestedClass {}
 
-  @AutoFactory(className = "CustomNamedFactory")
+  @AutoFactory(className = "NestedClassCustomNamedFactory")
   static final class SimpleNestedClassWithCustomFactory {}
 }

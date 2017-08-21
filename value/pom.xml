@@ -26,14 +26,14 @@
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.4-SNAPSHOT</version>
+  <version>1.5-SNAPSHOT</version>
   <name>AutoValue</name>
   <description>
     Immutable value-type code generation for Java 1.6+.
   </description>
 
   <properties>
-    <guava.version>19.0</guava.version>
+    <guava.version>21.0</guava.version>
   </properties>
   <scm>
     <url>http://github.com/google/auto</url>
@@ -46,12 +46,12 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>0.6</version>
+      <version>0.8</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
-      <version>1.0-rc2</version>
+      <version>1.0-rc3</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -59,9 +59,9 @@
       <version>${guava.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.ow2.asm</groupId>
-      <artifactId>asm</artifactId>
-      <version>4.1</version>
+      <groupId>com.squareup</groupId>
+      <artifactId>javapoet</artifactId>
+      <version>1.8.0</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -77,21 +77,21 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.testing.compile</groupId>
-      <artifactId>compile-testing</artifactId>
-      <version>0.9</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <version>0.25</version>
+      <version>0.34</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.testing.compile</groupId>
+      <artifactId>compile-testing</artifactId>
+      <version>0.10</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -103,6 +103,15 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.6</version>
@@ -134,7 +143,7 @@
       <plugin>
         <groupId>org.immutables.tools</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3</version>
+        <version>4</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -155,6 +164,10 @@
                     <exclude>com.google.auto.value.**</exclude>
                   </excludes>
                 </relocation>
+                <relocation>
+                  <pattern>com.squareup.javapoet</pattern>
+                  <shadedPattern>autovalue.shaded.com.squareup.javapoet$</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
@@ -162,4 +175,15 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>disable-java8-doclint</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <additionalparam>-Xdoclint:none</additionalparam>
+      </properties>
+    </profile>
+  </profiles>
 </project>

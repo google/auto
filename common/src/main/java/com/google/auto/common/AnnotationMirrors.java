@@ -74,7 +74,7 @@ public final class AnnotationMirrors {
    * {@link ExecutableElement}, supplying default values from the annotation if the
    * annotation property has not been set.  This is equivalent to
    * {@link Elements#getElementValuesWithDefaults(AnnotationMirror)} but can be called
-   * statically without an {@Elements} instance.
+   * statically without an {@link Elements} instance.
    */
   public static Map<ExecutableElement, AnnotationValue> getAnnotationValuesWithDefaults(
       AnnotationMirror annotation) {

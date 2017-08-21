@@ -70,7 +70,6 @@ public class MoreElementsTest {
 
   @Test
   public void getPackage() {
-    assertThat(javaLangPackageElement).isEqualTo(javaLangPackageElement);
     assertThat(MoreElements.getPackage(stringElement)).isEqualTo(javaLangPackageElement);
     for (Element childElement : stringElement.getEnclosedElements()) {
       assertThat(MoreElements.getPackage(childElement)).isEqualTo(javaLangPackageElement);
@@ -229,12 +228,13 @@ public class MoreElementsTest {
   }
 
   @Test
-  public void getLocalAndInheritedMethods() {
+  public void getLocalAndInheritedMethods_Old() {
     Elements elements = compilation.getElements();
     Types types = compilation.getTypes();
     TypeMirror intMirror = types.getPrimitiveType(TypeKind.INT);
     TypeMirror longMirror = types.getPrimitiveType(TypeKind.LONG);
     TypeElement childType = elements.getTypeElement(Child.class.getCanonicalName());
+    @SuppressWarnings("deprecation")
     Set<ExecutableElement> childTypeMethods =
         MoreElements.getLocalAndInheritedMethods(childType, elements);
     Set<ExecutableElement> objectMethods = visibleMethodsFromObject();
@@ -247,6 +247,63 @@ public class MoreElementsTest {
         getMethod(Child.class, "baz"),
         getMethod(Child.class, "buh", intMirror),
         getMethod(Child.class, "buh", intMirror, intMirror));
+  }
+
+  @Test
+  public void getLocalAndInheritedMethods() {
+    Elements elements = compilation.getElements();
+    Types types = compilation.getTypes();
+    TypeMirror intMirror = types.getPrimitiveType(TypeKind.INT);
+    TypeMirror longMirror = types.getPrimitiveType(TypeKind.LONG);
+    TypeElement childType = elements.getTypeElement(Child.class.getCanonicalName());
+    @SuppressWarnings("deprecation")
+    Set<ExecutableElement> childTypeMethods =
+        MoreElements.getLocalAndInheritedMethods(childType, types, elements);
+    Set<ExecutableElement> objectMethods = visibleMethodsFromObject();
+    assertThat(childTypeMethods).containsAllIn(objectMethods);
+    Set<ExecutableElement> nonObjectMethods = Sets.difference(childTypeMethods, objectMethods);
+    assertThat(nonObjectMethods).containsExactly(
+        getMethod(ParentClass.class, "foo"),
+        getMethod(ParentInterface.class, "bar", longMirror),
+        getMethod(Child.class, "bar"),
+        getMethod(Child.class, "baz"),
+        getMethod(Child.class, "buh", intMirror),
+        getMethod(Child.class, "buh", intMirror, intMirror));
+  }
+
+  static class Injectable {}
+
+  public static class MenuManager {
+    public interface ParentComponent extends MenuItemA.ParentComponent, MenuItemB.ParentComponent {}
+  }
+
+  public static class MenuItemA {
+    public interface ParentComponent {
+      Injectable injectable();
+    }
+  }
+
+  public static class MenuItemB {
+    public interface ParentComponent {
+      Injectable injectable();
+    }
+  }
+
+  public static class Main {
+    public interface ParentComponent extends MenuManager.ParentComponent {}
+  }
+
+  // Example from https://github.com/williamlian/daggerbug
+  @Test
+  public void getLocalAndInheritedMethods_DaggerBug() {
+    Elements elementUtils = compilation.getElements();
+    TypeElement main = elementUtils.getTypeElement(Main.ParentComponent.class.getCanonicalName());
+    Set<ExecutableElement> methods = MoreElements.getLocalAndInheritedMethods(
+        main, compilation.getTypes(), elementUtils);
+    assertThat(methods).hasSize(1);
+    ExecutableElement method = methods.iterator().next();
+    assertThat(method.getSimpleName().toString()).isEqualTo("injectable");
+    assertThat(method.getParameters()).isEmpty();
   }
 
   private Set<ExecutableElement> visibleMethodsFromObject() {

@@ -16,6 +16,15 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
@@ -33,22 +42,28 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class AutoValueTest extends TestCase {
+@RunWith(JUnit4.class)
+public class AutoValueTest {
 
   // TODO(emcmanus): add tests for exotic locales
 
@@ -61,6 +76,8 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_Simple(s, i, m);
     }
   }
+
+  @Test
   public void testSimple() throws Exception {
     Simple instance1a = Simple.create("example", 23, ImmutableMap.of("twenty-three", 23L));
     Simple instance1b = Simple.create("example", 23, ImmutableMap.of("twenty-three", 23L));
@@ -86,6 +103,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testEmpty() throws Exception {
     Empty instance = Empty.create();
     assertEquals("Empty{}", instance.toString());
@@ -108,6 +126,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testGetters() {
     SimpleWithGetters instance = SimpleWithGetters.create(23, true, false, "foo", "bar", "<html>");
     assertEquals(
@@ -126,6 +145,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNotGetters() {
     NotAllGetters instance = NotAllGetters.create(23, true);
     assertEquals("NotAllGetters{getFoo=23, bar=true}", instance.toString());
@@ -146,6 +166,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testGettersAndConcreteNonGetters() {
     GettersAndConcreteNonGetters instance = GettersAndConcreteNonGetters.create(23, new byte[] {1});
     assertFalse(instance.hasNoBytes());
@@ -162,6 +183,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testSerialize() throws Exception {
     Serialize instance = Serialize.create(23, "23", BigInteger.valueOf(23));
     assertEquals(instance, SerializableTester.reserialize(instance));
@@ -177,6 +199,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testSerializeWithVersionUID() throws Exception {
     SerializeWithVersionUID instance = SerializeWithVersionUID.create(23, "23");
     assertEquals(instance, SerializableTester.reserialize(instance));
@@ -195,6 +218,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testLongHashCode() {
     long longValue = 0x1234567887654321L;
     LongProperty longProperty = LongProperty.create(longValue);
@@ -209,6 +233,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testIntHashCode() {
     int intValue = 0x12345678;
     IntProperty intProperty = IntProperty.create(intValue);
@@ -223,6 +248,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testShortHashCode() {
     short shortValue = 0x1234;
     ShortProperty shortProperty = ShortProperty.create(shortValue);
@@ -237,6 +263,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testByteHashCode() {
     byte byteValue = 123;
     ByteProperty byteProperty = ByteProperty.create(byteValue);
@@ -251,6 +278,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testCharHashCode() {
     char charValue = 123;
     CharProperty charProperty = CharProperty.create(charValue);
@@ -265,6 +293,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBooleanHashCode() {
     for (boolean booleanValue : new boolean[] {false, true}) {
       BooleanProperty booleanProperty = BooleanProperty.create(booleanValue);
@@ -280,6 +309,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testFloatHashCode() {
     float floatValue = 123456f;
     FloatProperty floatProperty = FloatProperty.create(floatValue);
@@ -294,12 +324,14 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testDoubleHashCode() {
     double doubleValue = 12345678901234567890d;
     DoubleProperty doubleProperty = DoubleProperty.create(doubleValue);
     assertEquals(singlePropertyHash(doubleValue), doubleProperty.hashCode());
   }
 
+  @Test
   public void testFloatingEquality() {
     FloatProperty floatZero = FloatProperty.create(0.0f);
     FloatProperty floatMinusZero = FloatProperty.create(-0.0f);
@@ -336,6 +368,7 @@ public class AutoValueTest extends TestCase {
   }
 
   // The @AutoValue class can inherit abstract methods from its superclass.
+  @Test
   public void testSuperclass() throws Exception {
     Sub instance = Sub.create("blim", true, 1729);
     assertEquals("blim", instance.superObject());
@@ -361,6 +394,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNonPublicInheritedGetters() throws Exception {
     NonPublicSub instance = NonPublicSub.create("blim", "blam", 1729);
     assertEquals("blim", instance.superObject());
@@ -384,6 +418,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNullablePropertiesCanBeNull() {
     NullableProperties instance = NullableProperties.create(null, 23);
     assertNull(instance.nullableString());
@@ -396,6 +431,7 @@ public class AutoValueTest extends TestCase {
     return new AutoAnnotation_AutoValueTest_nullable();
   }
 
+  @Test
   public void testNullablePropertyConstructorParameterIsNullable() throws NoSuchMethodException {
     Constructor<?> constructor =
         AutoValue_AutoValueTest_NullableProperties.class.getDeclaredConstructor(
@@ -413,6 +449,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNullableCanBeFromElsewhere() throws Exception {
     AlternativeNullableProperties instance = AlternativeNullableProperties.create(null, 23);
     assertNull(instance.nullableString());
@@ -430,6 +467,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNonNullablePropertiesCannotBeNull() throws Exception {
     try {
       NonNullableProperties.create(null, 23);
@@ -449,11 +487,13 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNullableListPropertiesCanBeNonNull() {
     NullableListProperties instance = NullableListProperties.create(ImmutableList.of("foo", "bar"));
     assertEquals(ImmutableList.of("foo", "bar"), instance.nullableStringList());
   }
 
+  @Test
   public void testNullableListPropertiesCanBeNull() {
     NullableListProperties instance = NullableListProperties.create(null);
     assertNull(instance.nullableStringList());
@@ -472,6 +512,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testNullableListPropertiesWithBuilderCanBeNonNull() {
     NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
         .nullableStringList(ImmutableList.of("foo", "bar"))
@@ -479,12 +520,14 @@ public class AutoValueTest extends TestCase {
     assertEquals(ImmutableList.of("foo", "bar"), instance.nullableStringList());
   }
 
+  @Test
   public void testNullableListPropertiesWithBuilderCanBeUnset() {
     NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
         .build();
     assertNull(instance.nullableStringList());
   }
 
+  @Test
   public void testNullableListPropertiesWithBuilderCanBeNull() {
     NullableListPropertiesWithBuilder instance = NullableListPropertiesWithBuilder.builder()
         .nullableStringList(null)
@@ -503,6 +546,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testDoublyNestedClass() throws Exception {
     Nested.Doubly instance = Nested.Doubly.create(null, 23);
     assertNull(instance.nullableString());
@@ -521,6 +565,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testClassNestedInInterface() throws Exception {
     Map<String, Integer> map = ImmutableMap.of("vingt-et-un", 21);
     NestedInInterface.Doubly instance = NestedInInterface.Doubly.create("foo", map);
@@ -540,6 +585,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testEqualsWithNullable() throws Exception {
     NullableNonNullable everythingNull =
         NullableNonNullable.create(null, null, "nonNullableString");
@@ -566,6 +612,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testGenericProperties() throws Exception {
     GenericProperties instance1 = GenericProperties.create(
       ImmutableMap.of("twenty-three", 23),
@@ -591,6 +638,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testGenericClass() throws Exception {
     GenericClass<String, Boolean> instance =
         GenericClass.create("whatever", ImmutableMap.of("no", false));
@@ -609,6 +657,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testGenericClassWithSimpleBounds() throws Exception {
     GenericClassSimpleBounds<Integer, Integer> instance =
         GenericClassSimpleBounds.create(23, ImmutableMap.of(17, 23));
@@ -626,6 +675,8 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_GenericClassHairyBounds<K, V>(key, map);
     }
   }
+
+  @Test
   public void testGenericClassWithHairyBounds() throws Exception {
     class ComparableList<E> extends ArrayList<E> implements Comparable<ComparableList<E>> {
       @Override public int compareTo(ComparableList<E> list) {
@@ -653,6 +704,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testRecursiveGeneric() {
     class MergeableImpl implements Mergeable<MergeableImpl> {
       @Override public MergeableImpl merge(MergeableImpl other) {
@@ -688,6 +740,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testConcreteWithGenericParent() {
     NotNodeExpression instance = NotNodeExpression.create();
     assertThat(instance.getType()).isInstanceOf(NodeType.class);
@@ -709,6 +762,7 @@ public class AutoValueTest extends TestCase {
   }
 
   // We should not generate a toString() method if there already is a non-default one.
+  @Test
   public void testExplicitToString() throws Exception {
     ExplicitToString instance = ExplicitToString.create("foo");
     assertEquals("Bazinga{foo}", instance.toString());
@@ -731,6 +785,7 @@ public class AutoValueTest extends TestCase {
   }
 
   // We should not generate a toString() method if we already inherit a non-default one.
+  @Test
   public void testInheritedExplicitToString() throws Exception {
     InheritedExplicitToString instance = InheritedExplicitToString.create("foo");
     assertEquals("Bazinga{foo}", instance.toString());
@@ -749,6 +804,7 @@ public class AutoValueTest extends TestCase {
 
   // We should generate a toString() method if the parent class has an abstract one.
   // That allows users to cancel a toString() from a parent class if they want.
+  @Test
   public void testAbstractToString() throws Exception {
     AbstractToString instance = AbstractToString.create("foo");
     assertEquals("AbstractToString{string=foo}", instance.toString());
@@ -769,6 +825,7 @@ public class AutoValueTest extends TestCase {
   }
 
   // We should generate a toString() method if the parent class inherits an abstract one.
+  @Test
   public void testInheritedAbstractToString() throws Exception {
     SubAbstractToString instance = SubAbstractToString.create("foo");
     assertEquals("SubAbstractToString{string=foo}", instance.toString());
@@ -787,12 +844,14 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testExplicitHashCode() throws Exception {
     ExplicitHashCode instance = ExplicitHashCode.create("foo");
     assertEquals(1234, instance.hashCode());
   }
 
   @AutoValue
+  @SuppressWarnings("EqualsHashCode")
   abstract static class ExplicitEquals {
     int equalsCount;
     static ExplicitEquals create() {
@@ -807,6 +866,7 @@ public class AutoValueTest extends TestCase {
   }
 
   @SuppressWarnings("SelfEquals")
+  @Test
   public void testExplicitEquals() throws Exception {
     ExplicitEquals instance = ExplicitEquals.create();
     assertEquals(0, instance.equalsCount);
@@ -836,6 +896,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testPrimitiveArrays() {
     PrimitiveArrays object0 = PrimitiveArrays.create(new boolean[0], new int[0]);
     boolean[] booleans = {false, true, true, false};
@@ -856,6 +917,7 @@ public class AutoValueTest extends TestCase {
     assertThat(object1.ints()).isSameAs(object1.ints());
   }
 
+  @Test
   public void testNullablePrimitiveArrays() {
     PrimitiveArrays object0 = PrimitiveArrays.create(new boolean[0], null);
     boolean[] booleans = {false, true, true, false};
@@ -876,6 +938,7 @@ public class AutoValueTest extends TestCase {
     assertThat(object1.booleans()).isNotEqualTo(booleans);
   }
 
+  @Test
   public void testNotNullablePrimitiveArrays() {
     try {
       PrimitiveArrays.create(null, new int[0]);
@@ -901,6 +964,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testAmbiguousArrays() {
     // If this test compiles at all then we presumably don't have the import problem above.
     AmbiguousArrays object1 = AmbiguousArrays.create(new AmbiguousArrays.Arrays(), new int[0]);
@@ -932,6 +996,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testHashCodeNotCached() {
     HashCodeObserver observer = new HashCodeObserver();
     MaybeCachedHashCode maybeCached = MaybeCachedHashCode.create(observer, 17);
@@ -959,6 +1024,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testComparisonChain() {
     assertEquals(Version.create(1, 2), Version.create(1, 2));
     Version[] versions = {Version.create(1, 2), Version.create(1, 3), Version.create(2, 1)};
@@ -966,7 +1032,7 @@ public class AutoValueTest extends TestCase {
       for (int j = 0; j < versions.length; j++) {
         int actual = Integer.signum(versions[i].compareTo(versions[j]));
         int expected = Integer.signum(i - j);
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
       }
     }
   }
@@ -989,6 +1055,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testVisitor() {
     LukesBase.LukesVisitor<String> visitor = new LukesBase.LukesVisitor<String>() {
       @Override public String visit(LukesBase.LukesSub s) {
@@ -1022,6 +1089,7 @@ public class AutoValueTest extends TestCase {
     int answer();
   }
 
+  @Test
   public void testComplexInheritance() {
     ComplexInheritance complex = ComplexInheritance.create("fred");
     assertEquals("fred", complex.name());
@@ -1051,6 +1119,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testMoreComplexInheritance() {
     MoreComplexInheritance instance1 = MoreComplexInheritance.create();
     MoreComplexInheritance instance2 = MoreComplexInheritance.create();
@@ -1078,6 +1147,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testEffectiveVisibility() {
     EffectiveVisibility instance1 = EffectiveVisibility.create();
     EffectiveVisibility instance2 = EffectiveVisibility.create();
@@ -1092,6 +1162,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testInheritTwice() {
     InheritTwice inheritTwice = InheritTwice.create(42);
     assertEquals(42, inheritTwice.answer());
@@ -1106,6 +1177,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testAmbiguityFromAutoValueType() {
     Optional autoOptional = Optional.create(com.google.common.base.Optional.absent());
     assertEquals(com.google.common.base.Optional.absent(), autoOptional.getOptional());
@@ -1124,6 +1196,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testAmbiguityFromInheritedType() {
     InheritsNestedType inheritsNestedType =
         InheritsNestedType.create(com.google.common.base.Optional.absent());
@@ -1146,6 +1219,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testOverrideNotDuplicated() {
     AbstractChild instance = AbstractChild.create(23);
     assertEquals(23, instance.foo());
@@ -1166,6 +1240,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBasicWithBuilder() {
     BasicWithBuilder x = BasicWithBuilder.builder().foo(23).build();
     assertEquals(23, x.foo());
@@ -1175,6 +1250,15 @@ public class AutoValueTest extends TestCase {
     } catch (IllegalStateException e) {
       assertThat(e.getMessage()).contains("foo");
     }
+  }
+
+  @Test
+  public void testBasicWithBuilderHasOnlyOneConstructor() throws Exception {
+    Class<?> builderClass = AutoValue_AutoValueTest_BasicWithBuilder.Builder.class;
+    Constructor<?>[] constructors = builderClass.getDeclaredConstructors();
+    assertThat(constructors).hasLength(1);
+    Constructor<?> constructor = constructors[0];
+    assertThat(constructor.getParameterTypes()).isEmpty();
   }
 
   @AutoValue
@@ -1189,6 +1273,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testEmptyWithBuilder() {
     EmptyWithBuilder x = EmptyWithBuilder.builder().build();
     EmptyWithBuilder y = EmptyWithBuilder.builder().build();
@@ -1217,6 +1302,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testTwoPropertiesWithBuilderClass() {
     TwoPropertiesWithBuilderClass a1 =
         TwoPropertiesWithBuilderClass.builder().string("23").integer(17).build();
@@ -1230,6 +1316,12 @@ public class AutoValueTest extends TestCase {
         .addEqualityGroup(a1, a2, a3)
         .addEqualityGroup(b)
         .testEquals();
+
+    try {
+      TwoPropertiesWithBuilderClass.builder().string(null);
+      fail("Did not get expected exception");
+    } catch (NullPointerException expected) {
+    }
   }
 
   @AutoValue
@@ -1249,6 +1341,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testOmitNullableWithBuilder() {
     NullablePropertyWithBuilder instance1 = NullablePropertyWithBuilder.builder()
         .notNullable("hello")
@@ -1280,85 +1373,95 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
-  public abstract static class OptionalPropertyWithBuilder {
+  public abstract static class OptionalPropertiesWithBuilder {
     public abstract com.google.common.base.Optional<String> optionalString();
+    public abstract com.google.common.base.Optional<Integer> optionalInteger();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilder.Builder();
+      return new AutoValue_AutoValueTest_OptionalPropertiesWithBuilder.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
       Builder setOptionalString(String s);
-      OptionalPropertyWithBuilder build();
+      Builder setOptionalInteger(com.google.common.base.Optional<Integer> i);
+      Builder setOptionalInteger(int i);
+      OptionalPropertiesWithBuilder build();
     }
   }
 
+  @Test
   public void testOmitOptionalWithBuilder() {
-    OptionalPropertyWithBuilder omitted = OptionalPropertyWithBuilder.builder().build();
+    OptionalPropertiesWithBuilder omitted = OptionalPropertiesWithBuilder.builder().build();
     assertThat(omitted.optionalString()).isAbsent();
+    assertThat(omitted.optionalInteger()).isAbsent();
 
-    OptionalPropertyWithBuilder supplied = OptionalPropertyWithBuilder.builder()
+    OptionalPropertiesWithBuilder supplied = OptionalPropertiesWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
+    assertThat(omitted.optionalInteger()).isAbsent();
 
-    OptionalPropertyWithBuilder suppliedDirectly = OptionalPropertyWithBuilder.builder()
+    OptionalPropertiesWithBuilder suppliedDirectly = OptionalPropertiesWithBuilder.builder()
         .setOptionalString("foo")
+        .setOptionalInteger(23)
         .build();
     assertThat(suppliedDirectly.optionalString()).hasValue("foo");
+    assertThat(suppliedDirectly.optionalInteger()).hasValue(23);
   }
 
   @AutoValue
-  public abstract static class NullableOptionalPropertyWithBuilder {
+  public abstract static class NullableOptionalPropertiesWithBuilder {
     @Nullable
     public abstract com.google.common.base.Optional<String> optionalString();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_NullableOptionalPropertyWithBuilder.Builder();
+      return new AutoValue_AutoValueTest_NullableOptionalPropertiesWithBuilder.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(com.google.common.base.Optional<String> s);
-      NullableOptionalPropertyWithBuilder build();
+      NullableOptionalPropertiesWithBuilder build();
     }
   }
 
+  @Test
   public void testOmitNullableOptionalWithBuilder() {
-    NullableOptionalPropertyWithBuilder omitted =
-        NullableOptionalPropertyWithBuilder.builder().build();
+    NullableOptionalPropertiesWithBuilder omitted =
+        NullableOptionalPropertiesWithBuilder.builder().build();
     assertThat(omitted.optionalString()).isNull();
 
-    NullableOptionalPropertyWithBuilder supplied = NullableOptionalPropertyWithBuilder.builder()
+    NullableOptionalPropertiesWithBuilder supplied = NullableOptionalPropertiesWithBuilder.builder()
         .setOptionalString(com.google.common.base.Optional.of("foo"))
         .build();
     assertThat(supplied.optionalString()).hasValue("foo");
   }
 
   @AutoValue
-  public abstract static class OptionalPropertyWithBuilderSimpleSetter {
+  public abstract static class OptionalPropertiesWithBuilderSimpleSetter {
     public abstract com.google.common.base.Optional<String> optionalString();
 
     public static Builder builder() {
-      return new AutoValue_AutoValueTest_OptionalPropertyWithBuilderSimpleSetter.Builder();
+      return new AutoValue_AutoValueTest_OptionalPropertiesWithBuilderSimpleSetter.Builder();
     }
 
     @AutoValue.Builder
     public interface Builder {
       Builder setOptionalString(String s);
-      OptionalPropertyWithBuilderSimpleSetter build();
+      OptionalPropertiesWithBuilderSimpleSetter build();
     }
   }
 
+  @Test
   public void testOptionalPropertySimpleSetter() {
-    OptionalPropertyWithBuilderSimpleSetter omitted =
-        OptionalPropertyWithBuilderSimpleSetter.builder().build();
+    OptionalPropertiesWithBuilderSimpleSetter omitted =
+        OptionalPropertiesWithBuilderSimpleSetter.builder().build();
     assertThat(omitted.optionalString()).isAbsent();
 
-    OptionalPropertyWithBuilderSimpleSetter supplied =
-        OptionalPropertyWithBuilderSimpleSetter.builder()
+    OptionalPropertiesWithBuilderSimpleSetter supplied =
+        OptionalPropertiesWithBuilderSimpleSetter.builder()
             .setOptionalString("foo")
             .build();
     assertThat(supplied.optionalString()).hasValue("foo");
@@ -1383,6 +1486,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testOptionalGetter() {
     PropertyWithOptionalGetter.Builder omitted =
         PropertyWithOptionalGetter.builder();
@@ -1396,16 +1500,39 @@ public class AutoValueTest extends TestCase {
   }
 
   @AutoValue
+  public abstract static class PropertyNamedMissing {
+    public abstract String missing();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_PropertyNamedMissing.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setMissing(String x);
+      public abstract PropertyNamedMissing build();
+    }
+  }
+
+  // https://github.com/google/auto/issues/412
+  @Test
+  public void testPropertyNamedMissing() {
+    try {
+      PropertyNamedMissing.builder().build();
+      fail();
+    } catch (IllegalStateException expected) {
+    }
+    PropertyNamedMissing x = PropertyNamedMissing.builder().setMissing("foo").build();
+    assertThat(x.missing()).isEqualTo("foo");
+  }
+
+  @AutoValue
   public abstract static class GenericsWithBuilder<T extends Number & Comparable<T>, U extends T> {
     public abstract List<T> list();
     public abstract U u();
 
     public static <T extends Number & Comparable<T>, U extends T> Builder<T, U> builder() {
       return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>();
-    }
-
-    public Builder<T, U> toBuilderManual() {
-      return new AutoValue_AutoValueTest_GenericsWithBuilder.Builder<T, U>(this);
     }
 
     public abstract Builder<T, U> toBuilderGenerated();
@@ -1418,6 +1545,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderGenerics() {
     List<Integer> integers = ImmutableList.of(1, 2, 3);
     GenericsWithBuilder<Integer, Integer> instance =
@@ -1425,21 +1553,13 @@ public class AutoValueTest extends TestCase {
     assertEquals(integers, instance.list());
     assertEquals((Integer) 23, instance.u());
 
-    GenericsWithBuilder<Integer, Integer> instance2 = instance.toBuilderManual().build();
+    GenericsWithBuilder<Integer, Integer> instance2 = instance.toBuilderGenerated().build();
     assertEquals(instance, instance2);
     assertNotSame(instance, instance2);
 
-    GenericsWithBuilder<Integer, Integer> instance3 = instance.toBuilderManual().u(17).build();
+    GenericsWithBuilder<Integer, Integer> instance3 = instance.toBuilderGenerated().u(17).build();
     assertEquals(integers, instance3.list());
     assertEquals((Integer) 17, instance3.u());
-
-    GenericsWithBuilder<Integer, Integer> instance4 = instance.toBuilderGenerated().build();
-    assertEquals(instance, instance4);
-    assertNotSame(instance, instance4);
-
-    GenericsWithBuilder<Integer, Integer> instance5 = instance.toBuilderManual().u(17).build();
-    assertEquals(integers, instance5.list());
-    assertEquals((Integer) 17, instance5.u());
   }
 
   @AutoValue
@@ -1459,6 +1579,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderWithSet() {
     List<Integer> integers = ImmutableList.of(1, 2, 3);
     BuilderWithSet<Integer> instance =
@@ -1486,6 +1607,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderWithSetAndGet() {
     List<Integer> integers = ImmutableList.of(1, 2, 3);
     BuilderWithSetAndGet instance =
@@ -1509,6 +1631,8 @@ public class AutoValueTest extends TestCase {
     @SuppressWarnings("mutable")
     public abstract int[] ints();
     public abstract int noGetter();
+    public abstract String oAuth();
+    public abstract String oBrien();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
       return new AutoValue_AutoValueTest_BuilderWithUnprefixedGetters.Builder<T>();
@@ -1520,15 +1644,20 @@ public class AutoValueTest extends TestCase {
       Builder<T> setT(T t);
       Builder<T> setInts(int[] ints);
       Builder<T> setNoGetter(int x);
+      Builder<T> setoAuth(String x);  // this ugly spelling is for compatibility
+      Builder<T> setOBrien(String x);
 
       ImmutableList<T> list();
       T t();
       int[] ints();
+      String oAuth();
+      String oBrien();
 
       BuilderWithUnprefixedGetters<T> build();
     }
   }
 
+  @Test
   public void testBuilderWithUnprefixedGetter() {
     ImmutableList<String> names = ImmutableList.of("fred", "jim");
     int[] ints = {6, 28, 496, 8128, 33550336};
@@ -1553,6 +1682,10 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.list()).isSameAs(names);
     builder.setInts(ints);
     assertThat(builder.ints()).isEqualTo(ints);
+    builder.setoAuth("OAuth");
+    assertThat(builder.oAuth()).isEqualTo("OAuth");
+    builder.setOBrien("Flann");
+    assertThat(builder.oBrien()).isEqualTo("Flann");
     // The array is not cloned by the getter, so the client can modify it (but shouldn't).
     ints[0] = 0;
     assertThat(builder.ints()[0]).isEqualTo(0);
@@ -1563,6 +1696,8 @@ public class AutoValueTest extends TestCase {
     assertThat(instance.t()).isNull();
     assertThat(instance.ints()).isEqualTo(ints);
     assertThat(instance.noGetter()).isEqualTo(noGetter);
+    assertThat(instance.oAuth()).isEqualTo("OAuth");
+    assertThat(instance.oBrien()).isEqualTo("Flann");
   }
 
   @AutoValue
@@ -1571,6 +1706,7 @@ public class AutoValueTest extends TestCase {
     public abstract T getT();
     @SuppressWarnings("mutable")
     @Nullable public abstract int[] getInts();
+    public abstract String getOAuth();
     public abstract int getNoGetter();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
@@ -1583,6 +1719,7 @@ public class AutoValueTest extends TestCase {
       public abstract Builder<T> setT(T t);
       public abstract Builder<T> setInts(int[] ints);
       public abstract Builder<T> setNoGetter(int x);
+      public abstract Builder<T> setOAuth(String x);
 
       abstract ImmutableList<T> getList();
       abstract T getT();
@@ -1592,6 +1729,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderWithPrefixedGetter() {
     ImmutableList<String> names = ImmutableList.of("fred", "jim");
     String name = "sheila";
@@ -1610,12 +1748,14 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.getList()).isSameAs(names);
     builder.setT(name);
     assertThat(builder.getInts()).isNull();
+    builder.setOAuth("OAuth");
 
     BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
     assertThat(instance.getList()).isSameAs(names);
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
+    assertThat(instance.getOAuth()).isEqualTo("OAuth");
   }
 
   @AutoValue
@@ -1645,6 +1785,8 @@ public class AutoValueTest extends TestCase {
         return this;
       }
 
+      abstract Builder<FooT> setStrings(ImmutableList<String> strings);
+
       abstract ImmutableSet.Builder<String> stringsBuilder();
 
       public Builder<FooT> addToStrings(String element) {
@@ -1656,6 +1798,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderWithPropertyBuilders() {
     ImmutableList<Integer> numbers = ImmutableList.of(1, 1, 2, 6, 24);
     ImmutableSet<String> names = ImmutableSet.of("one", "two", "six", "twenty-four");
@@ -1698,6 +1841,14 @@ public class AutoValueTest extends TestCase {
         BuilderWithPropertyBuilders.<Integer>builder().build();
     assertEquals(ImmutableList.of(), empty.getFoos());
     assertEquals(ImmutableSet.of(), empty.getStrings());
+
+    try {
+      BuilderWithPropertyBuilders.<Integer>builder().setStrings(null).build();
+      fail("Did not get expected exception");
+    } catch (RuntimeException expected) {
+      // We don't specify whether you get the exception on setStrings(null) or on build(), nor
+      // which exception it is exactly.
+    }
   }
 
   @AutoValue
@@ -1730,6 +1881,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderWithExoticPropertyBuilders() {
     ImmutableMap<String, Integer> map = ImmutableMap.of("one", 1);
     ImmutableTable<String, Integer, Integer> table = ImmutableTable.of("one", 1, -1);
@@ -1778,6 +1930,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderWithCopyingSetters() {
     BuilderWithCopyingSetters.Builder<Integer> builder = BuilderWithCopyingSetters.builder(23);
 
@@ -1810,6 +1963,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testBuilderAndSetterDefaultsEmpty() {
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
         BuilderWithCollectionBuilderAndSetter.<Integer>builder();
@@ -1817,6 +1971,7 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.build().things()).isEmpty();
   }
 
+  @Test
   public void testBuilderAndSetterUsingBuilder() {
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
         BuilderWithCollectionBuilderAndSetter.builder();
@@ -1825,6 +1980,7 @@ public class AutoValueTest extends TestCase {
     assertThat(x.things()).isEqualTo(ImmutableList.of(17, 23));
   }
 
+  @Test
   public void testBuilderAndSetterUsingSetter() {
     ImmutableList<Integer> things = ImmutableList.of(17, 23);
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
@@ -1841,6 +1997,7 @@ public class AutoValueTest extends TestCase {
     assertThat(builder2.build().things()).isEqualTo(moreThings);
   }
 
+  @Test
   public void testBuilderAndSetterUsingSetterThenBuilder() {
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
         BuilderWithCollectionBuilderAndSetter.builder();
@@ -1851,6 +2008,7 @@ public class AutoValueTest extends TestCase {
     assertThat(builder.build().things()).isEqualTo(expectedThings);
   }
 
+  @Test
   public void testBuilderAndSetterCannotSetAfterBuilder() {
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
         BuilderWithCollectionBuilderAndSetter.builder();
@@ -1888,6 +2046,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testInheritedBuilder() {
     ChildWithBuilder x = ChildWithBuilder.builder().foo("foo").bar("bar").build();
     assertThat(x.foo()).isEqualTo("foo");
@@ -1919,6 +2078,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testGwtCompatibleInherited() {
     GwtCompatibleTest test = GwtCompatibleTest.create(23);
     GwtCompatible gwtCompatible = test.getClass().getAnnotation(GwtCompatible.class);
@@ -1983,6 +2143,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testCopyClassAnnotations() throws Exception {
     CopyAnnotation x = CopyAnnotation.create();
     Class<?> c = x.getClass();
@@ -2011,6 +2172,7 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testCopyMethodAnnotations() throws Exception {
     CopyAnnotation x = CopyAnnotation.create();
     Class<?> c = x.getClass();
@@ -2030,6 +2192,7 @@ public class AutoValueTest extends TestCase {
     assertThat(methodInSubclass.isAnnotationPresent(InheritedAnnotation.class)).isTrue();
   }
 
+  @Test
   public void testCopyMethodAnnotationsByDefault() throws Exception {
     CopyAnnotation x = CopyAnnotation.create();
     Class<?> c = x.getClass();
@@ -2051,6 +2214,7 @@ public class AutoValueTest extends TestCase {
       return new AutoValue_AutoValueTest_HProperty(h);
     }
   }
+  @Test
   public void testHProperty() throws Exception {
     // Checks that we can have a property called `h`. The generated hashCode() method has
     // a local variable of that name and can cause the error `int cannot be dereferenced`
@@ -2072,8 +2236,440 @@ public class AutoValueTest extends TestCase {
     }
   }
 
+  @Test
   public void testInheritSameMethodTwice() {
     InheritSameMethodTwice x = InheritSameMethodTwice.create(23);
     assertThat(x.something()).isEqualTo(23);
+  }
+
+  // Make sure we behave correctly when we inherit the same method definition from more than
+  // one parent interface. We expect methods to appear in the order they are seen, with parents
+  // preceding children, the superclass of a class preceding interfaces that class implements,
+  // and an interface mentioned earlier in the "implements" clause preceding one mentioned later.
+  // https://github.com/google/auto/issues/372
+  interface OneTwoThreeFour {
+    String one();
+    String two();
+    boolean three();
+    long four();
+  }
+
+  interface TwoFour {
+    String two();
+    long four();
+  }
+
+  @AutoValue
+  abstract static class OneTwoThreeFourImpl implements OneTwoThreeFour, TwoFour {
+    static OneTwoThreeFourImpl create(String one, String two, boolean three, long four) {
+      return new AutoValue_AutoValueTest_OneTwoThreeFourImpl(one, two, three, four);
+    }
+  }
+
+  @Test
+  public void testOneTwoThreeFour() {
+    OneTwoThreeFour x = OneTwoThreeFourImpl.create("one", "two", false, 4);
+    assertThat(x.toString())
+        .isEqualTo("OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}");
+  }
+
+  @AutoValue
+  abstract static class OuterWithBuilder {
+    abstract String foo();
+    abstract InnerWithBuilder inner();
+    abstract Builder toBuilder();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_OuterWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder foo(String x);
+      abstract Builder inner(InnerWithBuilder x);
+      abstract InnerWithBuilder.Builder innerBuilder();
+
+      abstract OuterWithBuilder build();
+    }
+  }
+
+  @AutoValue
+  abstract static class InnerWithBuilder {
+    abstract int bar();
+    abstract Builder toBuilder();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_InnerWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setBar(int x);
+
+      abstract InnerWithBuilder build();
+    }
+  }
+
+  @Test
+  public void testBuilderWithinBuilder() {
+    OuterWithBuilder x = OuterWithBuilder.builder()
+        .inner(InnerWithBuilder.builder()
+            .setBar(23)
+            .build())
+        .foo("yes")
+        .build();
+    assertThat(x.toString()).isEqualTo("OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=23}}");
+
+    OuterWithBuilder.Builder xBuilder = x.toBuilder();
+    xBuilder.innerBuilder().setBar(17);
+    OuterWithBuilder y = xBuilder.build();
+    assertThat(y.toString()).isEqualTo("OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=17}}");
+  }
+
+  public static class MyMap<K, V> extends HashMap<K, V> {
+    public MyMap() {}
+
+    public MyMap(Map<K, V> map) {
+      super(map);
+    }
+  }
+
+  public static class MyMapBuilder<K, V> extends LinkedHashMap<K, V> {
+    public MyMapBuilder() {}
+
+    public MyMapBuilder(Map<K, V> map) {
+      super(map);
+    }
+
+    public MyMap<K, V> build() {
+      return new MyMap<K, V>(this);
+    }
+  }
+
+  @AutoValue
+  abstract static class BuildMyMap<K, V> {
+    abstract MyMap<K, V> map();
+
+    static <K, V> Builder<K, V> builder() {
+      return new AutoValue_AutoValueTest_BuildMyMap.Builder<K, V>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<K, V> {
+      abstract MyMapBuilder<K, V> mapBuilder();
+      abstract BuildMyMap<K, V> build();
+    }
+  }
+
+  @Test
+  public void testMyMapBuilder() {
+    BuildMyMap.Builder<String, Integer> builder = BuildMyMap.builder();
+    MyMapBuilder<String, Integer> mapBuilder = builder.mapBuilder();
+    mapBuilder.put("23", 23);
+    BuildMyMap<String, Integer> built = builder.build();
+    assertThat(built.map()).containsExactly("23", 23);
+  }
+
+  public static class MyStringMap<V> extends MyMap<String, V> {
+    public MyStringMap() {}
+
+    public MyStringMap(Map<String, V> map) {
+      super(map);
+    }
+
+    public MyStringMapBuilder<V> toBuilder() {
+      return new MyStringMapBuilder<V>(this);
+    }
+  }
+
+  public static class MyStringMapBuilder<V> extends MyMapBuilder<String, V> {
+    public MyStringMapBuilder() {}
+
+    public MyStringMapBuilder(Map<String, V> map) {
+      super(map);
+    }
+
+    @Override public MyStringMap<V> build() {
+      return new MyStringMap<V>(this);
+    }
+  }
+
+  @AutoValue
+  abstract static class BuildMyStringMap<V> {
+    abstract MyStringMap<V> map();
+
+    static <V> Builder<V> builder() {
+      return new AutoValue_AutoValueTest_BuildMyStringMap.Builder<V>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<V> {
+      abstract MyStringMapBuilder<V> mapBuilder();
+      abstract BuildMyStringMap<V> build();
+    }
+  }
+
+  @Test
+  public void testMyStringMapBuilder() {
+    BuildMyStringMap.Builder<Integer> builder = BuildMyStringMap.builder();
+    MyStringMapBuilder<Integer> mapBuilder = builder.mapBuilder();
+    mapBuilder.put("23", 23);
+    BuildMyStringMap<Integer> built = builder.build();
+    assertThat(built.map()).containsExactly("23", 23);
+  }
+
+  @AutoValue
+  abstract static class BuilderOfManyAccessLevels {
+    public abstract int publicGetterProtectedBuilderGetterPackageProtectedSetterInt();
+
+    protected abstract int protectedGetterPackageProtectedBuilderGetterPublicSetterInt();
+
+    abstract int packageProtectedGetterPublicBuilderGetterProtectedSetterInt();
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      protected abstract int publicGetterProtectedBuilderGetterPackageProtectedSetterInt();
+
+      abstract int protectedGetterPackageProtectedBuilderGetterPublicSetterInt();
+
+      public abstract int packageProtectedGetterPublicBuilderGetterProtectedSetterInt();
+
+      abstract Builder setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt(int x);
+
+      public abstract Builder setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt(int x);
+
+      protected abstract Builder setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt(
+          int x);
+
+      public abstract BuilderOfManyAccessLevels build();
+    }
+  }
+
+  @Test
+  public void testBuilderOfManyAccessLevels_accessLevels() throws NoSuchMethodException {
+    Class<?> builderClass = AutoValue_AutoValueTest_BuilderOfManyAccessLevels.Builder.class;
+
+    testMethodAccess(
+        Access.PROTECTED,
+        builderClass, "publicGetterProtectedBuilderGetterPackageProtectedSetterInt");
+    testMethodAccess(
+        Access.PACKAGE,
+        builderClass, "protectedGetterPackageProtectedBuilderGetterPublicSetterInt");
+    testMethodAccess(
+        Access.PUBLIC,
+        builderClass, "packageProtectedGetterPublicBuilderGetterProtectedSetterInt");
+
+    testMethodAccess(
+        Access.PACKAGE,
+        builderClass, "setPublicGetterProtectedBuilderGetterPackageProtectedSetterInt", int.class);
+    testMethodAccess(
+        Access.PUBLIC,
+        builderClass, "setProtectedGetterPackageProtectedBuilderGetterPublicSetterInt", int.class);
+    testMethodAccess(
+        Access.PROTECTED,
+        builderClass, "setPackageProtectedGetterPublicBuilderGetterProtectedSetterInt", int.class);
+  }
+
+  private enum Access {PRIVATE, PACKAGE, PROTECTED, PUBLIC}
+
+  private static final ImmutableMap<Integer, Access> MODIFIER_BITS_TO_ACCESS =
+      ImmutableMap.of(
+          Modifier.PUBLIC, Access.PUBLIC,
+          Modifier.PROTECTED, Access.PROTECTED,
+          Modifier.PRIVATE, Access.PRIVATE,
+          0, Access.PACKAGE);
+
+  private static void testMethodAccess(
+      Access expectedAccess,
+      Class<?> clazz,
+      String methodName,
+      Class<?>... parameterTypes) throws NoSuchMethodException {
+    Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
+    int modBits = method.getModifiers() & (Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE);
+    Access actualAccess = MODIFIER_BITS_TO_ACCESS.get(modBits);
+    assertWithMessage("Wrong access for %s", methodName)
+        .that(actualAccess)
+        .isEqualTo(expectedAccess);
+  }
+
+  static class VersionId {}
+
+  static class ItemVersionId extends VersionId {}
+
+  interface VersionedPersistent {
+    VersionId getVersionId();
+  }
+
+  interface Item extends VersionedPersistent {
+    @Override
+    ItemVersionId getVersionId();
+  }
+
+  @AutoValue
+  abstract static class FakeItem implements Item {
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_FakeItem.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setVersionId(ItemVersionId x);
+      abstract FakeItem build();
+    }
+  }
+
+  @Test
+  public void testParentInterfaceOverridesGrandparent() {
+    ItemVersionId version = new ItemVersionId();
+    FakeItem fakeItem = FakeItem.builder().setVersionId(version).build();
+    assertThat(fakeItem.getVersionId()).isSameAs(version);
+  }
+
+  /** Fake ApkVersionCode class. */
+  public static class ApkVersionCode {}
+
+  /**
+   * Illustrates a potential problem that showed up while generalizing builders. If our
+   * imports are not accurate we may end up importing ImmutableList.Builder, which won't work
+   * because the generated Builder subclass of ReleaseInfoBuilder will supersede it. Normally
+   * we wouldn't import ImmutableList.Builder because the nested Builder class in the
+   * {@code @AutoValue} class would prevent us trying. But in this case the nested
+   * class is called ReleaseInfoBuilder so we might import anyway if we're not careful. This is one
+   * reason why we moved away from importing nested classes to only importing top-level classes.
+   */
+  @AutoValue
+  public abstract static class ReleaseInfo {
+    public static ReleaseInfoBuilder newBuilder() {
+      return new AutoValue_AutoValueTest_ReleaseInfo.Builder();
+    }
+
+    public abstract ImmutableList<ApkVersionCode> apkVersionCodes();
+
+    ReleaseInfo() {}
+
+    /** Notice that this is called ReleaseInfoBuilder and not Builder. */
+    @AutoValue.Builder
+    public abstract static class ReleaseInfoBuilder {
+      public ReleaseInfoBuilder addApkVersionCode(ApkVersionCode code) {
+        apkVersionCodesBuilder().add(code);
+        return this;
+      }
+
+      abstract ImmutableList.Builder<ApkVersionCode> apkVersionCodesBuilder();
+
+      public abstract ReleaseInfo build();
+    }
+  }
+
+  @Test
+  public void testUnusualBuilderName() {
+    ApkVersionCode apkVersionCode = new ApkVersionCode();
+    ReleaseInfo x = ReleaseInfo.newBuilder().addApkVersionCode(apkVersionCode).build();
+    assertThat(x.apkVersionCodes()).containsExactly(apkVersionCode);
+  }
+
+  @AutoValue
+  public abstract static class OuterWithDefaultableInner {
+    public abstract ImmutableList<String> names();
+    public abstract DefaultableInner inner();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_OuterWithDefaultableInner.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract ImmutableList<String> names();
+      public abstract ImmutableList.Builder<String> namesBuilder();
+      public abstract DefaultableInner inner();
+      public abstract DefaultableInner.Builder innerBuilder();
+      public abstract OuterWithDefaultableInner build();
+    }
+  }
+
+  @AutoValue
+  public abstract static class DefaultableInner {
+    public abstract int bar();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_DefaultableInner.Builder()
+          .setBar(23);
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setBar(int x);
+      public abstract DefaultableInner build();
+    }
+  }
+
+  @Test
+  public void testOuterWithDefaultableInner_Defaults() {
+    DefaultableInner defaultInner = DefaultableInner.builder().build();
+    OuterWithDefaultableInner x = OuterWithDefaultableInner.builder().build();
+    assertThat(x.names()).isEmpty();
+    assertThat(x.inner()).isEqualTo(defaultInner);
+  }
+
+  @Test
+  public void testOuterWithDefaultableInner_Getters() {
+    DefaultableInner defaultInner = DefaultableInner.builder().build();
+
+    OuterWithDefaultableInner.Builder builder = OuterWithDefaultableInner.builder();
+    assertThat(builder.names()).isEmpty();
+    assertThat(builder.inner()).isEqualTo(defaultInner);
+
+    OuterWithDefaultableInner x1 = builder.build();
+    assertThat(x1.names()).isEmpty();
+    assertThat(x1.inner()).isEqualTo(defaultInner);
+
+    builder.namesBuilder().add("Fred");
+    builder.innerBuilder().setBar(17);
+    OuterWithDefaultableInner x2 = builder.build();
+    assertThat(x2.names()).containsExactly("Fred");
+    assertThat(x2.inner().bar()).isEqualTo(17);
+  }
+
+  @AutoValue
+  public abstract static class OuterWithNonDefaultableInner<T> {
+    public abstract int foo();
+    public abstract NonDefaultableInner<T> inner();
+
+    public static <T> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_OuterWithNonDefaultableInner.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T> {
+      public abstract Builder<T> setFoo(int x);
+      public abstract NonDefaultableInner.Builder<T> innerBuilder();
+      public abstract OuterWithNonDefaultableInner<T> build();
+    }
+  }
+
+  @AutoValue
+  public abstract static class NonDefaultableInner<E> {
+    public abstract E bar();
+
+    public static <E> Builder<E> builder() {
+      return new AutoValue_AutoValueTest_NonDefaultableInner.Builder<E>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<E> {
+      public abstract Builder<E> setBar(E x);
+      public abstract NonDefaultableInner<E> build();
+    }
+  }
+
+  @Test
+  public void testOuterWithNonDefaultableInner() {
+    OuterWithNonDefaultableInner.Builder<String> builder = OuterWithNonDefaultableInner.builder();
+    builder.setFoo(23);
+    try {
+      builder.build();
+      fail("Did not get expected exception for unbuilt inner instance");
+    } catch (IllegalStateException expected) {
+    }
   }
 }

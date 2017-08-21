@@ -1,5 +1,6 @@
 # How do I...
 
+
 This page answers common how-to questions that may come up when using AutoValue.
 You should read and understand the [Introduction](index.md) first.
 
@@ -18,10 +19,10 @@ How do I...
 *   ... [use a property of a **mutable** type?](#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](#custom)
 *   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
-*   ... [have multiple **create** methods, or name it/them differently?]
-    (#create)
-*   ... [have AutoValue also implement abstract methods from my **supertypes**?]
-    (#supertypes)
+*   ... [have multiple **create** methods, or name it/them
+    differently?](#create)
+*   ... [have AutoValue also implement abstract methods from my
+    **supertypes**?](#supertypes)
 *   ... [use AutoValue with a **generic** class?](#generic)
 *   ... [make my class Java- or GWT- **serializable**?](#serialize)
 *   ... [apply an **annotation** to a generated **field**?](#annotate_field)
@@ -35,6 +36,9 @@ How do I...
 *   ... [expose a **constructor**, not factory method, as my public creation
     API?](#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract class?](#interface)
+*   ... [**memoize** ("cache") derived properties?](#memoize)
+*   ... [memoize the result of `hashCode` or
+    `toString`?](#memoize_hash_tostring)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -67,8 +71,8 @@ for the generated constructor's parameter names.
 AutoValue will do exactly this, but only if you are using these prefixes
 *consistently*. In that case, it infers your intended property name by first
 stripping the `get-` or `is-` prefix, then adjusting the case of what remains as
-specified by [Introspector.decapitalize]
-(http://docs.oracle.com/javase/8/docs/api/java/beans/Introspector.html#decapitalize).
+specified by
+[Introspector.decapitalize](http://docs.oracle.com/javase/8/docs/api/java/beans/Introspector.html#decapitalize).
 
 Note that, in keeping with the JavaBeans specification, the `is-` prefix is only
 allowed on `boolean`-returning methods. `get-` is allowed on any type of
@@ -161,8 +165,8 @@ concrete implementation class. We call this *underriding* the method.
 Remember when doing this that you are losing AutoValue's protections. Be careful
 to follow the basic rules of hash codes: equal objects must have equal hash
 codes *always*, and equal hash codes should imply equal objects *almost always*.
-You should now test your class more thoroughly, ideally using [`EqualsTester`]
-(http://static.javadoc.io/com.google.guava/guava-testlib/19.0/com/google/common/testing/EqualsTester.html)
+You should now test your class more thoroughly, ideally using
+[`EqualsTester`](http://static.javadoc.io/com.google.guava/guava-testlib/19.0/com/google/common/testing/EqualsTester.html)
 from [guava-testlib](http://github.com/google/guava).
 
 Best practice: mark your underriding methods `final` to make it clear to future
@@ -186,39 +190,24 @@ class PleaseOverrideExample extends SuperclassThatDefinesToString {
 
 ## <a name="create"></a>... have multiple `create` methods, or name it/them differently?
 
-Just do it! AutoValue doesn't actually care. This [best practice item]
-(practices.md#one_reference) may be relevant.
+Just do it! AutoValue doesn't actually care. This
+[best practice item](practices.md#one_reference) may be relevant.
 
 ## <a name="ignore"></a>... ignore certain properties in `equals`, etc.?
 
 Suppose your value class has an extra field that shouldn't be included in
-`equals` or `hashCode` computations. One common reason is that it is a "cached"
-or derived value based on other properties. In this case, simply define the
-field in your abstract class directly; AutoValue will have nothing to do with
-it:
+`equals` or `hashCode` computations.
 
-```java
-@AutoValue
-abstract class DerivedExample {
-  static DerivedExample create(String realProperty) {
-    return new AutoValue_DerivedExample(realProperty);
-  }
+If this is because it is a derived value based on other properties, see [How do
+I memoize derived properties?](#memoize).
 
-  abstract String realProperty();
+Otherwise, first make certain that you really want to do this. It is often, but
+not always, a mistake. Remember that libraries will treat two equal instances as
+absolutely *interchangeable* with each other. Whatever information is present in
+this extra field could essentially "disappear" when you aren't expecting it, for
+example when your value is stored and retrieved from certain collections.
 
-  private String derivedProperty;
-
-  final String derivedProperty() {
-    // non-thread-safe example
-    if (derivedProperty == null) {
-      derivedProperty = realProperty().toLowerCase();
-    }
-  }
-}
-```
-
-On the other hand, if the value is user-specified, not derived, the solution is
-slightly more elaborate (but still reasonable):
+If you're sure, here is how to do it:
 
 ```java
 @AutoValue
@@ -239,8 +228,8 @@ abstract class IgnoreExample {
 }
 ```
 
-Note that in both cases the field ignored for `equals` and `hashCode` is also
-ignored by `toString`; to AutoValue it simply doesn't exist.
+Note that this means the field is also ignored by `toString`; to AutoValue
+it simply doesn't exist.
 
 ## <a name="supertypes"></a>... have AutoValue also implement abstract methods from my supertypes?
 
@@ -292,8 +281,8 @@ public class Names {
 }
 ```
 
-For more details, see the [`AutoAnnotation` javadoc]
-(http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
+For more details, see the [`AutoAnnotation`
+javadoc](http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 
 ## <a name="setters"></a>... also include setter (mutator) methods?
 
@@ -307,10 +296,9 @@ might be mutated and the other not.
 ## <a name="compareTo"></a>... also generate `compareTo`?
 
 AutoValue intentionally does not provide this feature. It is better for you to
-roll your own comparison logic using the new methods added to [`Comparator`]
-(https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) in Java 8,
-or [`ComparisonChain`]
-(http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ComparisonChain.html)
+roll your own comparison logic using the new methods added to
+[`Comparator`](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) in Java 8,
+or [`ComparisonChain`](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ComparisonChain.html)
 from [Guava](http://github.com/google/guava).
 
 Since these mechanisms are easy to use, require very little code, and give you
@@ -337,7 +325,8 @@ If it's important to accept an object array at construction time, refer to the
 ## <a name="inherit"></a>... have one `@AutoValue` class extend another?
 
 This ability is intentionally not supported, because there is no way to do it
-correctly. See *Effective Java, 2nd Edition* Item 8.
+correctly. See *Effective Java, 2nd Edition* Item 8: "Obey the general contract
+when overriding equals".
 
 ## <a name="private_accessors"></a>... keep my accessor methods private?
 
@@ -356,7 +345,78 @@ constructors by *Effective Java*, Item 1.
 Interfaces are not allowed. The only advantage of interfaces we're aware of is
 that you can omit `public abstract` from the methods. That's not much. On the
 other hand, you would lose the immutability guarantee, and you'd also invite
-more of the kind of bad behavior described in [this best-practices item]
-(practices.md#simple). On balance, we don't think it's worth it.
+more of the kind of bad behavior described in [this best-practices
+item](practices.md#simple). On balance, we don't think it's worth it.
 
+## <a name="memoize"></a>... memoize ("cache") derived properties?
+
+Sometimes your class has properties that are derived from the ones that
+AutoValue implements. You'd typically implement them with a concrete method that
+uses the other properties:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+
+  String derivedProperty() {
+    return someFunctionOf(barProperty());
+  }
+}
+```
+
+But what if `someFunctionOf(Bar)` is expensive? You'd like to calculate it only
+one time, then cache and reuse that value for all future calls. Normally,
+thread-safe lazy initialization involves a lot of tricky boilerplate.
+
+Instead, just write the derived-property accessor method as above, and
+annotate it with [`@Memoized`]. Then AutoValue will override that method to
+return a stored value after the first call:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+
+  @Memoized
+  String derivedProperty() {
+    return someFunctionOf(barProperty());
+  }
+}
+```
+
+Then your method will be called at most once, even if multiple threads attempt
+to access the property concurrently.
+
+The annotated method must have the usual form of an accessor method, and may not
+be `abstract`, `final`, or `private`.
+
+The stored value will not be used in the implementation of `equals`, `hashCode`,
+or `toString`.
+
+If a `@Memoized` method is also annotated with `@Nullable`, then `null` values
+will be stored; if not, then the overriding method throws `NullPointerException`
+when the annotated method returns `null`.
+
+[`@Memoized`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/memoized/Memoized.java
+
+## <a name="memoize_hash_tostring"></a>... memoize the result of `hashCode` or `toString`?
+
+You can also make your class remember and reuse the result of `hashCode`,
+`toString`, or both, like this:
+
+```java
+@AutoValue
+abstract class Foo {
+  abstract Bar barProperty();
+
+  @Memoized
+  @Override
+  public abstract int hashCode();
+
+  @Memoized
+  @Override
+  public abstract String toString();
+}
+```
 

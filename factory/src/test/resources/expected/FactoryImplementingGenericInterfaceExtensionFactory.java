@@ -15,7 +15,6 @@
  */
 package tests;
 
-import com.google.auto.factory.internal.Preconditions;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -29,14 +28,23 @@ final class FactoryImplementingGenericInterfaceExtensionFactory
   private final Provider<String> sProvider;
   @Inject
   FactoryImplementingGenericInterfaceExtensionFactory(Provider<String> sProvider) {
-    this.sProvider = Preconditions.checkNotNull(sProvider, 1);
+    this.sProvider = checkNotNull(sProvider, 1);
   }
   FactoryImplementingGenericInterfaceExtension create(Integer i) {
     return new FactoryImplementingGenericInterfaceExtension(
-        Preconditions.checkNotNull(sProvider.get(), 1), Preconditions.checkNotNull(i, 2));
+        checkNotNull(sProvider.get(), 1), checkNotNull(i, 2));
   }
   @Override
   public FactoryImplementingGenericInterfaceExtension make(Integer arg) {
     return create(arg);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

@@ -67,12 +67,12 @@ abstract class AutoFactoryDeclaration {
     if (packageName.length() > 0) {
       builder.append('.');
     }
-    for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
-      builder.append(enclosingSimpleName).append('_');
-    }
     if (className().isPresent()) {
       builder.append(className().get());
     } else {
+      for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
+        builder.append(enclosingSimpleName).append('_');
+      }
       builder.append(targetType().getSimpleName()).append("Factory");
     }
     return builder.toString();

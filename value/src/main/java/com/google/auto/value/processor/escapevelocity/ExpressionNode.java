@@ -129,6 +129,7 @@ abstract class ExpressionNode extends Node {
           return equal(context);
         case NOT_EQUAL:
           return !equal(context);
+        default: // fall out
       }
       int lhsInt = lhs.intValue(context);
       int rhsInt = rhs.intValue(context);

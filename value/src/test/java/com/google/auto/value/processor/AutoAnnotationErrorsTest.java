@@ -22,15 +22,18 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests for compilation errors with the AutoAnnotation processor.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class AutoAnnotationErrorsTest extends TestCase {
-  private final JavaFileObject TEST_ANNOTATION = JavaFileObjects.forSourceLines(
+@RunWith(JUnit4.class)
+public class AutoAnnotationErrorsTest {
+  private static final JavaFileObject TEST_ANNOTATION = JavaFileObjects.forSourceLines(
       "com.example.TestAnnotation",
       "package com.example;",
       "",
@@ -38,6 +41,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
       "  int value();",
       "}");
 
+  @Test
   public void testCorrect() {
     assert_().about(javaSources())
         .that(ImmutableList.of(
@@ -60,6 +64,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .compilesWithoutError();
   }
 
+  @Test
   public void testNotStatic() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -81,6 +86,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(7);
   }
 
+  @Test
   public void testDoesNotReturnAnnotation() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -101,6 +107,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(6);
   }
 
+  @Test
   public void testOverload() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -129,6 +136,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
   // Overload detection used to detect all @AutoAnnotation methods that resulted in 
   // annotation class of the same SimpleName as being an overload. 
   // This verifies that implementations in different packages work correctly.
+  @Test
   public void testSameNameDifferentPackagesDoesNotTriggerOverload() {
     
     JavaFileObject fooTestSource = JavaFileObjects.forSourceLines(
@@ -162,6 +170,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .compilesWithoutError();    
   }
 
+  @Test
   public void testWrongName() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -183,6 +192,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(7);
   }
 
+  @Test
   public void testWrongType() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -206,6 +216,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(7);
   }
 
+  @Test
   public void testWrongTypeCollection() {
     JavaFileObject testAnnotation = JavaFileObjects.forSourceLines(
         "com.example.TestAnnotation",
@@ -247,6 +258,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
     }
   }
 
+  @Test
   public void testExtraParameters() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -270,6 +282,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(7);
   }
 
+  @Test
   public void testMissingParameters() {
     JavaFileObject testSource = JavaFileObjects.forSourceLines(
         "com.foo.Test",
@@ -291,6 +304,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(7);
   }
 
+  @Test
   public void testAnnotationValuedDefaultsNotSupportedYet() {
     JavaFileObject annotationSource = JavaFileObjects.forSourceLines(
         "com.example.TestAnnotation",
@@ -322,6 +336,7 @@ public class AutoAnnotationErrorsTest extends TestCase {
         .in(testSource).onLine(7);
   }
 
+  @Test
   public void testAnnotationMemberNameConflictWithGeneratedLocal() {
     JavaFileObject annotationSource = JavaFileObjects.forSourceLines(
         "com.example.TestAnnotation",
