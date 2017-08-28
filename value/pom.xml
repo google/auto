@@ -42,7 +42,19 @@
     <tag>HEAD</tag>
   </scm>
 
+  <repositories>
+    <repository>
+      <id>jitpack.io</id>
+      <url>https://jitpack.io</url>
+    </repository>
+  </repositories>
+
   <dependencies>
+    <dependency>
+      <groupId>com.github.gradle.incap</groupId>
+      <artifactId>incap-ap-client</artifactId>
+      <version>master-SNAPSHOT</version>
+    </dependency>
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
