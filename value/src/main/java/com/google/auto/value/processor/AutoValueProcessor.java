@@ -15,17 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
-import static com.google.auto.common.MoreElements.getAnnotationMirror;
-import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.auto.common.MoreElements.getPackage;
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.common.collect.Sets.union;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
-
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
@@ -43,24 +32,8 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import java.beans.Introspector;
-import java.io.IOException;
-import java.io.Serializable;
-import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.annotation.Inherited;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
-import java.util.Set;
-import java.util.regex.Pattern;
-import javax.annotation.processing.AbstractProcessor;
+import org.gradle.incap.BaseIncrementalAnnotationProcessor;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -85,6 +58,29 @@ import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
+import java.beans.Introspector;
+import java.io.IOException;
+import java.io.Serializable;
+import java.io.Writer;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Inherited;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
+import static com.google.auto.common.MoreElements.*;
+import static com.google.common.collect.Sets.union;
+import static java.util.stream.Collectors.*;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -95,7 +91,7 @@ import javax.tools.JavaFileObject;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
-public class AutoValueProcessor extends AbstractProcessor {
+public class AutoValueProcessor extends BaseIncrementalAnnotationProcessor {
   public AutoValueProcessor() {
     this(AutoValueProcessor.class.getClassLoader());
   }
@@ -115,6 +111,11 @@ public class AutoValueProcessor extends AbstractProcessor {
   @Override
   public Set<String> getSupportedAnnotationTypes() {
     return ImmutableSet.of(AutoValue.class.getName());
+  }
+
+  @Override
+  public Set<String> getAdditionalSupportedOptions() {
+    return new HashSet<>();
   }
 
   @Override
@@ -173,7 +174,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   }
 
   @Override
-  public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  public boolean incrementalProcess(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     List<TypeElement> deferredTypes = deferredTypeNames.stream()
         .map(name -> processingEnv.getElementUtils().getTypeElement(name))
         .collect(toList());
@@ -1171,7 +1172,7 @@ public class AutoValueProcessor extends AbstractProcessor {
   private void writeSourceFile(String className, String text, TypeElement originatingType) {
     try {
       JavaFileObject sourceFile =
-          processingEnv.getFiler().createSourceFile(className, originatingType);
+          incrementalFiler.createSourceFile(className, originatingType);
       try (Writer writer = sourceFile.openWriter()) {
         writer.write(text);
       }
