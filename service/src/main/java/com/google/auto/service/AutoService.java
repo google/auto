@@ -40,6 +40,6 @@ import java.lang.annotation.Target;
 @Retention(SOURCE)
 @Target(TYPE)
 public @interface AutoService {
-  /** Returns the interface implemented by this service provider. */
-  Class<?> value();
+  /** Returns the interfaces implemented by this service provider. */
+  Class<?>[] value();
 }
