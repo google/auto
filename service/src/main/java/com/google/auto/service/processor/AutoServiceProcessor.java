@@ -15,9 +15,13 @@
  */
 package com.google.auto.service.processor;
 
+import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
@@ -27,7 +31,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import javax.annotation.processing.AbstractProcessor;
@@ -38,7 +42,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -57,6 +60,9 @@ import javax.tools.StandardLocation;
  */
 @SupportedOptions({ "debug", "verify" })
 public class AutoServiceProcessor extends AbstractProcessor {
+
+  @VisibleForTesting
+  static final String MISSING_SERVICES_ERROR = "No service interfaces provided for element!";
 
   /**
    * Maps the class names of service provider interfaces to the
@@ -127,26 +133,27 @@ public class AutoServiceProcessor extends AbstractProcessor {
     for (Element e : elements) {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = (TypeElement) e;
-      AnnotationMirror providerAnnotation = getAnnotationMirror(e, AutoService.class).get();
-      DeclaredType providerInterface = getProviderInterface(providerAnnotation);
-      TypeElement providerType = (TypeElement) providerInterface.asElement();
-
-      log("provider interface: " + providerType.getQualifiedName());
-      log("provider implementer: " + providerImplementer.getQualifiedName());
-
-      if (!checkImplementer(providerImplementer, providerType)) {
-        String message = "ServiceProviders must implement their service provider interface. "
-            + providerImplementer.getQualifiedName() + " does not implement "
-            + providerType.getQualifiedName();
-        error(message, e, providerAnnotation);
+      AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
+      Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
+      if (providerInterfaces.isEmpty()) {
+        error(MISSING_SERVICES_ERROR, e, annotationMirror);
+        continue;
       }
+      for (DeclaredType providerInterface : providerInterfaces) {
+        TypeElement providerType = MoreTypes.asTypeElement(providerInterface);
 
-      String providerTypeName = getBinaryName(providerType);
-      String providerImplementerName = getBinaryName(providerImplementer);
-      log("provider interface binary name: " + providerTypeName);
-      log("provider implementer binary name: " + providerImplementerName);
+        log("provider interface: " + providerType.getQualifiedName());
+        log("provider implementer: " + providerImplementer.getQualifiedName());
 
-      providers.put(providerTypeName, providerImplementerName);
+        if (checkImplementer(providerImplementer, providerType)) {
+          providers.put(getBinaryName(providerType), getBinaryName(providerImplementer));
+        } else {
+          String message = "ServiceProviders must implement their service provider interface. "
+              + providerImplementer.getQualifiedName() + " does not implement "
+              + providerType.getQualifiedName();
+          error(message, e, annotationMirror);
+        }
+      }
     }
   }
 
@@ -243,23 +250,16 @@ public class AutoServiceProcessor extends AbstractProcessor {
     return getBinaryNameImpl(typeElement, typeElement.getSimpleName() + "$" + className);
   }
 
-  private DeclaredType getProviderInterface(AnnotationMirror providerAnnotation) {
-
-    // The very simplest of way of doing this, is also unfortunately unworkable.
-    // We'd like to do:
-    //    ServiceProvider provider = e.getAnnotation(ServiceProvider.class);
-    //    Class<?> providerInterface = provider.value();
-    //
-    // but unfortunately we can't load the arbitrary class at annotation
-    // processing time. So, instead, we have to use the mirror to get at the
-    // value (much more painful).
-
-    Map<? extends ExecutableElement, ? extends AnnotationValue> valueIndex =
-        providerAnnotation.getElementValues();
-    log("annotation values: " + valueIndex);
-
-    AnnotationValue value = valueIndex.values().iterator().next();
-    return (DeclaredType) value.getValue();
+  /**
+   * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code annotationMirror}.
+   */
+  private ImmutableSet<DeclaredType> getValueFieldOfClasses(AnnotationMirror annotationMirror) {
+    @SuppressWarnings("unchecked")
+    List<AnnotationValue> values =
+        ((List<AnnotationValue>) getAnnotationValue(annotationMirror, "value").getValue());
+    // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class,
+    // int[].class
+    return values.stream().map(value -> (DeclaredType) value.getValue()).collect(toImmutableSet());
   }
 
   private void log(String msg) {
