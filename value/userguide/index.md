@@ -77,7 +77,7 @@ Maven users should add the following to the project's `pom.xml` file:
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.2</version>
+  <version>1.5</version>
   <scope>provided</scope>
 </dependency>
 ```
@@ -87,8 +87,8 @@ these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
 
 ```groovy
 dependencies {
-  compileOnly "com.google.auto.value:auto-value:1.2"
-  apt         "com.google.auto.value:auto-value:1.2"
+  compileOnly "com.google.auto.value:auto-value:1.5"
+  apt         "com.google.auto.value:auto-value:1.5"
 }
 ```
 
