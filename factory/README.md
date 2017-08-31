@@ -54,6 +54,10 @@ final class SomeClassFactory {
 }
 ```
 
+> NOTE: AutoFactory only supports JSR-330 @Qualifier annotations. Older, 
+> framework-specific annotations from Guice, Spring, etc are not
+> supported (though these all support JSR-330)
+
 Download
 --------
 

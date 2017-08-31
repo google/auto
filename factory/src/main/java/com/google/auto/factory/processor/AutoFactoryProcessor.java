@@ -15,10 +15,10 @@
  */
 package com.google.auto.factory.processor;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -28,14 +28,14 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
-
+import com.google.googlejavaformat.java.filer.FormattingFiler;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -47,6 +47,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -73,11 +74,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
-    factoryWriter = new FactoryWriter(processingEnv.getFiler());
+    factoryWriter = new FactoryWriter(new FormattingFiler(processingEnv.getFiler()));
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =
-        new FactoryDescriptorGenerator(messager, elements, declarationFactory);
+        new FactoryDescriptorGenerator(messager, types, declarationFactory);
   }
 
   @Override
@@ -103,55 +104,21 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
-        String factoryName = declaration.get().getFactoryName(
-            elements.getPackageOf(element).getQualifiedName(), 
-            getAnnotatedType(element).getSimpleName());
-
+        String factoryName = declaration.get().getFactoryName();
         TypeElement extendingType = declaration.get().extendingType();
-        List<ExecutableElement> supertypeMethods =
-            ElementFilter.methodsIn(elements.getAllMembers(extendingType));
-        for (ExecutableElement supertypeMethod : supertypeMethods) {
-          if (supertypeMethod.getModifiers().contains(Modifier.ABSTRACT)) {
-            ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
-                types, supertypeMethod, extendingType);
-            implementationMethodDescriptorsBuilder.put(factoryName,
-                new ImplementationMethodDescriptor.Builder()
-                    .name(supertypeMethod.getSimpleName().toString())
-                    .returnType(getAnnotatedType(element).getQualifiedName().toString())
-                    .publicMethod()
-                    .passedParameters(Parameter.forParameterList(
-                        supertypeMethod.getParameters(), methodType.getParameterTypes()))
-                    .build());
-          }
-        }
+        implementationMethodDescriptorsBuilder.putAll(
+            factoryName, implementationMethods(extendingType, element));
         for (TypeElement implementingType : declaration.get().implementingTypes()) {
-          List<ExecutableElement> interfaceMethods =
-              ElementFilter.methodsIn(elements.getAllMembers(implementingType));
-          for (ExecutableElement interfaceMethod : interfaceMethods) {
-            if (interfaceMethod.getModifiers().contains(Modifier.ABSTRACT)) {
-              ExecutableType methodType = Elements2.getExecutableElementAsMemberOf(
-                  types, interfaceMethod, implementingType);
-              implementationMethodDescriptorsBuilder.put(factoryName,
-                  new ImplementationMethodDescriptor.Builder()
-                      .name(interfaceMethod.getSimpleName().toString())
-                      .returnType(getAnnotatedType(element).getQualifiedName().toString())
-                      .publicMethod()
-                      .passedParameters(Parameter.forParameterList(
-                          interfaceMethod.getParameters(), methodType.getParameterTypes()))
-                      .build());
-            }
-          }
+          implementationMethodDescriptorsBuilder.putAll(
+              factoryName, implementationMethods(implementingType, element));
         }
       }
 
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
-      indexedMethods.putAll(
-          Multimaps.index(descriptors, new Function<FactoryMethodDescriptor, String>() {
-            @Override public String apply(FactoryMethodDescriptor descriptor) {
-              return descriptor.factoryName();
-            }
-          }));
+      for (FactoryMethodDescriptor descriptor : descriptors) {
+        indexedMethods.put(descriptor.factoryName(), descriptor);
+      }
     }
 
     ImmutableSetMultimap<String, ImplementationMethodDescriptor>
@@ -159,15 +126,24 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
     for (Entry<String, Collection<FactoryMethodDescriptor>> entry
         : indexedMethods.build().asMap().entrySet()) {
-      ImmutableSet.Builder<String> extending = ImmutableSet.builder();
-      ImmutableSortedSet.Builder<String> implementing = ImmutableSortedSet.naturalOrder();
+      ImmutableSet.Builder<TypeMirror> extending = ImmutableSet.builder();
+      ImmutableSortedSet.Builder<TypeMirror> implementing =
+          ImmutableSortedSet.orderedBy(
+              new Comparator<TypeMirror>() {
+                @Override
+                public int compare(TypeMirror first, TypeMirror second) {
+                  String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
+                  String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
+                  return firstName.compareTo(secondName);
+                }
+              });
       boolean publicType = false;
       Boolean allowSubclasses = null;
       boolean skipCreation = false;
       for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
-        extending.add(methodDescriptor.declaration().extendingType().getQualifiedName().toString());
+        extending.add(methodDescriptor.declaration().extendingType().asType());
         for (TypeElement implementingType : methodDescriptor.declaration().implementingTypes()) {
-          implementing.add(implementingType.getQualifiedName().toString());
+          implementing.add(implementingType.asType());
         }
         publicType |= methodDescriptor.publicMethod();
         if (allowSubclasses == null) {
@@ -184,7 +160,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       if (!skipCreation) {
         try {
           factoryWriter.writeFactory(
-              new FactoryDescriptor(
+              FactoryDescriptor.create(
                   entry.getKey(),
                   Iterables.getOnlyElement(extending.build()),
                   implementing.build(),
@@ -199,13 +175,39 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     }
   }
 
-  private TypeElement getAnnotatedType(Element element) {
+  private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
+      TypeElement supertype, Element autoFactoryElement) {
+    ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
+        ImmutableSet.builder();
+    for (ExecutableElement implementationMethod :
+        ElementFilter.methodsIn(elements.getAllMembers(supertype))) {
+      if (implementationMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+        ExecutableType methodType =
+            Elements2.getExecutableElementAsMemberOf(
+                types, implementationMethod, supertype);
+        ImmutableSet<Parameter> passedParameters =
+            Parameter.forParameterList(
+                implementationMethod.getParameters(), methodType.getParameterTypes(), types);
+        implementationMethodsBuilder.add(
+            ImplementationMethodDescriptor.builder()
+                .name(implementationMethod.getSimpleName().toString())
+                .returnType(getAnnotatedType(autoFactoryElement))
+                .publicMethod()
+                .passedParameters(passedParameters)
+                .isVarArgs(implementationMethod.isVarArgs())
+                .build());
+      }
+    }
+    return implementationMethodsBuilder.build();
+  }
+
+  private TypeMirror getAnnotatedType(Element element) {
     List<TypeElement> types = ImmutableList.of();
     while (types.isEmpty()) {
       types = ElementFilter.typesIn(Arrays.asList(element));
       element = element.getEnclosingElement();
     }
-    return Iterables.getOnlyElement(types);
+    return Iterables.getOnlyElement(types).asType();
   }
 
   @Override

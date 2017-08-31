@@ -15,14 +15,14 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static javax.lang.model.element.ElementKind.PACKAGE;
+
 import com.google.common.collect.Ordering;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static javax.lang.model.element.ElementKind.PACKAGE;
 
 /**
  * Represents the visibility of a given {@link Element}: {@code public}, {@code protected},

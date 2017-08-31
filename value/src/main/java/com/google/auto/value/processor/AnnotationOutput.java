@@ -16,10 +16,8 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableMap;
-
 import java.util.List;
 import java.util.Map;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -27,7 +25,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.SimpleAnnotationValueVisitor6;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.tools.Diagnostic;
 
 /**
@@ -52,7 +50,7 @@ class AnnotationOutput {
    * abstract class and two concrete subclasses.
    */
   private abstract class SourceFormVisitor
-      extends SimpleAnnotationValueVisitor6<Void, StringBuilder> {
+      extends SimpleAnnotationValueVisitor8<Void, StringBuilder> {
     @Override
     protected Void defaultAction(Object value, StringBuilder sb) {
       sb.append(value);
@@ -159,7 +157,8 @@ class AnnotationOutput {
     @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
       sb.append('@').append(typeSimplifier.simplify(a.getAnnotationType()));
-      Map<ExecutableElement, AnnotationValue> map = ImmutableMap.copyOf(a.getElementValues());
+      Map<ExecutableElement, AnnotationValue> map =
+          ImmutableMap.<ExecutableElement, AnnotationValue>copyOf(a.getElementValues());
       if (!map.isEmpty()) {
         sb.append('(');
         String sep = "";

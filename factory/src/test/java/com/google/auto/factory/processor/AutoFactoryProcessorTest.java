@@ -17,16 +17,15 @@ package com.google.auto.factory.processor;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
-
+import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
-import javax.tools.JavaFileObject;
 
 /**
  * Functional tests for the {@link AutoFactoryProcessor}.
@@ -39,6 +38,18 @@ public class AutoFactoryProcessorTest {
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource("expected/SimpleClassFactory.java"));
+  }
+
+  @Test
+  public void nestedClasses() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/NestedClasses.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(
+            JavaFileObjects.forResource("expected/NestedClasses_SimpleNestedClassFactory.java"),
+            JavaFileObjects.forResource("expected/NestedClassCustomNamedFactory.java"));
   }
 
   @Test public void simpleClassNonFinal() {
@@ -98,6 +109,21 @@ public class AutoFactoryProcessorTest {
             JavaFileObjects.forResource("expected/SimpleClassProvidedDepsFactory.java"));
   }
 
+  @Test
+  public void simpleClassProvidedProviderDeps() {
+    assertAbout(javaSources())
+        .that(
+            ImmutableSet.of(
+                JavaFileObjects.forResource("support/AQualifier.java"),
+                JavaFileObjects.forResource("support/BQualifier.java"),
+                JavaFileObjects.forResource("good/SimpleClassProvidedProviderDeps.java")))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(
+            JavaFileObjects.forResource("expected/SimpleClassProvidedProviderDepsFactory.java"));
+  }
+
   @Test public void constructorAnnotated() {
     assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/ConstructorAnnotated.java"))
@@ -151,10 +177,10 @@ public class AutoFactoryProcessorTest {
         .failsToCompile()
         .withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(25).atColumn(3)
+            .in(file).onLine(24)
          .and().withErrorContaining(
             "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-            .in(file).onLine(26).atColumn(3);
+            .in(file).onLine(27);
   }
 
   @Test public void failsOnGenericClass() {
@@ -251,7 +277,7 @@ public class AutoFactoryProcessorTest {
         .withErrorContaining(
             "java.util.concurrent.TimeUnit is not a valid supertype for a factory. "
                 + "Supertypes must be non-final classes.")
-                    .in(file).onLine(22);
+                    .in(file).onLine(21);
   }
 
   @Test public void factoryExtendingFinalClass() {
@@ -273,7 +299,7 @@ public class AutoFactoryProcessorTest {
         .processedWith(new AutoFactoryProcessor())
         .compilesWithoutError()
         .and().generatesSources(JavaFileObjects.forResource(
-            "expected/FactoryImplementingGenericInterfaceExtension.java"));
+            "expected/FactoryImplementingGenericInterfaceExtensionFactory.java"));
   }
 
   @Test public void multipleFactoriesImpementingInterface() {
@@ -285,8 +311,96 @@ public class AutoFactoryProcessorTest {
         .compilesWithoutError()
         .and().generatesSources(
             JavaFileObjects.forResource(
-                "expected/MultipleFactoriesImplementingInterfaceAFactory.java"),
+                "expected/MultipleFactoriesImplementingInterface_ClassAFactory.java"),
             JavaFileObjects.forResource(
-                "expected/MultipleFactoriesImplementingInterfaceBFactory.java"));
+                "expected/MultipleFactoriesImplementingInterface_ClassBFactory.java"));
+  }
+
+  @Test public void classUsingQualifierWithArgs() {
+    assertAbout(javaSources())
+        .that(ImmutableSet.of(
+            JavaFileObjects.forResource("support/QualifierWithArgs.java"),
+            JavaFileObjects.forResource("good/ClassUsingQualifierWithArgs.java")))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/ClassUsingQualifierWithArgsFactory.java"));
+  }
+
+  @Test public void factoryImplementingInterfaceWhichRedeclaresCreateMethods() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("good/FactoryImplementingCreateMethod.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+        JavaFileObjects.forResource(
+            "expected/FactoryImplementingCreateMethod_ConcreteClassFactory.java"));
+  }
+
+  @Test public void nullableParams() {
+    assertAbout(javaSources())
+        .that(ImmutableSet.of(
+            JavaFileObjects.forResource("good/SimpleClassNullableParameters.java"),
+            JavaFileObjects.forResource("support/AQualifier.java"),
+            JavaFileObjects.forResource("support/BQualifier.java")))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/SimpleClassNullableParametersFactory.java"));
+  }
+
+  @Test public void customNullableType() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/CustomNullable.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(JavaFileObjects.forResource("expected/CustomNullableFactory.java"));
+  }
+
+  @Test public void multipleProvidedParamsWithSameKey() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/MultipleProvidedParamsSameKey.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/MultipleProvidedParamsSameKeyFactory.java"));
+  }
+
+  @Test public void providerArgumentToCreateMethod() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/ProviderArgumentToCreateMethod.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource("expected/ProviderArgumentToCreateMethodFactory.java"));
+  }
+
+  @Test public void multipleFactoriesConflictingParameterNames() {
+    assertThat(
+            JavaFileObjects.forResource("good/MultipleFactoriesConflictingParameterNames.java"),
+            JavaFileObjects.forResource("support/AQualifier.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and().generatesSources(
+            JavaFileObjects.forResource(
+                "expected/MultipleFactoriesConflictingParameterNamesFactory.java"));
+  }
+
+  @Test public void factoryVarargs() {
+    assertThat(JavaFileObjects.forResource("good/SimpleClassVarargs.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(JavaFileObjects.forResource("expected/SimpleClassVarargsFactory.java"));
+  }
+
+  @Test public void onlyPrimitives() {
+    assertThat(JavaFileObjects.forResource("good/OnlyPrimitives.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(JavaFileObjects.forResource("expected/OnlyPrimitivesFactory.java"));
   }
 }

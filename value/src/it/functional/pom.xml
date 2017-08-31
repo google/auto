@@ -22,6 +22,9 @@
   <artifactId>functional</artifactId>
   <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
+  <properties>
+    <exclude.tests>this-matches-nothing</exclude.tests>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.google.auto.value</groupId>
@@ -31,25 +34,37 @@
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
-      <version>1.3.9</version>
+      <version>3.0.0</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.truth</groupId>
-      <artifactId>truth</artifactId>
-      <version>0.25</version>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>20.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
-      <version>18.0</version>
+      <version>20.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.truth</groupId>
+      <artifactId>truth</artifactId>
+      <version>0.31</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.testing.compile</groupId>
+      <artifactId>compile-testing</artifactId>
+      <version>0.10</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -57,15 +72,25 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.6</version>
+      </plugin>
+      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
-          <compilerArgument>-Xlint:all</compilerArgument>
+          <source>${java.specification.version}</source>
+          <target>${java.specification.version}</target>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <arg>-encoding</arg>
+            <arg>utf8</arg>
+          </compilerArgs>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
+          <testExcludes>
+            <exclude>${exclude.tests}</exclude>
+          </testExcludes>
         </configuration>
       </plugin>
     </plugins>
@@ -81,18 +106,31 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <version>3.1</version>
             <configuration>
-              <source>1.6</source>
-              <target>1.6</target>
+              <source>${java.specification.version}</source>
+              <target>${java.specification.version}</target>
               <compilerArgs>
                 <arg>-Xlint:all</arg>
-                <arg>-Acom.google.auto.value.EclipseHackTest=1</arg>
+                <arg>-encoding</arg>
+                <arg>utf8</arg>
               </compilerArgs>
               <showWarnings>true</showWarnings>
               <showDeprecation>true</showDeprecation>
+              <testExcludes>
+                <exclude>${exclude.tests}</exclude>
+              </testExcludes>
             </configuration>
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>exclude-java8-tests</id>
+      <activation>
+        <jdk>(,1.7]</jdk>
+      </activation>
+      <properties>
+        <exclude.tests>**/AutoValueJava8Test.java</exclude.tests>
+      </properties>
     </profile>
   </profiles>
 </project>

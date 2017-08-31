@@ -15,13 +15,15 @@
  */
 package tests;
 
-import javax.annotation.Generated;
-
 import com.google.auto.factory.AutoFactory;
-import com.google.auto.factory.Provided;
 
 final class MixedFinals {
-  @AutoFactory(allowSubclasses = false) MixedFinals() {}
-  @AutoFactory(allowSubclasses = true) MixedFinals(String s) {}
-  @AutoFactory(allowSubclasses = true) MixedFinals(String s, Integer i) {}
+  @AutoFactory(allowSubclasses = false)
+  MixedFinals() {}
+
+  @AutoFactory(allowSubclasses = true)
+  MixedFinals(String s) {}
+
+  @AutoFactory(allowSubclasses = true)
+  MixedFinals(String s, Integer i) {}
 }

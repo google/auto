@@ -18,11 +18,14 @@ package tests;
 import javax.annotation.Generated;
 import javax.inject.Inject;
 
-@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+@Generated(
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 final class CustomNamedFactory {
   @Inject CustomNamedFactory() {}
-  
-  SimpleClass create() {
-    return new SimpleClass();
+
+  SimpleClassCustomName create() {
+    return new SimpleClassCustomName();
   }
 }

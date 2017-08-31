@@ -17,6 +17,7 @@ package com.google.auto.service.processor;
 
 import static com.google.common.base.Charsets.UTF_8;
 
+import com.google.common.io.Closer;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -27,8 +28,6 @@ import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.google.common.io.Closer;
 
 /**
  * A helper class for reading and writing Services files.

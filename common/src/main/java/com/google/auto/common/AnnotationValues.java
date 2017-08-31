@@ -16,9 +16,7 @@
 package com.google.auto.common;
 
 import com.google.common.base.Equivalence;
-
 import java.util.List;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.type.TypeMirror;
@@ -29,7 +27,7 @@ import javax.lang.model.util.SimpleAnnotationValueVisitor6;
  *
  * @author Christian Gruber
  */
-final class AnnotationValues {
+public final class AnnotationValues {
   private static final Equivalence<AnnotationValue> ANNOTATION_VALUE_EQUIVALENCE =
       new Equivalence<AnnotationValue>() {
         @Override protected boolean doEquivalent(AnnotationValue left, AnnotationValue right) {
@@ -67,7 +65,7 @@ final class AnnotationValues {
                   new SimpleAnnotationValueVisitor6<Boolean, List<? extends AnnotationValue>>() {
                     @Override protected Boolean defaultAction(
                         Object ignored, List<? extends AnnotationValue> alsoIgnored) {
-                      return false; // Not an annotation mirror, so can't be equal to such.
+                      return false; // Not an array, so can't be equal to such.
                     }
 
                     @SuppressWarnings("unchecked") // safe covariant cast

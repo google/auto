@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 The Guava Authors
+ * Copyright (C) 2012 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.NullPointerTester;
-
-import junit.framework.TestCase;
-
 import java.util.Map;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class PackagelessValueTypeTest extends TestCase {
+@RunWith(JUnit4.class)
+public class PackagelessValueTypeTest {
+  @Test
   public void testPackagelessValueType() {
     final String happy = "happy";
     final int testInt = 23;
@@ -42,6 +47,7 @@ public class PackagelessValueTypeTest extends TestCase {
     assertEquals(expectedHashCode, simple.hashCode());
   }
 
+  @Test
   public void testNestedValueType() {
     ImmutableMap<Integer, String> numberNames = ImmutableMap.of(1, "un", 2, "deux");
     PackagelessNestedValueType.Nested nested =
@@ -49,6 +55,7 @@ public class PackagelessValueTypeTest extends TestCase {
     assertEquals(numberNames, nested.numberNames());
   }
 
+  @Test
   public void testNull() {
     NullPointerTester tester = new NullPointerTester();
     tester.testAllPublicStaticMethods(PackagelessValueType.class);

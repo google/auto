@@ -15,21 +15,18 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.common.base.Optional;
+import static java.util.stream.Collectors.toList;
+
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.Multimap;
-
-import org.apache.velocity.runtime.parser.node.SimpleNode;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.zip.CRC32;
-
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -61,7 +58,7 @@ class GwtSerialization {
     if (optionalGwtCompatible.isPresent()) {
       AnnotationMirror gwtCompatible = optionalGwtCompatible.get();
       for (Map.Entry<ExecutableElement, AnnotationValue> entry :
-          Collections.unmodifiableMap(gwtCompatible.getElementValues()).entrySet()) {
+          GwtCompatibility.getElementValues(gwtCompatible).entrySet()) {
         if (entry.getKey().getSimpleName().contentEquals("serializable")
             && entry.getValue().getValue().equals(true)) {
           return true;
@@ -96,10 +93,7 @@ class GwtSerialization {
       String className = (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass
           + "_CustomFieldSerializer";
       vars.serializerClass = TypeSimplifier.simpleNameOf(className);
-      vars.props = new ArrayList<Property>();
-      for (AutoValueProcessor.Property prop : autoVars.props) {
-        vars.props.add(new Property(prop));
-      }
+      vars.props = autoVars.props.stream().map(Property::new).collect(toList());
       vars.classHashString = computeClassHash(autoVars.props);
       String text = vars.toText();
       writeSourceFile(className, text, type);
@@ -219,10 +213,10 @@ class GwtSerialization {
     /** A string that should change if any salient details of the serialized class change. */
     String classHashString;
 
-    private static final SimpleNode TEMPLATE = parsedTemplateForResource("gwtserializer.vm");
+    private static final Template TEMPLATE = parsedTemplateForResource("gwtserializer.vm");
 
     @Override
-    SimpleNode parsedTemplate() {
+    Template parsedTemplate() {
       return TEMPLATE;
     }
   }
@@ -231,11 +225,8 @@ class GwtSerialization {
     try {
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);
-      Writer writer = sourceFile.openWriter();
-      try {
+      try (Writer writer = sourceFile.openWriter()) {
         writer.write(text);
-      } finally {
-        writer.close();
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
@@ -251,7 +242,7 @@ class GwtSerialization {
     CRC32 crc = new CRC32();
     update(crc, typeSimplifier.simplify(type.asType()) + ":");
     for (AutoValueProcessor.Property prop : props) {
-      update(crc, prop.toString() + ":" + prop.getType() + ";");
+      update(crc, prop + ":" + prop.getType() + ";");
     }
     return String.format("%08x", crc.getValue());
   }

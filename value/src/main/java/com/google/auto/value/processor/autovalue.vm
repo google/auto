@@ -18,8 +18,13 @@ import $i;
 #end
 
 ${gwtCompatibleAnnotation}
+#foreach ($a in $annotations)
+$a
+#end
+#if ($generated != "")
 @${generated}("com.google.auto.value.processor.AutoValueProcessor")
-final class $subclass$formalTypes extends $origClass$actualTypes {
+#end
+#if ($isFinal) final #else abstract #end class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Fields
 
@@ -29,16 +34,20 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Constructor
 
-#if ($builderTypeName != "")
+#if ($isFinal && $builderTypeName != "")
   private ##
 #end
   $subclass(
 #foreach ($p in $props)
 
-     #if ($p.nullable) ${p.nullableAnnotation} #end $p.type $p #if ($foreach.hasNext) , #end
+      ${p.nullableAnnotation}$p.type $p #if ($foreach.hasNext) , #end
 #end ) {
 #foreach ($p in $props)
-  #if (!$p.kind.primitive && !$p.nullable && !$builderPropertyBuilders[$p.name])
+  #if (!$p.kind.primitive && !$p.nullable && ($builderTypeName == "" || !$isFinal))
+    ## We don't need a null check if the type is primitive or @Nullable. We also don't need it
+    ## if there is a builder, since the build() method will check for us. However, if there is a
+    ## builder but there are also extensions (!$isFinal) then we can't omit the null check because
+    ## the constructor is called from the extension code.
 
     if ($p == null) {
       throw new NullPointerException("Null $p.name");
@@ -61,25 +70,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
   @Override
   ${p.access}${p.type} ${p.getter}() {
-
-  #if ($p.kind == "ARRAY")
-
-    #if ($p.nullable)
-
-    return $p == null ? null : ${p}.clone();
-
-    #else
-
-    return ${p}.clone();
-
-    #end
-
-  #else
-
     return $p;
-
-  #end
-
   }
 
 #end
@@ -154,19 +145,19 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 #if ($hashCode)
   #macro (hashCodeExpression $p)
     #if ($p.kind == "BYTE" || $p.kind == "SHORT" || $p.kind == "CHAR" || $p.kind == "INT")
-      $p ##
+      this.$p ##
     #elseif ($p.kind == "LONG")
-      ($p >>> 32) ^ $p ##
+      (int) ((this.$p >>> 32) ^ this.$p) ##
     #elseif ($p.kind == "FLOAT")
-      Float.floatToIntBits($p) ##
+      Float.floatToIntBits(this.$p) ##
     #elseif ($p.kind == "DOUBLE")
-      (Double.doubleToLongBits($p) >>> 32) ^ Double.doubleToLongBits($p) ##
+      (int) ((Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p)) ##
     #elseif ($p.kind == "BOOLEAN")
-      $p ? 1231 : 1237 ##
+      this.$p ? 1231 : 1237 ##
     #elseif ($p.kind == "ARRAY")
-      ${arrays}.hashCode($p) ##
+      ${arrays}.hashCode(this.$p) ##
     #else
-      #if ($p.nullable) ($p == null) ? 0 : #end ${p}.hashCode() ##
+      #if ($p.nullable) ($p == null) ? 0 : #end this.${p}.hashCode() ##
     #end
   #end
 
@@ -194,7 +185,7 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #foreach ($m in $toBuilderMethods)
 
   @Override
-  public ${builderTypeName}${builderActualTypes} ${m}() {
+  ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
     return new Builder${builderActualTypes}(this);
   }
 
@@ -210,107 +201,154 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
 
     private $types.boxedClass($p.typeMirror).simpleName $p;
 
-    #elseif ($builderPropertyBuilders[$p.name])
-
-    private ${builderPropertyBuilders[$p.name].builderType} $p = ##
-        ${builderPropertyBuilders[$p.name].initializer};
-
     #else
 
-    private $p.type $p;
+      #if ($builderPropertyBuilders[$p.name])
+      ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
+      ## private ImmutableList.Builder<String> stringsBuilder$;
+      ## private ImmutableList<String> strings;
+
+    private ${builderPropertyBuilders[$p.name].builderType} ##
+        ${builderPropertyBuilders[$p.name].name};
+
+      #end
+
+    private $p.type $p #if ($p.optional && !$p.nullable) = $p.optional.empty #end ;
 
     #end
-
   #end
 
     Builder() {
     }
 
-    Builder(${origClass}${actualTypes} source) {
+  #if (!$toBuilderMethods.empty)
 
-  #foreach ($p in $props)
+    private Builder(${origClass}${actualTypes} source) {
 
-    #if ($builderPropertyBuilders[$p.name])
-
-      this.${p}.${builderPropertyBuilders[$p.name].copyAll}(source.${p.getter}());
-
-    #else
+    #foreach ($p in $props)
 
       this.$p = source.${p.getter}();
 
     #end
 
-  #end
-
     }
 
+  #end
+
   #foreach ($p in $props)
+
+    ## The following is either null or an instance of PropertyBuilderClassifier.PropertyBuilder
+    #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
 
     ## Setter and/or property builder
 
     #foreach ($setter in $builderSetters[$p.name])
 
     @Override
-    public ${builderTypeName}${builderActualTypes} ${setter.name}($setter.parameterType $p) {
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
+    ${setter.access}${builderTypeName}${builderActualTypes} ##
+        ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
 
-      this.$p = ($p == null) ? null : ${p}.clone();
+      #if (!$setter.primitiveParameter && !$p.nullable)
 
-        #else
-
-      this.$p = ${p}.clone();
-
-        #end
-      #else
-
-      this.$p = ${setter.copy($p)};
+      if ($p == null) {
+        throw new NullPointerException("Null $p.name");
+      }
 
       #end
 
+      #if ($propertyBuilder)
+
+      if (${propertyBuilder.name} != null) {
+        throw new IllegalStateException("Cannot set $p after calling ${p.name}Builder()");
+      }
+
+      #end
+
+      this.$p = ${setter.copy($p)};
       return this;
     }
 
     #end
 
-    #if ($builderPropertyBuilders[$p.name])
+    #if ($propertyBuilder)
 
     @Override
-    public ${builderPropertyBuilders[$p.name].builderType} ${p.name}Builder() {
-      return $p;
+    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder() {
+      if (${propertyBuilder.name} == null) {
+
+        ## This is the first time someone has asked for the builder. If the property it sets already
+        ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
+        ## there is also a setter for this property) then we copy that value into the builder.
+        ## Otherwise the builder starts out empty.
+        ## If we have neither a setter nor a toBuilder() method, then the builder always starts
+        ## off empty.
+
+        #if ($builderSetters[$p.name].empty && $toBuilderMethods.empty)
+
+        ${propertyBuilder.name} = ${propertyBuilder.initializer};
+
+        #else
+
+        if ($p == null) {
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
+        } else {
+
+          #if (${propertyBuilder.builtToBuilder})
+
+          ${propertyBuilder.name} = ${p}.${propertyBuilder.builtToBuilder}();
+
+          #else
+
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
+          ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
+
+          #end
+
+          $p = null;
+        }
+
+        #end
+
+      }
+      return $propertyBuilder.name;
     }
 
     #end
 
     ## Getter
 
-    #if ($propertiesWithBuilderGetters.contains($p.name))
+    #if ($builderGetters[$p.name])
 
     @Override
-    public $p.type ${p.getter}() {
-      #if ($builderRequiredProperties.contains($p))
+    ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
+      #if ($builderGetters[$p.name].optional)
+
+      if ($p == null) {
+        return $builderGetters[$p.name].optional.empty;
+      } else {
+        return ${builderGetters[$p.name].optional.rawType}.of($p);
+      }
+
+      #else
+        #if ($builderRequiredProperties.contains($p))
 
       if ($p == null) {
         throw new IllegalStateException("Property \"$p.name\" has not been set");
       }
 
-      #end
+        #end
 
-      #if ($p.kind == "ARRAY")
-        #if ($p.nullable)
+        #if ($propertyBuilder)
 
-      return ($p == null) ? null : ${p}.clone();
-
-        #else
-
-      return ${p}.clone();
+      if (${propertyBuilder.name} != null) {
+        return ${propertyBuilder.name}.build();
+      }
+      if ($p == null) {
+        ${propertyBuilder.beforeInitDefault}
+        $p = ${propertyBuilder.initDefault};
+      }
 
         #end
-      #elseif ($builderPropertyBuilders[$p.name])
-
-      return ${p}.build();
-
-      #else
 
       return $p;
 
@@ -322,14 +360,29 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
   #end
 
     @Override
-    public ${origClass}${actualTypes} ${buildMethodName}() {
+    ${buildMethod.get().access}${origClass}${actualTypes} ${buildMethod.get().name}() {
+
+  #foreach ($p in $props)
+    #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
+    #if ($propertyBuilder)
+
+      if (${propertyBuilder.name} != null) {
+        this.$p = ${propertyBuilder.name}.build();
+      } else if (this.$p == null) {
+        ${propertyBuilder.beforeInitDefault}
+        this.$p = ${propertyBuilder.initDefault};
+      }
+
+    #end
+  #end
+
   #if (!$builderRequiredProperties.empty)
 
       String missing = "";
 
     #foreach ($p in $builderRequiredProperties)
 
-      if ($p == null) {
+      if (this.$p == null) {
         missing += " $p.name";
       }
 
@@ -340,14 +393,13 @@ final class $subclass$formalTypes extends $origClass$actualTypes {
       }
   #end
 
-      return new ${subclass}${actualTypes}(
+      return new ${finalSubclass}${actualTypes}(
   #foreach ($p in $props)
 
-          this.$p ##
-    #if (${builderPropertyBuilders[$p.name]}) .build() #end
-    #if ($foreach.hasNext) , #end
+          this.$p #if ($foreach.hasNext) , #end
   #end );
     }
   }
 #end
+
 }

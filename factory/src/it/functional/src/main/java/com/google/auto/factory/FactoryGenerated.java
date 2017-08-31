@@ -15,14 +15,38 @@
  */
 package com.google.auto.factory;
 
+import javax.inject.Provider;
+
 @AutoFactory(implementing = FactoryInterface.class)
 public final class FactoryGenerated {
   private final String name;
   private final Dependency dependency;
+  private final Provider<Dependency> dependencyProvider;
+  private final int primitive;
+  private final int qualifiedPrimitive;
 
-  FactoryGenerated(String name, @Provided Dependency dependency) {
+  FactoryGenerated(
+      String name,
+      @Provided Dependency dependency,
+      @Provided @Qualifier Provider<Dependency> dependencyProvider,
+      @Provided int primitive,
+      @Provided @Qualifier int qualifiedPrimitive) {
     this.name = name;
     this.dependency = dependency;
+    this.dependencyProvider = dependencyProvider;
+    this.primitive = primitive;
+    this.qualifiedPrimitive = qualifiedPrimitive;
+  }
+
+  // Generates second factory method with a different name for the Dependency dependency.
+  // Tests http://b/21632171.
+  FactoryGenerated(
+      Object name,
+      @Provided Dependency dependency2,
+      @Provided @Qualifier Provider<Dependency> dependencyProvider,
+      @Provided int primitive,
+      @Provided @Qualifier int qualifiedPrimitive) {
+    this(name.toString(), dependency2, dependencyProvider, primitive, qualifiedPrimitive);
   }
 
   String name() {
@@ -31,5 +55,17 @@ public final class FactoryGenerated {
 
   Dependency dependency() {
     return dependency;
+  }
+
+  Provider<Dependency> dependencyProvider() {
+    return dependencyProvider;
+  }
+
+  int primitive() {
+    return primitive;
+  }
+
+  int qualifiedPrimitive() {
+    return qualifiedPrimitive;
   }
 }

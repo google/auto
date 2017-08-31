@@ -22,11 +22,18 @@ import com.google.auto.factory.Provided;
 @AutoFactory
 @SuppressWarnings("unused")
 final class SimpleClassProvidedDeps {
+  private final int providedPrimitiveA;
+  private final int providedPrimitiveB;
   private final String providedDepA;
   private final String providedDepB;
 
-  SimpleClassProvidedDeps(@Provided @AQualifier String providedDepA,
+  SimpleClassProvidedDeps(
+      @Provided @AQualifier int providedPrimitiveA,
+      @Provided @BQualifier int providedPrimitiveB,
+      @Provided @AQualifier String providedDepA,
       @Provided @BQualifier String providedDepB) {
+    this.providedPrimitiveA = providedPrimitiveA;
+    this.providedPrimitiveB = providedPrimitiveB;
     this.providedDepA = providedDepA;
     this.providedDepB = providedDepB;
   }

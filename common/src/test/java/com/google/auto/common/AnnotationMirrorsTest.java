@@ -19,25 +19,23 @@ import static com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH;
 import static com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.testing.compile.CompilationSubject.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.common.testing.EquivalenceTester;
 import com.google.testing.compile.CompilationRule;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
 import java.util.Map;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor6;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests {@link AnnotationMirrors}.
@@ -211,4 +209,5 @@ public class AnnotationMirrorsTest {
   private AnnotationMirror annotationOn(Class<?> clazz) {
     return getOnlyElement(elements.getTypeElement(clazz.getCanonicalName()).getAnnotationMirrors());
   }
+
 }

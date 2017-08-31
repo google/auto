@@ -19,16 +19,29 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+@Generated(
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 final class SimpleClassMixedDepsFactory {
   private final Provider<String> providedDepAProvider;
-  
+
   @Inject SimpleClassMixedDepsFactory(
       @AQualifier Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = providedDepAProvider;
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
   }
-  
+
   SimpleClassMixedDeps create(String depB) {
-    return new SimpleClassMixedDeps(providedDepAProvider.get(), depB);
+    return new SimpleClassMixedDeps(
+        checkNotNull(providedDepAProvider.get(), 1), checkNotNull(depB, 2));
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

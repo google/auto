@@ -19,36 +19,44 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-import tests.MixedDepsImplementingInterfaces.FromInt;
-import tests.MixedDepsImplementingInterfaces.FromObject;
-import tests.MixedDepsImplementingInterfaces.MarkerA;
-import tests.MixedDepsImplementingInterfaces.MarkerB;
-
 /**
  * @author Gregory Kick
  */
-@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+@Generated(
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+)
 final class MixedDepsImplementingInterfacesFactory
-    implements FromInt, FromObject, MarkerA, MarkerB {
+    implements MixedDepsImplementingInterfaces.FromInt, MixedDepsImplementingInterfaces.FromObject,
+        MixedDepsImplementingInterfaces.MarkerA, MixedDepsImplementingInterfaces.MarkerB {
   private final Provider<String> sProvider;
-  
+
   @Inject MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
-    this.sProvider = sProvider;
+    this.sProvider = checkNotNull(sProvider, 1);
   }
-  
+
   MixedDepsImplementingInterfaces create(int i) {
-    return new MixedDepsImplementingInterfaces(sProvider.get(), i);
+    return new MixedDepsImplementingInterfaces(checkNotNull(sProvider.get(), 1), i);
   }
-  
+
   MixedDepsImplementingInterfaces create(Object o) {
-    return new MixedDepsImplementingInterfaces(o);
+    return new MixedDepsImplementingInterfaces(checkNotNull(o, 1));
   }
-  
+
   @Override public MixedDepsImplementingInterfaces fromInt(int i) {
     return create(i);
   }
-  
+
   @Override public MixedDepsImplementingInterfaces fromObject(Object o) {
     return create(o);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

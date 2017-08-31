@@ -19,19 +19,42 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+@Generated(
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 final class SimpleClassProvidedDepsFactory {
+  private final Provider<Integer> providedPrimitiveAProvider;
+  private final Provider<Integer> providedPrimitiveBProvider;
   private final Provider<String> providedDepAProvider;
   private final Provider<String> providedDepBProvider;
-  
-  @Inject SimpleClassProvidedDepsFactory(
+
+  @Inject
+  SimpleClassProvidedDepsFactory(
+      @AQualifier Provider<Integer> providedPrimitiveAProvider,
+      @BQualifier Provider<Integer> providedPrimitiveBProvider,
       @AQualifier Provider<String> providedDepAProvider,
       @BQualifier Provider<String> providedDepBProvider) {
-    this.providedDepAProvider = providedDepAProvider;
-    this.providedDepBProvider = providedDepBProvider;
+    this.providedPrimitiveAProvider = checkNotNull(providedPrimitiveAProvider, 1);
+    this.providedPrimitiveBProvider = checkNotNull(providedPrimitiveBProvider, 2);
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 3);
+    this.providedDepBProvider = checkNotNull(providedDepBProvider, 4);
   }
-  
+
   SimpleClassProvidedDeps create() {
-    return new SimpleClassProvidedDeps(providedDepAProvider.get(), providedDepBProvider.get());
+    return new SimpleClassProvidedDeps(
+        checkNotNull(providedPrimitiveAProvider.get(), 1),
+        checkNotNull(providedPrimitiveBProvider.get(), 2),
+        checkNotNull(providedDepAProvider.get(), 3),
+        checkNotNull(providedDepBProvider.get(), 4));
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

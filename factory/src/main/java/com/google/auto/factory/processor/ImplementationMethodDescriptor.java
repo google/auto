@@ -15,85 +15,35 @@
  */
 package com.google.auto.factory.processor;
 
-import java.util.Set;
-
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import javax.lang.model.type.TypeMirror;
 
-final class ImplementationMethodDescriptor {
-  private final String name;
-  private final String returnType;
-  private final boolean publicMethod;
-  private final ImmutableSet<Parameter> passedParameters;
+@AutoValue
+abstract class ImplementationMethodDescriptor {
+  abstract String name();
+  abstract TypeMirror returnType();
+  abstract boolean publicMethod();
+  abstract ImmutableSet<Parameter> passedParameters();
+  abstract boolean isVarArgs();
 
-  private ImplementationMethodDescriptor(Builder builder) {
-    this.name = builder.name.get();
-    this.returnType = builder.returnType.get();
-    this.publicMethod = builder.publicMethod;
-    this.passedParameters = ImmutableSet.copyOf(builder.passedParameters);
+  static Builder builder() {
+    return new AutoValue_ImplementationMethodDescriptor.Builder()
+        .publicMethod(true)
+        .isVarArgs(false);
   }
 
-  String name() {
-    return name;
-  }
-
-  String returnType() {
-    return returnType;
-  }
-
-  boolean publicMethod() {
-    return publicMethod;
-  }
-
-  ImmutableSet<Parameter> passedParameters() {
-    return passedParameters;
-  }
-
-  @Override
-  public String toString() {
-    return Objects.toStringHelper(this)
-        .add("name", name)
-        .add("returnType", returnType)
-        .add("publicMethod", publicMethod)
-        .add("passedParameters", passedParameters)
-        .toString();
-  }
-
-  static final class Builder {
-    private Optional<String> name = Optional.absent();
-    private Optional<String> returnType = Optional.absent();
-    private boolean publicMethod = false;
-    private final Set<Parameter> passedParameters = Sets.newLinkedHashSet();
-
-    Builder name(String name) {
-      this.name = Optional.of(name);
-      return this;
-    }
-
-    Builder returnType(String returnType) {
-      this.returnType = Optional.of(returnType);
-      return this;
-    }
+  @AutoValue.Builder
+  static abstract class Builder {
+    abstract Builder name(String name);
+    abstract Builder returnType(TypeMirror returnTypeElement);
+    abstract Builder publicMethod(boolean publicMethod);
+    abstract Builder passedParameters(Iterable<Parameter> passedParameters);
+    abstract Builder isVarArgs(boolean isVarargs);
+    abstract ImplementationMethodDescriptor build();
 
     Builder publicMethod() {
       return publicMethod(true);
-    }
-
-    Builder publicMethod(boolean publicMethod) {
-      this.publicMethod = publicMethod;
-      return this;
-    }
-
-    Builder passedParameters(Iterable<Parameter> passedParameters) {
-      Iterables.addAll(this.passedParameters, passedParameters);
-      return this;
-    }
-
-    ImplementationMethodDescriptor build() {
-      return new ImplementationMethodDescriptor(this);
     }
   }
 }

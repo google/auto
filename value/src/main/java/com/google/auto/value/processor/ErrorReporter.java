@@ -15,8 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.AutoValue;
-
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -33,6 +31,16 @@ class ErrorReporter {
 
   ErrorReporter(ProcessingEnvironment processingEnv) {
     this.messager = processingEnv.getMessager();
+  }
+
+  /**
+   * Issue a compilation note.
+   *
+   * @param msg the text of the note
+   * @param e the element to which it pertains
+   */
+  void reportNote(String msg, Element e) {
+    messager.printMessage(Diagnostic.Kind.NOTE, msg, e);
   }
 
   /**

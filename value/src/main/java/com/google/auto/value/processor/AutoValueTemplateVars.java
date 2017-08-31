@@ -15,14 +15,14 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-
-import org.apache.velocity.runtime.parser.node.SimpleNode;
-
+import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
 
@@ -67,6 +67,13 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   String gwtCompatibleAnnotation;
 
+  /**
+   * The full spelling of any annotation to add to this class, or an empty list if there are none. A
+   * non-empty value might look something like {@code
+   * "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   */
+  ImmutableList<String> annotations;
+
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
 
@@ -83,6 +90,17 @@ class AutoValueTemplateVars extends TemplateVars {
   String simpleClassName;
   /** The simple name of the generated subclass. */
   String subclass;
+  /**
+   * The simple name of the final generated subclass.
+   * For {@code @AutoValue public static class Foo {}} this should always be "AutoValue_Foo".
+   */
+  String finalSubclass;
+
+  /**
+   * True if the generated class should be final (there are no extensions that
+   * will generate subclasses)
+   */
+  Boolean isFinal = false;
 
   /**
    * The formal generic signature of the class with the {@code @AutoValue} annotation and its
@@ -126,10 +144,8 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   Boolean builderIsInterface = false;
 
-  /**
-   * The simple name of the builder's build method, often {@code "build"}.
-   */
-  String buildMethodName = "";
+  /** The builder's build method, often {@code "build"}. */
+  Optional<AutoValueProcessor.SimpleMethod> buildMethod = Optional.empty();
 
   /**
    * A multimap from property names (like foo) to the corresponding setters. The same property may
@@ -141,33 +157,39 @@ class AutoValueTemplateVars extends TemplateVars {
   /**
    * A map from property names to information about the associated property builder. A property
    * called foo (defined by a method foo() or getFoo()) can have a property builder called
-   * fooBuilder(). The type of foo must be an immutable Guava type, like ImmutableSet, and
-   * fooBuilder() must return the corresponding builder, like ImmutableSet.Builder.
+   * fooBuilder(). The type of foo must be a type that has an associated builder following
+   * certain conventions. Guava immutable types such as ImmutableList follow those conventions,
+   * as do many {@code @AutoValue} types.
    */
-  ImmutableMap<String, BuilderSpec.PropertyBuilder> builderPropertyBuilders =
+  ImmutableMap<String, PropertyBuilder> builderPropertyBuilders =
       ImmutableMap.of();
 
   /**
-   * Properties that are required to be set. A property must be set explicitly unless it is either
-   * {@code @Nullable} (in which case it defaults to null), or has a property-builder method
-   * (in which case it defaults to empty).
+   * Properties that are required to be set. A property must be set explicitly except in the
+   * following cases:
+   * <ul>
+   * <li>it is {@code @Nullable} (in which case it defaults to null);
+   * <li>it is {@code Optional} (in which case it defaults to empty);
+   * <li>it has a property-builder method (in which case it defaults to empty).
+   * </ul>
    */
   ImmutableSet<AutoValueProcessor.Property> builderRequiredProperties = ImmutableSet.of();
 
   /**
-   * Properties that have getters in the builder.
+   * A map from property names to information about the associated property getter. A property
+   * called foo (defined by a method foo() or getFoo()) can have a property getter method with
+   * the same name (foo() or getFoo()) and either the same return type or an Optional
+   * (or OptionalInt, etc) wrapping it.
    */
-  ImmutableSet<String> propertiesWithBuilderGetters = ImmutableSet.of();
+  ImmutableMap<String, BuilderSpec.PropertyGetter> builderGetters = ImmutableMap.of();
 
-  /**
-   * The names of any {@code toBuilder()} methods, that is methods that return the builder type.
-   */
-  ImmutableList<String> toBuilderMethods;
+  /** The names of any {@code toBuilder()} methods, that is methods that return the builder type. */
+  ImmutableList<AutoValueProcessor.SimpleMethod> toBuilderMethods;
 
-  private static final SimpleNode TEMPLATE = parsedTemplateForResource("autovalue.vm");
+  private static final Template TEMPLATE = parsedTemplateForResource("autovalue.vm");
 
   @Override
-  SimpleNode parsedTemplate() {
+  Template parsedTemplate() {
     return TEMPLATE;
   }
 }

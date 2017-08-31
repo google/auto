@@ -15,12 +15,12 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
-
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -35,7 +35,7 @@ final class ProvidedChecker {
   }
 
   void checkProvidedParameter(Element element) {
-    checkArgument(element.getAnnotation(Provided.class) != null, "%s not annoated with @Provided",
+    checkArgument(isAnnotationPresent(element, Provided.class), "%s not annoated with @Provided",
         element);
     element.accept(new ElementKindVisitor6<Void, Void>() {
       @Override
@@ -73,6 +73,6 @@ final class ProvidedChecker {
   }
 
   private static boolean annotatedWithAutoFactory(Element e) {
-    return e.getAnnotation(AutoFactory.class) != null;
+    return isAnnotationPresent(e, AutoFactory.class);
   }
 }

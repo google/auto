@@ -15,103 +15,84 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
+import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.List;
-import java.util.Set;
-
-import javax.inject.Qualifier;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeMirror;
-
-import com.google.common.base.Objects;
+import com.google.auto.common.AnnotationMirrors;
+import com.google.auto.value.AutoValue;
+import com.google.common.base.Equivalence;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import java.util.List;
+import java.util.Set;
+import javax.inject.Provider;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Types;
 
-final class Parameter {
-  private final Optional<String> qualifier;
-  private final String type;
-  private final String name;
+/**
+ * Model for a parameter from an {@link com.google.auto.factory.AutoFactory} constructor or
+ * implementation method.
+ */
+@AutoValue
+abstract class Parameter {
 
-  private Parameter(Optional<String> qualifier, String type, String name) {
-    this.qualifier = checkNotNull(qualifier);
-    this.type = checkNotNull(type);
-    this.name = checkNotNull(name);
+  static final Function<Parameter, TypeMirror> TYPE = new Function<Parameter, TypeMirror>() {
+      @Override
+      public TypeMirror apply(Parameter parameter) {
+        return parameter.type();
+      }
+    };
+
+  /**
+   * The original type of the parameter, while {@code key().type()} erases the wrapped {@link
+   * Provider}, if any.
+   */
+  abstract TypeMirror type();
+
+  /** The name of the parameter. */
+  abstract String name();
+
+  abstract Key key();
+  abstract Optional<Equivalence.Wrapper<AnnotationMirror>> nullableWrapper();
+
+  Optional<AnnotationMirror> nullable() {
+    return unwrapOptionalEquivalence(nullableWrapper());
   }
 
-  Optional<String> qualifier() {
-    return qualifier;
-  }
-
-  String type() {
-    return type;
-  }
-
-  Key asKey() {
-    return new Key(qualifier, type);
-  }
-
-  String name() {
-    return name;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    } else if (obj instanceof  Parameter) {
-      Parameter that = (Parameter) obj;
-      return this.type.equals(that.type)
-          && this.name.equals(that.name)
-          && this.qualifier.equals(that.qualifier);
-    } else {
-      return false;
-    }
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(type, name, qualifier);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder().append('\'');
-    if (qualifier.isPresent()) {
-      builder.append(qualifier.get()).append(' ');
-    }
-    builder.append(type).append(' ').append(name).append('\'');
-    return builder.toString();
-  }
-
-  static Parameter forVariableElement(VariableElement variable, TypeMirror type) {
-    ImmutableSet.Builder<String> qualifiers = ImmutableSet.builder();
-    for (AnnotationMirror annotationMirror : variable.getAnnotationMirrors()) {
-      DeclaredType annotationType = annotationMirror.getAnnotationType();
-      if (annotationType.asElement().getAnnotation(Qualifier.class) != null) {
-        qualifiers.add(Mirrors.getQualifiedName(annotationType).toString());
+  static Parameter forVariableElement(VariableElement variable, TypeMirror type, Types types) {
+    Optional<AnnotationMirror> nullable = Optional.absent();
+    Iterable<? extends AnnotationMirror> annotations = variable.getAnnotationMirrors();
+    for (AnnotationMirror annotation : annotations) {
+      if (annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable")) {
+        nullable = Optional.of(annotation);
+        break;
       }
     }
-    // TODO(gak): check for only one qualifier rather than using the first
-    return new Parameter(FluentIterable.from(qualifiers.build()).first(),
-        type.toString(),
-        variable.getSimpleName().toString());
+
+    Key key = Key.create(type, annotations, types);
+    return new AutoValue_Parameter(
+        type,
+        variable.getSimpleName().toString(),
+        key,
+        wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), nullable));
   }
 
   static ImmutableSet<Parameter> forParameterList(
-      List<? extends VariableElement> variables, List<? extends TypeMirror> variableTypes) {
+      List<? extends VariableElement> variables,
+      List<? extends TypeMirror> variableTypes,
+      Types types) {
     checkArgument(variables.size() == variableTypes.size());
     ImmutableSet.Builder<Parameter> builder = ImmutableSet.builder();
     Set<String> names = Sets.newHashSetWithExpectedSize(variables.size());
     for (int i = 0; i < variables.size(); i++) {
-      Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i));
-      checkArgument(names.add(parameter.name));
+      Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i), types);
+      checkArgument(names.add(parameter.name()));
       builder.add(parameter);
     }
     ImmutableSet<Parameter> parameters = builder.build();
@@ -119,11 +100,12 @@ final class Parameter {
     return parameters;
   }
 
-  static ImmutableSet<Parameter> forParameterList(List<? extends VariableElement> variables) {
+  static ImmutableSet<Parameter> forParameterList(
+      List<? extends VariableElement> variables, Types types) {
     List<TypeMirror> variableTypes = Lists.newArrayListWithExpectedSize(variables.size());
     for (VariableElement var : variables) {
       variableTypes.add(var.asType());
     }
-    return forParameterList(variables, variableTypes);
+    return forParameterList(variables, variableTypes, types);
   }
 }

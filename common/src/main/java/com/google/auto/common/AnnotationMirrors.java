@@ -23,12 +23,10 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -76,7 +74,7 @@ public final class AnnotationMirrors {
    * {@link ExecutableElement}, supplying default values from the annotation if the
    * annotation property has not been set.  This is equivalent to
    * {@link Elements#getElementValuesWithDefaults(AnnotationMirror)} but can be called
-   * statically without an {@Elements} instance.
+   * statically without an {@link Elements} instance.
    */
   public static Map<ExecutableElement, AnnotationValue> getAnnotationValuesWithDefaults(
       AnnotationMirror annotation) {

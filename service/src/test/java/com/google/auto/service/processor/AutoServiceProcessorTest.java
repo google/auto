@@ -20,12 +20,10 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 import com.google.auto.service.processor.AutoServiceProcessor;
 import com.google.testing.compile.JavaFileObjects;
-
+import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
-import java.util.Arrays;
 
 /**
  * Tests the {@link AutoServiceProcessor}.

@@ -15,24 +15,26 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
-
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.runtime.log.NullLogChute;
-import org.apache.velocity.runtime.RuntimeConstants;
-import org.apache.velocity.runtime.RuntimeInstance;
-import org.apache.velocity.runtime.log.NullLogChute;
-import org.apache.velocity.runtime.parser.ParseException;
-import org.apache.velocity.runtime.parser.node.SimpleNode;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import org.apache.velocity.runtime.resource.ResourceCacheImpl;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * A template and a set of variables to be substituted into that template. A concrete subclass of
@@ -49,35 +51,7 @@ import org.apache.velocity.runtime.resource.ResourceCacheImpl;
  * @author Éamonn McManus
  */
 abstract class TemplateVars {
-  abstract SimpleNode parsedTemplate();
-
-  private static final RuntimeInstance velocityRuntimeInstance = new RuntimeInstance();
-  static {
-    // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-        new NullLogChute());
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RESOURCE_MANAGER_CACHE_CLASS,
-        ResourceCacheImpl.class.getName());
-    // Setting ResourceCacheImpl is should not be necessary since that is the default value, but
-    // ensures that Maven shading sees that Apache Commons classes referenced from ResourceCacheImpl
-    // are indeed referenced and cannot be removed during minimization.
-
-    // Disable any logging that Velocity might otherwise see fit to do.
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM, new NullLogChute());
-
-    // Velocity likes its "managers", LogManager and ResourceManager, which it loads through the
-    // context class loader. If that loader can see another copy of Velocity then that will lead
-    // to hard-to-diagnose exceptions during initialization.
-    Thread currentThread = Thread.currentThread();
-    ClassLoader oldContextLoader = currentThread.getContextClassLoader();
-    try {
-      currentThread.setContextClassLoader(TemplateVars.class.getClassLoader());
-      velocityRuntimeInstance.init();
-    } finally {
-      currentThread.setContextClassLoader(oldContextLoader);
-    }
-  }
+  abstract Template parsedTemplate();
 
   private final ImmutableList<Field> fields;
 
@@ -110,45 +84,114 @@ abstract class TemplateVars {
    * (a concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
    */
   String toText() {
-    VelocityContext velocityContext = toVelocityContext();
-    StringWriter writer = new StringWriter();
-    SimpleNode parsedTemplate = parsedTemplate();
-    boolean rendered = velocityRuntimeInstance.render(
-        velocityContext, writer, parsedTemplate.getTemplateName(), parsedTemplate);
-    if (!rendered) {
-      // I don't know when this happens. Usually you get an exception during rendering.
-      throw new IllegalArgumentException("Template rendering failed");
-    }
-    return writer.toString();
+    Map<String, Object> vars = toVars();
+    return parsedTemplate().evaluate(vars);
   }
 
-  private VelocityContext toVelocityContext() {
-    VelocityContext velocityContext = new VelocityContext();
+  private Map<String, Object> toVars() {
+    Map<String, Object> vars = Maps.newTreeMap();
     for (Field field : fields) {
       Object value = fieldValue(field, this);
       if (value == null) {
         throw new IllegalArgumentException("Field cannot be null (was it set?): " + field);
       }
-      Object old = velocityContext.put(field.getName(), value);
+      Object old = vars.put(field.getName(), value);
       if (old != null) {
         throw new IllegalArgumentException("Two fields called " + field.getName() + "?!");
       }
     }
-    return velocityContext;
+    return ImmutableMap.copyOf(vars);
   }
 
-  static SimpleNode parsedTemplateForResource(String resourceName) {
-    InputStream in = AutoValueTemplateVars.class.getResourceAsStream(resourceName);
+  static Template parsedTemplateForResource(String resourceName) {
+    InputStream in = TemplateVars.class.getResourceAsStream(resourceName);
     if (in == null) {
       throw new IllegalArgumentException("Could not find resource: " + resourceName);
     }
     try {
-      Reader reader = new InputStreamReader(in, "UTF-8");
-      return velocityRuntimeInstance.parse(reader, resourceName);
+      return templateFromInputStream(in);
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);
-    } catch (ParseException e) {
-      throw new AssertionError(e);
+    } catch (IOException | NullPointerException e) {
+      // https://github.com/google/auto/pull/439 says that we can also get NullPointerException.
+      return retryParseAfterException(resourceName, e);
+    } finally {
+      try {
+        in.close();
+      } catch (IOException ignored) {
+        // We probably already got an IOException which we're propagating.
+      }
+    }
+  }
+
+  private static Template retryParseAfterException(String resourceName, Exception exception) {
+    try {
+      return parsedTemplateFromUrl(resourceName);
+    } catch (Throwable t) {
+      // Chain the original exception so we can see both problems.
+      Throwable cause;
+      for (cause = exception; cause.getCause() != null; cause = cause.getCause()) {
+      }
+      cause.initCause(t);
+      throw new AssertionError(exception);
+    }
+  }
+
+  private static Template templateFromInputStream(InputStream in)
+      throws UnsupportedEncodingException, IOException {
+    Reader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+    return Template.parseFrom(reader);
+  }
+
+  // This is an ugly workaround for https://bugs.openjdk.java.net/browse/JDK-6947916, as
+  // reported in https://github.com/google/auto/issues/365.
+  // The issue is that sometimes the InputStream returned by JarURLCollection.getInputStream()
+  // can be closed prematurely, which leads to an IOException saying "Stream closed".
+  // We catch all IOExceptions, and fall back on logic that opens the jar file directly and
+  // loads the resource from it. Since that doesn't use JarURLConnection, it shouldn't be
+  // susceptible to the same bug. We only use this as fallback logic rather than doing it always,
+  // because jars are memory-mapped by URLClassLoader, so loading a resource in the usual way
+  // through the getResourceAsStream should be a lot more efficient than reopening the jar.
+  private static Template parsedTemplateFromUrl(String resourceName)
+      throws URISyntaxException, IOException {
+    URL resourceUrl = TemplateVars.class.getResource(resourceName);
+    if (resourceUrl.getProtocol().equalsIgnoreCase("file")) {
+      return parsedTemplateFromFile(resourceUrl);
+    } else if (resourceUrl.getProtocol().equalsIgnoreCase("jar")) {
+      return parsedTemplateFromJar(resourceUrl);
+    } else {
+      throw new AssertionError("Template fallback logic fails for: " + resourceUrl);
+    }
+  }
+
+  private static Template parsedTemplateFromJar(URL resourceUrl)
+      throws URISyntaxException, IOException {
+    // Jar URLs look like this: jar:file:/path/to/file.jar!/entry/within/jar
+    // So take apart the URL to open the jar /path/to/file.jar and read the entry
+    // entry/within/jar from it.
+    String resourceUrlString = resourceUrl.toString().substring("jar:".length());
+    int bang = resourceUrlString.lastIndexOf('!');
+    String entryName = resourceUrlString.substring(bang + 1);
+    if (entryName.startsWith("/")) {
+      entryName = entryName.substring(1);
+    }
+    URI jarUri = new URI(resourceUrlString.substring(0, bang));
+    try (JarFile jar = new JarFile(new File(jarUri))) {
+      JarEntry entry = jar.getJarEntry(entryName);
+      InputStream in = jar.getInputStream(entry);
+      return templateFromInputStream(in);
+    }
+  }
+
+  // We don't really expect this case to arise, since the bug we're working around concerns jars
+  // not individual files. However, when running the test for this workaround from Maven, we do
+  // have files. That does mean the test is basically useless there, but Google's internal build
+  // system does run it using a jar, so we do have coverage.
+  private static Template parsedTemplateFromFile(URL resourceUrl)
+      throws IOException, URISyntaxException {
+    File resourceFile = new File(resourceUrl.toURI());
+    try (InputStream in = new FileInputStream(resourceFile)) {
+      return templateFromInputStream(in);
     }
   }
 

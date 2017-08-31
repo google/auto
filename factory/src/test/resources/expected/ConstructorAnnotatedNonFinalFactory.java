@@ -19,12 +19,15 @@ import javax.annotation.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-@Generated("com.google.auto.factory.processor.AutoFactoryProcessor")
+@Generated(
+  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+  comments = "https://github.com/google/auto/tree/master/factory"
+  )
 class ConstructorAnnotatedNonFinalFactory {
   private final Provider<Object> objProvider;
-  
+
   @Inject ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
-    this.objProvider = objProvider;
+    this.objProvider = checkNotNull(objProvider, 1);
   }
 
   ConstructorAnnotatedNonFinal create() {
@@ -32,14 +35,23 @@ class ConstructorAnnotatedNonFinalFactory {
   }
 
   ConstructorAnnotatedNonFinal create(String s) {
-    return new ConstructorAnnotatedNonFinal(s);
+    return new ConstructorAnnotatedNonFinal(checkNotNull(s, 1));
   }
-  
+
   ConstructorAnnotatedNonFinal create(int i) {
-    return new ConstructorAnnotatedNonFinal(objProvider.get(), i);
+    return new ConstructorAnnotatedNonFinal(checkNotNull(objProvider.get(), 1), i);
   }
-  
+
   ConstructorAnnotatedNonFinal create(char c) {
-    return new ConstructorAnnotatedNonFinal(objProvider.get(), c);
+    return new ConstructorAnnotatedNonFinal(checkNotNull(objProvider.get(), 1), c);
+  }
+
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
+    if (reference == null) {
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
+    }
+    return reference;
   }
 }

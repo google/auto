@@ -29,17 +29,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EquivalenceTester;
 import com.google.testing.compile.CompilationRule;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -55,6 +48,10 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class MoreTypesTest {
@@ -69,6 +66,8 @@ public class MoreTypesTest {
     TypeElement mapElement = elements.getTypeElement(Map.class.getCanonicalName());
     TypeElement setElement = elements.getTypeElement(Set.class.getCanonicalName());
     TypeElement enumElement = elements.getTypeElement(Enum.class.getCanonicalName());
+    TypeElement container = elements.getTypeElement(Container.class.getCanonicalName());
+    TypeElement contained = elements.getTypeElement(Container.Contained.class.getCanonicalName());
     TypeElement funkyBounds = elements.getTypeElement(FunkyBounds.class.getCanonicalName());
     TypeElement funkyBounds2 = elements.getTypeElement(FunkyBounds2.class.getCanonicalName());
     TypeElement funkierBounds = elements.getTypeElement(FunkierBounds.class.getCanonicalName());
@@ -78,13 +77,25 @@ public class MoreTypesTest {
     DeclaredType mapOfObjectToObjectType =
         types.getDeclaredType(mapElement, objectType, objectType);
     TypeMirror mapType = mapElement.asType();
+    DeclaredType setOfSetOfObject =
+        types.getDeclaredType(setElement, types.getDeclaredType(setElement, objectType));
+    DeclaredType setOfSetOfString =
+        types.getDeclaredType(setElement, types.getDeclaredType(setElement, stringType));
+    DeclaredType setOfSetOfSetOfObject = types.getDeclaredType(setElement, setOfSetOfObject);
+    DeclaredType setOfSetOfSetOfString = types.getDeclaredType(setElement, setOfSetOfString);
     WildcardType wildcard = types.getWildcardType(null, null);
+    DeclaredType containerOfObject = types.getDeclaredType(container, objectType);
+    DeclaredType containerOfString = types.getDeclaredType(container, stringType);
+    TypeMirror containedInObject = types.asMemberOf(containerOfObject, contained);
+    TypeMirror containedInString = types.asMemberOf(containerOfString, contained);
     EquivalenceTester<TypeMirror> tester = EquivalenceTester.<TypeMirror>of(MoreTypes.equivalence())
         .addEquivalenceGroup(types.getNullType())
         .addEquivalenceGroup(types.getNoType(NONE))
         .addEquivalenceGroup(types.getNoType(VOID))
         .addEquivalenceGroup(objectType)
         .addEquivalenceGroup(stringType)
+        .addEquivalenceGroup(containedInObject)
+        .addEquivalenceGroup(containedInString)
         .addEquivalenceGroup(funkyBounds.asType())
         .addEquivalenceGroup(funkyBounds2.asType())
         .addEquivalenceGroup(funkierBounds.asType())
@@ -102,6 +113,10 @@ public class MoreTypesTest {
         .addEquivalenceGroup(types.getDeclaredType(mapElement, objectType, stringType))
         .addEquivalenceGroup(types.getDeclaredType(mapElement, stringType, objectType))
         .addEquivalenceGroup(types.getDeclaredType(mapElement, stringType, stringType))
+        .addEquivalenceGroup(setOfSetOfObject)
+        .addEquivalenceGroup(setOfSetOfString)
+        .addEquivalenceGroup(setOfSetOfSetOfObject)
+        .addEquivalenceGroup(setOfSetOfSetOfString)
         .addEquivalenceGroup(wildcard)
         // ? extends Object
         .addEquivalenceGroup(types.getWildcardType(objectType, null))
@@ -181,6 +196,11 @@ public class MoreTypesTest {
     <T> ExecutableElementsGroupE() {}
     <T> void a() {}
     public static <T> void b() {}
+  }
+
+  @SuppressWarnings("unused")
+  private static final class Container<T> {
+    private final class Contained {}
   }
 
   @SuppressWarnings("unused")
