@@ -15,6 +15,7 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
 import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
@@ -76,7 +77,15 @@ import org.junit.runners.model.Statement;
 public class OverridesTest {
   @Parameterized.Parameters(name = "{0}")
   public static List<Object[]> data() {
-    return ImmutableList.copyOf(new Object[][] {{CompilerType.JAVAC}, {CompilerType.ECJ}});
+    List<Object[]> compilerTypes = new ArrayList<Object[]>();
+    compilerTypes.add(new Object[] {CompilerType.JAVAC});
+    if (!"9".equals(JAVA_SPECIFICATION_VERSION.value())) {
+      // TODO(emcmanus): make this test pass with ECJ on Java 9.
+      // Currently it complains because it can't find java.lang.Object. Probably we need a newer
+      // version of ECJ.
+      compilerTypes.add(new Object[] {CompilerType.ECJ});
+    }
+    return compilerTypes;
   }
 
   @Rule public CompilationRule compilation = new CompilationRule();
