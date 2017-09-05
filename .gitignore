@@ -16,6 +16,8 @@ pom.xml.*
 release.properties
 
 .idea
+/*.ipr
+/*.iws
 *.iml
 classes
 
