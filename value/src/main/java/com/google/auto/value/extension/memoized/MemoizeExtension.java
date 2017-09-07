@@ -68,10 +68,8 @@ public final class MemoizeExtension extends AutoValueExtension {
   private static final ImmutableSet<String> DO_NOT_PULL_DOWN_ANNOTATIONS =
       ImmutableSet.of(Override.class.getCanonicalName(), Memoized.class.getCanonicalName());
 
-  private static final AnnotationSpec GENERATED =
-      AnnotationSpec.builder(Generated.class)
-          .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
-          .build();
+  private static final ClassName GENERATED =
+      ClassName.get("javax.annotation", "Generated");
 
   private static final ClassName LAZY_INIT =
       ClassName.get("com.google.errorprone.annotations.concurrent", "LazyInit");
@@ -105,6 +103,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     private final Elements elements;
     private final Messager messager;
     private final Optional<AnnotationSpec> lazyInitAnnotation;
+    private final Optional<AnnotationSpec> generatedAnnotation;
     private boolean hasErrors;
 
     Generator(Context context, String className, String classToExtend, boolean isFinal) {
@@ -115,6 +114,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       this.elements = context.processingEnvironment().getElementUtils();
       this.messager = context.processingEnvironment().getMessager();
       this.lazyInitAnnotation = getLazyInitAnnotation(elements);
+      this.generatedAnnotation = getGeneratedAnnotation(elements);
     }
 
     String generate() {
@@ -123,8 +123,11 @@ public final class MemoizeExtension extends AutoValueExtension {
               .superclass(superType())
               .addTypeVariables(typeVariableNames())
               .addModifiers(isFinal ? FINAL : ABSTRACT)
-              .addAnnotation(GENERATED)
               .addMethod(constructor());
+
+      if (generatedAnnotation.isPresent()) {
+        generated.addAnnotation(generatedAnnotation.get());
+      }
 
       for (ExecutableElement method : memoizedMethods(context)) {
         MethodOverrider methodOverrider = new MethodOverrider(method);
@@ -363,5 +366,17 @@ public final class MemoizeExtension extends AutoValueExtension {
       return Optional.absent();
     }
     return Optional.of(AnnotationSpec.builder(LAZY_INIT).build());
+  }
+
+  /**
+   * Returns the javax {@code @Generated} annotation if it is found on the classpath.
+   */
+  private static Optional<AnnotationSpec> getGeneratedAnnotation(Elements elements) {
+    if (elements.getTypeElement(GENERATED.toString()) == null) {
+      return Optional.absent();
+    }
+    return Optional.of(AnnotationSpec.builder(GENERATED)
+        .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
+        .build());
   }
 }
