@@ -1,7 +1,7 @@
 # AutoValue
 
 
-*Generated immutable value classes for Java 1.6+* <br />
+*Generated immutable value classes for Java 1.7+* <br />
 ***Éamonn McManus, Kevin Bourrillion*** <br />
 **Google, Inc.**
 

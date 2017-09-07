@@ -29,7 +29,7 @@
   <version>1.5-SNAPSHOT</version>
   <name>AutoValue</name>
   <description>
-    Immutable value-type code generation for Java 1.6+.
+    Immutable value-type code generation for Java 1.7+.
   </description>
 
   <properties>

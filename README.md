@@ -23,7 +23,7 @@ Save time.  Save code.  Save sanity.
 
     [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.service/auto-service.svg)](https://mvnrepository.com/artifact/com.google.auto.service/auto-service)
 
-  * [AutoValue] - Immutable [value-type] code generation for Java 1.6+.
+  * [AutoValue] - Immutable [value-type] code generation for Java 1.7+.
 
     [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.value/auto-value.svg)](https://mvnrepository.com/artifact/com.google.auto.value/auto-value)
 
