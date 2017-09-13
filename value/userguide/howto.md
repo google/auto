@@ -114,6 +114,9 @@ static MyType create(String first, String second) {
 
 ## <a name="mutable_property"></a>... use a property of a mutable type?
 
+AutoValue classes are meant and expected to be immutable. But sometimes you
+would want to take a mutable type and use it as a property. In these cases:
+
 First, check if the mutable type has a corresponding immutable cousin. For
 example, the types `List<String>` and `String[]` have the immutable counterpart
 `ImmutableList<String>` in [Guava](http://github.com/google/guava). If so, use
@@ -154,7 +157,10 @@ public abstract class MutableExample {
 }
 ```
 
-Note: this is a perfectly ugly workaround, not a sensible practice!
+Warning: this is an ugly workaround, not a perfectly sensible practice! Callers
+can trivially break the invariants of the immutable class by mutating the
+accessor's return value. An example where something can go wrong: AutoValue
+objects can be used as keys in Maps.
 
 ## <a name="custom"></a>... use a custom implementation of `equals`, etc.?
 
