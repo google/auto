@@ -36,7 +36,6 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.AnnotationSpec;
@@ -52,7 +51,7 @@ import com.squareup.javapoet.TypeVariableName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Generated;
+import java.util.Optional;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
@@ -67,11 +66,6 @@ import javax.tools.Diagnostic.Kind;
 public final class MemoizeExtension extends AutoValueExtension {
   private static final ImmutableSet<String> DO_NOT_PULL_DOWN_ANNOTATIONS =
       ImmutableSet.of(Override.class.getCanonicalName(), Memoized.class.getCanonicalName());
-
-  private static final AnnotationSpec GENERATED =
-      AnnotationSpec.builder(Generated.class)
-          .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
-          .build();
 
   private static final ClassName LAZY_INIT =
       ClassName.get("com.google.errorprone.annotations.concurrent", "LazyInit");
@@ -123,9 +117,8 @@ public final class MemoizeExtension extends AutoValueExtension {
               .superclass(superType())
               .addTypeVariables(typeVariableNames())
               .addModifiers(isFinal ? FINAL : ABSTRACT)
-              .addAnnotation(GENERATED)
               .addMethod(constructor());
-
+      generatedAnnotation().ifPresent(generated::addAnnotation);
       for (ExecutableElement method : memoizedMethods(context)) {
         MethodOverrider methodOverrider = new MethodOverrider(method);
         generated.addFields(methodOverrider.fields());
@@ -135,6 +128,19 @@ public final class MemoizeExtension extends AutoValueExtension {
         return null;
       }
       return JavaFile.builder(context.packageName(), generated.build()).build().toString();
+    }
+
+    private Optional<AnnotationSpec> generatedAnnotation() {
+      TypeElement generatedAnnotationElement =
+          elements.getTypeElement("javax.annotation.Generated");
+      if (generatedAnnotationElement == null) {
+        return Optional.empty();
+      }
+      ClassName generatedName = ClassName.get(generatedAnnotationElement);
+      return Optional.of(
+          AnnotationSpec.builder(generatedName)
+              .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
+              .build());
     }
 
     private TypeName superType() {
@@ -360,7 +366,7 @@ public final class MemoizeExtension extends AutoValueExtension {
   /** Returns the errorprone {@code @LazyInit} annotation if it is found on the classpath. */
   private static Optional<AnnotationSpec> getLazyInitAnnotation(Elements elements) {
     if (elements.getTypeElement(LAZY_INIT.toString()) == null) {
-      return Optional.absent();
+      return Optional.empty();
     }
     return Optional.of(AnnotationSpec.builder(LAZY_INIT).build());
   }
