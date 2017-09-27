@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimaps;
 import com.google.googlejavaformat.java.filer.FormattingFiler;
 import java.io.IOException;
 import java.util.Arrays;
@@ -74,7 +73,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
-    factoryWriter = new FactoryWriter(new FormattingFiler(processingEnv.getFiler()));
+    factoryWriter = new FactoryWriter(new FormattingFiler(processingEnv.getFiler()), elements);
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =

@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -81,7 +82,7 @@ abstract class AutoFactoryDeclaration {
   private ImmutableList<String> targetEnclosingSimpleNames() {
     ImmutableList.Builder<String> simpleNames = ImmutableList.builder();
     for (Element element = targetType().getEnclosingElement();
-        element.getEnclosingElement() != null;
+        !element.getKind().equals(PACKAGE);
         element = element.getEnclosingElement()) {
       simpleNames.add(element.getSimpleName().toString());
     }
