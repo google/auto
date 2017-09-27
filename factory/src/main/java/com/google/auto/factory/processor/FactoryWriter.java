@@ -37,23 +37,26 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
 import java.util.Iterator;
-import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
 
 final class FactoryWriter {
 
   private final Filer filer;
+  private final Elements elements;
 
-  FactoryWriter(Filer filer) {
+  FactoryWriter(Filer filer, Elements elements) {
     this.filer = filer;
+    this.elements = elements;
   }
 
   private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
@@ -62,12 +65,16 @@ final class FactoryWriter {
       throws IOException {
     String factoryName = getSimpleName(descriptor.name()).toString();
     TypeSpec.Builder factory = classBuilder(factoryName);
-    factory.addAnnotation(
-        AnnotationSpec.builder(Generated.class)
-            .addMember("value", "$S", AutoFactoryProcessor.class.getName())
-            .addMember(
-                "comments", "$S", "https://github.com/google/auto/tree/master/factory")
-            .build());
+    // TODO(ronshapiro): use javax.annotation.processing.Generated if it's available?
+    TypeElement generatedAnnotation = elements.getTypeElement("javax.annotation.Generated");
+    if (generatedAnnotation != null) {
+      factory.addAnnotation(
+          AnnotationSpec.builder(ClassName.get(generatedAnnotation))
+              .addMember("value", "$S", AutoFactoryProcessor.class.getName())
+              .addMember(
+                  "comments", "$S", "https://github.com/google/auto/tree/master/factory")
+              .build());
+    }
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }
