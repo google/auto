@@ -79,6 +79,11 @@ artifact as an "optional" dependency:
 </dependencies>
 ```
 
+IDE Integration
+---------------
+There's a [plugin](https://plugins.jetbrains.com/plugin/9807-google-autofactory-support) for IntelliJ that provides support for AutoFactory.
+The plugin is open-source and [available on Github](https://github.com/matan129/autofactory-intellij-plugin).
+
 
 License
 -------
