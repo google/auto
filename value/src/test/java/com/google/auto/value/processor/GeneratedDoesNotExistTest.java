@@ -24,7 +24,6 @@ import com.google.testing.compile.JavaFileObjects;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.annotation.Generated;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.lang.model.element.TypeElement;
@@ -94,7 +93,7 @@ public class GeneratedDoesNotExistTest {
     }
 
     public TypeElement getTypeElement(CharSequence name) {
-      if (name.toString().equals(Generated.class.getName())) {
+      if (name.toString().equals("javax.annotation.Generated")) {
         ignoredGenerated.set(true);
         return null;
       } else {

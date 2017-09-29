@@ -15,21 +15,29 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_CLASS_PATH;
+import static com.google.common.base.StandardSystemProperty.PATH_SEPARATOR;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.logging.Level.WARNING;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.Reflection;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -169,8 +177,7 @@ public class TemplateVarsTest {
   // characters.  We check that that exception was indeed seen, and that we did indeed try to read
   // the resource we're interested in, and that we succeeded in loading a Template nevertheless.
   private void doTestBrokenInputStream(Exception exception) throws Exception {
-    URLClassLoader myLoader = (URLClassLoader) getClass().getClassLoader();
-    URLClassLoader shadowLoader = new ShadowLoader(myLoader, exception);
+    URLClassLoader shadowLoader = new ShadowLoader(getClass().getClassLoader(), exception);
     Runnable brokenInputStreamTest =
         (Runnable) shadowLoader
             .loadClass(BrokenInputStreamTest.class.getName())
@@ -180,12 +187,42 @@ public class TemplateVarsTest {
   }
 
   private static class ShadowLoader extends URLClassLoader implements Callable<Set<String>> {
+
+    private static final Logger logger = Logger.getLogger(ShadowLoader.class.getName());
+
     private final Exception exception;
     private final Set<String> result = new TreeSet<String>();
 
-    ShadowLoader(URLClassLoader original, Exception exception) {
-      super(original.getURLs(), original.getParent());
+    ShadowLoader(ClassLoader original, Exception exception) {
+      super(getClassPathUrls(original), original.getParent());
       this.exception = exception;
+    }
+
+    private static URL[] getClassPathUrls(ClassLoader original) {
+      return original instanceof URLClassLoader
+          ? ((URLClassLoader) original).getURLs()
+          : parseJavaClassPath();
+    }
+
+    /**
+     * Returns the URLs in the class path specified by the {@code java.class.path} {@linkplain
+     * System#getProperty system property}.
+     */
+    // TODO(b/65488446): Use a new public API.
+    private static URL[] parseJavaClassPath() {
+      ImmutableList.Builder<URL> urls = ImmutableList.builder();
+      for (String entry : Splitter.on(PATH_SEPARATOR.value()).split(JAVA_CLASS_PATH.value())) {
+        try {
+          try {
+            urls.add(new File(entry).toURI().toURL());
+          } catch (SecurityException e) { // File.toURI checks to see if the file is a directory
+            urls.add(new URL("file", null, new File(entry).getAbsolutePath()));
+          }
+        } catch (MalformedURLException e) {
+          logger.log(WARNING, "malformed classpath entry: " + entry, e);
+        }
+      }
+      return urls.build().toArray(new URL[0]);
     }
 
     @Override
