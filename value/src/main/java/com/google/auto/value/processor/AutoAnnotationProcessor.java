@@ -171,7 +171,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.annotationName = typeSimplifier.simplify(annotationElement.asType());
     vars.className = generatedClassName;
     vars.imports = typeSimplifier.typesToImport();
-    vars.generated = typeSimplifier.simplify(getTypeMirror(Generated.class));
+    vars.generated = getGeneratedTypeName(typeSimplifier);
     vars.arrays = typeSimplifier.simplify(getTypeMirror(Arrays.class));
     vars.members = members;
     vars.params = parameters;
@@ -188,6 +188,15 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     text = Reformatter.fixup(text);
     String fullName = fullyQualifiedName(pkg, generatedClassName);
     writeSourceFile(fullName, text, methodClass);
+  }
+
+  private String getGeneratedTypeName(TypeSimplifier typeSimplifier) {
+    TypeElement generatedTypeElement =
+        processingEnv.getElementUtils().getTypeElement("javax.annotation.Generated");
+    if (generatedTypeElement == null) {
+      return "";
+    }
+    return typeSimplifier.simplify(generatedTypeElement.asType());
   }
 
   /**
