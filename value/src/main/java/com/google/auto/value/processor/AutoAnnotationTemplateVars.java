@@ -44,7 +44,8 @@ class AutoAnnotationTemplateVars extends TemplateVars {
   SortedSet<String> imports;
 
   /**
-   * The spelling of the javax.annotation.Generated class: Generated or javax.annotation.Generated.
+   * The spelling of the {@code Generated} class: {@code Generated} or {@code
+   * javax.annotation.Generated}. Empty if the class is not available.
    */
   String generated;
 
