@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -64,8 +65,12 @@ import org.junit.runners.JUnit4;
  */
 @RunWith(JUnit4.class)
 public class AutoValueTest {
+  private static boolean omitIdentifiers;
 
-  // TODO(emcmanus): add tests for exotic locales
+  @BeforeClass
+  public static void initOmitIdentifiers() {
+    omitIdentifiers = System.getProperty("OmitIdentifiers") != null;
+  }
 
   @AutoValue
   abstract static class Simple {
@@ -89,7 +94,10 @@ public class AutoValueTest {
     toStringHelper.add("publicString", "example");
     toStringHelper.add("protectedInt", 23);
     toStringHelper.add("packageMap", ImmutableMap.of("twenty-three", 23L));
-    assertEquals(toStringHelper.toString(), instance1a.toString());
+    String expectedString = omitIdentifiers
+        ? "{example, 23, {twenty-three=23}}"
+        : toStringHelper.toString();
+    assertThat(instance1a.toString()).isEqualTo(expectedString);
     new EqualsTester()
         .addEqualityGroup(instance1a, instance1b)
         .addEqualityGroup(instance2)
@@ -106,7 +114,8 @@ public class AutoValueTest {
   @Test
   public void testEmpty() throws Exception {
     Empty instance = Empty.create();
-    assertEquals("Empty{}", instance.toString());
+    String expectedString = omitIdentifiers ? "{}" : "Empty{}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
     assertEquals(instance, instance);
     assertEquals(instance, Empty.create());
   }
@@ -129,10 +138,11 @@ public class AutoValueTest {
   @Test
   public void testGetters() {
     SimpleWithGetters instance = SimpleWithGetters.create(23, true, false, "foo", "bar", "<html>");
-    assertEquals(
-        "SimpleWithGetters{"
-            + "foo=23, bar=true, otherBar=false, package=foo, package0=bar, HTMLPage=<html>}",
-        instance.toString());
+    String expectedString = omitIdentifiers
+        ? "{23, true, false, foo, bar, <html>}"
+        : "SimpleWithGetters{"
+            + "foo=23, bar=true, otherBar=false, package=foo, package0=bar, HTMLPage=<html>}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   @AutoValue
@@ -148,7 +158,10 @@ public class AutoValueTest {
   @Test
   public void testNotGetters() {
     NotAllGetters instance = NotAllGetters.create(23, true);
-    assertEquals("NotAllGetters{getFoo=23, bar=true}", instance.toString());
+    String expectedString = omitIdentifiers
+        ? "{23, true}"
+        : "NotAllGetters{getFoo=23, bar=true}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   @AutoValue
@@ -170,7 +183,65 @@ public class AutoValueTest {
   public void testGettersAndConcreteNonGetters() {
     GettersAndConcreteNonGetters instance = GettersAndConcreteNonGetters.create(23, new byte[] {1});
     assertFalse(instance.hasNoBytes());
-    assertEquals("GettersAndConcreteNonGetters{foo=23, bytes=[1]}", instance.toString());
+    String expectedString = omitIdentifiers
+        ? "{23, [1]}"
+        : "GettersAndConcreteNonGetters{foo=23, bytes=[1]}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
+  }
+
+  @AutoValue
+  abstract static class ClassProperty {
+    abstract Class<?> theClass();
+
+    static ClassProperty create(Class<?> theClass) {
+      return new AutoValue_AutoValueTest_ClassProperty(theClass);
+    }
+  }
+
+  @Test
+  public void testClassProperty() {
+    ClassProperty instance = ClassProperty.create(Thread.class);
+    assertThat(instance.theClass()).isEqualTo(Thread.class);
+
+    try {
+      ClassProperty.create(null);
+      fail();
+    } catch (NullPointerException expected) {
+    }
+  }
+
+  @AutoValue
+  abstract static class ClassPropertyWithBuilder {
+    abstract Class<? extends Number> numberClass();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_ClassPropertyWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setNumberClass(Class<? extends Number> x);
+      abstract ClassPropertyWithBuilder build();
+    }
+  }
+
+  @Test
+  public void testClassPropertyWithBuilder() {
+    ClassPropertyWithBuilder instance =
+        ClassPropertyWithBuilder.builder().setNumberClass(Integer.class).build();
+    assertThat(instance.numberClass()).isEqualTo(Integer.class);
+
+    try {
+      ClassPropertyWithBuilder.builder().build();
+      fail();
+    } catch (IllegalStateException expected) {
+    }
+
+    try {
+      ClassPropertyWithBuilder.builder().setNumberClass(null);
+      fail();
+    } catch (NullPointerException expected) {
+    }
   }
 
   @AutoValue
@@ -326,7 +397,7 @@ public class AutoValueTest {
 
   @Test
   public void testDoubleHashCode() {
-    double doubleValue = 12345678901234567890d;
+    double doubleValue = 1234567890123456d;
     DoubleProperty doubleProperty = DoubleProperty.create(doubleValue);
     assertEquals(singlePropertyHash(doubleValue), doubleProperty.hashCode());
   }
@@ -422,8 +493,11 @@ public class AutoValueTest {
   public void testNullablePropertiesCanBeNull() {
     NullableProperties instance = NullableProperties.create(null, 23);
     assertNull(instance.nullableString());
-    assertEquals(23, instance.randomInt());
-    assertEquals("NullableProperties{nullableString=null, randomInt=23}", instance.toString());
+    assertThat(instance.randomInt()).isEqualTo(23);
+    String expectedString = omitIdentifiers
+        ? "{null, 23}"
+        : "NullableProperties{nullableString=null, randomInt=23}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   @AutoAnnotation
@@ -453,9 +527,11 @@ public class AutoValueTest {
   public void testNullableCanBeFromElsewhere() throws Exception {
     AlternativeNullableProperties instance = AlternativeNullableProperties.create(null, 23);
     assertNull(instance.nullableString());
-    assertEquals(23, instance.randomInt());
-    assertEquals(
-        "AlternativeNullableProperties{nullableString=null, randomInt=23}", instance.toString());
+    assertThat(instance.randomInt()).isEqualTo(23);
+    String expectedString = omitIdentifiers
+        ? "{null, 23}"
+        : "AlternativeNullableProperties{nullableString=null, randomInt=23}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   @AutoValue
@@ -550,8 +626,11 @@ public class AutoValueTest {
   public void testDoublyNestedClass() throws Exception {
     Nested.Doubly instance = Nested.Doubly.create(null, 23);
     assertNull(instance.nullableString());
-    assertEquals(23, instance.randomInt());
-    assertEquals("Doubly{nullableString=null, randomInt=23}", instance.toString());
+    assertThat(instance.randomInt()).isEqualTo(23);
+    String expectedString = omitIdentifiers
+        ? "{null, 23}"
+        : "Doubly{nullableString=null, randomInt=23}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   static interface NestedInInterface {
@@ -807,7 +886,10 @@ public class AutoValueTest {
   @Test
   public void testAbstractToString() throws Exception {
     AbstractToString instance = AbstractToString.create("foo");
-    assertEquals("AbstractToString{string=foo}", instance.toString());
+    String expectedString = omitIdentifiers
+        ? "{foo}"
+        : "AbstractToString{string=foo}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   abstract static class NonAutoAbstractToString {
@@ -828,7 +910,10 @@ public class AutoValueTest {
   @Test
   public void testInheritedAbstractToString() throws Exception {
     SubAbstractToString instance = SubAbstractToString.create("foo");
-    assertEquals("SubAbstractToString{string=foo}", instance.toString());
+    String expectedString = omitIdentifiers
+        ? "{foo}"
+        : "SubAbstractToString{string=foo}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
   @AutoValue
@@ -910,10 +995,11 @@ public class AutoValueTest {
     // EqualsTester also exercises hashCode(). We clone the arrays above to ensure that using the
     // default Object.hashCode() will fail.
 
-    String expectedString = "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
-        + "ints=" + Arrays.toString(ints) + "}";
-    assertEquals(expectedString, object1.toString());
-
+    String expectedString = omitIdentifiers
+        ? ("{" + Arrays.toString(booleans) + ", " + Arrays.toString(ints) + "}")
+        : ("PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
+            + "ints=" + Arrays.toString(ints) + "}");
+    assertThat(object1.toString()).isEqualTo(expectedString);
     assertThat(object1.ints()).isSameAs(object1.ints());
   }
 
@@ -928,9 +1014,11 @@ public class AutoValueTest {
         .addEqualityGroup(object0)
         .testEquals();
 
-    String expectedString = "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
-        + "ints=null}";
-    assertEquals(expectedString, object1.toString());
+    String expectedString = omitIdentifiers
+        ? ("{" + Arrays.toString(booleans) + ", null}")
+        : ("PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
+            + "ints=null}");
+    assertThat(object1.toString()).isEqualTo(expectedString);
 
     assertThat(object1.booleans()).isSameAs(object1.booleans());
     assertThat(object1.booleans()).isEqualTo(booleans);
@@ -944,7 +1032,11 @@ public class AutoValueTest {
       PrimitiveArrays.create(null, new int[0]);
       fail("Construction with null value for non-@Nullable array should have failed");
     } catch (NullPointerException e) {
-      assertTrue(e.getMessage().contains("booleans"));
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessageThat().contains("booleans");
+      }
     }
   }
 
@@ -1248,7 +1340,11 @@ public class AutoValueTest {
       BasicWithBuilder.builder().build();
       fail("Expected exception for missing property");
     } catch (IllegalStateException e) {
-      assertThat(e.getMessage()).contains("foo");
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessageThat().contains("foo");
+      }
     }
   }
 
@@ -1368,7 +1464,11 @@ public class AutoValueTest {
       NullablePropertyWithBuilder.builder().build();
       fail("Expected IllegalStateException for unset non-@Nullable property");
     } catch (IllegalStateException e) {
-      assertThat(e.getMessage()).contains("notNullable");
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessageThat().contains("notNullable");
+      }
     }
   }
 
@@ -1669,13 +1769,21 @@ public class AutoValueTest {
       builder.list();
       fail("Attempt to retrieve unset list property should have failed");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Property \"list\" has not been set");
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessage("Property \"list\" has not been set");
+      }
     }
     try {
       builder.ints();
       fail("Attempt to retrieve unset ints property should have failed");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Property \"ints\" has not been set");
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessage("Property \"ints\" has not been set");
+      }
     }
 
     builder.setList(names);
@@ -1741,7 +1849,11 @@ public class AutoValueTest {
       builder.getList();
       fail("Attempt to retrieve unset list property should have failed");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Property \"list\" has not been set");
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessage("Property \"list\" has not been set");
+      }
     }
 
     builder.setList(names);
@@ -2018,7 +2130,11 @@ public class AutoValueTest {
       builder.setThings(ImmutableList.of(1729));
       fail("Setting list after retrieving builder should provoke an exception");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Cannot set things after calling thingsBuilder()");
+      if (omitIdentifiers) {
+        assertThat(e).hasMessageThat().isNull();
+      } else {
+        assertThat(e).hasMessage("Cannot set things after calling thingsBuilder()");
+      }
     }
   }
 
@@ -2269,8 +2385,10 @@ public class AutoValueTest {
   @Test
   public void testOneTwoThreeFour() {
     OneTwoThreeFour x = OneTwoThreeFourImpl.create("one", "two", false, 4);
-    assertThat(x.toString())
-        .isEqualTo("OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}");
+    String expectedString = omitIdentifiers
+        ? "{one, two, false, 4}"
+        : "OneTwoThreeFourImpl{one=one, two=two, three=false, four=4}";
+    assertThat(x.toString()).isEqualTo(expectedString);
   }
 
   @AutoValue
@@ -2318,12 +2436,18 @@ public class AutoValueTest {
             .build())
         .foo("yes")
         .build();
-    assertThat(x.toString()).isEqualTo("OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=23}}");
+    String expectedStringX = omitIdentifiers
+        ? "{yes, {23}}"
+        : "OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=23}}";
+    assertThat(x.toString()).isEqualTo(expectedStringX);
 
     OuterWithBuilder.Builder xBuilder = x.toBuilder();
     xBuilder.innerBuilder().setBar(17);
     OuterWithBuilder y = xBuilder.build();
-    assertThat(y.toString()).isEqualTo("OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=17}}");
+    String expectedStringY = omitIdentifiers
+        ? "{yes, {17}}"
+        : "OuterWithBuilder{foo=yes, inner=InnerWithBuilder{bar=17}}";
+    assertThat(y.toString()).isEqualTo(expectedStringY);
   }
 
   public static class MyMap<K, V> extends HashMap<K, V> {
