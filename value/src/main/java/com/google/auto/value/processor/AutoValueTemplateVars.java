@@ -46,6 +46,13 @@ class AutoValueTemplateVars extends TemplateVars {
   /** Whether to generate a toString() method. */
   Boolean toString;
 
+  /**
+   * Whether to include identifiers in strings in the generated code. If false, exception messages
+   * will not mention properties by name, and {@code toString()} will include neither property
+   * names nor the name of the {@code @AutoValue} class.
+   */
+  Boolean identifiers;
+
   /** The type utilities returned by {@link ProcessingEnvironment#getTypeUtils()}. */
   Types types;
 

@@ -64,6 +64,7 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -95,6 +96,7 @@ import javax.tools.JavaFileObject;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
+@SupportedOptions("com.google.auto.value.OmitIdentifiers")
 public class AutoValueProcessor extends AbstractProcessor {
   public AutoValueProcessor() {
     this(AutoValueProcessor.class.getClassLoader());
@@ -511,6 +513,8 @@ public class AutoValueProcessor extends AbstractProcessor {
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.types = processingEnv.getTypeUtils();
+    vars.identifiers =
+        !processingEnv.getOptions().containsKey("com.google.auto.value.OmitIdentifiers");
     determineObjectMethodsToGenerate(methods, vars);
     TypeSimplifier typeSimplifier =
         defineVarsForType(type, vars, toBuilderMethods, propertyMethods, builder);
