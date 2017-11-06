@@ -315,6 +315,25 @@ introduced related classes in `java.util` called [`OptionalInt`],
 example a property of type `OptionalInt` will default to `OptionalInt.empty()`
 and you can set it with either `setFoo(OptionalInt)` or `setFoo(int)`.
 
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract Optional<String> name();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    // You can have either or both of these two methods:
+    public abstract Builder setName(Optional<String> value);
+    public abstract Builder setName(String value);
+    public abstract Animal build();
+  }
+}
+```
+
 [`java.util.Optional`]: https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html
 [`com.google.common.base.Optional`]: http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html
 [`OptionalDouble`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalDouble.html
