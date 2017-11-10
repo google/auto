@@ -18,11 +18,11 @@ package com.google.auto.value.extension.memoized;
 
 import static com.google.common.truth.Truth.assertAbout;
 
-import com.google.common.truth.FailureStrategy;
-import com.google.common.truth.SubjectFactory;
+import com.google.common.truth.FailureMetadata;
+import com.google.common.truth.Subject;
 
 final class MemoizedMethodSubjectFactory
-    extends SubjectFactory<MemoizedMethodSubject, String> {
+    implements Subject.Factory<MemoizedMethodSubject, String> {
 
   static MemoizedMethodSubjectFactory memoizeMethod() {
     return new MemoizedMethodSubjectFactory();
@@ -33,7 +33,7 @@ final class MemoizedMethodSubjectFactory
   }
 
   @Override
-  public MemoizedMethodSubject getSubject(FailureStrategy fs, String that) {
-    return new MemoizedMethodSubject(fs, that);
+  public MemoizedMethodSubject createSubject(FailureMetadata failureMetadata, String that) {
+    return new MemoizedMethodSubject(failureMetadata, that);
   }
 }

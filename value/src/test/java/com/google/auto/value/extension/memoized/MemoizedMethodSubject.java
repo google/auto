@@ -21,15 +21,15 @@ import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.auto.value.processor.AutoValueProcessor;
 import com.google.common.collect.ImmutableList;
-import com.google.common.truth.FailureStrategy;
+import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
 
 final class MemoizedMethodSubject extends Subject<MemoizedMethodSubject, String> {
 
-  MemoizedMethodSubject(FailureStrategy failureStrategy, String subject) {
-    super(failureStrategy, subject);
+  MemoizedMethodSubject(FailureMetadata failureMetadata, String subject) {
+    super(failureMetadata, subject);
   }
 
   void hasError(String error) {
