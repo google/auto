@@ -38,6 +38,7 @@ public class AutoServiceProcessorTest {
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
             JavaFileObjects.forResource("test/Enclosing.java"),
+            JavaFileObjects.forResource("test/MultiServiceProvider.java"),
             JavaFileObjects.forResource("test/AnotherService.java"),
             JavaFileObjects.forResource("test/AnotherServiceProvider.java")))
         .processedWith(new AutoServiceProcessor())
