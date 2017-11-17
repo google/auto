@@ -2650,7 +2650,7 @@ public class CompilationTest {
   @Test
   public void nonVisibleProtectedClassAnnotationFromOtherPackage() {
     JavaFileObject bazFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
+        "foo.bar.Outer",
         "package foo.bar;",
         "",
         "import com.google.auto.value.AutoValue;",
@@ -2679,5 +2679,36 @@ public class CompilationTest {
         .generatedSourceFile("foo.bar.AutoValue_Outer_Inner")
         .contentsAsUtf8String()
         .doesNotContain("ProtectedAnnotation");
+  }
+
+  @Test
+  public void builderWithVarArgsDoesNotImportJavaUtilArrays() {
+    // Repro from https://github.com/google/auto/issues/373.
+    JavaFileObject testFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Test",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "public abstract class Test {",
+        "  abstract ImmutableList<String> foo();",
+        "",
+        "  @AutoValue.Builder",
+        "  abstract static class Builder {",
+        "    abstract Builder foo(String... foos);",
+        "    abstract Test build();",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .compile(testFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Test")
+        .contentsAsUtf8String()
+        .doesNotContain("java.util.Arrays");
   }
 }
