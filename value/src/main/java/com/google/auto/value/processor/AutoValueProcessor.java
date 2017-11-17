@@ -822,8 +822,8 @@ public class AutoValueProcessor extends AbstractProcessor {
       types.add(generatedTypeElement.asType());
     }
     TypeMirror javaUtilArrays = getTypeMirror(Arrays.class);
-    if (containsArrayType(types)) {
-      // If there are array properties then we will be referencing java.util.Arrays.
+    if (containsPrimitiveArrayType(types)) {
+      // If there are primitive array properties then we will be referencing java.util.Arrays.
       // Arrange to import it unless that would introduce ambiguity.
       types.add(javaUtilArrays);
     }
@@ -1039,8 +1039,10 @@ public class AutoValueProcessor extends AbstractProcessor {
         .collect(toCollection(TypeMirrorSet::new));
   }
 
-  private static boolean containsArrayType(Set<TypeMirror> types) {
-    return types.stream().anyMatch(t -> t.getKind().equals(TypeKind.ARRAY));
+  private static boolean containsPrimitiveArrayType(Set<TypeMirror> types) {
+    return types.stream().anyMatch(type ->
+        type.getKind().equals(TypeKind.ARRAY)
+            && ((ArrayType) type).getComponentType().getKind().isPrimitive());
   }
 
   /**
