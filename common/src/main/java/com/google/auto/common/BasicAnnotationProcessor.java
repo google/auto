@@ -105,7 +105,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   private final Set<ElementName> deferredElementNames = new LinkedHashSet<ElementName>();
   private final SetMultimap<ProcessingStep, ElementName> elementsDeferredBySteps =
       LinkedHashMultimap.create();
-  private final String processorName = getClass().getCanonicalName();
 
   private Elements elements;
   private Messager messager;
@@ -233,9 +232,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   private String processingErrorMessage(String target) {
     return String.format(
-        "%s was unable to process %s because not all of its dependencies could be resolved. Check "
-            + "for compilation errors or a circular dependency with generated code.",
-        processorName,
+        "[%s:MiscError] %s was unable to process %s because not all of its dependencies could be "
+            + "resolved. Check for compilation errors or a circular dependency with generated "
+            + "code.",
+        getClass().getSimpleName(),
+        getClass().getCanonicalName(),
         target);
   }
 
