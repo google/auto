@@ -69,7 +69,7 @@ public @interface AutoValue {
    *
    * @author Éamonn McManus
    */
-  @Retention(RetentionPolicy.SOURCE)
+  @Retention(RetentionPolicy.CLASS)
   @Target(ElementType.TYPE)
   public @interface Builder {}
 
@@ -106,7 +106,7 @@ public @interface AutoValue {
    *
    * @author Carmi Grushko
    */
-  @Retention(RetentionPolicy.SOURCE)
+  @Retention(RetentionPolicy.CLASS)
   @Target({ElementType.TYPE, ElementType.METHOD})
   public @interface CopyAnnotations {
     Class<? extends Annotation>[] exclude() default {};
