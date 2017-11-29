@@ -61,40 +61,134 @@
     <url>http://www.google.com</url>
   </organization>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- main dependencies -->
+
+      <dependency>
+        <groupId>com.google.googlejavaformat</groupId>
+        <artifactId>google-java-format</artifactId>
+        <version>1.5</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>23.5-jre</version>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup</groupId>
+        <artifactId>javapoet</artifactId>
+        <version>1.9.0</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.inject</groupId>
+        <artifactId>javax.inject</artifactId>
+        <version>1</version>
+      </dependency>
+
+      <!-- test dependencies -->
+
+      <dependency>
+        <groupId>com.google.code.findbugs</groupId>
+        <artifactId>jsr305</artifactId>
+        <version>3.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava-testlib</artifactId>
+        <version>23.5-jre</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.testing.compile</groupId>
+        <artifactId>compile-testing</artifactId>
+        <version>0.12</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.truth</groupId>
+        <artifactId>truth</artifactId>
+        <version>0.36</version>
+      </dependency>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.velocity</groupId>
+        <artifactId>velocity</artifactId>
+        <version>1.7</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jdt.core.compiler</groupId>
+        <artifactId>ecj</artifactId>
+        <version>4.6.1</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-          <compilerArgument>-Xlint:all</compilerArgument>
-          <showWarnings>true</showWarnings>
-          <showDeprecation>true</showDeprecation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.11</version>
-        <configuration>
-          <consoleOutput>true</consoleOutput>
-          <configLocation>checkstyle.xml</configLocation>
-          <failOnViolation>false</failOnViolation>
-        </configuration>
-      </plugin>
-    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>2.6</version>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.7.0</version>
+          <configuration>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
+            <compilerArgument>-Xlint:all</compilerArgument>
+            <showWarnings>true</showWarnings>
+            <showDeprecation>true</showDeprecation>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.plexus</groupId>
+              <artifactId>plexus-java</artifactId>
+              <version>0.9.4</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.17</version>
+          <configuration>
+            <consoleOutput>true</consoleOutput>
+            <configLocation>checkstyle.xml</configLocation>
+            <failOnViolation>false</failOnViolation>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-invoker-plugin</artifactId>
-          <version>1.8</version>
+          <version>3.0.1</version>
+          <configuration>
+            <addTestClassPath>true</addTestClassPath>
+            <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+            <pomIncludes>
+              <pomInclude>*/pom.xml</pomInclude>
+            </pomIncludes>
+            <streamLogs>true</streamLogs>
+          </configuration>
+          <executions>
+            <execution>
+              <id>integration-test</id>
+              <goals>
+                <goal>install</goal>
+                <goal>run</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.immutables.tools</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>4</version>
         </plugin>
       </plugins>
     </pluginManagement>
