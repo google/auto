@@ -87,6 +87,7 @@ class PropertyBuilderClassifier {
     private final String initDefault;
     private final String builtToBuilder;
     private final String copyAll;
+    private final Optionalish optional;
 
     PropertyBuilder(
         ExecutableElement propertyBuilderMethod,
@@ -95,7 +96,8 @@ class PropertyBuilderClassifier {
         String beforeInitDefault,
         String initDefault,
         String builtToBuilder,
-        String copyAll) {
+        String copyAll,
+        Optionalish optional) {
       this.propertyBuilderMethod = propertyBuilderMethod;
       this.name = propertyBuilderMethod.getSimpleName() + "$";
       this.builderType = builderType;
@@ -104,6 +106,7 @@ class PropertyBuilderClassifier {
       this.initDefault = initDefault;
       this.builtToBuilder = builtToBuilder;
       this.copyAll = copyAll;
+      this.optional = optional;
     }
 
     /** The property builder method, for example {@code barBuilder()}. */
@@ -167,6 +170,24 @@ class PropertyBuilderClassifier {
     public String getCopyAll() {
       return copyAll;
     }
+
+    /**
+     * The {@link Optionalish} that was created for the property, if applicable.
+     */
+    public Optionalish getOptional() {
+      return optional;
+    }
+
+    /**
+     * An expression to build the property, wrapping it using Optionalish if needed.
+     */
+    public String getBuild() {
+      if (optional == null) {
+        return name + ".build()";
+      } else {
+        return optional.getRawType() + ".of(" + name + ".build())";
+      }
+    }
   }
 
   // Construct this string so it won't be found by Maven shading and renamed, which is not what
@@ -181,6 +202,8 @@ class PropertyBuilderClassifier {
   // `BarBuilder` type are:
   // (1) It must have an instance method called `build()` that returns `Bar`. If the type of
   //     `bar()` is `Bar<String>` then the type of `build()` must be `Bar<String>`.
+  //      The property may be `Optional<Bar> bar()`, in which case the type of `build()` must
+  //      still be `Bar`, and it still cannot return `null`.
   // (2) `BarBuilder` must have a public no-arg constructor, or `Bar` must have a static method
   //     `builder()` or `newBuilder()` that returns `BarBuilder`.
   // (3) `Bar` must have an instance method `BarBuilder toBuilder()`, or `BarBuilder` must be a
@@ -202,6 +225,14 @@ class PropertyBuilderClassifier {
 
     ExecutableElement barGetter = getterToPropertyName.inverse().get(property);
     TypeMirror barTypeMirror = barGetter.getReturnType();
+
+    // Handle `Optional<Bar>` by replacing the type mirror with the contained type
+    Optionalish barOptionalish =
+        Optionalish.createIfOptional(barTypeMirror, typeSimplifier.simplifyRaw(barTypeMirror));
+    if (barOptionalish != null) {
+      barTypeMirror = barOptionalish.getContainedType(typeUtils);
+    }
+
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError("Method looks like a property builder, but the type of property "
           + property + " is not a class or interface", method);
@@ -292,7 +323,8 @@ class PropertyBuilderClassifier {
         beforeInitDefault,
         initDefault,
         builtToBuilder,
-        copyAll);
+        copyAll,
+        barOptionalish);
     return Optional.of(propertyBuilder);
   }
 

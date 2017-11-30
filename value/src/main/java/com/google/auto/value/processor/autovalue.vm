@@ -307,13 +307,10 @@ $a
 
         #else
 
-        if ($p == null) {
-          ${propertyBuilder.name} = ${propertyBuilder.initializer};
-        } else {
-
+        if (${p.presenseCheck}) {
           #if (${propertyBuilder.builtToBuilder})
 
-          ${propertyBuilder.name} = ${p}.${propertyBuilder.builtToBuilder}();
+          ${propertyBuilder.name} = ${p.valueRetrieval}.${propertyBuilder.builtToBuilder}();
 
           #else
 
@@ -323,6 +320,8 @@ $a
           #end
 
           $p = null;
+        } else {
+          ${propertyBuilder.name} = ${propertyBuilder.initializer};
         }
 
         #end
@@ -359,13 +358,16 @@ $a
         #if ($propertyBuilder)
 
       if (${propertyBuilder.name} != null) {
-        return ${propertyBuilder.name}.build();
+        return ${propertyBuilder.build};
       }
+          #if (!${p.optional})
+
       if ($p == null) {
         ${propertyBuilder.beforeInitDefault}
         $p = ${propertyBuilder.initDefault};
       }
 
+          #end
         #end
 
       return $p;
@@ -385,11 +387,11 @@ $a
     #if ($propertyBuilder)
 
       if (${propertyBuilder.name} != null) {
-        this.$p = ${propertyBuilder.name}.build();
-      } else if (this.$p == null) {
+        this.$p = ${propertyBuilder.build};
+      } #if (!${p.optional}) else if (this.$p == null) {
         ${propertyBuilder.beforeInitDefault}
         this.$p = ${propertyBuilder.initDefault};
-      }
+      } #end
 
     #end
   #end
