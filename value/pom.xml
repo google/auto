@@ -21,20 +21,17 @@
   <parent>
     <groupId>com.google.auto</groupId>
     <artifactId>auto-parent</artifactId>
-    <version>3</version>
+    <version>5</version>
   </parent>
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.6-SNAPSHOT</version>
+  <version>HEAD-SNAPSHOT</version>
   <name>AutoValue</name>
   <description>
     Immutable value-type code generation for Java 1.6+.
   </description>
 
-  <properties>
-    <guava.version>23.0</guava.version>
-  </properties>
   <scm>
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
@@ -56,42 +53,35 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>${guava.version}</version>
     </dependency>
     <dependency>
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
-      <version>1.9.0</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>org.apache.velocity</groupId>
       <artifactId>velocity</artifactId>
-      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
-      <version>${guava.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <version>0.36</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.12</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -106,44 +96,18 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.6</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-invoker-plugin</artifactId>
-        <configuration>
-          <addTestClassPath>true</addTestClassPath>
-          <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-          <filterProperties>
-            <auto.version>${project.version}</auto.version>
-          </filterProperties>
-          <pomIncludes>
-            <pomInclude>*/pom.xml</pomInclude>
-          </pomIncludes>
-          <streamLogs>true</streamLogs>
-        </configuration>
-        <executions>
-          <execution>
-            <id>integration-test</id>
-            <goals>
-              <goal>install</goal>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.immutables.tools</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>4</version>
         <executions>
           <execution>
             <phase>package</phase>
