@@ -15,9 +15,9 @@
  */
 package com.google.auto.service.processor;
 
-import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
@@ -61,6 +61,8 @@ import static com.google.auto.common.MoreElements.getAnnotationMirror;
  */
 @SupportedOptions({ "debug", "verify" })
 public class AutoServiceProcessor extends AbstractProcessor {
+
+  @VisibleForTesting static final String MISSING_SERVICES_ERROR = "No service interfaces provided for element!";
 
   /**
    * Maps the class names of service provider interfaces to the
@@ -134,7 +136,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
       Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
       if (providerInterfaces.isEmpty()) {
-        error("No interfaces provided for element!", e, annotationMirror);
+        error(MISSING_SERVICES_ERROR, e, annotationMirror);
         continue;
       }
       for (DeclaredType providerInterface : providerInterfaces) {

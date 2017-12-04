@@ -15,15 +15,17 @@
  */
 package com.google.auto.service.processor;
 
-import static com.google.common.truth.Truth.assert_;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
-
-import com.google.auto.service.processor.AutoServiceProcessor;
 import com.google.testing.compile.JavaFileObjects;
-import java.util.Arrays;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.util.Arrays;
+
+import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
+import static com.google.common.truth.Truth.assert_;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 /**
  * Tests the {@link AutoServiceProcessor}.
@@ -38,7 +40,6 @@ public class AutoServiceProcessorTest {
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
             JavaFileObjects.forResource("test/Enclosing.java"),
-            JavaFileObjects.forResource("test/MultiServiceProvider.java"),
             JavaFileObjects.forResource("test/AnotherService.java"),
             JavaFileObjects.forResource("test/AnotherServiceProvider.java")))
         .processedWith(new AutoServiceProcessor())
@@ -46,5 +47,31 @@ public class AutoServiceProcessorTest {
         .and().generatesFiles(
             JavaFileObjects.forResource("META-INF/services/test.SomeService"),
             JavaFileObjects.forResource("META-INF/services/test.AnotherService"));
+  }
+
+  @Test
+  public void multiService() {
+    assert_().about(javaSources())
+        .that(Arrays.asList(
+            JavaFileObjects.forResource("test/SomeService.java"),
+            JavaFileObjects.forResource("test/MultiServiceProvider.java"),
+            JavaFileObjects.forResource("test/AnotherService.java")))
+        .processedWith(new AutoServiceProcessor())
+        .compilesWithoutError()
+        .and().generatesFiles(
+            JavaFileObjects.forResource("META-INF/services/test.SomeService"),
+            JavaFileObjects.forResource("META-INF/services/test.AnotherService"));
+  }
+
+  @Test
+  public void badMultiService() {
+    assert_().about(javaSources())
+        .that(Arrays.asList(
+            JavaFileObjects.forResource("test/SomeService.java"),
+            JavaFileObjects.forResource("test/BadMultiServiceProvider.java"),
+            JavaFileObjects.forResource("test/AnotherService.java")))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(MISSING_SERVICES_ERROR);
   }
 }
