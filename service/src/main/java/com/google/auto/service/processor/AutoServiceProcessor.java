@@ -135,8 +135,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
       Set<DeclaredType> providerInterfaces = getFieldOfClasses(
           annotationMirror,
-          "value",
-          processingEnv.getElementUtils());
+          "value");
       if (providerInterfaces.isEmpty()) {
         error("No interfaces provided for element!", e, annotationMirror);
         continue;
@@ -267,8 +266,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
    */
   private ImmutableSet<DeclaredType> getFieldOfClasses(
       AnnotationMirror annotationMirror,
-      String fieldName,
-      Elements elementUtils) {
+      String fieldName) {
     for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
         annotationMirror.getElementValues().entrySet()) {
       if (fieldName.contentEquals(entry.getKey().getSimpleName())) {
