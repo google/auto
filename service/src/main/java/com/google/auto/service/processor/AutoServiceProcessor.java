@@ -17,6 +17,7 @@ package com.google.auto.service.processor;
 
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -141,7 +142,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
         continue;
       }
       for (DeclaredType providerInterface : providerInterfaces) {
-        TypeElement providerType = (TypeElement) providerInterface.asElement();
+        TypeElement providerType = MoreTypes.asTypeElement(processingEnv.getTypeUtils(), providerInterface);
 
         log("provider interface: " + providerType.getQualifiedName());
         log("provider implementer: " + providerImplementer.getQualifiedName());
