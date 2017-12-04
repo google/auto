@@ -136,6 +136,10 @@ public class AutoServiceProcessor extends AbstractProcessor {
           annotationMirror,
           "value",
           processingEnv.getElementUtils());
+      if (providerInterfaces.isEmpty()) {
+        error("No interfaces provided for element!", e, annotationMirror);
+        continue;
+      }
       for (DeclaredType providerInterface : providerInterfaces) {
         TypeElement providerType = (TypeElement) providerInterface.asElement();
 
