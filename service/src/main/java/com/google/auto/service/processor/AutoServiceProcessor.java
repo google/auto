@@ -131,8 +131,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     for (Element e : elements) {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = (TypeElement) e;
-      AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class)
-          .get(); // We already know it's present
+      AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
       Set<DeclaredType> providerInterfaces = getFieldOfClasses(
           annotationMirror,
           "value",
