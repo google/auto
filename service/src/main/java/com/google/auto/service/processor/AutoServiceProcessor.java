@@ -147,19 +147,19 @@ public class AutoServiceProcessor extends AbstractProcessor {
         log("provider interface: " + providerType.getQualifiedName());
         log("provider implementer: " + providerImplementer.getQualifiedName());
 
-        if (!checkImplementer(providerImplementer, providerType)) {
+        if (checkImplementer(providerImplementer, providerType)) {
+          String providerTypeName = getBinaryName(providerType);
+          String providerImplementerName = getBinaryName(providerImplementer);
+          log("provider interface binary name: " + providerTypeName);
+          log("provider implementer binary name: " + providerImplementerName);
+
+          providers.put(providerTypeName, providerImplementerName);
+        } else {
           String message = "ServiceProviders must implement their service provider interface. "
               + providerImplementer.getQualifiedName() + " does not implement "
               + providerType.getQualifiedName();
           error(message, e, annotationMirror);
         }
-
-        String providerTypeName = getBinaryName(providerType);
-        String providerImplementerName = getBinaryName(providerImplementer);
-        log("provider interface binary name: " + providerTypeName);
-        log("provider implementer binary name: " + providerImplementerName);
-
-        providers.put(providerTypeName, providerImplementerName);
       }
     }
   }
