@@ -18,4 +18,4 @@ package test;
 import com.google.auto.service.AutoService;
 
 @AutoService({})
-public class BadMultiServiceProvider implements SomeService, AnotherService { }
+public class BadMultiServiceProvider { }

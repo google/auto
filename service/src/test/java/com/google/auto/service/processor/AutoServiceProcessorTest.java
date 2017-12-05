@@ -22,6 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
 import static com.google.common.truth.Truth.assert_;
@@ -66,10 +67,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void badMultiService() {
     assert_().about(javaSources())
-        .that(Arrays.asList(
-            JavaFileObjects.forResource("test/SomeService.java"),
-            JavaFileObjects.forResource("test/BadMultiServiceProvider.java"),
-            JavaFileObjects.forResource("test/AnotherService.java")))
+        .that(Collections.singletonList(JavaFileObjects.forResource("test/BadMultiServiceProvider.java")))
         .processedWith(new AutoServiceProcessor())
         .failsToCompile()
         .withErrorContaining(MISSING_SERVICES_ERROR);
