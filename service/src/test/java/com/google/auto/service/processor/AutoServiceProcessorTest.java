@@ -54,8 +54,8 @@ public class AutoServiceProcessorTest {
     assert_().about(javaSources())
         .that(Arrays.asList(
             JavaFileObjects.forResource("test/SomeService.java"),
-            JavaFileObjects.forResource("test/MultiServiceProvider.java"),
-            JavaFileObjects.forResource("test/AnotherService.java")))
+            JavaFileObjects.forResource("test/AnotherService.java"),
+            JavaFileObjects.forResource("test/MultiServiceProvider.java")))
         .processedWith(new AutoServiceProcessor())
         .compilesWithoutError()
         .and().generatesFiles(
