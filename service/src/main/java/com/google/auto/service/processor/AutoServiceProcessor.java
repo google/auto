@@ -253,11 +253,6 @@ public class AutoServiceProcessor extends AbstractProcessor {
   /**
    * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code annotationMirror}.
    *
-   * <p>This method is needed because directly reading the value of such a field from an
-   * AnnotationMirror throws: <pre>
-   * javax.lang.model.type.MirroredTypeException: Attempt to access Class object for TypeMirror Foo.
-   * </pre>
-   *
    * @param annotationMirror The AnnotationMirror to read fields from, e.g. {@link AutoService}.
    * @return a set of fully-qualified names of classes appearing in 'fieldName' on 'annotation' on
    *     'element'.
