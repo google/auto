@@ -50,6 +50,7 @@ import javax.tools.StandardLocation;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 /**
  * Processes {@link AutoService} annotations and generates the service provider
@@ -259,7 +260,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
             .stream()
             // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class, int[].class
             .map(value -> MoreTypes.asDeclared((DeclaredType) value.getValue()))
-            .collect(ImmutableSet.toImmutableSet());
+            .collect(toImmutableSet());
   }
 
   private void log(String msg) {
