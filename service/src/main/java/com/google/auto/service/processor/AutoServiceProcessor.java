@@ -252,10 +252,6 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
   /**
    * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code annotationMirror}.
-   *
-   * @param annotationMirror The AnnotationMirror to read fields from, e.g. {@link AutoService}.
-   * @return a set of fully-qualified names of classes appearing in 'fieldName' on 'annotation' on
-   *     'element'.
    */
   private ImmutableSet<DeclaredType> getValueFieldOfClasses(AnnotationMirror annotationMirror) {
     //noinspection unchecked
