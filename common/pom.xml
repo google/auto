@@ -43,6 +43,14 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
+    <dependency>
+      <!-- Used only by GeneratedAnnotationSpecs.
+           If you use JavaPoet, you can use GeneratedAnnotationSpecs. -->
+      <groupId>com.squareup</groupId>
+      <artifactId>javapoet</artifactId>
+      <optional>true</optional>
+    </dependency>
+
     <!-- test dependencies -->
     <dependency>
       <groupId>com.google.guava</groupId>
