@@ -257,6 +257,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     //noinspection unchecked
     return ((List<AnnotationValue>) getAnnotationValue(annotationMirror, "value").getValue())
             .stream()
+            // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class, int[].class
             .map(value -> MoreTypes.asDeclared((DeclaredType) value.getValue()))
             .collect(ImmutableSet.toImmutableSet());
   }
