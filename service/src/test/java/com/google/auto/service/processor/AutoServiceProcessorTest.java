@@ -65,7 +65,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void badMultiService() {
     assert_().about(javaSources())
-        .that(Collections.singletonList(JavaFileObjects.forResource("test/BadMultiServiceProvider.java")))
+        .that(Collections.singletonList(JavaFileObjects.forResource("test/NoServices.java")))
         .processedWith(new AutoServiceProcessor())
         .failsToCompile()
         .withErrorContaining(MISSING_SERVICES_ERROR);
