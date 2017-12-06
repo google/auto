@@ -22,11 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.util.Collections;
-
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
-import static com.google.common.truth.Truth.assert_;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
 /**
  * Tests the {@link AutoServiceProcessor}.
