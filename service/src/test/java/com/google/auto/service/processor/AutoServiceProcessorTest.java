@@ -16,12 +16,12 @@
 package com.google.auto.service.processor;
 
 import com.google.testing.compile.JavaFileObjects;
+import com.google.testing.compile.JavaSourcesSubject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.util.Arrays;
 import java.util.Collections;
 
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
@@ -35,14 +35,13 @@ import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 public class AutoServiceProcessorTest {
   @Test
   public void autoService() {
-    assert_().about(javaSources())
-        .that(Arrays.asList(
+      JavaSourcesSubject.assertThat(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
             JavaFileObjects.forResource("test/Enclosing.java"),
             JavaFileObjects.forResource("test/AnotherService.java"),
-            JavaFileObjects.forResource("test/AnotherServiceProvider.java")))
+            JavaFileObjects.forResource("test/AnotherServiceProvider.java"))
         .processedWith(new AutoServiceProcessor())
         .compilesWithoutError()
         .and().generatesFiles(
@@ -52,11 +51,10 @@ public class AutoServiceProcessorTest {
 
   @Test
   public void multiService() {
-    assert_().about(javaSources())
-        .that(Arrays.asList(
+    JavaSourcesSubject.assertThat(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/AnotherService.java"),
-            JavaFileObjects.forResource("test/MultiServiceProvider.java")))
+            JavaFileObjects.forResource("test/MultiServiceProvider.java"))
         .processedWith(new AutoServiceProcessor())
         .compilesWithoutError()
         .and().generatesFiles(
