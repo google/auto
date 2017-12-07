@@ -33,12 +33,8 @@ import javax.tools.Diagnostic;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-class AnnotationOutput {
-  private final TypeSimplifier typeSimplifier;
-
-  AnnotationOutput(TypeSimplifier typeSimplifier) {
-    this.typeSimplifier = typeSimplifier;
-  }
+final class AnnotationOutput {
+  private AnnotationOutput() {}  // There are no instances of this class.
 
   /**
    * Visitor that produces a string representation of an annotation value, suitable for inclusion
@@ -49,7 +45,7 @@ class AnnotationOutput {
    * for example the construction of an {@code @AutoAnnotation} class. That's why we have this
    * abstract class and two concrete subclasses.
    */
-  private abstract class SourceFormVisitor
+  private abstract static class SourceFormVisitor
       extends SimpleAnnotationValueVisitor8<Void, StringBuilder> {
     @Override
     protected Void defaultAction(Object value, StringBuilder sb) {
@@ -112,7 +108,7 @@ class AnnotationOutput {
 
     @Override
     public Void visitEnumConstant(VariableElement c, StringBuilder sb) {
-      sb.append(typeSimplifier.simplify(c.asType())).append('.').append(c.getSimpleName());
+      sb.append(TypeEncoder.encode(c.asType())).append('.').append(c.getSimpleName());
       return null;
     }
 
@@ -124,12 +120,12 @@ class AnnotationOutput {
 
     @Override
     public Void visitType(TypeMirror classConstant, StringBuilder sb) {
-      sb.append(typeSimplifier.simplify(classConstant)).append(".class");
+      sb.append(TypeEncoder.encode(classConstant)).append(".class");
       return null;
     }
   }
 
-  private class InitializerSourceFormVisitor extends SourceFormVisitor {
+  private static class InitializerSourceFormVisitor extends SourceFormVisitor {
     private final ProcessingEnvironment processingEnv;
     private final String memberName;
     private final Element context;
@@ -153,10 +149,10 @@ class AnnotationOutput {
     }
   }
 
-  private class AnnotationSourceFormVisitor extends SourceFormVisitor {
+  private static class AnnotationSourceFormVisitor extends SourceFormVisitor {
     @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
-      sb.append('@').append(typeSimplifier.simplify(a.getAnnotationType()));
+      sb.append('@').append(TypeEncoder.encode(a.getAnnotationType()));
       Map<ExecutableElement, AnnotationValue> map =
           ImmutableMap.<ExecutableElement, AnnotationValue>copyOf(a.getElementValues());
       if (!map.isEmpty()) {
@@ -177,7 +173,7 @@ class AnnotationOutput {
    * Returns a string representation of the given annotation value, suitable for inclusion in a Java
    * source file as the initializer of a variable of the appropriate type.
    */
-  String sourceFormForInitializer(
+  static String sourceFormForInitializer(
       AnnotationValue annotationValue,
       ProcessingEnvironment processingEnv,
       String memberName,
@@ -193,7 +189,7 @@ class AnnotationOutput {
    * Returns a string representation of the given annotation mirror, suitable for inclusion in a
    * Java source file to reproduce the annotation in source form.
    */
-  String sourceFormForAnnotation(AnnotationMirror annotationMirror) {
+  static String sourceFormForAnnotation(AnnotationMirror annotationMirror) {
     StringBuilder sb = new StringBuilder();
     new AnnotationSourceFormVisitor().visitAnnotation(annotationMirror, sb);
     return sb.toString();

@@ -15,23 +15,23 @@
  */
 package com.google.auto.value.processor;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
 import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.Multimap;
 import java.io.IOException;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedSet;
 import java.util.zip.CRC32;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
@@ -82,7 +82,6 @@ class GwtSerialization {
   void maybeWriteGwtSerializer(AutoValueTemplateVars autoVars) {
     if (shouldWriteGwtSerializer()) {
       GwtTemplateVars vars = new GwtTemplateVars();
-      vars.imports = autoVars.imports;
       vars.pkg = autoVars.pkg;
       vars.subclass = autoVars.subclass;
       vars.formalTypes = autoVars.formalTypes;
@@ -94,8 +93,9 @@ class GwtSerialization {
           + "_CustomFieldSerializer";
       vars.serializerClass = TypeSimplifier.simpleNameOf(className);
       vars.props = autoVars.props.stream().map(Property::new).collect(toList());
-      vars.classHashString = computeClassHash(autoVars.props);
+      vars.classHashString = computeClassHash(autoVars.props, vars.pkg);
       String text = vars.toText();
+      text = TypeEncoder.decode(text, processingEnv, vars.pkg, type.asType());
       writeSourceFile(className, text, type);
     }
   }
@@ -132,10 +132,11 @@ class GwtSerialization {
      * every other type uses readObject and writeObject.
      */
     public String getGwtType() {
-      String type = property.getType();
+      TypeMirror typeMirror = property.getTypeMirror();
+      String type = typeMirror.toString();
       if (property.getKind().isPrimitive()) {
         return Character.toUpperCase(type.charAt(0)) + type.substring(1);
-      } else if (type.equals("String")) {
+      } else if (type.equals("java.lang.String")) {
         return "String";
       } else {
         return "Object";
@@ -165,9 +166,6 @@ class GwtSerialization {
   static class GwtTemplateVars extends TemplateVars {
     /** The properties defined by the parent class's abstract methods. */
     List<Property> props;
-
-    /** The fully-qualified names of the classes to be imported in the generated class. */
-    SortedSet<String> imports;
 
     /**
      * The package of the class with the {@code @AutoValue} annotation and its generated subclass.
@@ -205,8 +203,8 @@ class GwtSerialization {
     String serializerClass;
 
     /**
-     * The spelling of the {@code Generated} class: {@code Generated} or {@code
-     * javax.annotation.Generated}. Empty if the class is not available.
+     * The encoding of the {@code Generated} class. Empty if no {@code Generated} class is
+     * available.
      */
     String generated;
 
@@ -234,20 +232,25 @@ class GwtSerialization {
     }
   }
 
-  private static final Charset UTF8 = Charset.forName("UTF-8");
-
-  private String computeClassHash(Iterable<AutoValueProcessor.Property> props) {
-    TypeSimplifier typeSimplifier = new TypeSimplifier(
-        processingEnv.getTypeUtils(), "", new TypeMirrorSet(), null);
+  // Compute a hash that is guaranteed to change if the names, types, or order of the fields
+  // change. We use TypeEncoder so that we can get a defined string for types, since
+  // TypeMirror.toString() isn't guaranteed to remain the same.
+  private String computeClassHash(
+      Iterable<AutoValueProcessor.Property> props, String pkg) {
     CRC32 crc = new CRC32();
-    update(crc, typeSimplifier.simplify(type.asType()) + ":");
+    String encodedType = TypeEncoder.encode(type.asType()) + ":";
+    String decodedType = TypeEncoder.decode(encodedType, processingEnv, "", null);
+    if (!decodedType.startsWith(pkg)) {
+      // This is for compatibility with the way an earlier version did things. Preserving hash
+      // codes probably isn't vital, since client and server should be in sync.
+      decodedType = pkg + "." + decodedType;
+    }
+    crc.update(decodedType.getBytes(UTF_8));
     for (AutoValueProcessor.Property prop : props) {
-      update(crc, prop + ":" + prop.getType() + ";");
+      String encodedProp = prop + ":" + TypeEncoder.encode(prop.getTypeMirror()) + ";";
+      String decodedProp = TypeEncoder.decode(encodedProp, processingEnv, pkg, null);
+      crc.update(decodedProp.getBytes(UTF_8));
     }
     return String.format("%08x", crc.getValue());
-  }
-
-  private static void update(CRC32 crc, String s) {
-    crc.update(s.getBytes(UTF8));
   }
 }

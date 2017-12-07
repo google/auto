@@ -17,11 +17,12 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;
+import com.google.common.base.Equivalence.Wrapper;
 import com.google.common.collect.ImmutableList;
 import java.util.AbstractSet;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import javax.lang.model.type.TypeMirror;
 
@@ -32,7 +33,7 @@ import javax.lang.model.type.TypeMirror;
  */
 class TypeMirrorSet extends AbstractSet<TypeMirror> {
   private final Set<Equivalence.Wrapper<TypeMirror>> wrappers =
-      new HashSet<Equivalence.Wrapper<TypeMirror>>();
+      new LinkedHashSet<Wrapper<TypeMirror>>();
 
   TypeMirrorSet() {
   }

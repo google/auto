@@ -52,7 +52,6 @@ class PropertyBuilderClassifier {
   private final Elements elementUtils;
   private final BuilderMethodClassifier builderMethodClassifier;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
-  private final TypeSimplifier typeSimplifier;
   private final EclipseHack eclipseHack;
 
   PropertyBuilderClassifier(
@@ -61,14 +60,12 @@ class PropertyBuilderClassifier {
       Elements elementUtils,
       BuilderMethodClassifier builderMethodClassifier,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      TypeSimplifier typeSimplifier,
       EclipseHack eclipseHack) {
     this.errorReporter = errorReporter;
     this.typeUtils = typeUtils;
     this.elementUtils = elementUtils;
     this.builderMethodClassifier = builderMethodClassifier;
     this.getterToPropertyName = getterToPropertyName;
-    this.typeSimplifier = typeSimplifier;
     this.eclipseHack = eclipseHack;
   }
 
@@ -82,6 +79,7 @@ class PropertyBuilderClassifier {
     private final ExecutableElement propertyBuilderMethod;
     private final String name;
     private final String builderType;
+    private final TypeMirror builderTypeMirror;
     private final String initializer;
     private final String beforeInitDefault;
     private final String initDefault;
@@ -91,6 +89,7 @@ class PropertyBuilderClassifier {
     PropertyBuilder(
         ExecutableElement propertyBuilderMethod,
         String builderType,
+        TypeMirror builderTypeMirror,
         String initializer,
         String beforeInitDefault,
         String initDefault,
@@ -99,6 +98,7 @@ class PropertyBuilderClassifier {
       this.propertyBuilderMethod = propertyBuilderMethod;
       this.name = propertyBuilderMethod.getSimpleName() + "$";
       this.builderType = builderType;
+      this.builderTypeMirror = builderTypeMirror;
       this.initializer = initializer;
       this.beforeInitDefault = beforeInitDefault;
       this.initDefault = initDefault;
@@ -123,6 +123,10 @@ class PropertyBuilderClassifier {
     /** The type of the builder, for example {@code ImmutableSet.Builder<String>}. */
     public String getBuilderType() {
       return builderType;
+    }
+
+    TypeMirror getBuilderTypeMirror() {
+      return builderTypeMirror;
     }
 
     /** An initializer for the builder field, for example {@code ImmutableSet.builder()}. */
@@ -243,8 +247,8 @@ class PropertyBuilderClassifier {
     }
     ExecutableElement builderMaker = maybeBuilderMaker.get();
 
-    String barBuilderType = typeSimplifier.simplifyWithAnnotations(barBuilderTypeMirror);
-    String rawBarType = typeSimplifier.simplifyRaw(barTypeMirror);
+    String barBuilderType = TypeEncoder.encodeWithAnnotations(barBuilderTypeMirror);
+    String rawBarType = TypeEncoder.encodeRaw(barTypeMirror);
     String initializer = (builderMaker.getKind() == ElementKind.CONSTRUCTOR)
         ? "new " + barBuilderType + "()"
         : rawBarType + "." + builderMaker.getSimpleName() + "()";
@@ -259,7 +263,7 @@ class PropertyBuilderClassifier {
     } else {
       boolean isGuavaBuilder =
           barBuilderTypeMirror.toString().startsWith(COM_GOOGLE_COMMON_COLLECT_IMMUTABLE)
-          && barBuilderType.contains(".Builder<");
+          && barBuilderTypeMirror.toString().contains(".Builder<");
       Optional<ExecutableElement> maybeCopyAll = addAllPutAll(barBuilderTypeElement);
       if (maybeCopyAll.isPresent() && isGuavaBuilder) {
         copyAll = maybeCopyAll.get().getSimpleName().toString();
@@ -288,6 +292,7 @@ class PropertyBuilderClassifier {
     PropertyBuilder propertyBuilder = new PropertyBuilder(
         method,
         barBuilderType,
+        barBuilderTypeMirror,
         initializer,
         beforeInitDefault,
         initDefault,

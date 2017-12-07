@@ -35,7 +35,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.Types;
 import javax.tools.JavaFileObject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,7 +42,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 /**
- * This test verifies the method {@link TypeSimplifier#simplifyWithAnnotations(TypeMirror).
+ * This test verifies the method {@link TypeEncoder#encodeWithAnnotations(TypeMirror).
  * It takes a list of "type spellings", like {@code @Nullable String}, and compiles a class
  * with one field for each spelling. So there might be a field {@code @Nullable String x2;}.
  * Then it examines each compiled field to extract its {@code TypeMirror}, and uses the
@@ -64,13 +63,13 @@ public class SimplifyWithAnnotationsTest {
 
   /**
    * The types that we will compile and then recreate. They are referenced in a context where
-   * {@code List} has been imported but not {@code Set}, which allows us to test the placement of
-   * annotations in unqualified types like {@code List<T>} and qualified types like
-   * {@code java.util.Set<T>}.
+   * {@code Set} is unambiguous but not {@code List}, which allows us to test the placement of
+   * annotations in unqualified types like {@code Set<T>} and qualified types like
+   * {@code java.util.List<T>}.
    */
   private static final ImmutableList<String> TYPE_SPELLINGS = ImmutableList.of(
       "Object",
-      "List",
+      "Set",
       "String",
       "Nullable",
       "@Nullable String",
@@ -78,21 +77,22 @@ public class SimplifyWithAnnotationsTest {
       "@Nullable String[]",
       "String @Nullable []",
       "String @Nullable [] @Nullable []",
-      "List<String>",
-      "List<@Nullable String>",
-      "@Nullable List<String>",
+      "java.awt.List",
+      "java.util.List<String>",
+      "Set<@Nullable String>",
+      "@Nullable Set<String>",
       "int",
       "@Nullable int",  // whatever that might mean
       "@Nullable int[]",
       "int @Nullable []",
       "T",
       "@Nullable T",
-      "List<@Nullable T>",
-      "List<? extends @Nullable T>",
-      "List<? extends @Nullable String>",
-      "List<? extends @Nullable String @Nullable []>",
-      "java.util.@Nullable Set<@Nullable T>",
-      "java.util.@Nullable Set<java.util.@Nullable Set<T>>");
+      "Set<@Nullable T>",
+      "Set<? extends @Nullable T>",
+      "Set<? extends @Nullable String>",
+      "Set<? extends @Nullable String @Nullable []>",
+      "java.util.@Nullable List<@Nullable T>",
+      "java.util.@Nullable List<java.util.@Nullable List<T>>");
 
   private static final JavaFileObject NULLABLE_FILE_OBJECT = JavaFileObjects.forSourceLines(
       "pkg.Nullable",
@@ -116,7 +116,7 @@ public class SimplifyWithAnnotationsTest {
     builder.add(
         "package pkg;",
         "",
-        "import java.util.List;",
+        "import java.util.Set;",
         "",
         "public abstract class TestClass<T> {",
         "  abstract @Nullable T witness();");
@@ -139,7 +139,7 @@ public class SimplifyWithAnnotationsTest {
   }
 
   @SupportedAnnotationTypes("*")
-  private class TestProcessor extends AbstractProcessor {
+  private static class TestProcessor extends AbstractProcessor {
     @Override
     public SourceVersion getSupportedSourceVersion() {
       return SourceVersion.latest();
@@ -165,20 +165,20 @@ public class SimplifyWithAnnotationsTest {
       }
       ImmutableMap<String, TypeMirror> typeSpellingToType = typesFromTestClass(testClass);
       assertThat(typeSpellingToType).isNotEmpty();
-      TypeMirror nullable = typeSpellingToType.get("Nullable");
-      TypeMirror object = typeSpellingToType.get("Object");
-      TypeMirror string = typeSpellingToType.get("String");
-      TypeMirror list = typeSpellingToType.get("List");
-      Types typeUtils = processingEnv.getTypeUtils();
-      TypeMirrorSet types = TypeMirrorSet.of(nullable, string, list);
-      TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, "pkg", types, object);
+      StringBuilder text = new StringBuilder();
+      StringBuilder expected = new StringBuilder();
+      // Build up a fake source text with the encodings for the types in it, and decode it to
+      // ensure the type spellings are what we expect.
       typeSpellingToType.forEach(
           (typeSpelling, type) -> {
-            expect.that(typeSimplifier.simplifyWithAnnotations(type)).isEqualTo(typeSpelling);
+            text.append("{").append(TypeEncoder.encodeWithAnnotations(type)).append("}");
+            expected.append("{").append(typeSpelling).append("}");
           });
+      String decoded = TypeEncoder.decode(text.toString(), processingEnv, "pkg", null);
+      assertThat(decoded).isEqualTo(expected.toString());
     }
 
-    private ImmutableMap<String, TypeMirror> typesFromTestClass(TypeElement type) {
+    private static ImmutableMap<String, TypeMirror> typesFromTestClass(TypeElement type) {
       // Reads the types of the fields from the compiled TestClass and uses them to produce
       // a map from type spellings to types. This method depends on type.getEnclosedElements()
       // returning the fields in source order, which it is specified to do.

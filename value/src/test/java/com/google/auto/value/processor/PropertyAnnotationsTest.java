@@ -39,6 +39,8 @@ public class PropertyAnnotationsTest {
       PropertyAnnotationsTest.class.getName();
   private static final String IMPORT_PROPERTY_ANNOTATIONS_TEST =
       "import " + PROPERTY_ANNOTATIONS_TEST + ";";
+  private static final String IMPORT_JAVAX_ANNOTATION_NULLABLE =
+      "import javax.annotation.Nullable;";
   private static final String TEST_ANNOTATION =
       "@PropertyAnnotationsTest.TestAnnotation";
   private static final String TEST_ARRAY_ANNOTATION =
@@ -55,7 +57,7 @@ public class PropertyAnnotationsTest {
     }
   }
 
-  public static @interface TestAnnotation {
+  public @interface TestAnnotation {
     byte testByte() default 1;
     short testShort() default 2;
     int testInt() default 3;
@@ -70,12 +72,12 @@ public class PropertyAnnotationsTest {
     OtherAnnotation testAnnotation() default @OtherAnnotation(foo = 23, bar = "baz");
   }
 
-  public static @interface OtherAnnotation {
+  public @interface OtherAnnotation {
     int foo() default 123;
     String bar() default "bar";
   }
 
-  public static @interface TestArrayAnnotation {
+  public @interface TestArrayAnnotation {
     byte[] testBytes() default {1, 2};
     short[] testShorts() default {3, 4};
     int[] testInts() default {5, 6};
@@ -258,7 +260,7 @@ public class PropertyAnnotationsTest {
         ImmutableList.of(TEST_ANNOTATION
             + "(testClass = String.class)"),
         ImmutableList.of(TEST_ANNOTATION
-            + "(testClass = java.lang.String.class)"));
+            + "(testClass = String.class)"));
   }
 
   @Test
@@ -334,17 +336,17 @@ public class PropertyAnnotationsTest {
         ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
         ImmutableList.of(TEST_ARRAY_ANNOTATION + "(testClasses = {String.class, Long.class})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testClasses = {java.lang.String.class, java.lang.Long.class})"));
+            + "(testClasses = {String.class, Long.class})"));
   }
 
   @Test
   public void testImportedClassArrayAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST),
+        ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST, IMPORT_JAVAX_ANNOTATION_NULLABLE),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
             + "(testClasses = {javax.annotation.Nullable.class, Long.class})"),
         ImmutableList.of(TEST_ARRAY_ANNOTATION
-            + "(testClasses = {javax.annotation.Nullable.class, java.lang.Long.class})"));
+            + "(testClasses = {Nullable.class, Long.class})"));
   }
 
   @Test
@@ -391,14 +393,13 @@ public class PropertyAnnotationsTest {
             "@PropertyAnnotationsTest.TestAnnotation",
             "@PropertyAnnotationsTest.InheritedAnnotation");
 
-    ImmutableList<String> expectedImports = ImmutableList.of("import javax.annotation.Resource;");
     ImmutableList<String> expectedAnnotations =
         ImmutableList.of(
             "@Resource",
-            "@" + PROPERTY_ANNOTATIONS_TEST + ".InheritedAnnotation");
+            "@PropertyAnnotationsTest.InheritedAnnotation");
 
     JavaFileObject javaFileObject = sourceCode(sourceImports, sourceAnnotations);
-    JavaFileObject expectedOutput = expectedCode(expectedImports, expectedAnnotations);
+    JavaFileObject expectedOutput = expectedCode(sourceImports, expectedAnnotations);
 
     assertAbout(javaSource())
         .that(javaFileObject)

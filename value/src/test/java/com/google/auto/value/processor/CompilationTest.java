@@ -1940,9 +1940,9 @@ public class CompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Property builder method returns Baz.StringFactory but there is no way to make "
-                + "that type from String: String does not have a non-static "
-                + "toBuilder() method that returns Baz.StringFactory")
+            "Property builder method returns foo.bar.Baz.StringFactory but there is no way to make "
+                + "that type from java.lang.String: java.lang.String does not have a non-static "
+                + "toBuilder() method that returns foo.bar.Baz.StringFactory")
         .inFile(javaFileObject)
         .onLine(19);
   }
@@ -1979,9 +1979,9 @@ public class CompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Property builder method returns Baz.StringFactory but there is no way to make "
-                + "that type from String: String does not have a non-static "
-                + "toBuilder() method that returns Baz.StringFactory")
+            "Property builder method returns foo.bar.Baz.StringFactory but there is no way to make "
+                + "that type from java.lang.String: java.lang.String does not have a non-static "
+                + "toBuilder() method that returns foo.bar.Baz.StringFactory")
         .inFile(javaFileObject)
         .onLine(19);
   }
@@ -2024,9 +2024,9 @@ public class CompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Property builder method returns Baz.BuhBuilder but there is no way to make "
-                + "that type from Baz.Buh: Baz.Buh does not have a non-static "
-                + "toBuilder() method that returns Baz.BuhBuilder")
+            "Property builder method returns foo.bar.Baz.BuhBuilder but there is no way to make "
+                + "that type from foo.bar.Baz.Buh: foo.bar.Baz.Buh does not have a non-static "
+                + "toBuilder() method that returns foo.bar.Baz.BuhBuilder")
         .inFile(javaFileObject)
         .onLine(25);
   }
