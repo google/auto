@@ -7,11 +7,13 @@
 ## Velocity deletes a newline after a directive (#if, #foreach, #end etc) so ## is not needed there.
 ## That does mean that we sometimes need an extra blank line after such a directive.
 ##
-## A post-processing step will remove unwanted spaces and blank lines, but will not join two lines.
+## Post-processing will remove unwanted spaces and blank lines, but will not join two lines.
+## It will also replace classes spelled as (e.g.) `java.util.Arrays`, with the backquotes, to
+## use just Arrays if that class can be imported unambiguously, or java.util.Arrays if not.
 
 #macro (cloneArray $a)
   #if ($gwtCompatible)
-    ${arrays}.copyOf($a, ${a}.length)
+    `java.util.Arrays`.copyOf($a, ${a}.length)
   #else
     ${a}.clone()
   #end
@@ -21,9 +23,8 @@
 package $pkg;
 #end
 
-#foreach ($i in $imports)
-import $i;
-#end
+## The following line will be replaced by the required imports during post-processing.
+`import`
 
 #if (!$generated.empty)
 @${generated}("com.google.auto.value.processor.AutoAnnotationProcessor")
@@ -122,25 +123,25 @@ final class $className implements $annotationName {
 ## toString
 
 #macro (appendMemberString $m)
-  #if ($m.type == "String" || $m.type == "java.lang.String")
+  #if ($m.typeMirror.toString() == "java.lang.String")
     #set ($appendQuotedStringMethod = "true")
 
     appendQuoted(sb, $m) ##
-  #elseif ($m.type == "char")
+  #elseif ($m.typeMirror.toString() == "char")
     #set ($appendQuotedCharMethod = "true")
 
     appendQuoted(sb, $m) ##
-  #elseif ($m.type == "String[]" || $m.type == "java.lang.String[]")
+  #elseif ($m.typeMirror.toString() == "java.lang.String[]")
     #set ($appendQuotedStringArrayMethod = "true")
 
     appendQuoted(sb, $m) ##
-  #elseif ($m.type == "char[]")
+  #elseif ($m.typeMirror.toString() == "char[]")
     #set ($appendQuotedCharArrayMethod = "true")
 
     appendQuoted(sb, $m) ##
   #elseif ($m.kind == "ARRAY")
 
-    sb.append(${arrays}.toString($m)) ##
+    sb.append(`java.util.Arrays`.toString($m)) ##
   #else
 
     sb.append($m) ##
@@ -181,12 +182,12 @@ final class $className implements $annotationName {
     $m == that.${m}() ##
   #elseif ($m.kind == "ARRAY")
     #if ($params.containsKey($m.toString()))
-    ${arrays}.equals($m,
+    `java.util.Arrays`.equals($m,
         (that instanceof $className)
             ? (($className) that).$m
             : that.${m}()) ##
     #else ## default value, so if |that| is also a $className then it has the same constant value
-    that instanceof $className || ${arrays}.equals($m, that.${m}())
+    that instanceof $className || `java.util.Arrays`.equals($m, that.${m}())
     #end
   #else
     ${m}.equals(that.${m}()) ##
@@ -236,7 +237,7 @@ final class $className implements $annotationName {
   #elseif ($m.kind.primitive)
     $m ##
   #elseif ($m.kind == "ARRAY")
-    ${arrays}.hashCode($m) ##
+    `java.util.Arrays`.hashCode($m) ##
   #else
     ${m}.hashCode() ##
   #end
@@ -282,7 +283,7 @@ final class $className implements $annotationName {
 #foreach ($w in $wrapperTypesUsedInCollections)
   #set ($prim = $w.getField("TYPE").get(""))
 
-  private static ${prim}[] ${prim}ArrayFromCollection(Collection<${w.simpleName}> c) {
+  private static ${prim}[] ${prim}ArrayFromCollection(`java.util.Collection`<${w.simpleName}> c) {
     ${prim}[] a = new ${prim}[c.size()];
     int i = 0;
     for (${prim} x : c) {

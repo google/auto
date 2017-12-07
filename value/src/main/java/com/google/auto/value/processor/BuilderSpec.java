@@ -39,7 +39,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -163,27 +162,8 @@ class BuilderSpec {
       return builderMethods;
     }
 
-    /**
-     * Returns the types that are referenced by abstract methods in the builder, either as
-     * parameters or as return types.
-     */
-    Set<TypeMirror> referencedTypes() {
-      Set<TypeMirror> types = new TypeMirrorSet();
-      for (ExecutableElement method :
-          ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
-        if (method.getModifiers().contains(Modifier.ABSTRACT)) {
-          types.add(method.getReturnType());
-          for (VariableElement parameter : method.getParameters()) {
-            types.add(parameter.asType());
-          }
-        }
-      }
-      return types;
-    }
-
     void defineVars(
         AutoValueTemplateVars vars,
-        TypeSimplifier typeSimplifier,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
       boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
@@ -194,7 +174,6 @@ class BuilderSpec {
           autoValueClass,
           builderTypeElement,
           getterToPropertyName,
-          typeSimplifier,
           autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
@@ -216,7 +195,7 @@ class BuilderSpec {
       ExecutableElement buildMethod = Iterables.getOnlyElement(buildMethods);
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
-      vars.builderFormalTypes = typeSimplifier.formalTypeParametersString(builderTypeElement);
+      vars.builderFormalTypes = TypeEncoder.formalTypeParametersString(builderTypeElement);
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethod = Optional.of(new AutoValueProcessor.SimpleMethod(buildMethod));
       vars.builderGetters = classifier.builderGetters();
@@ -227,7 +206,7 @@ class BuilderSpec {
         String property = entry.getKey();
         ExecutableElement setter = entry.getValue();
         TypeMirror propertyType = getterToPropertyName.inverse().get(property).getReturnType();
-        setterBuilder.put(property, new PropertySetter(setter, propertyType, typeSimplifier));
+        setterBuilder.put(property, new PropertySetter(setter, propertyType));
       }
       vars.builderSetters = setterBuilder.build();
 
@@ -309,26 +288,35 @@ class BuilderSpec {
     private final boolean primitiveParameter;
     private final String copyOf;
 
-    public PropertySetter(
-        ExecutableElement setter, TypeMirror propertyType, TypeSimplifier typeSimplifier) {
+    public PropertySetter(ExecutableElement setter, TypeMirror propertyType) {
       this.access = AutoValueProcessor.access(setter);
       this.name = setter.getSimpleName().toString();
       TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
       primitiveParameter = parameterType.getKind().isPrimitive();
-      String simplifiedParameterType = typeSimplifier.simplifyWithAnnotations(parameterType);
-      if (setter.isVarArgs()) {
-        simplifiedParameterType = simplifiedParameterType.replaceAll("\\[\\]$", "...");
-      }
-      this.parameterTypeString = simplifiedParameterType;
+      this.parameterTypeString = parameterTypeString(setter, parameterType);
       Types typeUtils = processingEnv.getTypeUtils();
       TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
       boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
       if (sameType) {
         this.copyOf = null;
       } else {
-        String rawTarget = typeSimplifier.simplifyRaw(erasedPropertyType);
+        String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
         String of = Optionalish.isOptional(propertyType) ? "of" : "copyOf";
         this.copyOf = rawTarget + "." + of + "(%s)";
+      }
+    }
+
+    private String parameterTypeString(ExecutableElement setter, TypeMirror parameterType) {
+      if (setter.isVarArgs()) {
+        TypeMirror componentType = MoreTypes.asArray(parameterType).getComponentType();
+        // This is a bit ugly. It's OK to annotate just the component type, because if it is
+        // say `@Nullable String` then we will end up with `@Nullable String...`. Unlike the
+        // normal array case, we can't have the situation where the array itself is annotated;
+        // you can write `String @Nullable []` to mean that, but you can't write
+        // `String @Nullable ...`.
+        return TypeEncoder.encodeWithAnnotations(componentType) + "...";
+      } else {
+        return TypeEncoder.encodeWithAnnotations(parameterType);
       }
     }
 

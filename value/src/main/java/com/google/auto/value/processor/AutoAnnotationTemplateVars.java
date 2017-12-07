@@ -18,7 +18,6 @@ package com.google.auto.value.processor;
 import com.google.auto.value.processor.escapevelocity.Template;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 
 /**
  * The variables to substitute into the autoannotation.vm template.
@@ -39,18 +38,9 @@ class AutoAnnotationTemplateVars extends TemplateVars {
   Map<String, AutoAnnotationProcessor.Parameter> params;
 
   /**
-   * The fully-qualified names of the classes to be imported in the generated class.
-   */
-  SortedSet<String> imports;
-
-  /**
-   * The spelling of the {@code Generated} class: {@code Generated} or {@code
-   * javax.annotation.Generated}. Empty if the class is not available.
+   * The encoded form of the {@code Generated} class, or empty if it is not available.
    */
   String generated;
-
-  /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
-  String arrays;
 
   /**
    * The package of the class containing the {@code @AutoAnnotation} annotation, which is also the

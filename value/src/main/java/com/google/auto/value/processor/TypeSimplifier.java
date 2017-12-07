@@ -26,15 +26,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.NestingKind;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ErrorType;
-import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -64,7 +62,6 @@ final class TypeSimplifier {
     }
   }
 
-  private final Types typeUtils;
   private final Map<String, Spelling> imports;
 
   /**
@@ -80,18 +77,16 @@ final class TypeSimplifier {
    *     subclass, so a reference to another class with the same name as one of them is ambiguous.
    *
    * @throws MissingTypeException if one of the input types contains an error (typically,
-   *     is undefined). This may be something like {@code UndefinedClass}, or something more subtle
-   *     like {@code Set<UndefinedClass<?>>}.
+   *     is undefined).
    */
   TypeSimplifier(Types typeUtils, String packageName, Set<TypeMirror> types, TypeMirror base) {
-    this.typeUtils = typeUtils;
     Set<TypeMirror> typesPlusBase = new TypeMirrorSet(types);
     if (base != null) {
       typesPlusBase.add(base);
     }
-    Set<TypeMirror> referenced = referencedClassTypes(typeUtils, typesPlusBase);
+    Set<TypeMirror> topLevelTypes = topLevelTypes(typeUtils, typesPlusBase);
     Set<TypeMirror> defined = nonPrivateDeclaredTypes(typeUtils, base);
-    this.imports = findImports(typeUtils, packageName, referenced, defined);
+    this.imports = findImports(typeUtils, packageName, topLevelTypes, defined);
   }
 
   /**
@@ -111,56 +106,17 @@ final class TypeSimplifier {
     return typesToImport.build();
   }
 
-  /**
-   * Returns a string that can be used to refer to the given type given the imports defined by
-   * {@link #typesToImport}.
-   */
-  String simplify(TypeMirror type) {
-    return type.accept(toStringTypeVisitor, new StringBuilder()).toString();
-  }
-
-  /**
-   * Returns a string that can be used to refer to the given raw type given the imports defined by
-   * {@link #typesToImport}. The difference between this and {@link #simplify} is that the string
-   * returned here will not include type parameters.
-   */
-  String simplifyRaw(TypeMirror type) {
-    return type.accept(toStringRawTypeVisitor, new StringBuilder()).toString();
-  }
-
-  /**
-   * Returns a string that can be used to refer to the given type given the imports defined by
-   * {@link #typesToImport}. The difference between this and {@link #simplify} is that the string
-   * returned here includes any type annotations, with appropriate spelling given current imports.
-   */
-  String simplifyWithAnnotations(TypeMirror type) {
-    return type.accept(toStringAnnotatedTypeVisitor, new StringBuilder()).toString();
-  }
-
-  // The formal type parameters of the given type.
-  // If we have @AutoValue abstract class Foo<T extends SomeClass> then this method will
-  // return <T extends Something> for Foo. Likewise it will return the angle-bracket part of:
-  // Foo<SomeClass>
-  // Foo<T extends Number>
-  // Foo<E extends Enum<E>>
-  // Foo<K, V extends Comparable<? extends K>>
-  // Type variables need special treatment because we only want to include their bounds when they
-  // are declared, not when they are referenced. We don't want to include the bounds of the second E
-  // in <E extends Enum<E>> or of the second K in <K, V extends Comparable<? extends K>>. That's
-  // why we put the "extends" handling here and not in ToStringTypeVisitor.
-  String formalTypeParametersString(TypeElement type) {
-    List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
-    if (typeParameters.isEmpty()) {
-      return "";
+  String simplifiedClassName(DeclaredType type) {
+    TypeElement typeElement = MoreElements.asType(type.asElement());
+    TypeElement top = topLevelType(typeElement);
+    // We always want to write a class name starting from the outermost class. For example,
+    // if the type is java.util.Map.Entry then we will import java.util.Map and write Map.Entry.
+    String topString = top.getQualifiedName().toString();
+    if (imports.containsKey(topString)) {
+      String suffix = typeElement.getQualifiedName().toString().substring(topString.length());
+      return imports.get(topString).spelling + suffix;
     } else {
-      StringBuilder sb = new StringBuilder("<");
-      String sep = "";
-      for (TypeParameterElement typeParameter : typeParameters) {
-        sb.append(sep);
-        sep = ", ";
-        appendTypeParameterWithBounds(sb, typeParameter);
-      }
-      return sb.append(">").toString();
+      return typeElement.getQualifiedName().toString();
     }
   }
 
@@ -177,148 +133,6 @@ final class TypeSimplifier {
       return typeParameters.stream()
           .map(e -> e.getSimpleName().toString())
           .collect(joining(", ", "<", ">"));
-    }
-  }
-
-  private void appendTypeParameterWithBounds(StringBuilder sb, TypeParameterElement typeParameter) {
-    sb.append(typeParameter.getSimpleName());
-    String sep = " extends ";
-    for (TypeMirror bound : typeParameter.getBounds()) {
-      if (!bound.toString().equals("java.lang.Object")) {
-        sb.append(sep);
-        sep = " & ";
-        bound.accept(toStringTypeVisitor, sb);
-      }
-    }
-  }
-
-  private final ToStringTypeVisitor toStringTypeVisitor = new ToStringTypeVisitor();
-  private final ToStringTypeVisitor toStringRawTypeVisitor = new ToStringRawTypeVisitor();
-  private final ToStringTypeVisitor toStringAnnotatedTypeVisitor =
-      new ToStringAnnotatedTypeVisitor();
-
-  /**
-   * Visitor that produces a string representation of a type for use in generated code.
-   * The visitor takes into account the imports defined by {@link #typesToImport} and will use
-   * the short names of those types.
-   *
-   * <p>A simpler alternative would be just to use TypeMirror.toString() and regular expressions to
-   * pick apart the type references and replace fully-qualified types where possible. That depends
-   * on unspecified behaviour of TypeMirror.toString(), though, and is vulnerable to formatting
-   * quirks such as the way it omits the space after the comma in
-   * {@code java.util.Map<java.lang.String, java.lang.String>}.
-   */
-  private class ToStringTypeVisitor extends SimpleTypeVisitor8<StringBuilder, StringBuilder> {
-    @Override protected StringBuilder defaultAction(TypeMirror type, StringBuilder sb) {
-      return sb.append(type);
-    }
-
-    @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
-      return visit(type.getComponentType(), sb).append("[]");
-    }
-
-    @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
-      sb.append(declaredTypeName(type));
-      appendTypeArguments(type, sb);
-      return sb;
-    }
-
-    String declaredTypeName(DeclaredType type) {
-      TypeElement typeElement = (TypeElement) typeUtils.asElement(type);
-      TypeElement top = topLevelType(typeElement);
-      // We always want to write a class name starting from the outermost class. For example,
-      // if the type is java.util.Map.Entry then we will import java.util.Map and write Map.Entry.
-      String topString = top.getQualifiedName().toString();
-      if (imports.containsKey(topString)) {
-        String suffix = typeElement.getQualifiedName().toString().substring(topString.length());
-        return imports.get(topString).spelling + suffix;
-      } else {
-        return typeElement.getQualifiedName().toString();
-      }
-    }
-
-    void appendTypeArguments(DeclaredType type, StringBuilder sb) {
-      List<? extends TypeMirror> arguments = type.getTypeArguments();
-      if (!arguments.isEmpty()) {
-        sb.append("<");
-        String sep = "";
-        for (TypeMirror argument : arguments) {
-          sb.append(sep);
-          sep = ", ";
-          visit(argument, sb);
-        }
-        sb.append(">");
-      }
-    }
-
-    @Override public StringBuilder visitWildcard(WildcardType type, StringBuilder sb) {
-      sb.append("?");
-      TypeMirror extendsBound = type.getExtendsBound();
-      TypeMirror superBound = type.getSuperBound();
-      if (superBound != null) {
-        sb.append(" super ");
-        visit(superBound, sb);
-      } else if (extendsBound != null) {
-        sb.append(" extends ");
-        visit(extendsBound, sb);
-      }
-      return sb;
-    }
-  }
-
-  private class ToStringRawTypeVisitor extends ToStringTypeVisitor {
-    @Override void appendTypeArguments(DeclaredType type, StringBuilder sb) {}
-  }
-
-  private class ToStringAnnotatedTypeVisitor extends ToStringTypeVisitor {
-    private final AnnotationOutput annotationOutput = new AnnotationOutput(TypeSimplifier.this);
-
-    @Override public StringBuilder visitPrimitive(PrimitiveType type, StringBuilder sb) {
-      appendAnnotations(type.getAnnotationMirrors(), sb);
-      // We can't just append type.toString(), because that will also have the annotation, but
-      // without using our imports.
-      return sb.append(typeUtils.getPrimitiveType(type.getKind()));
-    }
-
-    @Override public StringBuilder visitTypeVariable(TypeVariable type, StringBuilder sb) {
-      appendAnnotations(type.getAnnotationMirrors(), sb);
-      return sb.append(type.asElement().getSimpleName());
-    }
-
-    @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
-      visit(type.getComponentType(), sb);
-      List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
-      if (!annotationMirrors.isEmpty()) {
-        sb.append(" ");
-        appendAnnotations(annotationMirrors, sb);
-      }
-      return sb.append("[]");
-    }
-
-    @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
-      String name = declaredTypeName(type);
-      List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
-      if (annotationMirrors.isEmpty()) {
-        sb.append(name);
-      } else {
-        // Find the index of the last part of the name, "Map" in "Map" or "Entry" in "Map.Entry".
-        // lastIndexOf might return -1 in which case this is still correct.
-        // The goal here is to produce "@Nullable Foo" for simple type names and
-        // "com.example.@Nullable Foo" or "Bar.@Nullable Foo" for qualified ones.
-        int lastPart = name.lastIndexOf('.') + 1;
-        sb.append(name.substring(0, lastPart));
-        appendAnnotations(annotationMirrors, sb);
-        sb.append(name.substring(lastPart));
-      }
-      appendTypeArguments(type, sb);
-      return sb;
-    }
-
-    private void appendAnnotations(
-        List<? extends AnnotationMirror> annotationMirrors, StringBuilder sb) {
-      for (AnnotationMirror annotationMirror : annotationMirrors) {
-        sb.append(annotationOutput.sourceFormForAnnotation(annotationMirror)).append(" ");
-      }
     }
   }
 
@@ -379,7 +193,7 @@ final class TypeSimplifier {
    */
   private static Map<String, Spelling> findImports(
       Types typeUtils, String packageName, Set<TypeMirror> referenced, Set<TypeMirror> defined) {
-    Map<String, Spelling> imports = new HashMap<String, Spelling>();
+    Map<String, Spelling> imports = new HashMap<>();
     Set<TypeMirror> typesInScope = new TypeMirrorSet();
     typesInScope.addAll(referenced);
     typesInScope.addAll(defined);
@@ -407,79 +221,18 @@ final class TypeSimplifier {
   }
 
   /**
-   * Finds all declared types (classes and interfaces) that are referenced in the given
-   * {@code Set<TypeMirror>}. This includes classes and interfaces that appear directly in the set,
-   * but also ones that appear in type parameters and the like. For example, if the set contains
-   * {@code java.util.List<? extends java.lang.Number>} then both {@code java.util.List} and
-   * {@code java.lang.Number} will be in the resulting set.
+   * Finds the top-level types for all the declared types (classes and interfaces) in the given
+   * {@code Set<TypeMirror>}.
    *
    * <p>The returned set contains only top-level types. If we reference {@code java.util.Map.Entry}
    * then the returned set will contain {@code java.util.Map}. This is because we want to write
    * {@code Map.Entry} everywhere rather than {@code Entry}.
    */
-  private static Set<TypeMirror> referencedClassTypes(Types typeUtil, Set<TypeMirror> types) {
-    Set<TypeMirror> allReferenced = new TypeMirrorSet();
-    ReferencedClassTypeVisitor referencedClassVisitor =
-        new ReferencedClassTypeVisitor(typeUtil, allReferenced);
-    for (TypeMirror type : types) {
-      referencedClassVisitor.visit(type);
-    }
-    return allReferenced.stream()
+  private static Set<TypeMirror> topLevelTypes(Types typeUtil, Set<TypeMirror> types) {
+    return types.stream()
         .map(typeMirror -> MoreElements.asType(typeUtil.asElement(typeMirror)))
         .map(typeElement -> topLevelType(typeElement).asType())
         .collect(toCollection(TypeMirrorSet::new));
-  }
-
-  private static class ReferencedClassTypeVisitor extends SimpleTypeVisitor8<Void, Void> {
-    private final Types typeUtils;
-    private final Set<TypeMirror> referencedTypes;
-    private final Set<TypeMirror> seenTypes;
-
-    ReferencedClassTypeVisitor(Types typeUtils, Set<TypeMirror> referenced) {
-      this.typeUtils = typeUtils;
-      this.referencedTypes = referenced;
-      this.seenTypes = new TypeMirrorSet();
-    }
-
-    @Override public Void visitArray(ArrayType t, Void p) {
-      return visit(t.getComponentType(), p);
-    }
-
-    @Override public Void visitDeclared(DeclaredType t, Void p) {
-      if (seenTypes.add(t)) {
-        referencedTypes.add(typeUtils.erasure(t));
-        for (TypeMirror param : t.getTypeArguments()) {
-          visit(param, p);
-        }
-      }
-      return null;
-    }
-
-    @Override public Void visitTypeVariable(TypeVariable t, Void p) {
-      // Instead of visiting t.getUpperBound(), we explicitly visit the supertypes of t.
-      // The reason is that for a variable like <T extends Foo & Bar>, t.getUpperBound() will be
-      // the intersection type Foo & Bar, with no really simple way to extract Foo and Bar. But
-      // directSupertypes(t) will be exactly [Foo, Bar]. For plain <T>, directSupertypes(t) will
-      // be java.lang.Object, and it is harmless for us to record a reference to that since we won't
-      // try to import it or use it in the output string for <T>.
-      for (TypeMirror upper : typeUtils.directSupertypes(t)) {
-        visit(upper, p);
-      }
-      return visit(t.getLowerBound(), p);
-    }
-
-    @Override public Void visitWildcard(WildcardType t, Void p) {
-      for (TypeMirror bound : new TypeMirror[] {t.getSuperBound(), t.getExtendsBound()}) {
-        if (bound != null) {
-          visit(bound, p);
-        }
-      }
-      return null;
-    }
-
-    @Override public Void visitError(ErrorType t, Void p) {
-      throw new MissingTypeException();
-    }
   }
 
   /**
@@ -507,8 +260,8 @@ final class TypeSimplifier {
   }
 
   private static Set<String> ambiguousNames(Types typeUtils, Set<TypeMirror> types) {
-    Set<String> ambiguous = new HashSet<String>();
-    Map<String, Name> simpleNamesToQualifiedNames = new HashMap<String, Name>();
+    Set<String> ambiguous = new HashSet<>();
+    Map<String, Name> simpleNamesToQualifiedNames = new HashMap<>();
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ERROR) {
         throw new MissingTypeException();
@@ -519,7 +272,7 @@ final class TypeSimplifier {
        * the same (unannotated) type may appear multiple times in the Set<TypeMirror>.
        * TODO(emcmanus): investigate further, because this might cause problems elsewhere.
        */
-      Name qualifiedName = ((TypeElement)typeUtils.asElement(type)).getQualifiedName();
+      Name qualifiedName = ((QualifiedNameable) typeUtils.asElement(type)).getQualifiedName();
       Name previous = simpleNamesToQualifiedNames.put(simpleName, qualifiedName);
       if (previous != null && !previous.equals(qualifiedName)) {
         ambiguous.add(simpleName);

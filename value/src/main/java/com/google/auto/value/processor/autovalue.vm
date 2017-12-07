@@ -7,15 +7,16 @@
 ## Velocity deletes a newline after a directive (#if, #foreach, #end etc) so ## is not needed there.
 ## That does mean that we sometimes need an extra blank line after such a directive.
 ##
-## A post-processing step will remove unwanted spaces and blank lines, but will not join two lines.
+## Post-processing will remove unwanted spaces and blank lines, but will not join two lines.
+## It will also replace classes spelled as (e.g.) `java.util.Arrays`, with the backquotes, to
+## use just Arrays if that class can be imported unambiguously, or java.util.Arrays if not.
 
 #if (!$pkg.empty)
 package $pkg;
 #end
 
-#foreach ($i in $imports)
-import $i;
-#end
+## The following line will be replaced by the required imports during post-processing.
+`import`
 
 ${gwtCompatibleAnnotation}
 #foreach ($a in $annotations)
@@ -94,7 +95,7 @@ $a
   #foreach ($p in $props)
 
         #if ($identifiers) + "$p.name=" ##
-        #end+ #if ($p.kind == "ARRAY") ${arrays}.toString($p) #else $p #end
+        #end+ #if ($p.kind == "ARRAY") `java.util.Arrays`.toString($p) #else $p #end
         #if ($foreach.hasNext) + ", " #end
 
   #end
@@ -113,7 +114,7 @@ $a
     #elseif ($p.kind.primitive)
       this.$p == that.${p.getter}() ##
     #elseif ($p.kind == "ARRAY")
-      ${arrays}.equals(this.$p, ##
+      `java.util.Arrays`.equals(this.$p, ##
           (that instanceof $subclass) ? (($subclass) that).$p : that.${p.getter}()) ##
     #else
       #if ($p.nullable) (this.$p == null) ? (that.${p.getter}() == null) : #end ##
@@ -165,7 +166,7 @@ $a
     #elseif ($p.kind == "BOOLEAN")
       this.$p ? 1231 : 1237 ##
     #elseif ($p.kind == "ARRAY")
-      ${arrays}.hashCode(this.$p) ##
+      `java.util.Arrays`.hashCode(this.$p) ##
     #else
       #if ($p.nullable) ($p == null) ? 0 : #end this.${p}.hashCode() ##
     #end

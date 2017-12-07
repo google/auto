@@ -17,7 +17,6 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -43,11 +42,9 @@ public class Optionalish {
       "java.util.OptionalLong");
 
   private final DeclaredType optionalType;
-  private final String rawTypeSpelling;
 
-  private Optionalish(DeclaredType optionalType, String rawTypeSpelling) {
+  private Optionalish(DeclaredType optionalType) {
     this.optionalType = optionalType;
-    this.rawTypeSpelling = rawTypeSpelling;
   }
 
   /**
@@ -55,14 +52,10 @@ public class Optionalish {
    *
    * @param type the TypeMirror for the original optional type, for example
    *     {@code Optional<String>}.
-   * @param rawTypeSpelling the representation of the base Optional type in source code, given
-   *     the imports that will be present. Usually this will be {@code Optional},
-   *     {@code OptionalInt}, etc. In cases of ambiguity it might be {@code java.util.Optional} etc.
    */
-  static Optionalish createIfOptional(TypeMirror type, String rawTypeSpelling) {
+  static Optionalish createIfOptional(TypeMirror type) {
     if (isOptional(type)) {
-      return new Optionalish(
-          MoreTypes.asDeclared(type), Preconditions.checkNotNull(rawTypeSpelling));
+      return new Optionalish(MoreTypes.asDeclared(type));
     } else {
       return null;
     }
@@ -84,7 +77,7 @@ public class Optionalish {
    * for example.
    */
   public String getRawType() {
-    return rawTypeSpelling;
+    return TypeEncoder.encodeRaw(optionalType);
   }
 
   /**
@@ -100,7 +93,7 @@ public class Optionalish {
     String empty = typeElement.getQualifiedName().toString().startsWith("java.util.")
         ? ".empty()"
         : ".absent()";
-    return rawTypeSpelling + empty;
+    return TypeEncoder.encodeRaw(optionalType) + empty;
   }
 
   TypeMirror getContainedType(Types typeUtils) {

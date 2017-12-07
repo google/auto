@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
@@ -56,22 +55,16 @@ class AutoValueTemplateVars extends TemplateVars {
   /** The type utilities returned by {@link ProcessingEnvironment#getTypeUtils()}. */
   Types types;
 
-  /** The fully-qualified names of the classes to be imported in the generated class. */
-  ImmutableSortedSet<String> imports;
-
   /**
-   * The spelling of the {@code Generated} class: {@code Generated} or {@code
-   * javax.annotation.Generated}. Empty if the class is not available.
+   * The encoding of the {@code Generated} class. Empty if the class is not available.
    */
   String generated;
 
-  /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
-  String arrays;
-
   /**
-   * The full spelling of the {@code @GwtCompatible} annotation to add to this class, or an empty
-   * string if there is none. A non-empty value might look something like
-   * {@code "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   * The encoding of the {@code @GwtCompatible} annotation to add to this class, or an empty
+   * string if there is none. A non-empty value will look something like
+   * {@code "@`com.google.common.annotations.GwtCompatible`(serializable = true)"}, where the
+   * {@code ``} represent the encoding used by {@link TypeEncoder}.
    */
   String gwtCompatibleAnnotation;
 

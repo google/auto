@@ -16,37 +16,22 @@
 package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.testing.compile.CompilationSubject.assertThat;
-import static com.google.testing.compile.Compiler.javac;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.testing.compile.Compilation;
 import com.google.testing.compile.CompilationRule;
-import com.google.testing.compile.JavaFileObjects;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ErrorType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
-import javax.tools.JavaFileObject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,8 +55,6 @@ public class TypeSimplifierTest {
     typeUtils = compilationRule.getTypes();
     elementUtils = compilationRule.getElements();
   }
-
-  private static class MultipleBounds<K extends List<V> & Comparable<K>, V> {}
 
   private static class Erasure<T> {
     int intNo;
@@ -219,222 +202,6 @@ public class TypeSimplifierTest {
         .isEqualTo("java.util");
   }
 
-  @Test
-  public void testImportsForNoTypes() {
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", typeMirrorSet(), baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport()).isEmpty();
-  }
-
-  @Test
-  public void testImportsForImplicitlyImportedTypes() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeMirrorOf(java.lang.String.class),
-        typeMirrorOf(javax.management.MBeanServer.class),  // Same package, so no import.
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeUtils.getPrimitiveType(TypeKind.BOOLEAN)
-    );
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "javax.management", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport()).isEmpty();
-  }
-
-  @Test
-  public void testImportsForPlainTypes() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeMirrorOf(java.lang.String.class),
-        typeMirrorOf(java.net.Proxy.class),
-        typeMirrorOf(java.net.Proxy.Type.class),
-        typeMirrorOf(java.util.regex.Pattern.class),
-        typeMirrorOf(javax.management.MBeanServer.class));
-    List<String> expectedImports = ImmutableList.of(
-        "java.net.Proxy",
-        "java.util.regex.Pattern",
-        "javax.management.MBeanServer"
-    );
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport()).containsExactlyElementsIn(expectedImports).inOrder();
-    assertThat(typeSimplifier.simplify(typeMirrorOf(java.net.Proxy.class)))
-        .isEqualTo("Proxy");
-    assertThat(typeSimplifier.simplify(typeMirrorOf(java.net.Proxy.Type.class)))
-        .isEqualTo("Proxy.Type");
-  }
-
-  @Test
-  public void testImportsForComplicatedTypes() {
-    TypeElement list = typeElementOf(java.util.List.class);
-    TypeElement map = typeElementOf(java.util.Map.class);
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeMirrorOf(java.util.regex.Pattern.class),
-        typeUtils.getDeclaredType(list,  // List<Timer>
-            typeMirrorOf(java.util.Timer.class)),
-        typeUtils.getDeclaredType(map,   // Map<? extends Timer, ? super BigInteger>
-            typeUtils.getWildcardType(typeMirrorOf(java.util.Timer.class), null),
-            typeUtils.getWildcardType(null, typeMirrorOf(java.math.BigInteger.class))));
-    // Timer is referenced twice but should obviously only be imported once.
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport())
-        .containsExactly(
-            "java.math.BigInteger",
-            "java.util.List",
-            "java.util.Map",
-            "java.util.Timer",
-            "java.util.regex.Pattern")
-        .inOrder();
-  }
-
-  @Test
-  public void testImportsForArrayTypes() {
-    TypeElement list = typeElementOf(java.util.List.class);
-    TypeElement set = typeElementOf(java.util.Set.class);
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.INT)),
-        typeUtils.getArrayType(typeMirrorOf(java.util.regex.Pattern.class)),
-        typeUtils.getArrayType(          // Set<Matcher[]>[]
-            typeUtils.getDeclaredType(set,
-                typeUtils.getArrayType(typeMirrorOf(java.util.regex.Matcher.class)))),
-        typeUtils.getDeclaredType(list,  // List<Timer[]>
-            typeUtils.getArrayType(typeMirrorOf(java.util.Timer.class))));
-    // Timer is referenced twice but should obviously only be imported once.
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport())
-        .containsExactly(
-            "java.util.List",
-            "java.util.Set",
-            "java.util.Timer",
-            "java.util.regex.Matcher",
-            "java.util.regex.Pattern")
-        .inOrder();
-  }
-
-  @Test
-  public void testImportNestedType() {
-    Set<TypeMirror> types = typeMirrorSet(typeMirrorOf(java.net.Proxy.Type.class));
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport())
-        .containsExactly("java.net.Proxy");
-    assertThat(typeSimplifier.simplify(typeMirrorOf(java.net.Proxy.Type.class)))
-        .isEqualTo("Proxy.Type");
-  }
-
-  @Test
-  public void testImportsForAmbiguousNames() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeMirrorOf(java.awt.List.class),
-        typeMirrorOf(java.lang.String.class),
-        typeMirrorOf(java.util.List.class),
-        typeMirrorOf(java.util.Map.class)
-    );
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport())
-        .containsExactly("java.util.Map");
-  }
-
-  @Test
-  public void testSimplifyJavaLangString() {
-    TypeMirror string = typeMirrorOf(java.lang.String.class);
-    Set<TypeMirror> types = typeMirrorSet(string);
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.simplify(string)).isEqualTo("String");
-  }
-
-  @Test
-  public void testSimplifyJavaLangThreadState() {
-    TypeMirror threadState = typeMirrorOf(java.lang.Thread.State.class);
-    Set<TypeMirror> types = typeMirrorSet(threadState);
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.simplify(threadState)).isEqualTo("Thread.State");
-  }
-
-  @Test
-  public void testSimplifyAmbiguousNames() {
-    TypeMirror javaAwtList = typeMirrorOf(java.awt.List.class);
-    TypeMirror javaUtilList = typeMirrorOf(java.util.List.class);
-    Set<TypeMirror> types = typeMirrorSet(javaAwtList, javaUtilList);
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.simplify(javaAwtList)).isEqualTo(javaAwtList.toString());
-    assertThat(typeSimplifier.simplify(javaUtilList)).isEqualTo(javaUtilList.toString());
-  }
-
-  @Test
-  public void testSimplifyJavaLangNamesake() {
-    TypeMirror javaLangType = typeMirrorOf(java.lang.RuntimePermission.class);
-    TypeMirror notJavaLangType = typeMirrorOf(
-        com.google.auto.value.processor.testclasses.RuntimePermission.class);
-    Set<TypeMirror> types = typeMirrorSet(javaLangType, notJavaLangType);
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    assertThat(typeSimplifier.simplify(javaLangType)).isEqualTo(javaLangType.toString());
-    assertThat(typeSimplifier.simplify(notJavaLangType)).isEqualTo(notJavaLangType.toString());
-  }
-
-  @Test
-  public void testSimplifyComplicatedTypes() {
-    // This test constructs a set of types and feeds them to TypeSimplifier. Then it verifies that
-    // the resultant rewrites of those types are what we would expect.
-    TypeElement list = typeElementOf(java.util.List.class);
-    TypeElement map = typeElementOf(java.util.Map.class);
-    TypeMirror string = typeMirrorOf(java.lang.String.class);
-    TypeMirror integer = typeMirrorOf(java.lang.Integer.class);
-    TypeMirror pattern = typeMirrorOf(java.util.regex.Pattern.class);
-    TypeMirror timer = typeMirrorOf(java.util.Timer.class);
-    TypeMirror bigInteger = typeMirrorOf(java.math.BigInteger.class);
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.BYTE)),
-        pattern,
-        typeUtils.getArrayType(pattern),
-        typeUtils.getArrayType(typeUtils.getArrayType(pattern)),
-        typeUtils.getDeclaredType(list, typeUtils.getWildcardType(null, null)),
-        typeUtils.getDeclaredType(list, timer),
-        typeUtils.getDeclaredType(map, string, integer),
-        typeUtils.getDeclaredType(map,
-            typeUtils.getWildcardType(timer, null), typeUtils.getWildcardType(null, bigInteger)));
-    Set<String> expectedSimplifications = ImmutableSet.of(
-        "int",
-        "byte[]",
-        "Pattern",
-        "Pattern[]",
-        "Pattern[][]",
-        "List<?>",
-        "List<Timer>",
-        "Map<String, Integer>",
-        "Map<? extends Timer, ? super BigInteger>"
-    );
-    TypeSimplifier typeSimplifier =
-        new TypeSimplifier(typeUtils, "foo.bar", types, baseWithoutContainedTypes());
-    Set<String> actualSimplifications = new HashSet<String>();
-    for (TypeMirror type : types) {
-      actualSimplifications.add(typeSimplifier.simplify(type));
-    }
-    assertThat(actualSimplifications).isEqualTo(expectedSimplifications);
-  }
-
-  @Test
-  public void testSimplifyMultipleBounds() {
-    TypeElement multipleBoundsElement = typeElementOf(MultipleBounds.class);
-    TypeMirror multipleBoundsMirror = multipleBoundsElement.asType();
-    TypeSimplifier typeSimplifier = new TypeSimplifier(typeUtils, "",
-        typeMirrorSet(multipleBoundsMirror), baseWithoutContainedTypes());
-    assertThat(typeSimplifier.typesToImport())
-        .contains("java.util.List");
-    assertThat(typeSimplifier.simplify(multipleBoundsMirror))
-        .isEqualTo("TypeSimplifierTest.MultipleBounds<K, V>");
-    assertThat(typeSimplifier.formalTypeParametersString(multipleBoundsElement))
-        .isEqualTo("<K extends List<V> & Comparable<K>, V>");
-  }
-
   // Test TypeSimplifier.isCastingUnchecked. We do this by examining the fields of the Erasure
   // class. A field whose name ends with Yes has a type where
   // isCastingUnchecked should return true, and one whose name ends with No has a type where
@@ -492,82 +259,5 @@ public class TypeSimplifierTest {
 
   private TypeMirror typeMirrorOf(Class<?> c) {
     return typeElementOf(c).asType();
-  }
-
-  /**
-   * Returns a "base type" for TypeSimplifier that does not contain any nested types. The point
-   * being that every {@code TypeSimplifier} has a base type that the class being generated is
-   * going to extend, and if that class has nested types they will be in scope, and therefore a
-   * possible source of ambiguity.
-   */
-  private TypeMirror baseWithoutContainedTypes() {
-    return typeMirrorOf(Object.class);
-  }
-
-  // This test checks that we correctly throw MissingTypeException if there is an ErrorType anywhere
-  // inside a type we are asked to simplify. There's no way to get an ErrorType from typeUtils or
-  // elementUtils, so we need to fire up the compiler with an erroneous source file and use an
-  // annotation processor to capture the resulting ErrorType. Then we can run tests within that
-  // annotation processor, and propagate any failures out of this test.
-  @Test
-  public void testErrorTypes() {
-    JavaFileObject source = JavaFileObjects.forSourceString(
-        "ExtendsUndefinedType", "class ExtendsUndefinedType extends UndefinedParent {}");
-    Compilation compilation = javac()
-        .withProcessors(new ErrorTestProcessor())
-        .compile(source);
-    assertThat(compilation).failed();
-    assertThat(compilation).hadErrorContaining("UndefinedParent");
-    assertThat(compilation).hadErrorCount(1);
-  }
-
-  @SupportedAnnotationTypes("*")
-  private static class ErrorTestProcessor extends AbstractProcessor {
-    Types typeUtils;
-    Elements elementUtils;
-
-    @Override
-    public boolean process(
-        Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-      if (roundEnv.processingOver()) {
-        typeUtils = processingEnv.getTypeUtils();
-        elementUtils = processingEnv.getElementUtils();
-        test();
-      }
-      return false;
-    }
-
-    private void test() {
-      TypeElement extendsUndefinedType = elementUtils.getTypeElement("ExtendsUndefinedType");
-      ErrorType errorType = (ErrorType) extendsUndefinedType.getSuperclass();
-      TypeElement list = elementUtils.getTypeElement("java.util.List");
-      TypeMirror listOfError = typeUtils.getDeclaredType(list, errorType);
-      TypeMirror queryExtendsError = typeUtils.getWildcardType(errorType, null);
-      TypeMirror listOfQueryExtendsError = typeUtils.getDeclaredType(list, queryExtendsError);
-      TypeMirror querySuperError = typeUtils.getWildcardType(null, errorType);
-      TypeMirror listOfQuerySuperError = typeUtils.getDeclaredType(list, querySuperError);
-      TypeMirror arrayOfError = typeUtils.getArrayType(errorType);
-      testErrorType(errorType);
-      testErrorType(listOfError);
-      testErrorType(listOfQueryExtendsError);
-      testErrorType(listOfQuerySuperError);
-      testErrorType(arrayOfError);
-    }
-
-    @SuppressWarnings("MissingFail")  // error message gets converted into assertion failure
-    private void testErrorType(TypeMirror typeWithError) {
-      TypeMirror javaLangObject = elementUtils.getTypeElement("java.lang.Object").asType();
-      try {
-        new TypeSimplifier(typeUtils, "foo.bar", ImmutableSet.of(typeWithError), javaLangObject);
-        processingEnv.getMessager().printMessage(
-            Diagnostic.Kind.ERROR, "Expected exception for type: " + typeWithError);
-      } catch (MissingTypeException expected) {
-      }
-    }
-
-    @Override
-    public SourceVersion getSupportedSourceVersion() {
-      return SourceVersion.latestSupported();
-    }
   }
 }

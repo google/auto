@@ -24,8 +24,6 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
-import java.lang.Override;
-import java.lang.SuppressWarnings;
 
 public class GwtSerializerTest extends GWTTestCase {
 
