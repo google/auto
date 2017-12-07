@@ -54,8 +54,8 @@ public class AutoServiceProcessorTest {
         .processedWith(new AutoServiceProcessor())
         .compilesWithoutError()
         .and().generatesFiles(
-            JavaFileObjects.forResource("META-INF/services/test.SomeService"),
-            JavaFileObjects.forResource("META-INF/services/test.AnotherService"));
+            JavaFileObjects.forResource("META-INF/services/test.SomeServiceMulti"),
+            JavaFileObjects.forResource("META-INF/services/test.AnotherServiceMulti"));
   }
 
   @Test
