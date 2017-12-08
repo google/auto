@@ -70,6 +70,9 @@ public final class MemoizeExtension extends AutoValueExtension {
   private static final ClassName LAZY_INIT =
       ClassName.get("com.google.errorprone.annotations.concurrent", "LazyInit");
 
+  private static final AnnotationSpec SUPPRESS_WARNINGS =
+      AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "Immutable").build();
+
   @Override
   public boolean applicable(Context context) {
     return !memoizedMethods(context).isEmpty();
@@ -288,6 +291,7 @@ public final class MemoizeExtension extends AutoValueExtension {
         FieldSpec.Builder builder = FieldSpec.builder(type, name, PRIVATE, VOLATILE);
         if (lazyInitAnnotation.isPresent()) {
           builder.addAnnotation(lazyInitAnnotation.get());
+          builder.addAnnotation(SUPPRESS_WARNINGS);
         }
         return builder.build();
       }
