@@ -23,6 +23,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
+import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 
 /**
  * Tests the {@link AutoServiceProcessor}.
@@ -31,7 +32,7 @@ import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SER
 public class AutoServiceProcessorTest {
   @Test
   public void autoService() {
-      JavaSourcesSubject.assertThat(
+      assertThat(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
             JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
@@ -47,7 +48,7 @@ public class AutoServiceProcessorTest {
 
   @Test
   public void multiService() {
-    JavaSourcesSubject.assertThat(
+    assertThat(
             JavaFileObjects.forResource("test/SomeService.java"),
             JavaFileObjects.forResource("test/AnotherService.java"),
             JavaFileObjects.forResource("test/MultiServiceProvider.java"))
@@ -60,7 +61,7 @@ public class AutoServiceProcessorTest {
 
   @Test
   public void badMultiService() {
-    JavaSourcesSubject.assertThat(JavaFileObjects.forResource("test/NoServices.java"))
+    assertThat(JavaFileObjects.forResource("test/NoServices.java"))
         .processedWith(new AutoServiceProcessor())
         .failsToCompile()
         .withErrorContaining(MISSING_SERVICES_ERROR);
