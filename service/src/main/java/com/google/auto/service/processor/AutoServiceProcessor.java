@@ -255,7 +255,6 @@ public class AutoServiceProcessor extends AbstractProcessor {
    * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code annotationMirror}.
    */
   private ImmutableSet<DeclaredType> getValueFieldOfClasses(AnnotationMirror annotationMirror) {
-    //noinspection unchecked
     return ((List<AnnotationValue>) getAnnotationValue(annotationMirror, "value").getValue())
             .stream()
             // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class, int[].class
