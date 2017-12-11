@@ -45,6 +45,8 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
@@ -254,12 +256,26 @@ public class AutoServiceProcessor extends AbstractProcessor {
    * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code annotationMirror}.
    */
   private ImmutableSet<DeclaredType> getValueFieldOfClasses(AnnotationMirror annotationMirror) {
-    @SuppressWarnings("unchecked")
-    List<AnnotationValue> values =
-        ((List<AnnotationValue>) getAnnotationValue(annotationMirror, "value").getValue());
-    // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class,
-    // int[].class
-    return values.stream().map(value -> (DeclaredType) value.getValue()).collect(toImmutableSet());
+    return getAnnotationValue(annotationMirror, "value")
+        .accept(
+            new SimpleAnnotationValueVisitor8<ImmutableSet<DeclaredType>, Void>() {
+              @Override
+              public ImmutableSet<DeclaredType> visitType(TypeMirror typeMirror, Void v) {
+                // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class,
+                // int[].class
+                return ImmutableSet.of(MoreTypes.asDeclared(typeMirror));
+              }
+
+              @Override
+              public ImmutableSet<DeclaredType> visitArray(
+                  List<? extends AnnotationValue> values, Void v) {
+                return values
+                    .stream()
+                    .flatMap(value -> value.accept(this, null).stream())
+                    .collect(toImmutableSet());
+              }
+            },
+            null);
   }
 
   private void log(String msg) {
