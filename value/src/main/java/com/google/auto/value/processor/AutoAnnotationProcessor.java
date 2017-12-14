@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.GeneratedAnnotations;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
@@ -177,12 +178,12 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private String getGeneratedTypeName() {
-    TypeElement generatedTypeElement =
-        processingEnv.getElementUtils().getTypeElement("javax.annotation.Generated");
-    if (generatedTypeElement == null) {
+    Optional<TypeElement> generatedTypeElement =
+        GeneratedAnnotations.generatedAnnotation(processingEnv.getElementUtils());
+    if (!generatedTypeElement.isPresent()) {
       return "";
     }
-    return TypeEncoder.encode(generatedTypeElement.asType());
+    return TypeEncoder.encode(generatedTypeElement.get().asType());
   }
 
   /**
