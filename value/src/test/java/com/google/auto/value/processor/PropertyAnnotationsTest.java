@@ -24,6 +24,7 @@ import com.google.testing.compile.JavaFileObjects;
 import java.lang.annotation.Inherited;
 import java.util.List;
 import javax.tools.JavaFileObject;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -96,6 +97,8 @@ public class PropertyAnnotationsTest {
   @Inherited
   public @interface InheritedAnnotation {}
 
+  @Rule public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
+
   private JavaFileObject sourceCode(List<String> imports, List<String> annotations) {
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
@@ -126,10 +129,11 @@ public class PropertyAnnotationsTest {
 
   private JavaFileObject expectedCode(List<String> imports, List<String> annotations) {
     String nullable = annotations.contains("@Nullable") ? "@Nullable " : "";
-    ImmutableSortedSet<String> allImports = ImmutableSortedSet.<String>naturalOrder()
-        .add("import javax.annotation.Generated;")
-        .addAll(imports)
-        .build();
+    ImmutableSortedSet<String> allImports =
+        ImmutableSortedSet.<String>naturalOrder()
+            .add(generatedImportRule.importGeneratedAnnotationType())
+            .addAll(imports)
+            .build();
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
             "package foo.bar;",
@@ -183,7 +187,6 @@ public class PropertyAnnotationsTest {
     return JavaFileObjects.forSourceLines("foo.bar.AutoValue_Baz", lines);
   }
 
-  
   private void assertGeneratedMatches(
       List<String> imports,
       List<String> annotations,
@@ -408,5 +411,4 @@ public class PropertyAnnotationsTest {
         .and()
         .generatesSources(expectedOutput);
   }
-
 }

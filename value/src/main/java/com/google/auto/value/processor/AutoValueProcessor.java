@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
+import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
@@ -819,14 +820,13 @@ public class AutoValueProcessor extends AbstractProcessor {
       ImmutableSet<ExecutableElement> toBuilderMethods,
       ImmutableSet<ExecutableElement> propertyMethods,
       Optional<BuilderSpec.Builder> builder) {
-    TypeElement generatedTypeElement =
-        processingEnv.getElementUtils().getTypeElement("javax.annotation.Generated");
     // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
         ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
-    vars.generated = generatedTypeElement == null
-        ? ""
-        : TypeEncoder.encode(generatedTypeElement.asType());
+    vars.generated =
+        generatedAnnotation(processingEnv.getElementUtils())
+            .map(annotation -> TypeEncoder.encode(annotation.asType()))
+            .orElse("");
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         propertyNameToMethodMap(propertyMethods).inverse();
     vars.props = propertySet(type, propertyMethods);

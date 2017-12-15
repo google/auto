@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.extension.memoized;
 
+import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
@@ -121,7 +122,7 @@ public final class MemoizeExtension extends AutoValueExtension {
               .addTypeVariables(typeVariableNames())
               .addModifiers(isFinal ? FINAL : ABSTRACT)
               .addMethod(constructor());
-      generatedAnnotation().ifPresent(generated::addAnnotation);
+      generatedAnnotationSpec(elements, MemoizeExtension.class).ifPresent(generated::addAnnotation);
       for (ExecutableElement method : memoizedMethods(context)) {
         MethodOverrider methodOverrider = new MethodOverrider(method);
         generated.addFields(methodOverrider.fields());
@@ -131,19 +132,6 @@ public final class MemoizeExtension extends AutoValueExtension {
         return null;
       }
       return JavaFile.builder(context.packageName(), generated.build()).build().toString();
-    }
-
-    private Optional<AnnotationSpec> generatedAnnotation() {
-      TypeElement generatedAnnotationElement =
-          elements.getTypeElement("javax.annotation.Generated");
-      if (generatedAnnotationElement == null) {
-        return Optional.empty();
-      }
-      ClassName generatedName = ClassName.get(generatedAnnotationElement);
-      return Optional.of(
-          AnnotationSpec.builder(generatedName)
-              .addMember("value", "$S", MemoizeExtension.class.getCanonicalName())
-              .build());
     }
 
     private TypeName superType() {
