@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
 import static com.google.auto.factory.processor.Mirrors.isProvider;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
@@ -45,7 +46,6 @@ import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 
@@ -65,16 +65,11 @@ final class FactoryWriter {
       throws IOException {
     String factoryName = getSimpleName(descriptor.name()).toString();
     TypeSpec.Builder factory = classBuilder(factoryName);
-    // TODO(ronshapiro): use javax.annotation.processing.Generated if it's available?
-    TypeElement generatedAnnotation = elements.getTypeElement("javax.annotation.Generated");
-    if (generatedAnnotation != null) {
-      factory.addAnnotation(
-          AnnotationSpec.builder(ClassName.get(generatedAnnotation))
-              .addMember("value", "$S", AutoFactoryProcessor.class.getName())
-              .addMember(
-                  "comments", "$S", "https://github.com/google/auto/tree/master/factory")
-              .build());
-    }
+    generatedAnnotationSpec(
+            elements,
+            AutoFactoryProcessor.class,
+            "https://github.com/google/auto/tree/master/factory")
+        .ifPresent(factory::addAnnotation);
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }

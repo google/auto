@@ -15,8 +15,8 @@
  */
 package tests;
 
-import javax.annotation.Generated;
 import javax.annotation.Nullable;
+import javax.annotation.processing.Generated;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
