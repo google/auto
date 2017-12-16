@@ -16,7 +16,7 @@
 package tests;
 
 import java.util.RandomAccess;
-import javax.annotation.Generated;
+import javax.annotation.processing.Generated;
 import javax.inject.Inject;
 
 @Generated(

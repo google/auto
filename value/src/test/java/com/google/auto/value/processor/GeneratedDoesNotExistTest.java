@@ -19,11 +19,13 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.Reflection;
 import com.google.testing.compile.JavaFileObjects;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.lang.model.element.TypeElement;
@@ -48,7 +50,11 @@ public class GeneratedDoesNotExistTest {
   // out the Generated class. So that ProcessingEnvironment forwards everything to the real
   // ProcessingEnvironment, except the ProcessingEnvironment.getElementUtils() method. That method
   // returns an Elements object that forwards everything to the real Elements except
-  // getTypeElement("javax.annotation.Generated").
+  // getTypeElement("javax.annotation.Generated") and
+  // getTypeElement("javax.annotation.processing.Generated").
+
+  private static final ImmutableSet<String> GENERATED_ANNOTATIONS =
+      ImmutableSet.of("javax.annotation.Generated", "javax.annotation.processing.Generated");
 
   /**
    * InvocationHandler that forwards every method to an original object, except methods where
@@ -85,16 +91,17 @@ public class GeneratedDoesNotExistTest {
   }
 
   private static class ElementsHandler extends OverridableInvocationHandler<Elements> {
-    private final AtomicBoolean ignoredGenerated;
 
-    ElementsHandler(Elements original, AtomicBoolean ignoredGenerated) {
+    private final Set<String> ignoredGenerated;
+
+    ElementsHandler(Elements original, Set<String> ignoredGenerated) {
       super(original);
       this.ignoredGenerated = ignoredGenerated;
     }
 
     public TypeElement getTypeElement(CharSequence name) {
-      if (name.toString().equals("javax.annotation.Generated")) {
-        ignoredGenerated.set(true);
+      if (GENERATED_ANNOTATIONS.contains(name.toString())) {
+        ignoredGenerated.add(name.toString());
         return null;
       } else {
         return original.getTypeElement(name);
@@ -106,8 +113,7 @@ public class GeneratedDoesNotExistTest {
       extends OverridableInvocationHandler<ProcessingEnvironment> {
     private final Elements noGeneratedElements;
 
-    ProcessingEnvironmentHandler(
-        ProcessingEnvironment original, AtomicBoolean ignoredGenerated) {
+    ProcessingEnvironmentHandler(ProcessingEnvironment original, Set<String> ignoredGenerated) {
       super(original);
       ElementsHandler elementsHandler =
           new ElementsHandler(original.getElementUtils(), ignoredGenerated);
@@ -120,9 +126,9 @@ public class GeneratedDoesNotExistTest {
   }
 
   private static class ProcessorHandler extends OverridableInvocationHandler<Processor> {
-    private final AtomicBoolean ignoredGenerated;
+    private final Set<String> ignoredGenerated;
 
-    ProcessorHandler(Processor original, AtomicBoolean ignoredGenerated) {
+    ProcessorHandler(Processor original, Set<String> ignoredGenerated) {
       super(original);
       this.ignoredGenerated = ignoredGenerated;
     }
@@ -179,7 +185,7 @@ public class GeneratedDoesNotExistTest {
         "  }",
         "}"
     );
-    AtomicBoolean ignoredGenerated = new AtomicBoolean();
+    Set<String> ignoredGenerated = ConcurrentHashMap.newKeySet();
     Processor autoValueProcessor = new AutoValueProcessor();
     ProcessorHandler handler = new ProcessorHandler(autoValueProcessor, ignoredGenerated);
     Processor noGeneratedProcessor = partialProxy(Processor.class, handler);
@@ -189,6 +195,6 @@ public class GeneratedDoesNotExistTest {
         .compilesWithoutError()
         .and()
         .generatesSources(expectedOutput);
-    assertThat(ignoredGenerated.get()).isTrue();
+    assertThat(ignoredGenerated).isEqualTo(GENERATED_ANNOTATIONS);
   }
 }

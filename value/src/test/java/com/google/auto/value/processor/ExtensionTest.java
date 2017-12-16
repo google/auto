@@ -49,12 +49,16 @@ import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class ExtensionTest {
+
+  @Rule public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
+
   @Test
   public void testExtensionCompilation() throws Exception {
 
@@ -103,59 +107,58 @@ public class ExtensionTest {
         "  abstract String foo();",
         "  abstract String dizzle();",
         "}");
-    JavaFileObject expectedExtensionOutput = JavaFileObjects.forSourceLines(
-        "foo.bar.$AutoValue_Baz",
-        "package foo.bar;\n"
-        + "\n"
-        + "import javax.annotation.Generated;\n"
-        + "\n"
-        + "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")\n"
-        + " abstract class $AutoValue_Baz extends Baz {\n"
-        + "\n"
-        + "  private final String foo;\n"
-        + "\n"
-        + "  $AutoValue_Baz(\n"
-        + "      String foo) {\n"
-        + "    if (foo == null) {\n"
-        + "      throw new NullPointerException(\"Null foo\");\n"
-        + "    }\n"
-        + "    this.foo = foo;\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  String foo() {\n"
-        + "    return foo;\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  public String toString() {\n"
-        + "    return \"Baz{\"\n"
-        + "        + \"foo=\" + foo\n"
-        + "        + \"}\";\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  public boolean equals(Object o) {\n"
-        + "    if (o == this) {\n"
-        + "      return true;\n"
-        + "    }\n"
-        + "    if (o instanceof Baz) {\n"
-        + "      Baz that = (Baz) o;\n"
-        + "      return (this.foo.equals(that.foo()));\n"
-        + "    }\n"
-        + "    return false;\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  public int hashCode() {\n"
-        + "    int h = 1;\n"
-        + "    h *= 1000003;\n"
-        + "    h ^= this.foo.hashCode();\n"
-        + "    return h;\n"
-        + "  }\n"
-        + "\n"
-        + "}"
-    );
+    JavaFileObject expectedExtensionOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.$AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            generatedImportRule.importGeneratedAnnotationType(),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+            " abstract class $AutoValue_Baz extends Baz {",
+            "",
+            "  private final String foo;",
+            "",
+            "  $AutoValue_Baz(",
+            "      String foo) {",
+            "    if (foo == null) {",
+            "      throw new NullPointerException(\"Null foo\");",
+            "    }",
+            "    this.foo = foo;",
+            "  }",
+            "",
+            "  @Override",
+            "  String foo() {",
+            "    return foo;",
+            "  }",
+            "",
+            "  @Override",
+            "  public String toString() {",
+            "    return \"Baz{\"",
+            "        + \"foo=\" + foo",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override",
+            "  public boolean equals(Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Baz) {",
+            "      Baz that = (Baz) o;",
+            "      return (this.foo.equals(that.foo()));",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+            "  @Override",
+            "  public int hashCode() {",
+            "    int h = 1;",
+            "    h *= 1000003;",
+            "    h ^= this.foo.hashCode();",
+            "    return h;",
+            "  }",
+            "}");
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
