@@ -69,7 +69,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.12</version>
+      <version>0.15</version>
       <scope>test</scope>
     </dependency>
     <dependency>
