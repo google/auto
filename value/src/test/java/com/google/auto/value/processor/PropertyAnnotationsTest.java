@@ -206,9 +206,7 @@ public class PropertyAnnotationsTest {
   @Test
   public void testSimpleAnnotation() {
     assertGeneratedMatches(
-        ImmutableList.of("import javax.annotation.Resource;"),
-        ImmutableList.of("@Resource"),
-        ImmutableList.of("@Resource"));
+        ImmutableList.of(), ImmutableList.of("@Deprecated"), ImmutableList.of("@Deprecated"));
   }
 
   @Test
@@ -386,20 +384,16 @@ public class PropertyAnnotationsTest {
    */
   @Test
   public void testCopyingMethodAnnotations() {
-    ImmutableList<String> sourceImports =
-        ImmutableList.of("import javax.annotation.Resource;",
-            IMPORT_PROPERTY_ANNOTATIONS_TEST);
+    ImmutableList<String> sourceImports = ImmutableList.of(IMPORT_PROPERTY_ANNOTATIONS_TEST);
     ImmutableList<String> sourceAnnotations =
         ImmutableList.of(
             "@AutoValue.CopyAnnotations(exclude={PropertyAnnotationsTest.TestAnnotation.class})",
-            "@Resource",
+            "@Deprecated",
             "@PropertyAnnotationsTest.TestAnnotation",
             "@PropertyAnnotationsTest.InheritedAnnotation");
 
     ImmutableList<String> expectedAnnotations =
-        ImmutableList.of(
-            "@Resource",
-            "@PropertyAnnotationsTest.InheritedAnnotation");
+        ImmutableList.of("@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation");
 
     JavaFileObject javaFileObject = sourceCode(sourceImports, sourceAnnotations);
     JavaFileObject expectedOutput = expectedCode(sourceImports, expectedAnnotations);
