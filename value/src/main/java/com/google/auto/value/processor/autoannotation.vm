@@ -58,7 +58,7 @@ final class $className implements $annotationName {
   #if (!$members[$p].kind.primitive)
 
     if ($p == null) {
-      throw new NullPointerException("Null $p");
+      throw new IllegalArgumentException("Null $p");
     }
 
   #end
