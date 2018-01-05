@@ -40,9 +40,11 @@ import com.google.common.collect.ImmutableList;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class Node {
+  final String resourceName;
   final int lineNumber;
 
-  Node(int lineNumber) {
+  Node(String resourceName, int lineNumber) {
+    this.resourceName = resourceName;
     this.lineNumber = lineNumber;
   }
 
@@ -55,20 +57,28 @@ abstract class Node {
    */
   abstract Object evaluate(EvaluationContext context);
 
+  private String where() {
+    String where = "In expression on line " + lineNumber;
+    if (resourceName != null) {
+      where += " of " + resourceName;
+    }
+    return where;
+  }
+
   EvaluationException evaluationException(String message) {
-    return new EvaluationException("In expression on line " + lineNumber + ": " + message);
+    return new EvaluationException(where() + ": " + message);
   }
 
   EvaluationException evaluationException(Throwable cause) {
-    return new EvaluationException("In expression on line " + lineNumber + ": " + cause, cause);
+    return new EvaluationException(where() + ": " + cause, cause);
   }
 
   /**
    * Returns an empty node in the parse tree. This is used for example to represent the trivial
    * "else" part of an {@code #if} that does not have an explicit {@code #else}.
    */
-  static Node emptyNode(int lineNumber) {
-    return new Cons(lineNumber, ImmutableList.<Node>of());
+  static Node emptyNode(String resourceName, int lineNumber) {
+    return new Cons(resourceName, lineNumber, ImmutableList.<Node>of());
   }
 
   /**
@@ -76,15 +86,15 @@ abstract class Node {
    * new node produces the same string as evaluating each of the given nodes and concatenating the
    * result.
    */
-  static Node cons(int lineNumber, ImmutableList<Node> nodes) {
-    return new Cons(lineNumber, nodes);
+  static Node cons(String resourceName, int lineNumber, ImmutableList<Node> nodes) {
+    return new Cons(resourceName, lineNumber, nodes);
   }
 
   private static final class Cons extends Node {
     private final ImmutableList<Node> nodes;
 
-    Cons(int lineNumber, ImmutableList<Node> nodes) {
-      super(lineNumber);
+    Cons(String resourceName, int lineNumber, ImmutableList<Node> nodes) {
+      super(resourceName, lineNumber);
       this.nodes = nodes;
     }
 

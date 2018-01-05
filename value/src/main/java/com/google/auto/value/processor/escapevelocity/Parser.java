@@ -47,6 +47,7 @@ import com.google.auto.value.processor.escapevelocity.TokenNode.EofNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.ForEachTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.IfTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.MacroDefinitionTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.NestedTokenNode;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
@@ -68,6 +69,8 @@ class Parser {
   private static final int EOF = -1;
 
   private final LineNumberReader reader;
+  private final String resourceName;
+  private final Template.ResourceOpener resourceOpener;
 
   /**
    * The invariant of this parser is that {@code c} is always the next character of interest.
@@ -77,10 +80,13 @@ class Parser {
    */
   private int c;
 
-  Parser(Reader reader) throws IOException {
+  Parser(Reader reader, String resourceName, Template.ResourceOpener resourceOpener)
+      throws IOException {
     this.reader = new LineNumberReader(reader);
     this.reader.setLineNumber(1);
     next();
+    this.resourceName = resourceName;
+    this.resourceOpener = resourceOpener;
   }
 
   /**
@@ -118,13 +124,18 @@ class Parser {
    * define a simple parser over the resultant tokens that is the second phase.
    */
   Template parse() throws IOException {
+    ImmutableList<Node> tokens = parseTokens();
+    return new Reparser(tokens).reparse();
+  }
+
+  private ImmutableList<Node> parseTokens() throws IOException {
     ImmutableList.Builder<Node> tokens = ImmutableList.builder();
     Node token;
     do {
       token = parseNode();
       tokens.add(token);
     } while (!(token instanceof EofNode));
-    return new Reparser(tokens.build()).reparse();
+    return tokens.build();
   }
 
   private int lineNumber() {
@@ -186,14 +197,51 @@ class Parser {
       next();
       if (c == '#') {
         return parseComment();
-      } else {
+      } else if (isAsciiLetter(c) || c == '{') {
         return parseDirective();
+      } else if (c == '[') {
+        return parseHashSquare();
+      } else {
+        // For consistency with Velocity, we treat # not followed by # or a letter as a plain
+        // character, and we treat #$foo as a literal # followed by the reference $foo.
+        // But the # is its own ConstantExpressionNode; we don't try to merge it with adjacent text.
+        return new ConstantExpressionNode(resourceName, lineNumber(), "#");
       }
     }
     if (c == EOF) {
-      return new EofNode(lineNumber());
+      return new EofNode(resourceName, lineNumber());
     }
     return parseNonDirective();
+  }
+
+  private Node parseHashSquare() throws IOException {
+    // We've just seen #[ which might be the start of a #[[quoted block]]#. If the next character
+    // is not another [ then it's not a quoted block, but it *is* a literal #[ followed by whatever
+    // that next character is.
+    assert c == '[';
+    next();
+    if (c != '[') {
+      return new ConstantExpressionNode(resourceName, lineNumber(), "#[");
+    }
+    next();
+    StringBuilder sb = new StringBuilder();
+    while (true) {
+      if (c == EOF) {
+        throw parseException("Unterminated #[[ - did not see matching ]]#");
+      }
+      if (c == '#') {
+        // This might be the last character of ]]# or it might just be a random #.
+        int len = sb.length();
+        if (len > 1 && sb.charAt(len - 1) == ']' && sb.charAt(len - 2) == ']') {
+          next();
+          break;
+        }
+      }
+      sb.append((char) c);
+      next();
+    }
+    String quoted = sb.substring(0, sb.length() - 2);
+    return new ConstantExpressionNode(resourceName, lineNumber(), quoted);
   }
 
   /**
@@ -228,6 +276,7 @@ class Parser {
    *                <end-token> |
    *                <foreach-token> |
    *                <set-token> |
+   *                <parse-token> |
    *                <macro-token> |
    *                <macro-call> |
    *                <comment>
@@ -243,20 +292,31 @@ class Parser {
       directive = parseId("Directive");
     }
     Node node;
-    if (directive.equals("end")) {
-      node = new EndTokenNode(lineNumber());
-    } else if (directive.equals("if") || directive.equals("elseif")) {
-      node = parseIfOrElseIf(directive);
-    } else if (directive.equals("else")) {
-      node = new ElseTokenNode(lineNumber());
-    } else if (directive.equals("foreach")) {
-      node = parseForEach();
-    } else if (directive.equals("set")) {
-      node = parseSet();
-    } else if (directive.equals("macro")) {
-      node = parseMacroDefinition();
-    } else {
-      node = parsePossibleMacroCall(directive);
+    switch (directive) {
+      case "end":
+        node = new EndTokenNode(resourceName, lineNumber());
+        break;
+      case "if":
+      case "elseif":
+        node = parseIfOrElseIf(directive);
+        break;
+      case "else":
+        node = new ElseTokenNode(resourceName, lineNumber());
+        break;
+      case "foreach":
+        node = parseForEach();
+        break;
+      case "set":
+        node = parseSet();
+        break;
+      case "parse":
+        node = parseParse();
+        break;
+      case "macro":
+        node = parseMacroDefinition();
+        break;
+      default:
+        node = parsePossibleMacroCall(directive);
     }
     // Velocity skips a newline after any directive.
     // TODO(emcmanus): in fact it also skips space before the newline, which should be implemented.
@@ -326,6 +386,34 @@ class Parser {
   }
 
   /**
+   * Parses a {@code #parse} token from the reader. <pre>{@code
+   * <parse-token> -> #parse ( <string-literal> )
+   * }</pre>
+   *
+   * <p>The way this works is inconsistent with Velocity. In Velocity, the {@code #parse} directive
+   * is evaluated when it is encountered during template evaluation. That means that the argument
+   * can be a variable, and it also means that you can use {@code #if} to choose whether or not
+   * to do the {@code #parse}. Neither of those is true in EscapeVelocity. The contents of the
+   * {@code #parse} are integrated into the containing template pretty much as if they had been
+   * written inline. That also means that EscapeVelocity allows forward references to macros
+   * inside {@code #parse} directives, which Velocity does not.
+   */
+  private Node parseParse() throws IOException {
+    expect('(');
+    skipSpace();
+    if (c != '"') {
+      throw parseException("#parse only supported with string literal argument");
+    }
+    String nestedResourceName = readStringLiteral();
+    expect(')');
+    try (Reader nestedReader = resourceOpener.openResource(nestedResourceName)) {
+      Parser nestedParser = new Parser(nestedReader, nestedResourceName, resourceOpener);
+      ImmutableList<Node> nestedTokens = nestedParser.parseTokens();
+      return new NestedTokenNode(nestedResourceName, nestedTokens);
+    }
+  }
+
+  /**
    * Parses a {@code #macro} token from the reader. <pre>{@code
    * <macro-token> -> #macro ( <id> <macro-parameter-list> )
    * <macro-parameter-list> -> <empty> |
@@ -351,7 +439,7 @@ class Parser {
       next();
       parameterNames.add(parseId("Macro parameter name"));
     }
-    return new MacroDefinitionTokenNode(lineNumber(), name, parameterNames.build());
+    return new MacroDefinitionTokenNode(resourceName, lineNumber(), name, parameterNames.build());
   }
 
   /**
@@ -386,7 +474,8 @@ class Parser {
         next();
       }
     }
-    return new DirectiveNode.MacroCallNode(lineNumber(), directive, parameterNodes.build());
+    return new DirectiveNode.MacroCallNode(
+        resourceName, lineNumber(), directive, parameterNodes.build());
   }
 
   /**
@@ -399,7 +488,7 @@ class Parser {
       next();
     }
     next();
-    return new CommentTokenNode(lineNumber);
+    return new CommentTokenNode(resourceName, lineNumber);
   }
 
   /**
@@ -418,11 +507,13 @@ class Parser {
         case '$':
         case '#':
           break literal;
+        default:
+          // Just some random character.
       }
       sb.appendCodePoint(c);
       next();
     }
-    return new ConstantExpressionNode(lineNumber(), sb.toString());
+    return new ConstantExpressionNode(resourceName, lineNumber(), sb.toString());
   }
 
   /**
@@ -457,7 +548,7 @@ class Parser {
    */
   private ReferenceNode parseReferenceNoBrace() throws IOException {
     String id = parseId("Reference");
-    ReferenceNode lhs = new PlainReferenceNode(lineNumber(), id);
+    ReferenceNode lhs = new PlainReferenceNode(resourceName, lineNumber(), id);
     return parseReferenceSuffix(lhs);
   }
 
@@ -487,13 +578,13 @@ class Parser {
    * Parses a reference member, which is either a property reference like {@code $x.y} or a method
    * call like {@code $x.y($z)}.
    * <pre>{@code
-   * <reference-member> -> .<id><reference-method-or-property><reference-suffix>
-   * <reference-method-or-property> -> <id> |
+   * <reference-member> -> .<id><reference-property-or-method><reference-suffix>
+   * <reference-property-or-method> -> <id> |
    *                                   <id> ( <method-parameter-list> )
    * }</pre>
    *
    * @param lhs the reference node representing what appears to the left of the dot, like the
-   * {@code $x} in {@code $x.foo} or {@code $x.foo()}.
+   *     {@code $x} in {@code $x.foo} or {@code $x.foo()}.
    */
   private ReferenceNode parseReferenceMember(ReferenceNode lhs) throws IOException {
     assert c == '.';
@@ -518,7 +609,7 @@ class Parser {
    * }</pre>
    *
    * @param lhs the reference node representing what appears to the left of the dot, like the
-   * {@code $x} in {@code $x.foo()}.
+   *     {@code $x} in {@code $x.foo()}.
    */
   private ReferenceNode parseReferenceMethodParams(ReferenceNode lhs, String id)
       throws IOException {
@@ -547,7 +638,7 @@ class Parser {
    * }</pre>
    *
    * @param lhs the reference node representing what appears to the left of the dot, like the
-   * {@code $x} in {@code $x[$i]}.
+   *     {@code $x} in {@code $x[$i]}.
    */
   private ReferenceNode parseReferenceIndex(ReferenceNode lhs) throws IOException {
     assert c == '[';
@@ -764,6 +855,10 @@ class Parser {
   }
 
   private ExpressionNode parseStringLiteral() throws IOException {
+    return new ConstantExpressionNode(resourceName, lineNumber(), readStringLiteral());
+  }
+
+  private String readStringLiteral() throws IOException {
     assert c == '"';
     StringBuilder sb = new StringBuilder();
     next();
@@ -782,7 +877,7 @@ class Parser {
       next();
     }
     next();
-    return new ConstantExpressionNode(lineNumber(), sb.toString());
+    return sb.toString();
   }
 
   private ExpressionNode parseIntLiteral(String prefix) throws IOException {
@@ -795,7 +890,7 @@ class Parser {
     if (value == null) {
       throw parseException("Invalid integer: " + sb);
     }
-    return new ConstantExpressionNode(lineNumber(), value);
+    return new ConstantExpressionNode(resourceName, lineNumber(), value);
   }
 
   /**
@@ -813,7 +908,7 @@ class Parser {
     } else {
       throw parseException("Identifier in expression must be preceded by $ or be true or false");
     }
-    return new ConstantExpressionNode(lineNumber(), value);
+    return new ConstantExpressionNode(resourceName, lineNumber(), value);
   }
 
   private static final CharMatcher ASCII_LETTER =
@@ -880,6 +975,6 @@ class Parser {
         context.append("...");
       }
     }
-    return new ParseException(message, lineNumber(), context.toString());
+    return new ParseException(message, resourceName, lineNumber(), context.toString());
   }
 }

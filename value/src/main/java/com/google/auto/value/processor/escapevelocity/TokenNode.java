@@ -43,8 +43,8 @@ import java.util.List;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class TokenNode extends Node {
-  TokenNode(int lineNumber) {
-    super(lineNumber);
+  TokenNode(String resourceName, int lineNumber) {
+    super(resourceName, lineNumber);
   }
 
   /**
@@ -52,7 +52,7 @@ abstract class TokenNode extends Node {
    * final parse tree.
    */
   @Override Object evaluate(EvaluationContext vars) {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException(getClass().getName());
   }
 
   /**
@@ -65,8 +65,8 @@ abstract class TokenNode extends Node {
    * initial token string and also the last one in the parse tree.
    */
   static final class EofNode extends TokenNode {
-    EofNode(int lineNumber) {
-      super(lineNumber);
+    EofNode(String resourceName, int lineNumber) {
+      super(resourceName, lineNumber);
     }
 
     @Override
@@ -76,8 +76,8 @@ abstract class TokenNode extends Node {
   }
 
   static final class EndTokenNode extends TokenNode {
-    EndTokenNode(int lineNumber) {
-      super(lineNumber);
+    EndTokenNode(String resourceName, int lineNumber) {
+      super(resourceName, lineNumber);
     }
 
     @Override String name() {
@@ -92,8 +92,8 @@ abstract class TokenNode extends Node {
    * behaviour.
    */
   static class CommentTokenNode extends TokenNode {
-    CommentTokenNode(int lineNumber) {
-      super(lineNumber);
+    CommentTokenNode(String resourceName, int lineNumber) {
+      super(resourceName, lineNumber);
     }
 
     @Override String name() {
@@ -105,7 +105,7 @@ abstract class TokenNode extends Node {
     final ExpressionNode condition;
 
     IfOrElseIfTokenNode(ExpressionNode condition) {
-      super(condition.lineNumber);
+      super(condition.resourceName, condition.lineNumber);
       this.condition = condition;
     }
   }
@@ -131,8 +131,8 @@ abstract class TokenNode extends Node {
   }
 
   static final class ElseTokenNode extends TokenNode {
-    ElseTokenNode(int lineNumber) {
-      super(lineNumber);
+    ElseTokenNode(String resourceName, int lineNumber) {
+      super(resourceName, lineNumber);
     }
 
     @Override String name() {
@@ -145,7 +145,7 @@ abstract class TokenNode extends Node {
     final ExpressionNode collection;
 
     ForEachTokenNode(String var, ExpressionNode collection) {
-      super(collection.lineNumber);
+      super(collection.resourceName, collection.lineNumber);
       this.var = var;
       this.collection = collection;
     }
@@ -155,12 +155,26 @@ abstract class TokenNode extends Node {
     }
   }
 
+  static final class NestedTokenNode extends TokenNode {
+    final ImmutableList<Node> nodes;
+
+    NestedTokenNode(String resourceName, ImmutableList<Node> nodes) {
+      super(resourceName, 1);
+      this.nodes = nodes;
+    }
+
+    @Override String name() {
+      return "#parse(\"" + resourceName + "\")";
+    }
+  }
+
   static final class MacroDefinitionTokenNode extends TokenNode {
     final String name;
     final ImmutableList<String> parameterNames;
 
-    MacroDefinitionTokenNode(int lineNumber, String name, List<String> parameterNames) {
-      super(lineNumber);
+    MacroDefinitionTokenNode(
+        String resourceName, int lineNumber, String name, List<String> parameterNames) {
+      super(resourceName, lineNumber);
       this.name = name;
       this.parameterNames = ImmutableList.copyOf(parameterNames);
     }

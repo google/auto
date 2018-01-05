@@ -306,6 +306,44 @@ Macros can make templates hard to understand. You may prefer to put the logic in
 rather than a macro, and call the method from the template using `$methods.doSomething("foo")`
 or whatever.
 
+## Block quoting
+
+If you have text that should be treated verbatim, you can enclose it in `#[[...]]#`. The text
+represented by `...` will be copied into the output. `#` and `$` characters will have no
+effect in that text.
+
+```
+#[[ This is not a #directive, and this is not a $variable. ]]#
+```
+
+## Including other templates
+
+If you want to include a template from another file, you can use the `#parse` directive.
+This can be useful if you have macros that are shared between templates, for example.
+
+```
+#set ($foo = "bar")
+#parse("macros.vm")
+#mymacro($foo) ## #mymacro defined in macros.vm
+```
+
+For this to work, you will need to tell EscapeVelocity how to find "resources" such as
+`macro.vm` in the example. You might use something like this:
+
+```
+ResourceOpener resourceOpener = resourceName -> {
+  InputStream inputStream = getClass().getResource(resourceName);
+  if (inputStream == null) {
+    throw new IOException("Unknown resource: " + resourceName);
+  }
+  return new BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8));
+};
+Template template = Template.parseFrom("foo.vm", resourceOpener);
+```
+
+In this case, the `resourceOpener` is used to find the main template `foo.vm`, as well as any
+templates it may reference in `#parse` directives.
+
 ## <a name="spaces"></a> Spaces
 
 For the most part, spaces and newlines in the template are preserved exactly in the output.

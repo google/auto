@@ -47,6 +47,7 @@ import com.google.auto.value.processor.escapevelocity.TokenNode.ForEachTokenNode
 import com.google.auto.value.processor.escapevelocity.TokenNode.IfOrElseIfTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.IfTokenNode;
 import com.google.auto.value.processor.escapevelocity.TokenNode.MacroDefinitionTokenNode;
+import com.google.auto.value.processor.escapevelocity.TokenNode.NestedTokenNode;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -89,15 +90,23 @@ class Reparser {
   private final Map<String, Macro> macros;
 
   Reparser(ImmutableList<Node> nodes) {
+    this(nodes, Maps.newTreeMap());
+  }
+
+  private Reparser(ImmutableList<Node> nodes, Map<String, Macro> macros) {
     this.nodes = removeSpaceBeforeSet(nodes);
     this.nodeIndex = 0;
-    this.macros = Maps.newTreeMap();
+    this.macros = macros;
   }
 
   Template reparse() {
-    Node root = parseTo(EOF_SET, new EofNode(1));
+    Node root = reparseNodes();
     linkMacroCalls();
     return new Template(root);
+  }
+
+  private Node reparseNodes() {
+    return parseTo(EOF_SET, new EofNode((String) null, 1));
   }
 
   /**
@@ -162,7 +171,9 @@ class Reparser {
       }
       if (currentNode instanceof EofNode) {
         throw new ParseException(
-            "Reached end of file while parsing " + forWhat.name(), forWhat.lineNumber);
+            "Reached end of file while parsing " + forWhat.name(),
+            forWhat.resourceName,
+            forWhat.lineNumber);
       }
       Node parsed;
       if (currentNode instanceof TokenNode) {
@@ -173,7 +184,7 @@ class Reparser {
       }
       nodeList.add(parsed);
     }
-    return Node.cons(forWhat.lineNumber, nodeList.build());
+    return Node.cons(forWhat.resourceName, forWhat.lineNumber, nodeList.build());
   }
 
   private Node currentNode() {
@@ -194,11 +205,13 @@ class Reparser {
     TokenNode tokenNode = (TokenNode) currentNode();
     nextNode();
     if (tokenNode instanceof CommentTokenNode) {
-      return emptyNode(tokenNode.lineNumber);
+      return emptyNode(tokenNode.resourceName, tokenNode.lineNumber);
     } else if (tokenNode instanceof IfTokenNode) {
       return parseIfOrElseIf((IfTokenNode) tokenNode);
     } else if (tokenNode instanceof ForEachTokenNode) {
       return parseForEach((ForEachTokenNode) tokenNode);
+    } else if (tokenNode instanceof NestedTokenNode) {
+      return parseNested((NestedTokenNode) tokenNode);
     } else if (tokenNode instanceof MacroDefinitionTokenNode) {
       return parseMacroDefinition((MacroDefinitionTokenNode) tokenNode);
     } else {
@@ -210,7 +223,8 @@ class Reparser {
   private Node parseForEach(ForEachTokenNode forEach) {
     Node body = parseTo(END_SET, forEach);
     nextNode();  // Skip #end
-    return new ForEachNode(forEach.lineNumber, forEach.var, forEach.collection, body);
+    return new ForEachNode(
+        forEach.resourceName, forEach.lineNumber, forEach.var, forEach.collection, body);
   }
 
   private Node parseIfOrElseIf(IfOrElseIfTokenNode ifOrElseIf) {
@@ -219,7 +233,7 @@ class Reparser {
     Node token = currentNode();
     nextNode();  // Skip #else or #elseif (cond) or #end.
     if (token instanceof EndTokenNode) {
-      falsePart = emptyNode(token.lineNumber);
+      falsePart = emptyNode(token.resourceName, token.lineNumber);
     } else if (token instanceof ElseTokenNode) {
       falsePart = parseTo(END_SET, ifOrElseIf);
       nextNode();  // Skip #end
@@ -232,7 +246,17 @@ class Reparser {
     } else {
       throw new AssertionError(currentNode());
     }
-    return new IfNode(ifOrElseIf.lineNumber, ifOrElseIf.condition, truePart, falsePart);
+    return new IfNode(
+        ifOrElseIf.resourceName, ifOrElseIf.lineNumber, ifOrElseIf.condition, truePart, falsePart);
+  }
+
+  // This is a #parse("foo.vm") directive. We've already done the first phase of parsing on the
+  // contents of foo.vm. Now we need to do the second phase, and insert the result into the
+  // reparsed nodes. We can call Reparser recursively, but we must ensure that any macros found
+  // are added to the containing Reparser's macro definitions.
+  private Node parseNested(NestedTokenNode nested) {
+    Reparser reparser = new Reparser(nested.nodes, this.macros);
+    return reparser.reparseNodes();
   }
 
   private Node parseMacroDefinition(MacroDefinitionTokenNode macroDefinition) {
@@ -243,7 +267,7 @@ class Reparser {
           macroDefinition.lineNumber, macroDefinition.name, macroDefinition.parameterNames, body);
       macros.put(macroDefinition.name, macro);
     }
-    return emptyNode(macroDefinition.lineNumber);
+    return emptyNode(macroDefinition.resourceName, macroDefinition.lineNumber);
   }
 
   private void linkMacroCalls() {
@@ -260,6 +284,7 @@ class Reparser {
       throw new ParseException(
           "#" + macroCall.name()
               + " is neither a standard directive nor a macro that has been defined",
+          macroCall.resourceName,
           macroCall.lineNumber);
     }
     if (macro.parameterCount() != macroCall.argumentCount()) {
@@ -267,6 +292,7 @@ class Reparser {
           "Wrong number of arguments to #" + macroCall.name()
               + ": expected " + macro.parameterCount()
               + ", got " + macroCall.argumentCount(),
+          macroCall.resourceName,
           macroCall.lineNumber);
     }
     macroCall.setMacro(macro);

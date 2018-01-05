@@ -14,24 +14,32 @@
 package com.google.auto.value.processor.escapevelocity;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.fail;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.truth.Expect;
+import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Supplier;
+import org.apache.commons.collections.ExtendedProperties;
 import org.apache.velocity.VelocityContext;
+import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.RuntimeInstance;
 import org.apache.velocity.runtime.log.NullLogChute;
 import org.apache.velocity.runtime.parser.node.SimpleNode;
+import org.apache.velocity.runtime.resource.Resource;
+import org.apache.velocity.runtime.resource.loader.ResourceLoader;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -52,18 +60,21 @@ public class TemplateTest {
   private RuntimeInstance velocityRuntimeInstance;
 
   @Before
-  public void setUp() {
-    velocityRuntimeInstance = new RuntimeInstance();
+  public void initVelocityRuntimeInstance() {
+    velocityRuntimeInstance = newVelocityRuntimeInstance();
+    velocityRuntimeInstance.init();
+  }
+
+  private RuntimeInstance newVelocityRuntimeInstance() {
+    RuntimeInstance runtimeInstance = new RuntimeInstance();
 
     // Ensure that $undefinedvar will produce an exception rather than outputting $undefinedvar.
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-        new NullLogChute());
+    runtimeInstance.setProperty(RuntimeConstants.RUNTIME_REFERENCES_STRICT, "true");
 
     // Disable any logging that Velocity might otherwise see fit to do.
-    velocityRuntimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM, new NullLogChute());
-
-    velocityRuntimeInstance.init();
+    runtimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, new NullLogChute());
+    runtimeInstance.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM, new NullLogChute());
+    return runtimeInstance;
   }
 
   private void compare(String template) {
@@ -71,7 +82,7 @@ public class TemplateTest {
   }
 
   private void compare(String template, Map<String, ?> vars) {
-    compare(template, Suppliers.ofInstance(vars));
+    compare(template, () -> vars);
   }
 
   /**
@@ -89,8 +100,9 @@ public class TemplateTest {
     try {
       escapeVelocityRendered =
           Template.parseFrom(new StringReader(template)).evaluate(escapeVelocityVars);
-    } catch (IOException e) {
-      throw new AssertionError(e);
+    } catch (Exception e) {
+      throw new AssertionError(
+          "EscapeVelocity failed, but Velocity succeeded and returned: " + velocityRendered, e);
     }
     String failure = "from velocity: <" + velocityRendered + ">\n"
         + "from escape velocity: <" + escapeVelocityRendered + ">\n";
@@ -98,7 +110,7 @@ public class TemplateTest {
   }
 
   private String velocityRender(String template, Map<String, ?> vars) {
-    VelocityContext velocityContext = new VelocityContext(new TreeMap<String, Object>(vars));
+    VelocityContext velocityContext = new VelocityContext(new TreeMap<>(vars));
     StringWriter writer = new StringWriter();
     SimpleNode parsedTemplate;
     try {
@@ -126,6 +138,24 @@ public class TemplateTest {
   @Test
   public void comment() {
     compare("line 1 ##\n  line 2");
+  }
+
+  @Test
+  public void ignoreHashIfNotDirectiveOrComment() {
+    compare("# if is not a directive because of the space");
+    compare("#<foo>");
+    compare("# <foo>");
+    compare("${foo}#${bar}", ImmutableMap.of("foo", "xxx", "bar", "yyy"));
+  }
+
+  @Test
+  public void blockQuote() {
+    compare("#[[]]#");
+    compare("x#[[]]#y");
+    compare("#[[$notAReference #notADirective]]#");
+    compare("#[[ [[  ]]  ]#  ]]#");
+    compare("#[ foo");
+    compare("x\n  #[[foo\nbar\nbaz]]#y");
   }
 
   @Test
@@ -319,7 +349,7 @@ public class TemplateTest {
 
   /**
    * Tests the surprising definition of equality mentioned in
-   * {@link ExpressionNode.EqualsExpressionNode}.
+   * {@link ExpressionNode.BinaryExpressionNode}.
    */
   @Test
   public void funkyEquals() {
@@ -650,4 +680,101 @@ public class TemplateTest {
     Template.parseFrom(new StringReader(template));
   }
 
+  /**
+   * A Velocity ResourceLoader that looks resources up in a map. This allows us to test directives
+   * that read "resources", for example {@code #parse}, without needing to make separate files to
+   * put them in.
+   */
+  private static final class MapResourceLoader extends ResourceLoader {
+    private final ImmutableMap<String, String> resourceMap;
+
+    MapResourceLoader(ImmutableMap<String, String> resourceMap) {
+      this.resourceMap = resourceMap;
+    }
+
+    @Override
+    public void init(ExtendedProperties configuration) {
+    }
+
+    @Override
+    public InputStream getResourceStream(String source) {
+      String resource = resourceMap.get(source);
+      if (resource == null) {
+        throw new ResourceNotFoundException(source);
+      }
+      return new ByteArrayInputStream(resource.getBytes(StandardCharsets.ISO_8859_1));
+    }
+
+    @Override
+    public boolean isSourceModified(Resource resource) {
+      return false;
+    }
+
+    @Override
+    public long getLastModified(Resource resource) {
+      return 0;
+    }
+  };
+
+  private String renderWithResources(
+      String templateResourceName,
+      ImmutableMap<String, String> resourceMap,
+      ImmutableMap<String, String> vars) {
+    MapResourceLoader mapResourceLoader = new MapResourceLoader(resourceMap);
+    RuntimeInstance runtimeInstance = newVelocityRuntimeInstance();
+    runtimeInstance.setProperty("resource.loader", "map");
+    runtimeInstance.setProperty("map.resource.loader.instance", mapResourceLoader);
+    runtimeInstance.init();
+    org.apache.velocity.Template velocityTemplate =
+        runtimeInstance.getTemplate(templateResourceName);
+    StringWriter velocityWriter = new StringWriter();
+    VelocityContext velocityContext = new VelocityContext(new TreeMap<>(vars));
+    velocityTemplate.merge(velocityContext, velocityWriter);
+    return velocityWriter.toString();
+  }
+
+  @Test
+  public void parseDirective() throws IOException {
+    // If outer.vm does #parse("nested.vm"), then we should be able to #set a variable in
+    // nested.vm and use it in outer.vm, and we should be able to define a #macro in nested.vm
+    // and call it in outer.vm.
+    ImmutableMap<String, String> resources = ImmutableMap.of(
+        "outer.vm",
+        "first line\n"
+            + "#parse (\"nested.vm\")\n"
+            + "<#decorate (\"left\" \"right\")>\n"
+            + "$baz skidoo\n"
+            + "last line\n",
+        "nested.vm",
+        "nested template first line\n"
+            + "[#if ($foo == $bar) equal #else not equal #end]\n"
+            + "#macro (decorate $a $b) < $a | $b > #end\n"
+            + "#set ($baz = 23)\n"
+            + "nested template last line\n");
+
+    ImmutableMap<String, String> vars = ImmutableMap.of("foo", "foovalue", "bar", "barvalue");
+
+    String velocityResult = renderWithResources("outer.vm", resources, vars);
+
+    Template.ResourceOpener resourceOpener = resourceName -> {
+      String resource = resources.get(resourceName);
+      if (resource == null) {
+        throw new FileNotFoundException(resourceName);
+      }
+      return new StringReader(resource);
+    };
+    Template template = Template.parseFrom("outer.vm", resourceOpener);
+
+    String result = template.evaluate(vars);
+    assertThat(result).isEqualTo(velocityResult);
+
+    ImmutableMap<String, String> badVars = ImmutableMap.of("foo", "foovalue");
+    try {
+      template.evaluate(badVars);
+      fail();
+    } catch (EvaluationException e) {
+      assertThat(e).hasMessageThat().isEqualTo(
+          "In expression on line 2 of nested.vm: Undefined reference $bar");
+    }
+  }
 }
