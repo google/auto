@@ -40,11 +40,19 @@ package com.google.auto.value.processor.escapevelocity;
 public class ParseException extends RuntimeException {
   private static final long serialVersionUID = 1;
 
-  ParseException(String message, int lineNumber) {
-    super(message + ", on line " + lineNumber);
+  ParseException(String message, String resourceName, int lineNumber) {
+    super(message + ", " + where(resourceName, lineNumber));
   }
 
-  ParseException(String message, int lineNumber, String context) {
-    super(message + ", on line " + lineNumber + ", at text starting: " + context);
+  ParseException(String message, String resourceName, int lineNumber, String context) {
+    super(message + ", " + where(resourceName, lineNumber) + ", at text starting: " + context);
+  }
+
+  private static String where(String resourceName, int lineNumber) {
+    if (resourceName == null) {
+      return "on line " + lineNumber;
+    } else {
+      return "on line " + lineNumber + " of " + resourceName;
+    }
   }
 }

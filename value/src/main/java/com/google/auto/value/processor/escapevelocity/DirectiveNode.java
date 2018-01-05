@@ -45,8 +45,8 @@ import java.util.Map;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class DirectiveNode extends Node {
-  DirectiveNode(int lineNumber) {
-    super(lineNumber);
+  DirectiveNode(String resourceName, int lineNumber) {
+    super(resourceName, lineNumber);
   }
 
   /**
@@ -62,7 +62,7 @@ abstract class DirectiveNode extends Node {
     private final Node expression;
 
     SetNode(String var, Node expression) {
-      super(expression.lineNumber);
+      super(expression.resourceName, expression.lineNumber);
       this.var = var;
       this.expression = expression;
     }
@@ -86,8 +86,13 @@ abstract class DirectiveNode extends Node {
     private final Node truePart;
     private final Node falsePart;
 
-    IfNode(int lineNumber, ExpressionNode condition, Node trueNode, Node falseNode) {
-      super(lineNumber);
+    IfNode(
+        String resourceName,
+        int lineNumber,
+        ExpressionNode condition,
+        Node trueNode,
+        Node falseNode) {
+      super(resourceName, lineNumber);
       this.condition = condition;
       this.truePart = trueNode;
       this.falsePart = falseNode;
@@ -112,8 +117,8 @@ abstract class DirectiveNode extends Node {
     private final ExpressionNode collection;
     private final Node body;
 
-    ForEachNode(int lineNumber, String var, ExpressionNode in, Node body) {
-      super(lineNumber);
+    ForEachNode(String resourceName, int lineNumber, String var, ExpressionNode in, Node body) {
+      super(resourceName, lineNumber);
       this.var = var;
       this.collection = in;
       this.body = body;
@@ -130,7 +135,7 @@ abstract class DirectiveNode extends Node {
       } else if (collectionValue instanceof Map<?, ?>) {
         iterable = ((Map<?, ?>) collectionValue).values();
       } else {
-        throw new EvaluationException("Not iterable: " + collectionValue);
+        throw evaluationException("Not iterable: " + collectionValue);
       }
       Runnable undo = context.setVar(var, null);
       StringBuilder sb = new StringBuilder();
@@ -178,8 +183,12 @@ abstract class DirectiveNode extends Node {
     private final ImmutableList<Node> thunks;
     private Macro macro;
 
-    MacroCallNode(int lineNumber, String name, ImmutableList<Node> argumentNodes) {
-      super(lineNumber);
+    MacroCallNode(
+        String resourceName,
+        int lineNumber,
+        String name,
+        ImmutableList<Node> argumentNodes) {
+      super(resourceName, lineNumber);
       this.name = name;
       this.thunks = argumentNodes;
     }

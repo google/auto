@@ -48,8 +48,8 @@ package com.google.auto.value.processor.escapevelocity;
 class ConstantExpressionNode extends ExpressionNode {
   private final Object value;
 
-  ConstantExpressionNode(int lineNumber, Object value) {
-    super(lineNumber);
+  ConstantExpressionNode(String resourceName, int lineNumber, Object value) {
+    super(resourceName, lineNumber);
     this.value = value;
   }
 

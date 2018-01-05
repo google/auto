@@ -51,8 +51,8 @@ import java.util.Map;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class ReferenceNode extends ExpressionNode {
-  ReferenceNode(int lineNumber) {
-    super(lineNumber);
+  ReferenceNode(String resourceName, int lineNumber) {
+    super(resourceName, lineNumber);
   }
 
   /**
@@ -62,8 +62,8 @@ abstract class ReferenceNode extends ExpressionNode {
   static class PlainReferenceNode extends ReferenceNode {
     final String id;
 
-    PlainReferenceNode(int lineNumber, String id) {
-      super(lineNumber);
+    PlainReferenceNode(String resourceName, int lineNumber, String id) {
+      super(resourceName, lineNumber);
       this.id = id;
     }
 
@@ -71,7 +71,7 @@ abstract class ReferenceNode extends ExpressionNode {
       if (context.varIsDefined(id)) {
         return context.getVar(id);
       } else {
-        throw new EvaluationException("Undefined reference $" + id);
+        throw evaluationException("Undefined reference $" + id);
       }
     }
 
@@ -94,7 +94,7 @@ abstract class ReferenceNode extends ExpressionNode {
     final String id;
 
     MemberReferenceNode(ReferenceNode lhs, String id) {
-      super(lhs.lineNumber);
+      super(lhs.resourceName, lhs.lineNumber);
       this.lhs = lhs;
       this.id = id;
     }
@@ -105,7 +105,7 @@ abstract class ReferenceNode extends ExpressionNode {
     @Override Object evaluate(EvaluationContext context) {
       Object lhsValue = lhs.evaluate(context);
       if (lhsValue == null) {
-        throw new EvaluationException("Cannot get member " + id + " of null value");
+        throw evaluationException("Cannot get member " + id + " of null value");
       }
       // Velocity specifies that, given a reference .foo, it will first look for getfoo() and then
       // for getFoo(), and likewise given .Foo it will look for getFoo() and then getfoo().
@@ -125,7 +125,7 @@ abstract class ReferenceNode extends ExpressionNode {
           }
         }
       }
-      throw new EvaluationException(
+      throw evaluationException(
           "Member " + id + " does not correspond to a public getter of " + lhsValue
               + ", a " + lhsValue.getClass().getName());
     }
@@ -152,7 +152,7 @@ abstract class ReferenceNode extends ExpressionNode {
     final ExpressionNode index;
 
     IndexReferenceNode(ReferenceNode lhs, ExpressionNode index) {
-      super(lhs.lineNumber);
+      super(lhs.resourceName, lhs.lineNumber);
       this.lhs = lhs;
       this.index = index;
     }
@@ -160,17 +160,17 @@ abstract class ReferenceNode extends ExpressionNode {
     @Override Object evaluate(EvaluationContext context) {
       Object lhsValue = lhs.evaluate(context);
       if (lhsValue == null) {
-        throw new EvaluationException("Cannot index null value");
+        throw evaluationException("Cannot index null value");
       }
       if (lhsValue instanceof List<?>) {
         Object indexValue = index.evaluate(context);
         if (!(indexValue instanceof Integer)) {
-          throw new EvaluationException("List index is not an integer: " + indexValue);
+          throw evaluationException("List index is not an integer: " + indexValue);
         }
         List<?> lhsList = (List<?>) lhsValue;
         int i = (Integer) indexValue;
         if (i < 0 || i >= lhsList.size()) {
-          throw new EvaluationException(
+          throw evaluationException(
               "List index " + i + " is not valid for list of size " + lhsList.size());
         }
         return lhsList.get(i);
@@ -196,7 +196,7 @@ abstract class ReferenceNode extends ExpressionNode {
     final List<ExpressionNode> args;
 
     MethodReferenceNode(ReferenceNode lhs, String id, List<ExpressionNode> args) {
-      super(lhs.lineNumber);
+      super(lhs.resourceName, lhs.lineNumber);
       this.lhs = lhs;
       this.id = id;
       this.args = args;
@@ -224,11 +224,11 @@ abstract class ReferenceNode extends ExpressionNode {
       if (lhsValue == null) {
         throw evaluationException("Cannot invoke method " + id + " on null value");
       }
-      List<Object> argValues = new ArrayList<Object>();
+      List<Object> argValues = new ArrayList<>();
       for (ExpressionNode arg : args) {
         argValues.add(arg.evaluate(context));
       }
-      List<Method> methodsWithName = Lists.newArrayList();
+      List<Method> methodsWithName = new ArrayList<>();
       for (Method method : lhsValue.getClass().getMethods()) {
         if (method.getName().equals(id) && !method.isSynthetic()) {
           methodsWithName.add(method);
@@ -252,8 +252,8 @@ abstract class ReferenceNode extends ExpressionNode {
           return invokeMethod(Iterables.getOnlyElement(compatibleMethods), lhsValue, argValues);
         default:
           throw evaluationException(
-              "Ambiguous method invocation, could be one of:"
-              + Joiner.on('\n').join(compatibleMethods));
+              "Ambiguous method invocation, could be one of:\n  "
+              + Joiner.on("\n  ").join(compatibleMethods));
       }
     }
 

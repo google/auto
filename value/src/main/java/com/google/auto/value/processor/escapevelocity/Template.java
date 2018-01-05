@@ -50,10 +50,62 @@ public class Template {
   private final Node root;
 
   /**
-   * Parse a VTL template from the given {@code Reader}.
+   * Used to resolve references to resources in the template, through {@code #parse} directives.
+   *
+   * <p>Here is an example that opens nested templates as resources relative to the calling class:
+   *
+   * <pre>
+   *   ResourceOpener resourceOpener = resourceName -> {
+   *     InputStream inputStream = getClass().getResource(resourceName);
+   *     if (inputStream == null) {
+   *       throw new IOException("Unknown resource: " + resourceName);
+   *     }
+   *     return new BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8));
+   *   };
+   * </pre>
+   */
+  @FunctionalInterface
+  public interface ResourceOpener {
+
+    /**
+     * Returns a Reader that will be used to read the given resource, then closed.
+     *
+     * @param resourceName the name of the resource to be read. This will never be null.
+     */
+    Reader openResource(String resourceName) throws IOException;
+  }
+
+  /**
+   * Parses a VTL template from the given {@code Reader}. The given Reader will be closed on
+   * return from this method.
    */
   public static Template parseFrom(Reader reader) throws IOException {
-    return new Parser(reader).parse();
+    ResourceOpener resourceOpener = resourceName -> {
+      if (resourceName == null) {
+        return reader;
+      } else {
+        throw new IOException("No ResourceOpener has been configured to read " + resourceName);
+      }
+    };
+    try {
+      return parseFrom((String) null, resourceOpener);
+    } finally {
+      reader.close();
+    }
+  }
+
+  /**
+   * Parse a VTL template of the given name using the given {@code ResourceOpener}.
+   *
+   * @param resourceName name of the resource. May be null.
+   * @param resourceOpener used to open included files for {@code #parse} directives in the
+   *     template.
+   */
+  public static Template parseFrom(
+      String resourceName, ResourceOpener resourceOpener) throws IOException {
+    try (Reader reader = resourceOpener.openResource(resourceName)) {
+      return new Parser(reader, resourceName, resourceOpener).parse();
+    }
   }
 
   Template(Node root) {
