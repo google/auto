@@ -18,6 +18,7 @@ package com.google.auto.common;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import java.util.Optional;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.util.Elements;
 
 /** Utility methods for writing {@code @Generated} annotations using JavaPoet. */
@@ -29,7 +30,10 @@ public final class GeneratedAnnotationSpecs {
    * Returns {@code @Generated("processorClass"} if either {@code
    * javax.annotation.processing.Generated} or {@code javax.annotation.Generated} is {@linkplain
    * GeneratedAnnotations#generatedAnnotation(Elements) available at compile time}.
+   *
+   * @deprecated prefer {@link #generatedAnnotationSpec(Elements, SourceVersion, Class<?>)}
    */
+  @Deprecated
   public static Optional<AnnotationSpec> generatedAnnotationSpec(
       Elements elements, Class<?> processorClass) {
     return generatedAnnotationSpecBuilder(elements, processorClass)
@@ -40,7 +44,10 @@ public final class GeneratedAnnotationSpecs {
    * Returns {@code @Generated(value = "processorClass", comments = "comments"} if either {@code
    * javax.annotation.processing.Generated} or {@code javax.annotation.Generated} is {@linkplain
    * GeneratedAnnotations#generatedAnnotation(Elements) available at compile time}.
+   *
+   * @deprecated prefer {@link #generatedAnnotationSpec(Elements, SourceVersion, Class<?>, String)}
    */
+  @Deprecated
   public static Optional<AnnotationSpec> generatedAnnotationSpec(
       Elements elements, Class<?> processorClass, String comments) {
     return generatedAnnotationSpecBuilder(elements, processorClass)
@@ -50,6 +57,42 @@ public final class GeneratedAnnotationSpecs {
   private static Optional<AnnotationSpec.Builder> generatedAnnotationSpecBuilder(
       Elements elements, Class<?> processorClass) {
     return GeneratedAnnotations.generatedAnnotation(elements)
+        .map(
+            generated ->
+                AnnotationSpec.builder(ClassName.get(generated))
+                    .addMember("value", "$S", processorClass.getCanonicalName()));
+  }
+
+  /**
+   * Returns {@code @Generated("processorClass"} for the target {@code SourceVersion}.
+   *
+   * <p>Returns {@code javax.annotation.processing.Generated} for JDK 9 and newer, {@code
+   * javax.annotation.Generated} for earlier releases, and Optional#empty()} if the annotation is
+   * not available.
+   */
+  public static Optional<AnnotationSpec> generatedAnnotationSpec(
+      Elements elements, SourceVersion sourceVersion, Class<?> processorClass) {
+    return generatedAnnotationSpecBuilder(elements, sourceVersion, processorClass)
+        .map(AnnotationSpec.Builder::build);
+  }
+
+  /**
+   * Returns {@code @Generated(value = "processorClass", comments = "comments"} for the target
+   * {@code SourceVersion}.
+   *
+   * <p>Returns {@code javax.annotation.processing.Generated} for JDK 9 and newer, {@code
+   * javax.annotation.Generated} for earlier releases, and Optional#empty()} if the annotation is
+   * not available.
+   */
+  public static Optional<AnnotationSpec> generatedAnnotationSpec(
+      Elements elements, SourceVersion sourceVersion, Class<?> processorClass, String comments) {
+    return generatedAnnotationSpecBuilder(elements, sourceVersion, processorClass)
+        .map(annotation -> annotation.addMember("comments", "$S", comments).build());
+  }
+
+  private static Optional<AnnotationSpec.Builder> generatedAnnotationSpecBuilder(
+      Elements elements, SourceVersion sourceVersion, Class<?> processorClass) {
+    return GeneratedAnnotations.generatedAnnotation(elements, sourceVersion)
         .map(
             generated ->
                 AnnotationSpec.builder(ClassName.get(generated))
