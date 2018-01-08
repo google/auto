@@ -234,7 +234,10 @@ public class CompilationTest {
         "  }",
         "}");
     Compilation compilation =
-        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
   }
 
@@ -349,7 +352,10 @@ public class CompilationTest {
         "  }",
         "}");
     Compilation compilation =
-        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
   }
 
@@ -1074,7 +1080,8 @@ public class CompilationTest {
             "      if (aNestedAutoValueBuilder$ != null) {",
             "        this.aNestedAutoValue = aNestedAutoValueBuilder$.build();",
             "      } else if (this.aNestedAutoValue == null) {",
-            "        NestedAutoValue.Builder<T> aNestedAutoValue$builder = NestedAutoValue.builder();",
+            "        NestedAutoValue.Builder<T> aNestedAutoValue$builder = "
+                + "NestedAutoValue.builder();",
             "        this.aNestedAutoValue = aNestedAutoValue$builder.build();",
             "      }",
             "      String missing = \"\";",
@@ -2493,6 +2500,7 @@ public class CompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor(), new FooProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(bazFileObject, barFileObject);
     assertThat(compilation).succeededWithoutWarnings();
   }
@@ -2577,6 +2585,7 @@ public class CompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(bazFileObject, parentFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation).generatedSourceFile("foo.bar.AutoValue_Baz");
@@ -2605,6 +2614,7 @@ public class CompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(bazFileObject, parentFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -2644,6 +2654,7 @@ public class CompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(bazFileObject, parentFileObject, annotationsFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -2678,6 +2689,7 @@ public class CompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(bazFileObject, parentFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -2709,6 +2721,7 @@ public class CompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(testFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
