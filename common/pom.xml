@@ -24,6 +24,7 @@
     <version>5</version>
   </parent>
 
+  <groupId>com.google.auto</groupId>
   <artifactId>auto-common</artifactId>
   <version>HEAD-SNAPSHOT</version>
   <name>Auto Common Libraries</name>
