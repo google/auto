@@ -31,7 +31,7 @@ public final class GeneratedAnnotationSpecs {
    * javax.annotation.processing.Generated} or {@code javax.annotation.Generated} is {@linkplain
    * GeneratedAnnotations#generatedAnnotation(Elements) available at compile time}.
    *
-   * @deprecated prefer {@link #generatedAnnotationSpec(Elements, SourceVersion, Class<?>)}
+   * @deprecated prefer {@link #generatedAnnotationSpec(Elements, SourceVersion, Class)}
    */
   @Deprecated
   public static Optional<AnnotationSpec> generatedAnnotationSpec(
@@ -45,7 +45,7 @@ public final class GeneratedAnnotationSpecs {
    * javax.annotation.processing.Generated} or {@code javax.annotation.Generated} is {@linkplain
    * GeneratedAnnotations#generatedAnnotation(Elements) available at compile time}.
    *
-   * @deprecated prefer {@link #generatedAnnotationSpec(Elements, SourceVersion, Class<?>, String)}
+   * @deprecated prefer {@link #generatedAnnotationSpec(Elements, SourceVersion, Class, String)}
    */
   @Deprecated
   public static Optional<AnnotationSpec> generatedAnnotationSpec(
