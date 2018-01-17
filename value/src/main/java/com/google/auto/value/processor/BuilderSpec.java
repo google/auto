@@ -197,7 +197,7 @@ class BuilderSpec {
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.builderFormalTypes = TypeEncoder.formalTypeParametersString(builderTypeElement);
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
-      vars.buildMethod = Optional.of(new AutoValueProcessor.SimpleMethod(buildMethod));
+      vars.buildMethod = Optional.of(new SimpleMethod(buildMethod));
       vars.builderGetters = classifier.builderGetters();
 
       ImmutableMultimap.Builder<String, PropertySetter> setterBuilder = ImmutableMultimap.builder();
@@ -254,7 +254,7 @@ class BuilderSpec {
      *     {@code Optional<T>} rather than {@code T}, as explained above.
      */
     PropertyGetter(ExecutableElement method, String type, Optionalish optional) {
-      this.access = AutoValueProcessor.access(method);
+      this.access = SimpleMethod.access(method);
       this.type = type;
       this.optional = optional;
     }
@@ -289,7 +289,7 @@ class BuilderSpec {
     private final String copyOf;
 
     public PropertySetter(ExecutableElement setter, TypeMirror propertyType) {
-      this.access = AutoValueProcessor.access(setter);
+      this.access = SimpleMethod.access(setter);
       this.name = setter.getSimpleName().toString();
       TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
       primitiveParameter = parameterType.getKind().isPrimitive();

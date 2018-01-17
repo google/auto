@@ -174,10 +174,10 @@ public class PropertyAnnotationsTest {
             "  }",
             "",
             "  @Override public int hashCode() {",
-            "    int h = 1;",
-            "    h *= 1000003;",
-            "    h ^= this.buh;",
-            "    return h;",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= buh;",
+            "    return h$;",
             "  }",
             "}"
         )

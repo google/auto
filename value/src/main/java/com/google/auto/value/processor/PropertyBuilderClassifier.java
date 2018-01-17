@@ -112,7 +112,7 @@ class PropertyBuilderClassifier {
     }
 
     public String getAccess() {
-      return AutoValueProcessor.access(propertyBuilderMethod);
+      return SimpleMethod.access(propertyBuilderMethod);
     }
 
     /** The name of the field to hold this builder. */

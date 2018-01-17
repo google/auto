@@ -180,8 +180,8 @@ public class GeneratedDoesNotExistTest {
         "  }",
         "",
         "  @Override public int hashCode() {",
-        "    int h = 1;",
-        "    return h;",
+        "    int h$ = 1;",
+        "    return h$;",
         "  }",
         "}"
     );

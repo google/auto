@@ -28,6 +28,7 @@ import javax.tools.Diagnostic;
  */
 class ErrorReporter {
   private final Messager messager;
+  private boolean anyErrors;
 
   ErrorReporter(ProcessingEnvironment processingEnv) {
     this.messager = processingEnv.getMessager();
@@ -64,6 +65,7 @@ class ErrorReporter {
    */
   void reportError(String msg, Element e) {
     messager.printMessage(Diagnostic.Kind.ERROR, msg, e);
+    anyErrors = true;
   }
 
   /**
@@ -76,5 +78,14 @@ class ErrorReporter {
   void abortWithError(String msg, Element e) {
     reportError(msg, e);
     throw new AbortProcessingException();
+  }
+
+  /**
+   * Abandon the processing of this class if any errors have been output.
+   */
+  void abortIfAnyError() {
+    if (anyErrors) {
+      throw new AbortProcessingException();
+    }
   }
 }

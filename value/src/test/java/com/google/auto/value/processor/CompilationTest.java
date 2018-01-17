@@ -109,10 +109,10 @@ public class CompilationTest {
             "  }",
             "",
             "  @Override public int hashCode() {",
-            "    int h = 1;",
-            "    h *= 1000003;",
-            "    h ^= (int) ((this.buh >>> 32) ^ this.buh);",
-            "    return h;",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= (int) ((buh >>> 32) ^ buh);",
+            "    return h$;",
             "  }",
             "}");
     Compilation compilation =
@@ -204,12 +204,12 @@ public class CompilationTest {
             "  }",
             "",
             "  @Override public int hashCode() {",
-            "    int h = 1;",
-            "    h *= 1000003;",
-            "    h ^= Arrays.hashCode(this.ints);",
-            "    h *= 1000003;",
-            "    h ^= this.arrays.hashCode();",
-            "    return h;",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= Arrays.hashCode(ints);",
+            "    h$ *= 1000003;",
+            "    h$ ^= arrays.hashCode();",
+            "    return h$;",
             "  }",
             "}");
     Compilation compilation =
@@ -406,7 +406,34 @@ public class CompilationTest {
     assertThat(compilation)
         .hadErrorContaining("@AutoValue class must not be private")
         .inFile(javaFileObject)
-        .onLine(7);
+        .onLineContaining("class Private");
+  }
+
+  @Test
+  public void autoValueMustBeNotBeNestedInPrivate() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "public class Baz {",
+        "  private static class Private {",
+        "    @AutoValue",
+        "    abstract static class Nested {",
+        "      public abstract String buh();",
+        "      public Nested create(String buh) {",
+        "        return new AutoValue_Baz_Private_Nested(buh);",
+        "      }",
+        "    }",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoValue class must not be nested in a private class")
+        .inFile(javaFileObject)
+        .onLineContaining("class Nested");
   }
 
   @Test
@@ -908,22 +935,22 @@ public class CompilationTest {
             "  }",
             "",
             "  @Override public int hashCode() {",
-            "    int h = 1;",
-            "    h *= 1000003;",
-            "    h ^= this.anInt;",
-            "    h *= 1000003;",
-            "    h ^= Arrays.hashCode(this.aByteArray);",
-            "    h *= 1000003;",
-            "    h ^= Arrays.hashCode(this.aNullableIntArray);",
-            "    h *= 1000003;",
-            "    h ^= this.aList.hashCode();",
-            "    h *= 1000003;",
-            "    h ^= this.anImmutableList.hashCode();",
-            "    h *= 1000003;",
-            "    h ^= this.anOptionalString.hashCode();",
-            "    h *= 1000003;",
-            "    h ^= this.aNestedAutoValue.hashCode();",
-            "    return h;",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= anInt;",
+            "    h$ *= 1000003;",
+            "    h$ ^= Arrays.hashCode(aByteArray);",
+            "    h$ *= 1000003;",
+            "    h$ ^= Arrays.hashCode(aNullableIntArray);",
+            "    h$ *= 1000003;",
+            "    h$ ^= aList.hashCode();",
+            "    h$ *= 1000003;",
+            "    h$ ^= anImmutableList.hashCode();",
+            "    h$ *= 1000003;",
+            "    h$ ^= anOptionalString.hashCode();",
+            "    h$ *= 1000003;",
+            "    h$ ^= aNestedAutoValue.hashCode();",
+            "    return h$;",
             "  }",
             "",
             "  @Override public Baz.Builder<T> toBuilder() {",
@@ -1932,7 +1959,7 @@ public class CompilationTest {
         "@AutoValue",
         "public abstract class Baz<E> {",
         "  abstract String blim();",
-        "  abstract Builder toBuilder();",
+        "  abstract Builder<E> toBuilder();",
         "",
         "  public static class StringFactory {",
         "    public String build() {",
@@ -2420,7 +2447,11 @@ public class CompilationTest {
     assertThat(compilation)
         .hadErrorContaining("More than one @AutoValue property called foo")
         .inFile(javaFileObject)
-        .onLine(8);
+        .onLineContaining("getFoo");
+    assertThat(compilation)
+        .hadErrorContaining("More than one @AutoValue property called foo")
+        .inFile(javaFileObject)
+        .onLineContaining("isFoo");
   }
 
   @Retention(RetentionPolicy.SOURCE)
