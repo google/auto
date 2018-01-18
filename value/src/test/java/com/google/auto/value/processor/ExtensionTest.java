@@ -153,10 +153,10 @@ public class ExtensionTest {
             "",
             "  @Override",
             "  public int hashCode() {",
-            "    int h = 1;",
-            "    h *= 1000003;",
-            "    h ^= this.foo.hashCode();",
-            "    return h;",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= foo.hashCode();",
+            "    return h$;",
             "  }",
             "}");
     assertThat(javaFileObject)

@@ -1,0 +1,80 @@
+## Copyright (C) 2018 Google, Inc.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+
+## Shared definitions for @AutoFoo templates. This is included in those templates using
+## the #parse directive.
+##
+## This template uses the Apache Velocity Template Language (VTL).
+## The variables ($pkg, $props, and so on) are defined by the fields of AutoValueTemplateVars.
+##
+## Comments, like this one, begin with ##. The comment text extends up to and including the newline
+## character at the end of the line. So comments also serve to join a line to the next one.
+## Velocity deletes a newline after a directive (#if, #foreach, #end etc) so ## is not needed there.
+## That does mean that we sometimes need an extra blank line after such a directive.
+##
+## Post-processing will remove unwanted spaces and blank lines, but will not join two lines.
+## It will also replace classes spelled as (e.g.) `java.util.Arrays`, with the backquotes, to
+## use just Arrays if that class can be imported unambiguously, or java.util.Arrays if not.
+
+## In the following two macros, $p is an object of type AutoValueProcessor.Property
+## or AutoOneOfProcessor.Property. $p.kind means the getKind() method of those classes,
+## and likewise for $p.getter and $p.nullable (isNullable()).
+
+## Expands to an expression appropriate for comparing the $p property in `this` against
+## the $p property in `that`. If we're generating code for `AutoValue_Baz` then
+## `that` is of type `Baz`.
+## As an example, if $p is the `foo` property and $p.kind is FLOAT,
+## this becomes `Float.floatToIntBits(this.foo) == Float.floatToIntBits(that.foo())`
+## or `...that.getFoo()...`.
+## A reminder that trailing ## here serves to delete the newline, which we don't want in the output.
+#macro (equalsThatExpression $p)
+  #if ($p.kind == "FLOAT")
+    Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.${p.getter}()) ##
+  #elseif ($p.kind == "DOUBLE")
+    Double.doubleToLongBits(this.$p) == Double.doubleToLongBits(that.${p.getter}()) ##
+  #elseif ($p.kind.primitive)
+    this.$p == that.${p.getter}() ##
+  #elseif ($p.kind == "ARRAY")
+    `java.util.Arrays`.equals(this.$p, ##
+        (that instanceof $subclass) ? (($subclass) that).$p : that.${p.getter}()) ##
+  #elseif ($p.nullable)
+    (this.$p == null) ? (that.${p.getter}() == null) : this.${p}.equals(that.${p.getter}()) ##
+  #else
+    this.${p}.equals(that.${p.getter}()) ##
+  #end
+#end
+
+## Expands to an expression to compute the hashCode of the $p property.
+## For example, if $p is the `foo` property and $p.kind is FLOAT,
+## this becomes `Float.floatToIntBits(this.foo)`.
+## A reminder that trailing ## here serves to delete the newline, which we don't want in the output.
+#macro (hashCodeExpression $p)
+  #if ($p.kind == "LONG")
+    (int) (($p >>> 32) ^ $p) ##
+  #elseif ($p.kind == "FLOAT")
+    Float.floatToIntBits($p) ##
+  #elseif ($p.kind == "DOUBLE")
+    (int) ((Double.doubleToLongBits($p) >>> 32) ^ Double.doubleToLongBits($p)) ##
+  #elseif ($p.kind == "BOOLEAN")
+    $p ? 1231 : 1237 ##
+  #elseif ($p.kind.primitive)
+    $p ##
+  #elseif ($p.kind == "ARRAY")
+    `java.util.Arrays`.hashCode($p) ##
+  #elseif ($p.nullable)
+    ($p == null) ? 0 : ${p}.hashCode() ##
+  #else
+    ${p}.hashCode() ##
+  #end
+#end
