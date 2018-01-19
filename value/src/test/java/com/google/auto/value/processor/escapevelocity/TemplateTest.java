@@ -102,10 +102,11 @@ public class TemplateTest {
           Template.parseFrom(new StringReader(template)).evaluate(escapeVelocityVars);
     } catch (Exception e) {
       throw new AssertionError(
-          "EscapeVelocity failed, but Velocity succeeded and returned: " + velocityRendered, e);
+          "EscapeVelocity failed, but Velocity succeeded and returned: <" + velocityRendered + ">",
+          e);
     }
-    String failure = "from velocity: <" + velocityRendered + ">\n"
-        + "from escape velocity: <" + escapeVelocityRendered + ">\n";
+    String failure = "from Velocity: <" + velocityRendered + ">\n"
+        + "from EscapeVelocity: <" + escapeVelocityRendered + ">\n";
     expect.withMessage(failure).that(escapeVelocityRendered).isEqualTo(velocityRendered);
   }
 
@@ -136,8 +137,16 @@ public class TemplateTest {
   }
 
   @Test
-  public void comment() {
+  public void lineComment() {
     compare("line 1 ##\n  line 2");
+  }
+
+  @Test
+  public void blockComment() {
+    compare("line 1 #* blah\n line 2 * #\n line 3 *#  \n line 4");
+    compare("foo #*# bar *# baz");
+    compare("foo #* one *# #* two *# #* three *#");
+    compare("foo #** bar *# #* baz **#");
   }
 
   @Test
@@ -165,6 +174,21 @@ public class TemplateTest {
   }
 
   @Test
+  public void dollarWithoutId() {
+    compare(" $? ");
+    compare(" $$ ");
+    compare(" $. ");
+    compare(" $[ ");
+  }
+
+  @Test
+  public void doubleDollar() {
+    // The first $ is plain text and the second one starts a reference.
+    compare(" $$foo ", ImmutableMap.of("foo", true));
+    compare(" $${foo} ", ImmutableMap.of("foo", true));
+  }
+
+  @Test
   public void substituteWithBraces() {
     compare("a${x}\nb", ImmutableMap.of("x", "1729"));
   }
@@ -178,6 +202,13 @@ public class TemplateTest {
   public void substitutePropertyWithBraces() {
     compare("=${t.name}=", ImmutableMap.of("t", Thread.currentThread()));
   }
+
+  /* TODO(emcmanus): make this work.
+  @Test
+  public void substituteNotPropertyId() {
+    compare("$foo.!", ImmutableMap.of("foo", false));
+  }
+  */
 
   @Test
   public void substituteNestedProperty() {
@@ -236,6 +267,10 @@ public class TemplateTest {
     compare("<AZaz-foo_bar23>", ImmutableMap.of("AZaz-foo_bar23", "(P)"));
   }
 
+  /**
+   * A public class with a public {@code get} method that has one argument. That means instances can
+   * be used like {@code $indexable["foo"]}.
+   */
   public static class Indexable {
     public String get(String y) {
       return "[" + y + "]";
@@ -482,6 +517,7 @@ public class TemplateTest {
     compare("x  #set($x = 0)  #set($x = 0)  #set($x = 0)  y");
 
     compare("x ## comment\n  #set($x = 0)  y");
+    compare("x #* comment *#    #set($x = 0)  y");
   }
 
   @Test
@@ -677,6 +713,22 @@ public class TemplateTest {
         + "#twoArgs(23)\n";
     thrown.expect(ParseException.class);
     thrown.expectMessage("Wrong number of arguments to #twoArgs: expected 2, got 1");
+    Template.parseFrom(new StringReader(template));
+  }
+
+  @Test
+  public void unclosedBlockQuote() throws IOException {
+    String template = "foo\nbar #[[\nblah\nblah";
+    thrown.expect(ParseException.class);
+    thrown.expectMessage("Unterminated #[[ - did not see matching ]]#, on line 2");
+    Template.parseFrom(new StringReader(template));
+  }
+
+  @Test
+  public void unclosedBlockComment() throws IOException {
+    String template = "foo\nbar #*\nblah\nblah";
+    thrown.expect(ParseException.class);
+    thrown.expectMessage("Unterminated #* - did not see matching *#, on line 2");
     Template.parseFrom(new StringReader(template));
   }
 
