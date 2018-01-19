@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.collect.Sets.difference;
+
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
@@ -26,10 +28,10 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import java.beans.Introspector;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -60,15 +62,13 @@ class BuilderMethodClassifier {
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
 
-  private final Set<ExecutableElement> buildMethods = Sets.newLinkedHashSet();
-  private final Map<String, BuilderSpec.PropertyGetter> builderGetters =
-      Maps.newLinkedHashMap();
+  private final Set<ExecutableElement> buildMethods = new LinkedHashSet<>();
+  private final Map<String, BuilderSpec.PropertyGetter> builderGetters = new LinkedHashMap<>();
+  private final Map<String, PropertyBuilder> propertyNameToPropertyBuilder = new LinkedHashMap<>();
   private final Multimap<String, ExecutableElement> propertyNameToPrefixedSetters =
       LinkedListMultimap.create();
   private final Multimap<String, ExecutableElement> propertyNameToUnprefixedSetters =
       LinkedListMultimap.create();
-  private final Map<String, PropertyBuilder> propertyNameToPropertyBuilder =
-      Maps.newLinkedHashMap();
   private final EclipseHack eclipseHack;
 
   private boolean settersPrefixed;
@@ -398,7 +398,7 @@ class BuilderMethodClassifier {
       String note =
           "This might be because you are using the getFoo() convention"
               + " for some but not all methods. These methods don't follow the convention: "
-              + Sets.difference(allGetters, prefixedGetters);
+              + difference(allGetters, prefixedGetters);
       errorReporter.reportNote(note, rejectedSetter);
     }
   }

@@ -35,7 +35,6 @@ package com.google.auto.value.processor.escapevelocity;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Primitives;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -237,7 +236,7 @@ abstract class ReferenceNode extends ExpressionNode {
       if (methodsWithName.isEmpty()) {
         throw evaluationException("No method " + id + " in " + lhsValue.getClass().getName());
       }
-      List<Method> compatibleMethods = Lists.newArrayList();
+      List<Method> compatibleMethods = new ArrayList<>();
       for (Method method : methodsWithName) {
         // TODO(emcmanus): support varargs, if it's useful
         if (compatibleArgs(method.getParameterTypes(), argValues)) {
