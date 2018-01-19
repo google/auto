@@ -21,7 +21,7 @@ import static java.util.stream.Collectors.toList;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
-import com.google.auto.value.processor.AutoValueProcessor.Property;
+import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
