@@ -20,15 +20,19 @@ import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.beans.Introspector;
+import java.io.IOException;
 import java.io.Serializable;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +41,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -53,12 +58,14 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
+import javax.tools.JavaFileObject;
 
 /**
  * Shared code between AutoValueProcessor and AutoOneOfProcessor.
@@ -107,6 +114,125 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   @Override
   public final SourceVersion getSupportedSourceVersion() {
     return SourceVersion.latestSupported();
+  }
+
+  /**
+   * A property of an {@code @AutoValue} or {@code @AutoOneOf} class, defined by one of its abstract
+   * methods. An instance of this class is made available to the Velocity template engine for
+   * each property. The public methods of this class define JavaBeans-style properties
+   * that are accessible from templates. For example {@link #getType()} means we can
+   * write {@code $p.type} for a Velocity variable {@code $p} that is a {@code Property}.
+   */
+  public static class Property {
+    private final String name;
+    private final String identifier;
+    private final ExecutableElement method;
+    private final String type;
+    private final ImmutableList<String> annotations;
+    private final Optional<String> nullableAnnotation;
+    private final Optionalish optional;
+
+    Property(
+        String name,
+        String identifier,
+        ExecutableElement method,
+        String type,
+        ImmutableList<String> annotations,
+        Optional<String> nullableAnnotation) {
+      this.name = name;
+      this.identifier = identifier;
+      this.method = method;
+      this.type = type;
+      this.annotations = annotations;
+      this.nullableAnnotation = nullableAnnotation;
+      TypeMirror propertyType = method.getReturnType();
+      this.optional = Optionalish.createIfOptional(propertyType);
+    }
+
+    /**
+     * Returns the name of the property as it should be used when declaring identifiers (fields and
+     * parameters). If the original getter method was {@code foo()} then this will be {@code foo}.
+     * If it was {@code getFoo()} then it will be {@code foo}. If it was {@code getPackage()} then
+     * it will be something like {@code package0}, since {@code package} is a reserved word.
+     */
+    @Override
+    public String toString() {
+      return identifier;
+    }
+
+    /**
+     * Returns the name of the property as it should be used in strings visible to users. This is
+     * usually the same as {@code toString()}, except that if we had to use an identifier like
+     * "package0" because "package" is a reserved word, the name here will be the original
+     * "package".
+     */
+    public String getName() {
+      return name;
+    }
+
+    /**
+     * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
+     * class. For property {@code foo}, this will be {@code foo} or {@code getFoo} or {@code isFoo}.
+     */
+    public String getGetter() {
+      return method.getSimpleName().toString();
+    }
+
+    public TypeMirror getTypeMirror() {
+      return method.getReturnType();
+    }
+
+    public String getType() {
+      return type;
+    }
+
+    public TypeKind getKind() {
+      return method.getReturnType().getKind();
+    }
+
+    public List<String> getAnnotations() {
+      return annotations;
+    }
+
+    /**
+     * Returns an {@link Optionalish} representing the kind of Optional that this property's type
+     * is, or null if the type is not an Optional of any kind.
+     */
+    public Optionalish getOptional() {
+      return optional;
+    }
+
+    /**
+     * Returns the string to use as a method annotation to indicate the nullability of
+     * this property.  It is either the empty string, if the property is not nullable, or
+     * an annotation string with a trailing space, such as {@code "@`javax.annotation.Nullable` "},
+     * where the {@code ``} is the encoding used by {@link TypeEncoder}.
+     * If the property is nullable by virtue of its <i>type</i> rather than its method being
+     * {@code @Nullable}, this method returns the empty string, because the {@code @Nullable} will
+     * appear when the type is spelled out. In this case, {@link #nullableAnnotation} is present
+     * but empty.
+     */
+    public final String getNullableAnnotation() {
+      return nullableAnnotation.map(s -> s + " ").orElse("");
+    }
+
+    public boolean isNullable() {
+      return nullableAnnotation.isPresent();
+    }
+
+    public String getAccess() {
+      return SimpleMethod.access(method);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof Property && ((Property) obj).method.equals(method);
+    }
+
+    @Override
+    public int hashCode() {
+      return method.hashCode();
+    }
   }
 
   @Override
@@ -165,6 +291,84 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    */
   abstract void processType(TypeElement type);
 
+  /**
+   * Returns the appropriate {@code @Nullable} annotation to put on the implementation of the given
+   * property method, and indicates whether the property is in fact nullable. The annotation in
+   * question is on the method, not its return type. If instead the return type is
+   * {@code @Nullable}, this method returns {@code Optional.of("")}, to indicate that the property
+   * is nullable but the <i>method</i> isn't. The {@code @Nullable} annotation will instead appear
+   * when the return type of the method is spelled out in the implementation.
+   *
+   * @param methodAnnotations the annotations to include on {@code propertyMethod}. This is
+   *     governed by the {@link AutoValue.CopyAnnotations} logic.
+   */
+  abstract Optional<String> nullableAnnotationForMethod(
+      ExecutableElement propertyMethod, ImmutableList<AnnotationMirror> methodAnnotations);
+
+  /**
+   * Returns the ordered set of {@link Property} definitions for the given {@code @AutoValue} or
+   * {@code AutoOneOf} type.
+   *
+   * @param annotatedPropertyMethods a map from property methods to the method annotations that
+   *     should go on the implementation of those methods. These annotations are method annotations
+   *     specifically. Type annotations do not appear because they are considered part of the
+   *     return type and will appear when that is spelled out. Annotations that are excluded
+   *     by {@link AutoValue.CopyAnnotations} also do not appear here.
+   */
+  final ImmutableSet<Property> propertySet(
+      TypeElement type,
+      Map<ExecutableElement, ImmutableList<AnnotationMirror>> annotatedPropertyMethods) {
+    Set<ExecutableElement> propertyMethods = annotatedPropertyMethods.keySet();
+    ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
+        propertyNameToMethodMap(propertyMethods).inverse();
+    Map<ExecutableElement, String> methodToIdentifier = Maps.newLinkedHashMap(methodToPropertyName);
+    fixReservedIdentifiers(methodToIdentifier);
+    EclipseHack eclipseHack = new EclipseHack(processingEnv);
+    DeclaredType declaredType = MoreTypes.asDeclared(type.asType());
+    ImmutableMap<ExecutableElement, TypeMirror> returnTypes =
+        eclipseHack.methodReturnTypes(propertyMethods, declaredType);
+
+    ImmutableSet.Builder<Property> props = ImmutableSet.builder();
+    for (ExecutableElement propertyMethod : propertyMethods) {
+      TypeMirror returnType = returnTypes.get(propertyMethod);
+      String propertyType = TypeEncoder.encodeWithAnnotations(returnType);
+      String propertyName = methodToPropertyName.get(propertyMethod);
+      String identifier = methodToIdentifier.get(propertyMethod);
+      ImmutableList<AnnotationMirror> annotationMirrors =
+          annotatedPropertyMethods.get(propertyMethod);
+      ImmutableList<String> annotations = annotationStrings(annotationMirrors);
+      Optional<String> nullableAnnotation =
+          nullableAnnotationForMethod(propertyMethod, annotationMirrors);
+      Property p = new Property(
+          propertyName, identifier, propertyMethod, propertyType, annotations, nullableAnnotation);
+      props.add(p);
+      if (p.isNullable() && returnType.getKind().isPrimitive()) {
+        errorReporter().reportError("Primitive types cannot be @Nullable", propertyMethod);
+      }
+    }
+    return props.build();
+  }
+
+  /** Returns the spelling to be used in the generated code for the given list of annotations. */
+  static ImmutableList<String> annotationStrings(
+      ImmutableList<AnnotationMirror> annotations) {
+    // TODO(b/68008628): use ImmutableList.toImmutableList() when that works.
+    return ImmutableList.copyOf(annotations
+        .stream()
+        .map(AnnotationOutput::sourceFormForAnnotation)
+        .collect(toList()));
+  }
+
+  /**
+   * Returns the name of the generated {@code @AutoValue} or {@code @AutoOneOf} class, for example
+   * {@code AutoOneOf_TaskResult} or {@code $$AutoValue_SimpleMethod}.
+   *
+   * @param type the name of the type bearing the {@code @AutoValue} or {@code @AutoOneOf}
+   *     annotation.
+   * @param prefix the prefix to use in the generated class. This may start with one or more
+   *     dollar signs, for an {@code @AutoValue} implementation where there are AutoValue
+   *     extensions.
+   */
   static String generatedClassName(TypeElement type, String prefix) {
     String name = type.getSimpleName().toString();
     while (type.getEnclosingElement() instanceof TypeElement) {
@@ -490,6 +694,25 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       return "";
     } else {
       return typeParameters.stream().map(e -> "?").collect(joining(", ", "<", ">"));
+    }
+  }
+
+  final void writeSourceFile(String className, String text, TypeElement originatingType) {
+    try {
+      JavaFileObject sourceFile =
+          processingEnv.getFiler().createSourceFile(className, originatingType);
+      try (Writer writer = sourceFile.openWriter()) {
+        writer.write(text);
+      }
+    } catch (IOException e) {
+      // This should really be an error, but we make it a warning in the hope of resisting Eclipse
+      // bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=367599. If that bug manifests, we may get
+      // invoked more than once for the same file, so ignoring the ability to overwrite it is the
+      // right thing to do. If we are unable to write for some other reason, we should get a compile
+      // error later because user code will have a reference to the code we were supposed to
+      // generate (new AutoValue_Foo() or whatever) and that reference will be undefined.
+      errorReporter.reportWarning(
+          "Could not write generated class " + className + ": " + e, originatingType);
     }
   }
 }
