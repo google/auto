@@ -79,17 +79,9 @@ interface EvaluationContext {
       Runnable undo;
       if (vars.containsKey(var)) {
         final Object oldValue = vars.get(var);
-        undo = new Runnable() {
-          @Override public void run() {
-            vars.put(var, oldValue);
-          }
-        };
+        undo = () -> vars.put(var, oldValue);
       } else {
-        undo = new Runnable() {
-          @Override public void run() {
-            vars.remove(var);
-          }
-        };
+        undo = () -> vars.remove(var);
       }
       vars.put(var, value);
       return undo;

@@ -34,7 +34,7 @@ package com.google.auto.value.processor.escapevelocity;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -71,7 +71,7 @@ class Macro {
   Object evaluate(EvaluationContext context, List<Node> thunks) {
     try {
       Verify.verify(thunks.size() == parameterNames.size(), "Argument mistmatch for %s", name);
-      Map<String, Node> parameterThunks = Maps.newLinkedHashMap();
+      Map<String, Node> parameterThunks = new LinkedHashMap<>();
       for (int i = 0; i < parameterNames.size(); i++) {
         parameterThunks.put(parameterNames.get(i), thunks.get(i));
       }
@@ -141,12 +141,9 @@ class Macro {
       } else {
         parameterThunks.remove(var);
         final Runnable originalUndo = originalEvaluationContext.setVar(var, value);
-        return new Runnable() {
-          @Override
-          public void run() {
-            originalUndo.run();
-            parameterThunks.put(var, thunk);
-          }
+        return () -> {
+          originalUndo.run();
+          parameterThunks.put(var, thunk);
         };
       }
     }

@@ -27,8 +27,6 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
@@ -39,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -300,7 +299,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    * when the return type of the method is spelled out in the implementation.
    *
    * @param methodAnnotations the annotations to include on {@code propertyMethod}. This is
-   *     governed by the {@link AutoValue.CopyAnnotations} logic.
+   *     governed by the {@code AutoValue.CopyAnnotations} logic.
    */
   abstract Optional<String> nullableAnnotationForMethod(
       ExecutableElement propertyMethod, ImmutableList<AnnotationMirror> methodAnnotations);
@@ -313,7 +312,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    *     should go on the implementation of those methods. These annotations are method annotations
    *     specifically. Type annotations do not appear because they are considered part of the
    *     return type and will appear when that is spelled out. Annotations that are excluded
-   *     by {@link AutoValue.CopyAnnotations} also do not appear here.
+   *     by {@code AutoValue.CopyAnnotations} also do not appear here.
    */
   final ImmutableSet<Property> propertySet(
       TypeElement type,
@@ -321,7 +320,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     Set<ExecutableElement> propertyMethods = annotatedPropertyMethods.keySet();
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         propertyNameToMethodMap(propertyMethods).inverse();
-    Map<ExecutableElement, String> methodToIdentifier = Maps.newLinkedHashMap(methodToPropertyName);
+    Map<ExecutableElement, String> methodToIdentifier = new LinkedHashMap<>(methodToPropertyName);
     fixReservedIdentifiers(methodToIdentifier);
     EclipseHack eclipseHack = new EclipseHack(processingEnv);
     DeclaredType declaredType = MoreTypes.asDeclared(type.asType());
@@ -419,7 +418,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    */
   final ImmutableBiMap<String, ExecutableElement> propertyNameToMethodMap(
       Set<ExecutableElement> propertyMethods) {
-    Map<String, ExecutableElement> map = Maps.newLinkedHashMap();
+    Map<String, ExecutableElement> map = new LinkedHashMap<>();
     Set<String> reportedDups = new HashSet<>();
     boolean allPrefixed = gettersAllPrefixed(propertyMethods);
     for (ExecutableElement method : propertyMethods) {
@@ -558,7 +557,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    */
   static ImmutableSet<ExecutableElement> abstractMethodsIn(
       ImmutableSet<ExecutableElement> methods) {
-    Set<Name> noArgMethods = Sets.newHashSet();
+    Set<Name> noArgMethods = new HashSet<>();
     ImmutableSet.Builder<ExecutableElement> abstracts = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)) {

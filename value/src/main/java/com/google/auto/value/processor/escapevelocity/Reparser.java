@@ -52,9 +52,9 @@ import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * The second phase of parsing. See {@link Parser#parse()} for a description of the phases and why
@@ -90,7 +90,7 @@ class Reparser {
   private final Map<String, Macro> macros;
 
   Reparser(ImmutableList<Node> nodes) {
-    this(nodes, Maps.newTreeMap());
+    this(nodes, new TreeMap<>());
   }
 
   private Reparser(ImmutableList<Node> nodes, Map<String, Macro> macros) {

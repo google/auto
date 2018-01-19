@@ -18,7 +18,6 @@ package com.google.auto.value.processor;
 import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilterInputStream;
@@ -34,6 +33,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -93,7 +93,7 @@ abstract class TemplateVars {
   }
 
   private Map<String, Object> toVars() {
-    Map<String, Object> vars = Maps.newTreeMap();
+    Map<String, Object> vars = new TreeMap<>();
     for (Field field : fields) {
       Object value = fieldValue(field, this);
       if (value == null) {

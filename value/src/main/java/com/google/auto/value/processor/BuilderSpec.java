@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
@@ -27,7 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,7 +66,7 @@ class BuilderSpec {
   }
 
   private static final ImmutableSet<ElementKind> CLASS_OR_INTERFACE =
-      Sets.immutableEnumSet(ElementKind.CLASS, ElementKind.INTERFACE);
+      immutableEnumSet(ElementKind.CLASS, ElementKind.INTERFACE);
 
   /**
    * Determines if the {@code @AutoValue} class for this instance has a correct nested
@@ -213,7 +214,7 @@ class BuilderSpec {
       vars.builderPropertyBuilders =
           ImmutableMap.copyOf(classifier.propertyNameToPropertyBuilder());
 
-      Set<Property> required = Sets.newLinkedHashSet(vars.props);
+      Set<Property> required = new LinkedHashSet<>(vars.props);
       for (Property property : vars.props) {
         if (property.isNullable()
             || property.getOptional() != null
