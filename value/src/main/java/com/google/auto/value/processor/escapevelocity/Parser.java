@@ -195,17 +195,24 @@ class Parser {
   private Node parseNode() throws IOException {
     if (c == '#') {
       next();
-      if (c == '#') {
-        return parseComment();
-      } else if (isAsciiLetter(c) || c == '{') {
-        return parseDirective();
-      } else if (c == '[') {
-        return parseHashSquare();
-      } else {
-        // For consistency with Velocity, we treat # not followed by # or a letter as a plain
-        // character, and we treat #$foo as a literal # followed by the reference $foo.
-        // But the # is its own ConstantExpressionNode; we don't try to merge it with adjacent text.
-        return new ConstantExpressionNode(resourceName, lineNumber(), "#");
+      switch (c) {
+        case '#':
+          return parseLineComment();
+        case '*':
+          return parseBlockComment();
+        case '[':
+          return parseHashSquare();
+        case '{':
+          return parseDirective();
+        default:
+          if (isAsciiLetter(c)) {
+            return parseDirective();
+          } else {
+            // For consistency with Velocity, we treat # not followed by a letter or one of the
+            // characters above as a plain character, and we treat #$foo as a literal # followed by
+            // the reference $foo.
+            return parsePlainText('#');
+          }
       }
     }
     if (c == EOF) {
@@ -221,13 +228,15 @@ class Parser {
     assert c == '[';
     next();
     if (c != '[') {
-      return new ConstantExpressionNode(resourceName, lineNumber(), "#[");
+      return parsePlainText(new StringBuilder("#["));
     }
+    int startLine = lineNumber();
     next();
     StringBuilder sb = new StringBuilder();
     while (true) {
       if (c == EOF) {
-        throw parseException("Unterminated #[[ - did not see matching ]]#");
+        throw new ParseException(
+            "Unterminated #[[ - did not see matching ]]#", resourceName, startLine);
       }
       if (c == '#') {
         // This might be the last character of ]]# or it might just be a random #.
@@ -479,16 +488,37 @@ class Parser {
   }
 
   /**
-   * Parses and discards a comment, which is {@code ##} followed by any number of characters up to
-   * and including the next newline.
+   * Parses and discards a line comment, which is {@code ##} followed by any number of characters
+   * up to and including the next newline.
    */
-  private Node parseComment() throws IOException {
+  private Node parseLineComment() throws IOException {
     int lineNumber = lineNumber();
     while (c != '\n' && c != EOF) {
       next();
     }
     next();
     return new CommentTokenNode(resourceName, lineNumber);
+  }
+
+  /**
+   * Parses and discards a block comment, which is {@code #*} followed by everything up to and
+   * including the next {@code *#}.
+   */
+  private Node parseBlockComment() throws IOException {
+    assert c == '*';
+    int startLine = lineNumber();
+    int lastC = '\0';
+    next();
+    while (!(lastC == '*' && c == '#')) {
+      if (c == EOF) {
+        throw new ParseException(
+            "Unterminated #* - did not see matching *#", resourceName, startLine);
+      }
+      lastC = c;
+      next();
+    }
+    next();
+    return new CommentTokenNode(resourceName, startLine);
   }
 
   /**
@@ -499,7 +529,10 @@ class Parser {
   private Node parsePlainText(int firstChar) throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.appendCodePoint(firstChar);
+    return parsePlainText(sb);
+  }
 
+  private Node parsePlainText(StringBuilder sb) throws IOException {
     literal:
     while (true) {
       switch (c) {
