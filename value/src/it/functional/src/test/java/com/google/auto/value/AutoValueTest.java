@@ -2796,4 +2796,37 @@ public class AutoValueTest {
     } catch (IllegalStateException expected) {
     }
   }
+
+  @SuppressWarnings("JavaLangClash")
+  @AutoValue
+  public abstract static class RedeclareJavaLangClasses {
+    // If you really really want to do this, we have you covered.
+
+    public static class Object {}
+    public static class String {}
+
+    public abstract Object alienObject();
+    public abstract String alienString();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_RedeclareJavaLangClasses.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setAlienObject(Object x);
+      public abstract Builder setAlienString(String x);
+      public abstract RedeclareJavaLangClasses build();
+    }
+  }
+
+  @Test
+  public void testRedeclareJavaLangClasses() {
+    RedeclareJavaLangClasses x =
+        RedeclareJavaLangClasses.builder()
+            .setAlienObject(new RedeclareJavaLangClasses.Object())
+            .setAlienString(new RedeclareJavaLangClasses.String())
+            .build();
+    assertThat(x).isNotNull();
+  }
 }

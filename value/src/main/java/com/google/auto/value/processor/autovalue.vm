@@ -78,7 +78,7 @@ $a
       ## Just throw NullPointerException with no message if it's null.
       ## The Object cast has no effect on the code but silences an ErrorProne warning.
 
-    ((Object) ${p}).getClass();
+    ((`java.lang.Object`) ${p}).getClass();
     #end
 
   #end
@@ -106,7 +106,7 @@ $a
 #if ($toString)
 
   @Override
-  public String toString() {
+  public `java.lang.String` toString() {
     return "#if ($identifiers)$simpleClassName#end{"
 
   #foreach ($p in $props)
@@ -125,7 +125,7 @@ $a
 #if ($equals)
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(`java.lang.Object` o) {
     if (o == this) {
       return true;
     }
@@ -255,7 +255,7 @@ $a
           ## Just throw NullPointerException with no message if it's null.
           ## The Object cast has no effect on the code but silences an ErrorProne warning.
 
-      ((Object) ${p}).getClass();
+      ((`java.lang.Object`) ${p}).getClass();
         #end
 
       #end
@@ -383,7 +383,7 @@ $a
   #if (!$builderRequiredProperties.empty)
     #if ($identifiers)  ## build a friendly message showing all missing properties
 
-      String missing = "";
+      `java.lang.String` missing = "";
 
       #foreach ($p in $builderRequiredProperties)
 

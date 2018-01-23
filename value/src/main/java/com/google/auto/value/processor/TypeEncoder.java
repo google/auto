@@ -325,7 +325,7 @@ final class TypeEncoder {
       Set<TypeMirror> referencedClasses = findReferencedClasses();
       // Make a type simplifier based on these referenced types.
       TypeSimplifier typeSimplifier =
-          new TypeSimplifier(typeUtils, packageName, referencedClasses, baseType);
+          new TypeSimplifier(elementUtils, typeUtils, packageName, referencedClasses, baseType);
 
       StringBuilder output = new StringBuilder();
       int copyStart;

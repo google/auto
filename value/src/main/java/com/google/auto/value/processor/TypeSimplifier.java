@@ -38,6 +38,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
 
@@ -67,6 +68,8 @@ final class TypeSimplifier {
   /**
    * Makes a new simplifier for the given package and set of types.
    *
+   * @param elementUtils the result of {@code ProcessingEnvironment.getElementUtils()} for the
+   *     current annotation processing environment.
    * @param typeUtils the result of {@code ProcessingEnvironment.getTypeUtils()} for the current
    *     annotation processing environment.
    * @param packageName the name of the package from which classes will be referenced. Classes that
@@ -79,14 +82,19 @@ final class TypeSimplifier {
    * @throws MissingTypeException if one of the input types contains an error (typically,
    *     is undefined).
    */
-  TypeSimplifier(Types typeUtils, String packageName, Set<TypeMirror> types, TypeMirror base) {
+  TypeSimplifier(
+      Elements elementUtils,
+      Types typeUtils,
+      String packageName,
+      Set<TypeMirror> types,
+      TypeMirror base) {
     Set<TypeMirror> typesPlusBase = new TypeMirrorSet(types);
     if (base != null) {
       typesPlusBase.add(base);
     }
     Set<TypeMirror> topLevelTypes = topLevelTypes(typeUtils, typesPlusBase);
     Set<TypeMirror> defined = nonPrivateDeclaredTypes(typeUtils, base);
-    this.imports = findImports(typeUtils, packageName, topLevelTypes, defined);
+    this.imports = findImports(elementUtils, typeUtils, packageName, topLevelTypes, defined);
   }
 
   /**
@@ -181,7 +189,7 @@ final class TypeSimplifier {
    * goal should be complete correctness, and the only way to achieve that is to operate on the real
    * representations of types.
    *
-   * @param packageName The name of the package where the class containing these references is
+   * @param codePackageName The name of the package where the class containing these references is
    *     defined. Other classes within the same package do not need to be imported.
    * @param referenced The complete set of declared types (classes and interfaces) that will be
    *     referenced in the generated code.
@@ -192,7 +200,11 @@ final class TypeSimplifier {
    *     whether the type should be imported, and how the type should be spelled in the source code.
    */
   private static Map<String, Spelling> findImports(
-      Types typeUtils, String packageName, Set<TypeMirror> referenced, Set<TypeMirror> defined) {
+      Elements elementUtils,
+      Types typeUtils,
+      String codePackageName,
+      Set<TypeMirror> referenced,
+      Set<TypeMirror> defined) {
     Map<String, Spelling> imports = new HashMap<>();
     Set<TypeMirror> typesInScope = new TypeMirrorSet();
     typesInScope.addAll(referenced);
@@ -208,7 +220,10 @@ final class TypeSimplifier {
       if (ambiguous.contains(simpleName)) {
         importIt = false;
         spelling = fullName;
-      } else if (pkg.equals(packageName) || pkg.equals("java.lang")) {
+      } else if (pkg.equals("java.lang")) {
+        importIt = false;
+        spelling = javaLangSpelling(elementUtils, codePackageName, typeElement);
+      } else if (pkg.equals(codePackageName)) {
         importIt = false;
         spelling = fullName.substring(pkg.isEmpty() ? 0 : pkg.length() + 1);
       } else {
@@ -218,6 +233,25 @@ final class TypeSimplifier {
       imports.put(fullName, new Spelling(spelling, importIt));
     }
     return imports;
+  }
+
+  /**
+   * Handles the tricky case where the class being referred to is in {@code java.lang}, but the
+   * package of the referring code contains another class of the same name. For example, if the
+   * current package is {@code foo.bar} and there is a {@code foo.bar.Compiler}, then we will refer
+   * to {@code java.lang.Compiler} by its full name. The plain name {@code Compiler} would reference
+   * {@code foo.bar.Compiler} in this case. We need to write {@code java.lang.Compiler} even if the
+   * other {@code Compiler} class is not being considered here, so the {@link #ambiguousNames} logic
+   * is not enough. We have to look to see if the class exists.
+   */
+  private static String javaLangSpelling(
+      Elements elementUtils, String codePackageName, TypeElement typeElement) {
+    // If this is java.lang.Thread.State or the like, we have to look for a clash with Thread.
+    TypeElement topLevelType = topLevelType(typeElement);
+    TypeElement clash =
+        elementUtils.getTypeElement(codePackageName + "." + topLevelType.getSimpleName());
+    String fullName = typeElement.getQualifiedName().toString();
+    return (clash == null) ? fullName.substring("java.lang.".length()) : fullName;
   }
 
   /**
@@ -280,7 +314,7 @@ final class TypeSimplifier {
     }
     return ambiguous;
   }
-  
+
   /**
    * Returns true if casting to the given type will elicit an unchecked warning from the
    * compiler. Only generic types such as {@code List<String>} produce such warnings. There will be
