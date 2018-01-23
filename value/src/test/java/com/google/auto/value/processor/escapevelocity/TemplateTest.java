@@ -203,6 +203,11 @@ public class TemplateTest {
     compare("=${t.name}=", ImmutableMap.of("t", Thread.currentThread()));
   }
 
+  @Test
+  public void substituteNotPropertyId() {
+    compare("$foo.!", ImmutableMap.of("foo", false));
+  }
+
   /* TODO(emcmanus): make this work.
   @Test
   public void substituteNotPropertyId() {
@@ -696,6 +701,14 @@ public class TemplateTest {
         + "#set($tmp = \"b\")\n"
         + "#nameCaptureSwap($x $tmp)";
     compare(template);
+  }
+
+  @Test
+  public void badBraceReference() throws IOException {
+    String template = "line 1\nline 2\nbar${foo.!}baz";
+    thrown.expect(ParseException.class);
+    thrown.expectMessage("Expected }, on line 3, at text starting: .!}baz");
+    Template.parseFrom(new StringReader(template));
   }
 
   @Test
