@@ -74,11 +74,19 @@ class Parser {
 
   /**
    * The invariant of this parser is that {@code c} is always the next character of interest.
-   * This means that we never have to "unget" a character by reading too far. For example, after
-   * we parse an integer, {@code c} will be the first character after the integer, which is exactly
-   * the state we will be in when there are no more digits.
+   * This means that we almost never have to "unget" a character by reading too far. For example,
+   * after we parse an integer, {@code c} will be the first character after the integer, which is
+   * exactly the state we will be in when there are no more digits.
+   *
+   * <p>Sometimes we need to read two characters ahead, and in that case we use {@link #pushback}.
    */
   private int c;
+
+  /**
+   * A single character of pushback. If this is not negative, the {@link #next()} method will
+   * return it instead of reading a character.
+   */
+  private int pushback = -1;
 
   Parser(Reader reader, String resourceName, Template.ResourceOpener resourceOpener)
       throws IOException {
@@ -148,8 +156,26 @@ class Parser {
    */
   private void next() throws IOException {
     if (c != EOF) {
-      c = reader.read();
+      if (pushback < 0) {
+        c = reader.read();
+      } else {
+        c = pushback;
+        pushback = -1;
+      }
     }
+  }
+
+  /**
+   * Saves the current character {@code c} to be read again, and sets {@code c} to the given
+   * {@code c1}. Suppose the text contains {@code xy} and we have just read {@code y}.
+   * So {@code c == 'y'}. Now if we execute {@code pushback('x')}, we will have
+   * {@code c == 'x'} and the next call to {@link #next()} will set {@code c == 'y'}. Subsequent
+   * calls to {@code next()} will continue reading from {@link #reader}. So the pushback
+   * essentially puts us back in the state we were in before we read {@code y}.
+   */
+  private void pushback(int c1) {
+    pushback = c;
+    c = c1;
   }
 
   /**
@@ -562,7 +588,27 @@ class Parser {
    *
    * <p>On entry to this method, {@link #c} is the character immediately after the {@code $}.
    */
-  private ReferenceNode parseReference() throws IOException {
+  private Node parseReference() throws IOException {
+    if (c == '{') {
+      next();
+      if (!isAsciiLetter(c)) {
+        return parsePlainText(new StringBuilder("${"));
+      }
+      ReferenceNode node = parseReferenceNoBrace();
+      expect('}');
+      return node;
+    } else {
+      return parseReferenceNoBrace();
+    }
+  }
+
+  /**
+   * Same as {@link #parseReference()}, except it really must be a reference. A {@code $} in
+   * normal text doesn't start a reference if it is not followed by an identifier. But in an
+   * expression, for example in {@code #if ($x == 23)}, {@code $} must be followed by an
+   * identifier.
+   */
+  private ReferenceNode parseRequiredReference() throws IOException {
     if (c == '{') {
       next();
       ReferenceNode node = parseReferenceNoBrace();
@@ -622,6 +668,11 @@ class Parser {
   private ReferenceNode parseReferenceMember(ReferenceNode lhs) throws IOException {
     assert c == '.';
     next();
+    if (!isAsciiLetter(c)) {
+      // We've seen something like `$foo.!`, so it turns out it's not a member after all.
+      pushback('.');
+      return lhs;
+    }
     String id = parseId("Member");
     ReferenceNode reference;
     if (c == '(') {
@@ -868,7 +919,7 @@ class Parser {
     ExpressionNode node;
     if (c == '$') {
       next();
-      node = parseReference();
+      node = parseRequiredReference();
     } else if (c == '"') {
       node = parseStringLiteral();
     } else if (c == '-') {
