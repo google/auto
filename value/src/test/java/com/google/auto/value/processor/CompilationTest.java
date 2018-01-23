@@ -2761,6 +2761,70 @@ public class CompilationTest {
         .doesNotContain("java.util.Arrays");
   }
 
+  /**
+   * Tests behaviour when the package containing an {@code @AutoValue} class also has classes with
+   * the same name as classes in {@code java.lang}. If you call a class {@code Object} you are
+   * asking for trouble, but you could innocently call a class {@code Compiler} without realizing
+   * there is a {@code java.lang.Compiler}.
+   *
+   * <p>The case where the class in question is mentioned in the {@code @AutoValue} class is the
+   * easy one, because then our logic can easily see that there is a clash and will use
+   * fully-qualified names. This is the case of the {@code Compiler} class below. The case where
+   * the class is <i>not</i> mentioned is harder. We have to realize that we can't elide the
+   * package name in {@code java.lang.Object} because there is also a {@code foo.bar.Object} in
+   * scope, and in fact it takes precedence.
+   */
+  @Test
+  public void javaLangClash() {
+    JavaFileObject object = JavaFileObjects.forSourceLines(
+        "foo.bar.Object",
+        "package foo.bar;",
+        "",
+        "public class Object {}");
+    JavaFileObject string = JavaFileObjects.forSourceLines(
+        "foo.bar.String",
+        "package foo.bar;",
+        "",
+        "public class String {}");
+    JavaFileObject compiler = JavaFileObjects.forSourceLines(
+        "foo.bar.Compiler",
+        "package foo.bar;",
+        "",
+        "public class Compiler {}");
+    JavaFileObject thread = JavaFileObjects.forSourceLines(
+        "foo.bar.Thread",
+        "package foo.bar;",
+        "",
+        "public class Thread {}");
+    JavaFileObject test = JavaFileObjects.forSourceLines(
+        "foo.bar.Test",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "public abstract class Test {",
+        "  public abstract java.lang.Compiler compiler();",
+        "  public abstract java.lang.Thread.State state();",
+        "  public static Builder builder() {",
+        "    return new AutoValue_Test.Builder();",
+        "  }",
+        "",
+        "  @AutoValue.Builder",
+        "  public abstract static class Builder {",
+        "    public abstract Builder setCompiler(java.lang.Compiler x);",
+        "    public abstract Builder setState(java.lang.Thread.State x);",
+        "    public abstract Test build();",
+        "  }",
+        "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(object, string, compiler, thread, test);
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
   private String sorted(String... imports) {
     return Stream.of(imports).sorted().collect(joining("\n"));
   }
