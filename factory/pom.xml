@@ -44,7 +44,7 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>0.9</version>
+      <version>0.10</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.value</groupId>
@@ -54,7 +54,7 @@
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
-      <version>1.0-rc3</version>
+      <version>1.0-rc4</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
