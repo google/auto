@@ -90,6 +90,9 @@
     <resources>
       <resource>
         <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.vm</include>
+        </includes>
       </resource>
     </resources>
     <plugins>
