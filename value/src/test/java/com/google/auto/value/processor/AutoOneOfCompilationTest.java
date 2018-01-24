@@ -178,8 +178,11 @@ public class AutoOneOfCompilationTest {
             "      return exception.hashCode();",
             "    }",
             "  }");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoOneOfProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(javaFileObject);
     assertThat(compilation)
         .succeededWithoutWarnings();
     assertThat(compilation)
