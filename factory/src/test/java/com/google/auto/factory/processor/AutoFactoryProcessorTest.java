@@ -378,6 +378,15 @@ public class AutoFactoryProcessorTest {
         .generatesSources(loadExpectedFile("expected/CustomNullableFactory.java"));
   }
 
+  @Test public void checkerFrameworkNullableType() {
+    assertAbout(javaSource())
+        .that(JavaFileObjects.forResource("good/CheckerFrameworkNullable.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(loadExpectedFile("expected/CheckerFrameworkNullableFactory.java"));
+  }
+
   @Test public void multipleProvidedParamsWithSameKey() {
     assertAbout(javaSource())
         .that(JavaFileObjects.forResource("good/MultipleProvidedParamsSameKey.java"))
