@@ -2786,11 +2786,11 @@ public class CompilationTest {
         "package foo.bar;",
         "",
         "public class String {}");
-    JavaFileObject compiler = JavaFileObjects.forSourceLines(
-        "foo.bar.Compiler",
+    JavaFileObject integer = JavaFileObjects.forSourceLines(
+        "foo.bar.Integer",
         "package foo.bar;",
         "",
-        "public class Compiler {}");
+        "public class Integer {}");
     JavaFileObject thread = JavaFileObjects.forSourceLines(
         "foo.bar.Thread",
         "package foo.bar;",
@@ -2804,7 +2804,7 @@ public class CompilationTest {
         "",
         "@AutoValue",
         "public abstract class Test {",
-        "  public abstract java.lang.Compiler compiler();",
+        "  public abstract java.lang.Integer integer();",
         "  public abstract java.lang.Thread.State state();",
         "  public static Builder builder() {",
         "    return new AutoValue_Test.Builder();",
@@ -2812,7 +2812,7 @@ public class CompilationTest {
         "",
         "  @AutoValue.Builder",
         "  public abstract static class Builder {",
-        "    public abstract Builder setCompiler(java.lang.Compiler x);",
+        "    public abstract Builder setInteger(java.lang.Integer x);",
         "    public abstract Builder setState(java.lang.Thread.State x);",
         "    public abstract Test build();",
         "  }",
@@ -2821,7 +2821,7 @@ public class CompilationTest {
         javac()
             .withProcessors(new AutoValueProcessor())
             .withOptions("-Xlint:-processing", "-implicit:none")
-            .compile(object, string, compiler, thread, test);
+            .compile(object, string, integer, thread, test);
     assertThat(compilation).succeededWithoutWarnings();
   }
 
