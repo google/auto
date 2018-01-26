@@ -19,30 +19,62 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.Reflection;
 import com.google.testing.compile.JavaFileObjects;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Tests that {@link AutoValueProcessor} works even if run in a context where the
- * {@code @Generated} annotation does not exist.
+ * Tests that {@link AutoValueProcessor} works even if run in a context where the {@code @Generated}
+ * annotation does not exist.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-@RunWith(JUnit4.class)
+@RunWith(Parameterized.class)
 public class GeneratedDoesNotExistTest {
+
+  @Parameters(name = "{0}")
+  public static Collection<Object[]> data() {
+    ImmutableList.Builder<Object[]> params = ImmutableList.builder();
+    if (SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0) {
+      // use default options when running on JDK > 8
+      // TODO(b/72513371): use --release 8 once compile-testing supports that
+      params.add(
+          new Object[] {
+            ImmutableList.of(), "javax.annotation.processing.Generated",
+          });
+    }
+    params.add(
+        new Object[] {
+          ImmutableList.of("-source", "8", "-target", "8"), "javax.annotation.Generated",
+        });
+    return params.build();
+  }
+
+  private final ImmutableList<String> javacOptions;
+  private final String expectedAnnotation;
+
+  public GeneratedDoesNotExistTest(
+      ImmutableList<String> javacOptions, String expectedAnnotation) {
+    this.javacOptions = javacOptions;
+    this.expectedAnnotation = expectedAnnotation;
+  }
+
   // The classes here are basically just rigmarole to ensure that
   // Types.getTypeElement("javax.annotation.Generated") returns null, and to check that something
   // called that. We want a Processor that forwards everything to AutoValueProcessor, except that
@@ -191,10 +223,11 @@ public class GeneratedDoesNotExistTest {
     Processor noGeneratedProcessor = partialProxy(Processor.class, handler);
     assertAbout(javaSource())
         .that(javaFileObject)
+        .withCompilerOptions(javacOptions)
         .processedWith(noGeneratedProcessor)
         .compilesWithoutError()
         .and()
         .generatesSources(expectedOutput);
-    assertThat(ignoredGenerated).isEqualTo(GENERATED_ANNOTATIONS);
+    assertThat(ignoredGenerated).containsExactly(expectedAnnotation);
   }
 }

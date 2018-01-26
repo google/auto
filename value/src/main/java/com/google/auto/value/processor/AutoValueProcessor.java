@@ -524,7 +524,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     vars.toBuilderMethods =
         ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
     vars.generated =
-        generatedAnnotation(processingEnv.getElementUtils())
+        generatedAnnotation(processingEnv.getElementUtils(), processingEnv.getSourceVersion())
             .map(annotation -> TypeEncoder.encode(annotation.asType()))
             .orElse("");
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
