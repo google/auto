@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.processing.Messager;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -101,6 +102,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     private final String classToExtend;
     private final boolean isFinal;
     private final Elements elements;
+    private final SourceVersion sourceVersion;
     private final Messager messager;
     private final Optional<AnnotationSpec> lazyInitAnnotation;
     private boolean hasErrors;
@@ -111,6 +113,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       this.classToExtend = classToExtend;
       this.isFinal = isFinal;
       this.elements = context.processingEnvironment().getElementUtils();
+      this.sourceVersion = context.processingEnvironment().getSourceVersion();
       this.messager = context.processingEnvironment().getMessager();
       this.lazyInitAnnotation = getLazyInitAnnotation(elements);
     }
@@ -122,7 +125,8 @@ public final class MemoizeExtension extends AutoValueExtension {
               .addTypeVariables(typeVariableNames())
               .addModifiers(isFinal ? FINAL : ABSTRACT)
               .addMethod(constructor());
-      generatedAnnotationSpec(elements, MemoizeExtension.class).ifPresent(generated::addAnnotation);
+      generatedAnnotationSpec(elements, sourceVersion, MemoizeExtension.class)
+          .ifPresent(generated::addAnnotation);
       for (ExecutableElement method : memoizedMethods(context)) {
         MethodOverrider methodOverrider = new MethodOverrider(method);
         generated.addFields(methodOverrider.fields());

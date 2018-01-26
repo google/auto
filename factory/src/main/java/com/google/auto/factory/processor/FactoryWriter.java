@@ -45,6 +45,7 @@ import java.util.Iterator;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -53,10 +54,12 @@ final class FactoryWriter {
 
   private final Filer filer;
   private final Elements elements;
+  private final SourceVersion sourceVersion;
 
-  FactoryWriter(Filer filer, Elements elements) {
+  FactoryWriter(Filer filer, Elements elements, SourceVersion sourceVersion) {
     this.filer = filer;
     this.elements = elements;
+    this.sourceVersion = sourceVersion;
   }
 
   private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
@@ -67,6 +70,7 @@ final class FactoryWriter {
     TypeSpec.Builder factory = classBuilder(factoryName);
     generatedAnnotationSpec(
             elements,
+            sourceVersion,
             AutoFactoryProcessor.class,
             "https://github.com/google/auto/tree/master/factory")
         .ifPresent(factory::addAnnotation);

@@ -73,7 +73,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
-    factoryWriter = new FactoryWriter(new FormattingFiler(processingEnv.getFiler()), elements);
+    factoryWriter =
+        new FactoryWriter(
+            new FormattingFiler(processingEnv.getFiler()),
+            elements,
+            processingEnv.getSourceVersion());
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =
