@@ -34,8 +34,6 @@ import org.junit.runners.JUnit4;
 public class AutoOneOfCompilationTest {
   @Rule
   public final Expect expect = Expect.create();
-  @Rule
-  public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
 
   @Test
   public void success() {
@@ -67,7 +65,7 @@ public class AutoOneOfCompilationTest {
             "foo.bar.AutoOneOf_TaskResult",
             "package foo.bar;",
             "",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"com.google.auto.value.processor.AutoOneOfProcessor\")",
             "final class AutoOneOf_TaskResult {",

@@ -33,7 +33,6 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -43,8 +42,6 @@ import org.junit.runners.JUnit4;
  */
 @RunWith(JUnit4.class)
 public class AutoAnnotationCompilationTest {
-
-  @Rule public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
 
   @Test
   public void testSimple() {
@@ -89,7 +86,7 @@ public class AutoAnnotationCompilationTest {
             "",
             "import com.example.annotations.MyAnnotation;",
             "import com.example.enums.MyEnum;",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
             "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
@@ -166,7 +163,7 @@ public class AutoAnnotationCompilationTest {
     JavaFileObject expectedOutput =
         JavaFileObjects.forSourceLines(
             "AutoAnnotation_AnnotationFactory_newMyAnnotation",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
             "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
@@ -242,7 +239,7 @@ public class AutoAnnotationCompilationTest {
             "",
             "import com.example.annotations.MyAnnotation;",
             "import java.util.Arrays;",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
             "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
@@ -346,7 +343,7 @@ public class AutoAnnotationCompilationTest {
             "import java.util.Collection;",
             "import java.util.List;",
             "import java.util.Set;",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
             "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",

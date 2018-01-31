@@ -250,7 +250,7 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       ImmutableSet<ExecutableElement> propertyMethods,
       ExecutableElement kindGetter) {
     vars.generated =
-        generatedAnnotation(elementUtils())
+        generatedAnnotation(elementUtils(), processingEnv.getSourceVersion())
             .map(annotation -> TypeEncoder.encode(annotation.asType()))
             .orElse("");
     Map<ExecutableElement, ImmutableList<AnnotationMirror>> annotatedPropertyMethods =

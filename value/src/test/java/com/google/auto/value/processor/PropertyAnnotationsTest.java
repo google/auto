@@ -24,7 +24,6 @@ import com.google.testing.compile.JavaFileObjects;
 import java.lang.annotation.Inherited;
 import java.util.List;
 import javax.tools.JavaFileObject;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -97,8 +96,6 @@ public class PropertyAnnotationsTest {
   @Inherited
   public @interface InheritedAnnotation {}
 
-  @Rule public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
-
   private JavaFileObject sourceCode(List<String> imports, List<String> annotations) {
     ImmutableList<String> list = ImmutableList.<String>builder()
         .add(
@@ -131,7 +128,7 @@ public class PropertyAnnotationsTest {
     String nullable = annotations.contains("@Nullable") ? "@Nullable " : "";
     ImmutableSortedSet<String> allImports =
         ImmutableSortedSet.<String>naturalOrder()
-            .add(generatedImportRule.importGeneratedAnnotationType())
+            .add(GeneratedImport.importGeneratedAnnotationType())
             .addAll(imports)
             .build();
     ImmutableList<String> list = ImmutableList.<String>builder()

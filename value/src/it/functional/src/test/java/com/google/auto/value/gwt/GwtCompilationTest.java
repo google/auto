@@ -20,10 +20,9 @@ import static com.google.testing.compile.Compiler.javac;
 
 import com.google.auto.value.processor.AutoValueProcessor;
 import com.google.testing.compile.Compilation;
-import com.google.testing.compile.CompilationRule;
 import com.google.testing.compile.JavaFileObjects;
+import javax.lang.model.SourceVersion;
 import javax.tools.JavaFileObject;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -43,8 +42,6 @@ public class GwtCompilationTest {
       "  boolean serializable() default false;",
       "}"
   );
-
-  @Rule public final CompilationRule compilationRule = new CompilationRule();
 
   /**
    * Test where the serialized properties don't include generics, so no {@code @SuppressWarnings}
@@ -342,7 +339,6 @@ public class GwtCompilationTest {
   }
 
   private boolean isJavaxAnnotationProcessingGeneratedAvailable() {
-    return compilationRule.getElements().getTypeElement("javax.annotation.processing.Generated")
-        != null;
+    return SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0;
   }
 }
