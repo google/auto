@@ -49,15 +49,12 @@ import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class ExtensionTest {
-
-  @Rule public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
 
   @Test
   public void testExtensionCompilation() throws Exception {
@@ -112,7 +109,7 @@ public class ExtensionTest {
             "foo.bar.$AutoValue_Baz",
             "package foo.bar;",
             "",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
             " abstract class $AutoValue_Baz extends Baz {",

@@ -50,7 +50,6 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class CompilationTest {
   @Rule public final Expect expect = Expect.create();
-  @Rule public final GeneratedImportRule generatedImportRule = new GeneratedImportRule();
 
   @Test
   public void simpleSuccess() {
@@ -77,7 +76,7 @@ public class CompilationTest {
             "foo.bar.AutoValue_Baz",
             "package foo.bar;",
             "",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",
             "final class AutoValue_Baz extends Baz {",
@@ -156,7 +155,7 @@ public class CompilationTest {
             "package foo.bar;",
             "",
             "import java.util.Arrays;",
-            generatedImportRule.importGeneratedAnnotationType(),
+            GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",
             "final class AutoValue_Baz extends Baz {",
@@ -840,7 +839,7 @@ public class CompilationTest {
             "import java.util.Arrays;",
             "import java.util.List;",
             sorted(
-                generatedImportRule.importGeneratedAnnotationType(),
+                GeneratedImport.importGeneratedAnnotationType(),
                 "import javax.annotation.Nullable;"),
             "",
             "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",

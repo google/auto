@@ -15,27 +15,20 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.testing.compile.CompilationRule;
-import javax.lang.model.util.Elements;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import javax.lang.model.SourceVersion;
 
 /**
- * Test rule that allows compile-testing tests to know which {@code @Generated} annotation is
+ * Utility methods for compile-testing tests to know which {@code @Generated} annotation is
  * available.
  */
-final class GeneratedImportRule implements TestRule {
-
-  private final CompilationRule compilationRule = new CompilationRule();
+final class GeneratedImport {
 
   /**
    * Returns the qualified name of the {@code @Generated} annotation available during a compilation
    * task.
    */
-  String generatedAnnotationType() {
-    Elements elements = compilationRule.getElements();
-    return elements.getTypeElement("javax.annotation.processing.Generated") != null
+  static String generatedAnnotationType() {
+    return SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0
         ? "javax.annotation.processing.Generated"
         : "javax.annotation.Generated";
   }
@@ -44,12 +37,7 @@ final class GeneratedImportRule implements TestRule {
    * Returns an {@code import} statement that imports the {@code @Generated} annotation {@linkplain
    * #generatedAnnotationType() available during a compilation task}.
    */
-  String importGeneratedAnnotationType() {
+  static String importGeneratedAnnotationType() {
     return "import " + generatedAnnotationType() + ";";
-  }
-
-  @Override
-  public Statement apply(Statement base, Description description) {
-    return compilationRule.apply(base, description);
   }
 }
