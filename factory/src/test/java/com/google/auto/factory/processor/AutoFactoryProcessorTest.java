@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
+import javax.lang.model.SourceVersion;
 import javax.tools.JavaFileObject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -446,8 +447,7 @@ public class AutoFactoryProcessorTest {
   }
 
   private boolean isJavaxAnnotationProcessingGeneratedAvailable() {
-    return compilationRule.getElements().getTypeElement("javax.annotation.processing.Generated")
-        != null;
+    return SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0;
   }
 
   private static void replaceGeneratedImport(List<String> sourceLines) {
