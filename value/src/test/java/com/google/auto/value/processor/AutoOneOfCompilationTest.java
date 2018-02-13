@@ -82,7 +82,7 @@ public class AutoOneOfCompilationTest {
             "  }",
             "",
             "  // Parent class that each implementation will inherit from.",
-            "  private abstract static class Parent$<V, T extends Throwable> "
+            "  private abstract static class Parent_<V, T extends Throwable> "
                 + "extends TaskResult<V, T> {",
             "    @Override",
             "    public V value() {",
@@ -97,7 +97,7 @@ public class AutoOneOfCompilationTest {
             "",
             "  // Implementation when the contained property is \"value\".",
             "  private static final class Impl_value<V, T extends Throwable> "
-                + "extends Parent$<V, T> {",
+                + "extends Parent_<V, T> {",
             "    private final V value;",
             "",
             "    Impl_value(V value) {",
@@ -138,7 +138,7 @@ public class AutoOneOfCompilationTest {
             "",
             "  // Implementation when the contained property is \"exception\".",
             "  private static final class Impl_exception<V, T extends Throwable> "
-                + "extends Parent$<V, T> {",
+                + "extends Parent_<V, T> {",
             "    private final Throwable exception;",
             "",
             "    Impl_exception(Throwable exception) {",
