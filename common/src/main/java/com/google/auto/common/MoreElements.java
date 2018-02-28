@@ -186,14 +186,6 @@ public final class MoreElements {
    * {@linkplain AnnotationMirror#getAnnotationType() annotation type} has the same canonical name
    * as that of {@code annotationClass}. This method is a safer alternative to calling
    * {@link Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
-
-   . This() {
-   super();
-   }
-
-   . This() {
-   super();
-   }
    * annotation proxies.
    */
   public static boolean isAnnotationPresent(Element element,
