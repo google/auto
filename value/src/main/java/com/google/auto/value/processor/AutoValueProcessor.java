@@ -19,6 +19,8 @@ import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
+import static com.google.auto.value.processor.ClassNames.COPY_ANNOTATIONS_NAME;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.intersection;
 import static com.google.common.collect.Sets.union;
@@ -26,10 +28,11 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
+import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
-import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -44,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.ServiceConfigurationError;
@@ -53,6 +55,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -74,6 +77,7 @@ import javax.lang.model.type.TypeMirror;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
+@SupportedAnnotationTypes(AUTO_VALUE_NAME)
 @SupportedOptions("com.google.auto.value.OmitIdentifiers")
 public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   public AutoValueProcessor() {
@@ -82,14 +86,14 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
   @VisibleForTesting
   AutoValueProcessor(ClassLoader loaderForExtensions) {
-    super(AutoValue.class);
+    super(AUTO_VALUE_NAME);
     this.extensions = null;
     this.loaderForExtensions = loaderForExtensions;
   }
 
   @VisibleForTesting
   public AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
-    super(AutoValue.class);
+    super(AUTO_VALUE_NAME);
     this.extensions = ImmutableList.<AutoValueExtension>copyOf(extensions);
     this.loaderForExtensions = null;
   }
@@ -99,7 +103,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
    * nested annotations.
    */
   private static final Pattern AUTO_VALUE_CLASSNAME_PATTERN =
-      Pattern.compile(Pattern.quote(AutoValue.class.getCanonicalName()) + "(\\..*)?");
+      Pattern.compile(Pattern.quote(AUTO_VALUE_NAME) + "(\\..*)?");
 
   // Depending on how this AutoValueProcessor was constructed, we might already have a list of
   // extensions when init() is run, or, if `extensions` is null, we have a ClassLoader that will be
@@ -138,16 +142,14 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
   @Override
   void processType(TypeElement type) {
-    AutoValue autoValue = type.getAnnotation(AutoValue.class);
-    if (autoValue == null) {
+    if (!hasAnnotationMirror(type, AUTO_VALUE_NAME)) {
       // This shouldn't happen unless the compilation environment is buggy,
       // but it has happened in the past and can crash the compiler.
       errorReporter().abortWithError("annotation processor for @AutoValue was invoked with a type"
           + " that does not have that annotation; this is probably a compiler bug", type);
     }
     if (type.getKind() != ElementKind.CLASS) {
-      errorReporter().abortWithError(
-          "@" + AutoValue.class.getName() + " only applies to classes", type);
+      errorReporter().abortWithError("@AutoValue only applies to classes", type);
     }
     if (ancestorIsAutoValue(type)) {
       errorReporter().abortWithError("One @AutoValue class may not extend another", type);
@@ -227,11 +229,9 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     defineVarsForType(type, vars, toBuilderMethods, propertyMethods, builder);
 
     // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.
-    if (isAnnotationPresent(type, AutoValue.CopyAnnotations.class)) {
+    if (hasAnnotationMirror(type, COPY_ANNOTATIONS_NAME)) {
       Set<String> excludedAnnotations =
-          union(
-              getFieldOfClasses(type, AutoValue.CopyAnnotations.class, "exclude"),
-              getAnnotationsMarkedWithInherited(type));
+          union(getExcludedClasses(type), getAnnotationsMarkedWithInherited(type));
 
       vars.annotations = copyAnnotations(type, type, excludedAnnotations);
     } else {
@@ -254,7 +254,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     gwtSerialization.maybeWriteGwtSerializer(vars);
   }
 
-  /** Implements the semantics of {@link AutoValue.CopyAnnotations}; see its javadoc. */
+  /** Implements the semantics of {@code AutoValue.CopyAnnotations}; see its javadoc. */
   private ImmutableList<String> copyAnnotations(
       Element autoValueType,
       Element typeOrMethod,
@@ -264,7 +264,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     return annotationStrings(annotationsToCopy);
   }
 
-  /** Implements the semantics of {@link AutoValue.CopyAnnotations}; see its javadoc. */
+  /** Implements the semantics of {@code AutoValue.CopyAnnotations}; see its javadoc. */
   private ImmutableList<AnnotationMirror> annotationsToCopy(
       Element autoValueType,
       Element typeOrMethod,
@@ -322,56 +322,24 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   }
 
   /**
-   * Returns the contents of a {@code Class[]}-typed field in an annotation.
-   *
-   * <p>This method is needed because directly reading the value of such a field from an
-   * AnnotationMirror throws: <pre>
-   * javax.lang.model.type.MirroredTypeException: Attempt to access Class object for TypeMirror Foo.
-   * </pre>
-   *
-   * @param element The element on which the annotation is present. e.g. the class being processed
-   *     by AutoValue.
-   * @param annotation The class of the annotation to read from., e.g. {@link
-   *     AutoValue.CopyAnnotations}.
-   * @param fieldName The name of the field to read, e.g. "exclude".
-   * @return a set of fully-qualified names of classes appearing in 'fieldName' on 'annotation' on
-   *     'element'.
+   * Returns the contents of the {@code AutoValue.CopyAnnotations.exclude} element, as a list of
+   * strings that are fully-qualified class names.
    */
-  private ImmutableSet<String> getFieldOfClasses(
-      Element element,
-      Class<? extends Annotation> annotation,
-      String fieldName) {
-    TypeElement annotationElement = elementUtils().getTypeElement(annotation.getCanonicalName());
-    if (annotationElement == null) {
-      // This can happen if the annotation is on the -processorpath but not on the -classpath.
+  private Set<String> getExcludedClasses(Element element) {
+    Optional<AnnotationMirror> maybeAnnotation =
+        getAnnotationMirror(element, COPY_ANNOTATIONS_NAME);
+    if (!maybeAnnotation.isPresent()) {
       return ImmutableSet.of();
     }
-    TypeMirror annotationMirror = annotationElement.asType();
 
-    for (AnnotationMirror annot : element.getAnnotationMirrors()) {
-      if (!typeUtils().isSameType(annot.getAnnotationType(), annotationMirror)) {
-        continue;
-      }
-      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
-          annot.getElementValues().entrySet()) {
-        if (fieldName.contentEquals(entry.getKey().getSimpleName())) {
-          ImmutableSet.Builder<String> result = ImmutableSet.builder();
-
-          @SuppressWarnings("unchecked")
-          List<AnnotationValue> annotationsToCopy =
-              (List<AnnotationValue>) entry.getValue().getValue();
-          for (AnnotationValue annotationValue : annotationsToCopy) {
-            String qualifiedName =
-                ((QualifiedNameable) ((DeclaredType) annotationValue.getValue()).asElement())
-                    .getQualifiedName()
-                    .toString();
-            result.add(qualifiedName);
-          }
-          return result.build();
-        }
-      }
-    }
-    return ImmutableSet.of();
+    @SuppressWarnings("unchecked")
+    List<AnnotationValue> excludedClasses = (List<AnnotationValue>)
+        AnnotationMirrors.getAnnotationValue(maybeAnnotation.get(), "exclude").getValue();
+    return excludedClasses
+        .stream()
+        .map(annotationValue -> MoreTypes.asTypeElement((DeclaredType) annotationValue.getValue()))
+        .map(typeElement -> typeElement.getQualifiedName().toString())
+        .collect(toSet());
   }
 
   private static Set<String> getAnnotationsMarkedWithInherited(Element element) {
@@ -611,7 +579,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       Iterable<ExecutableElement> methods) {
     ImmutableSetMultimap.Builder<ExecutableElement, String> result = ImmutableSetMultimap.builder();
     for (ExecutableElement method : methods) {
-      result.putAll(method, getFieldOfClasses(method, AutoValue.CopyAnnotations.class, "exclude"));
+      result.putAll(method, getExcludedClasses(method));
     }
     return result.build();
   }
@@ -638,7 +606,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         return false;
       }
       TypeElement parentElement = (TypeElement) typeUtils().asElement(parentMirror);
-      if (MoreElements.isAnnotationPresent(parentElement, AutoValue.class)) {
+      if (hasAnnotationMirror(parentElement, AUTO_VALUE_NAME)) {
         return true;
       }
       type = parentElement;

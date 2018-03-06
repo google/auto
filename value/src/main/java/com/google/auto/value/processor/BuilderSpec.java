@@ -16,12 +16,12 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.hasAnnotationMirror;
+import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
 
-import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import com.google.auto.value.AutoValue;
 import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
@@ -76,7 +76,7 @@ class BuilderSpec {
   Optional<Builder> getBuilder() {
     Optional<TypeElement> builderTypeElement = Optional.empty();
     for (TypeElement containedClass : ElementFilter.typesIn(autoValueClass.getEnclosedElements())) {
-      if (MoreElements.isAnnotationPresent(containedClass, AutoValue.Builder.class)) {
+      if (hasAnnotationMirror(containedClass, AUTO_VALUE_BUILDER_NAME)) {
         if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
           errorReporter.reportError(
               "@AutoValue.Builder can only apply to a class or an interface", containedClass);
