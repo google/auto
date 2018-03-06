@@ -16,13 +16,12 @@
 package com.google.auto.value.extension.memoized;
 
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.auto.common.BasicAnnotationProcessor;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
@@ -36,7 +35,7 @@ import javax.lang.model.element.ExecutableElement;
 
 /**
  * An annotation {@link Processor} that reports errors for {@link Memoized @Memoized} methods that
- * are not inside {@link AutoValue}-annotated classes.
+ * are not inside {@code AutoValue}-annotated classes.
  */
 @AutoService(Processor.class)
 public final class MemoizedValidator extends BasicAnnotationProcessor {
@@ -67,7 +66,7 @@ public final class MemoizedValidator extends BasicAnnotationProcessor {
     public Set<Element> process(
         SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
       for (ExecutableElement method : methodsIn(elementsByAnnotation.values())) {
-        if (!isAnnotationPresent(method.getEnclosingElement(), AutoValue.class)) {
+        if (!isAutoValue(method.getEnclosingElement())) {
           messager.printMessage(
               ERROR,
               "@Memoized methods must be declared only in @AutoValue classes",
@@ -76,6 +75,15 @@ public final class MemoizedValidator extends BasicAnnotationProcessor {
         }
       }
       return ImmutableSet.of();
+    }
+
+    private static boolean isAutoValue(Element element) {
+      return element
+          .getAnnotationMirrors()
+          .stream()
+          .map(annotation -> MoreTypes.asTypeElement(annotation.getAnnotationType()))
+          .anyMatch(type ->
+              type.getQualifiedName().contentEquals("com.google.auto.value.AutoValue"));
     }
   }
 }

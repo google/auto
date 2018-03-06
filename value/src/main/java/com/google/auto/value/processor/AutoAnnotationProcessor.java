@@ -16,11 +16,11 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
+import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
-import com.google.auto.value.AutoAnnotation;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -38,6 +38,7 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -53,6 +54,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -64,13 +66,9 @@ import javax.tools.JavaFileObject;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @AutoService(Processor.class)
+@SupportedAnnotationTypes(AUTO_ANNOTATION_NAME)
 public class AutoAnnotationProcessor extends AbstractProcessor {
   public AutoAnnotationProcessor() {}
-
-  @Override
-  public Set<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(AutoAnnotation.class.getName());
-  }
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
@@ -95,10 +93,12 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     return new AbortProcessingException();
   }
 
+  private Elements elementUtils;
   private Types typeUtils;
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    elementUtils = processingEnv.getElementUtils();
     typeUtils = processingEnv.getTypeUtils();
     boolean claimed =
         (annotations.size() == 1
@@ -106,7 +106,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
                 .iterator()
                 .next()
                 .getQualifiedName()
-                .contentEquals(AutoAnnotation.class.getName()));
+                .contentEquals(AUTO_ANNOTATION_NAME));
     if (claimed) {
       process(roundEnv);
       return true;
@@ -116,8 +116,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private void process(RoundEnvironment roundEnv) {
+    TypeElement autoAnnotation = elementUtils.getTypeElement(AUTO_ANNOTATION_NAME);
     Collection<? extends Element> annotatedElements =
-        roundEnv.getElementsAnnotatedWith(AutoAnnotation.class);
+        roundEnv.getElementsAnnotatedWith(autoAnnotation);
     List<ExecutableElement> methods = ElementFilter.methodsIn(annotatedElements);
     if (!SuperficialValidation.validateElements(methods) || methodsAreOverloaded(methods)) {
       return;
@@ -179,7 +180,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private String getGeneratedTypeName() {
-    return generatedAnnotation(processingEnv.getElementUtils(), processingEnv.getSourceVersion())
+    return generatedAnnotation(elementUtils, processingEnv.getSourceVersion())
         .map(generatedAnnotation -> TypeEncoder.encode(generatedAnnotation.asType()))
         .orElse(null);
   }
@@ -388,7 +389,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
         ? typeUtils.boxedClass((PrimitiveType) arrayElementType).asType()
         : arrayElementType;
     TypeElement javaUtilCollection =
-        processingEnv.getElementUtils().getTypeElement(Collection.class.getCanonicalName());
+        elementUtils.getTypeElement(Collection.class.getCanonicalName());
     DeclaredType collectionOfElement =
         typeUtils.getDeclaredType(javaUtilCollection, wrappedArrayElementType);
     return typeUtils.isAssignable(parameterType, collectionOfElement);
@@ -400,8 +401,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
    * type, for example to convert {@code Collection<Integer>} into {@code int[]}.
    */
   private Set<Class<?>> wrapperTypesUsedInCollections(ExecutableElement method) {
-    TypeElement javaUtilCollection =
-        processingEnv.getElementUtils().getTypeElement(Collection.class.getName());
+    TypeElement javaUtilCollection = elementUtils.getTypeElement(Collection.class.getName());
     ImmutableSet.Builder<Class<?>> usedInCollections = ImmutableSet.builder();
     for (Class<?> wrapper : Primitives.allWrapperTypes()) {
       DeclaredType collectionOfWrapper =
@@ -417,7 +417,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private TypeMirror getTypeMirror(Class<?> c) {
-    return processingEnv.getElementUtils().getTypeElement(c.getName()).asType();
+    return elementUtils.getTypeElement(c.getName()).asType();
   }
 
   private static boolean isGwtCompatible(TypeElement annotationElement) {

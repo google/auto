@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.auto.value.processor.ClassNames.AUTO_ONE_OF_NAME;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -24,7 +25,6 @@ import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
-import com.google.auto.value.AutoOneOf;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.Processor;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -58,17 +59,18 @@ import javax.lang.model.type.TypeMirror;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
+@SupportedAnnotationTypes(AUTO_ONE_OF_NAME)
 @SupportedOptions("com.google.auto.value.OmitIdentifiers")
 public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   public AutoOneOfProcessor() {
-    super(AutoOneOf.class);
+    super(AUTO_ONE_OF_NAME);
   }
 
   @Override
   void processType(TypeElement autoOneOfType) {
     if (autoOneOfType.getKind() != ElementKind.CLASS) {
       errorReporter().abortWithError(
-          "@" + AutoOneOf.class.getName() + " only applies to classes", autoOneOfType);
+          "@" + AUTO_ONE_OF_NAME + " only applies to classes", autoOneOfType);
     }
     checkModifiersIfNested(autoOneOfType);
     DeclaredType kindMirror = mirrorForKindType(autoOneOfType);
@@ -122,7 +124,7 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
 
   private DeclaredType mirrorForKindType(TypeElement autoOneOfType) {
     Optional<AnnotationMirror> oneOfAnnotation =
-        MoreElements.getAnnotationMirror(autoOneOfType, AutoOneOf.class).toJavaUtil();
+        getAnnotationMirror(autoOneOfType, AUTO_ONE_OF_NAME);
     if (!oneOfAnnotation.isPresent()) {
       // This shouldn't happen unless the compilation environment is buggy,
       // but it has happened in the past and can crash the compiler.
@@ -235,10 +237,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
         // that overrides it. This shows up in AutoValueTest.LukesBase for example.
         // The compilation will fail anyway because the generated concrete classes won't
         // implement this alien method.
-        String message =
-            "Abstract methods in @" + AutoOneOf.class.getSimpleName()
-            + " classes must be non-void with no parameters";
-        errorReporter().reportWarning(message, method);
+        errorReporter().reportWarning(
+            "Abstract methods in @AutoOneOf classes must be non-void with no parameters",
+            method);
       }
     }
     errorReporter().abortIfAnyError();

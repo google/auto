@@ -16,7 +16,6 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
-import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -31,7 +30,6 @@ import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -64,6 +62,7 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
@@ -72,7 +71,7 @@ import javax.tools.JavaFileObject;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
-  private final Class<? extends Annotation> annotationClass;
+  private final String annotationClassName;
 
   /**
    * Qualified names of {@code @AutoValue} or {@code AutoOneOf} classes that we attempted to process
@@ -81,10 +80,14 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    */
   private final List<String> deferredTypeNames = new ArrayList<>();
 
-  AutoValueOrOneOfProcessor(Class<? extends Annotation> annotationClass) {
-    this.annotationClass = annotationClass;
+  AutoValueOrOneOfProcessor(String annotationClassName) {
+    this.annotationClassName = annotationClassName;
   }
 
+  /** The annotation we are processing, {@code AutoValue} or {@code AutoOneOf}. */
+  private TypeElement annotationType;
+  /** The simple name of {@link #annotationType}. */
+  private String simpleAnnotationName;
   private ErrorReporter errorReporter;
 
   @Override
@@ -103,11 +106,6 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   final Elements elementUtils() {
     return processingEnv.getElementUtils();
-  }
-
-  @Override
-  public final Set<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(annotationClass.getName());
   }
 
   @Override
@@ -236,6 +234,17 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    annotationType = elementUtils().getTypeElement(annotationClassName);
+    if (annotationType == null) {
+      // This should not happen. If the annotation type is not found, how did the processor get
+      // triggered?
+      processingEnv.getMessager().printMessage(
+          Diagnostic.Kind.ERROR,
+          "Did not process @" + annotationClassName
+              + " because the annotation class was not found");
+      return false;
+    }
+    simpleAnnotationName = annotationType.getSimpleName().toString();
     List<TypeElement> deferredTypes = deferredTypeNames.stream()
         .map(name -> elementUtils().getTypeElement(name))
         .collect(toList());
@@ -245,14 +254,14 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       // was in deferredTypes.
       for (TypeElement type : deferredTypes) {
         errorReporter.reportError(
-            "Did not generate @" + annotationClass.getSimpleName() + " class for " +
+            "Did not generate @" + simpleAnnotationName + " class for " +
                 type.getQualifiedName() + " because it references undefined types",
             type);
       }
       return false;
     }
     Collection<? extends Element> annotatedElements =
-        roundEnv.getElementsAnnotatedWith(annotationClass);
+        roundEnv.getElementsAnnotatedWith(annotationType);
     List<TypeElement> types = new ImmutableList.Builder<TypeElement>()
         .addAll(deferredTypes)
         .addAll(ElementFilter.typesIn(annotatedElements))
@@ -274,7 +283,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       } catch (RuntimeException e) {
         String trace = Throwables.getStackTraceAsString(e);
         errorReporter.reportError(
-            "@" + annotationClass.getSimpleName() + " processor threw an exception: " + trace,
+            "@" + simpleAnnotationName + " processor threw an exception: " + trace,
             type);
         throw e;
       }
@@ -426,13 +435,10 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       String name = allPrefixed ? nameWithoutPrefix(methodName) : methodName;
       ExecutableElement old = map.put(name, method);
       if (old != null) {
-        errorReporter.reportError(
-            "More than one @" + annotationClass.getSimpleName() + " property called " + name,
-            method);
+        String message = "More than one @" + simpleAnnotationName + " property called " + name;
+        errorReporter.reportError(message, method);
         if (reportedDups.add(name)) {
-          errorReporter.reportError(
-              "More than one @" + annotationClass.getSimpleName() + " property called " + name,
-              old);
+          errorReporter.reportError(message, old);
         }
       }
     }
@@ -494,17 +500,17 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     if (enclosingKind.isClass() || enclosingKind.isInterface()) {
       if (type.getModifiers().contains(Modifier.PRIVATE)) {
         errorReporter.abortWithError(
-            "@" + annotationClass.getSimpleName() + " class must not be private", type);
+            "@" + simpleAnnotationName + " class must not be private", type);
       } else if (Visibility.effectiveVisibilityOfElement(type).equals(Visibility.PRIVATE)) {
         // The previous case, where the class itself is private, is much commoner so it deserves
         // its own error message, even though it would be caught by the test here too.
         errorReporter.abortWithError(
-            "@" + annotationClass.getSimpleName() + " class must not be nested in a private class",
+            "@" + simpleAnnotationName + " class must not be nested in a private class",
             type);
       }
       if (!type.getModifiers().contains(Modifier.STATIC)) {
         errorReporter.abortWithError(
-            "Nested @" + annotationClass.getSimpleName() + " class must be static", type);
+            "Nested @" + simpleAnnotationName + " class must be static", type);
       }
     }
     // In principle type.getEnclosingElement() could be an ExecutableElement (for a class
@@ -606,7 +612,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         warnAboutPrimitiveArrays(autoValueClass, getter);
       } else {
         errorReporter.reportError(
-            "An @" + annotationClass.getSimpleName() + " class cannot define an array-valued"
+            "An @" + simpleAnnotationName + " class cannot define an array-valued"
                 + " property unless it is a primitive array", getter);
       }
     }
@@ -614,8 +620,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   private void warnAboutPrimitiveArrays(TypeElement autoValueClass, ExecutableElement getter) {
     boolean suppressed = false;
-    com.google.common.base.Optional<AnnotationMirror> maybeAnnotation =
-        getAnnotationMirror(getter, SuppressWarnings.class);
+    Optional<AnnotationMirror> maybeAnnotation =
+        getAnnotationMirror(getter, "java.lang.SuppressWarnings");
     if (maybeAnnotation.isPresent()) {
       AnnotationValue listValue = getAnnotationValue(maybeAnnotation.get(), "value");
       suppressed = listValue.accept(new ContainsMutableVisitor(), null);
@@ -629,7 +635,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       // class itself, and we include extra text in the error message that shows the full name of
       // the inherited method.
       String warning =
-          "An @" + annotationClass.getSimpleName() + " property that is a primitive array returns "
+          "An @" + simpleAnnotationName + " property that is a primitive array returns "
               + "the original array, which can therefore be modified by the caller. If this OK, "
               + "you can suppress this warning with @SuppressWarnings(\"mutable\"). Otherwise, you "
               + "should replace the property with an immutable type, perhaps a simple wrapper "
@@ -694,6 +700,20 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     } else {
       return typeParameters.stream().map(e -> "?").collect(joining(", ", "<", ">"));
     }
+  }
+
+  static Optional<AnnotationMirror> getAnnotationMirror(Element element, String annotationName) {
+    for (AnnotationMirror annotation : element.getAnnotationMirrors()) {
+      TypeElement annotationElement = MoreTypes.asTypeElement(annotation.getAnnotationType());
+      if (annotationElement.getQualifiedName().contentEquals(annotationName)) {
+        return Optional.of(annotation);
+      }
+    }
+    return Optional.empty();
+  }
+
+  static boolean hasAnnotationMirror(Element element, String annotationName) {
+    return getAnnotationMirror(element, annotationName).isPresent();
   }
 
   final void writeSourceFile(String className, String text, TypeElement originatingType) {
