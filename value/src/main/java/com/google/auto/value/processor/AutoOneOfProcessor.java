@@ -110,10 +110,12 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     vars.generatedClass = TypeSimplifier.simpleNameOf(subclass);
     vars.types = processingEnv.getTypeUtils();
     vars.propertyToKind = propertyToKind;
-    Set<ObjectMethod> methodsToGenerate = determineObjectMethodsToGenerate(methods);
-    vars.toString = methodsToGenerate.contains(ObjectMethod.TO_STRING);
-    vars.equals = methodsToGenerate.contains(ObjectMethod.EQUALS);
-    vars.hashCode = methodsToGenerate.contains(ObjectMethod.HASH_CODE);
+    Map<ObjectMethod, ExecutableElement> methodsToGenerate =
+        determineObjectMethodsToGenerate(methods);
+    vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
+    vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
+    vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
+    vars.equalsParameterType = equalsParameterType(methodsToGenerate);
     defineVarsForType(autoOneOfType, vars, propertyMethods, kindGetter);
 
     String text = vars.toText();

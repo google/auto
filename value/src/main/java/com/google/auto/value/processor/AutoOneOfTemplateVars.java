@@ -41,6 +41,13 @@ class AutoOneOfTemplateVars extends TemplateVars {
   /** Whether to generate a toString() method. */
   Boolean toString;
 
+  /**
+   * A string representing the parameter type declaration of the equals(Object) method, including
+   * any annotations. If {@link #equals} is false, this field is ignored (but it must still be
+   * non-null).
+   */
+  String equalsParameterType;
+
   /** The type utilities returned by {@link ProcessingEnvironment#getTypeUtils()}. */
   Types types;
 

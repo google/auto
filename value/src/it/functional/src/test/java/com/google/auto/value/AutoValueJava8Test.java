@@ -31,6 +31,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -511,5 +512,42 @@ public class AutoValueJava8Test {
     FunkyNullable explicitNull = FunkyNullable.builder().setFoo(null).build();
     FunkyNullable implicitNull = FunkyNullable.builder().build();
     assertThat(explicitNull).isEqualTo(implicitNull);
+  }
+
+  @AutoValue
+  abstract static class EqualsNullable {
+    @Target({ElementType.TYPE_USE, ElementType.TYPE_PARAMETER})
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Nullable {}
+
+    abstract String foo();
+
+    static EqualsNullable create(String foo) {
+      return new AutoValue_AutoValueJava8Test_EqualsNullable(foo);
+    }
+
+    @Override
+    public abstract boolean equals(@Nullable Object x);
+
+    @Override
+    public abstract int hashCode();
+  }
+
+  /**
+   * Tests that a type annotation on the parameter of {@code equals(Object)} is copied into the
+   * implementation class.
+   */
+  @Test
+  public void testEqualsNullable() throws ReflectiveOperationException {
+    if (BugDetector.typeVisitorDropsAnnotations()) {
+      System.err.println("TYPE VISITORS DO NOT SEE TYPE ANNOTATIONS, SKIPPING TEST");
+      return;
+    }
+    EqualsNullable x = EqualsNullable.create("foo");
+    Class<? extends EqualsNullable> implClass = x.getClass();
+    Method equals = implClass.getDeclaredMethod("equals", Object.class);
+    AnnotatedType[] parameterTypes = equals.getAnnotatedParameterTypes();
+    assertThat(parameterTypes[0].isAnnotationPresent(EqualsNullable.Nullable.class))
+        .isTrue();
   }
 }
