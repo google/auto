@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.ServiceConfigurationError;
@@ -222,10 +223,12 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     vars.types = processingEnv.getTypeUtils();
     vars.identifiers =
         !processingEnv.getOptions().containsKey("com.google.auto.value.OmitIdentifiers");
-    Set<ObjectMethod> methodsToGenerate = determineObjectMethodsToGenerate(methods);
-    vars.toString = methodsToGenerate.contains(ObjectMethod.TO_STRING);
-    vars.equals = methodsToGenerate.contains(ObjectMethod.EQUALS);
-    vars.hashCode = methodsToGenerate.contains(ObjectMethod.HASH_CODE);
+    Map<ObjectMethod, ExecutableElement> methodsToGenerate =
+        determineObjectMethodsToGenerate(methods);
+    vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
+    vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
+    vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
+    vars.equalsParameterType = equalsParameterType(methodsToGenerate);
     defineVarsForType(type, vars, toBuilderMethods, propertyMethods, builder);
 
     // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.

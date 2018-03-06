@@ -112,7 +112,7 @@ final class $generatedClass {
   #if ($equals)
 
     @Override
-    public boolean equals(Object x) {
+    public boolean equals($equalsParameterType x) {
       if (x instanceof $origClass) {
         $origClass$wildcardTypes that = ($origClass$wildcardTypes) x;
         return this.${kindGetter}() == that.${kindGetter}()

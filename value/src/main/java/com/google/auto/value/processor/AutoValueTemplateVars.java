@@ -46,6 +46,13 @@ class AutoValueTemplateVars extends TemplateVars {
   Boolean toString;
 
   /**
+   * A string representing the parameter type declaration of the equals(Object) method, including
+   * any annotations. If {@link #equals} is false, this field is ignored (but it must still be
+   * non-null).
+   */
+  String equalsParameterType;
+
+  /**
    * Whether to include identifiers in strings in the generated code. If false, exception messages
    * will not mention properties by name, and {@code toString()} will include neither property
    * names nor the name of the {@code @AutoValue} class.

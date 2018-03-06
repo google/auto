@@ -125,7 +125,7 @@ $a
 #if ($equals)
 
   @Override
-  public boolean equals(`java.lang.Object` o) {
+  public boolean equals($equalsParameterType o) {
     if (o == this) {
       return true;
     }

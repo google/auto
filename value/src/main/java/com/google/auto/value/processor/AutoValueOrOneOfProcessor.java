@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -33,7 +34,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -411,9 +412,14 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         }
         break;
       case 1:
-        if (name.equals("equals")
-            && method.getParameters().get(0).asType().toString().equals("java.lang.Object")) {
-          return ObjectMethod.EQUALS;
+        if (name.equals("equals")) {
+          TypeMirror param = getOnlyElement(method.getParameters()).asType();
+          if (param.getKind().equals(TypeKind.DECLARED)) {
+            TypeElement paramType = MoreTypes.asTypeElement(param);
+            if (paramType.getQualifiedName().contentEquals("java.lang.Object")) {
+              return ObjectMethod.EQUALS;
+            }
+          }
         }
         break;
       default:
@@ -541,20 +547,37 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   }
 
   /**
-   * Given a list of all methods defined in or inherited by a class, returns a set indicating
-   * which of equals, hashCode, and toString should be generated.
+   * Given a list of all methods defined in or inherited by a class, returns a map indicating
+   * which of equals, hashCode, and toString should be generated. Each value in the map is
+   * the method that will be overridden by the generated method, which might be a method in
+   * {@code Object} or an abstract method in the {@code @AutoValue} class or an ancestor.
    */
-  static Set<ObjectMethod> determineObjectMethodsToGenerate(Set<ExecutableElement> methods) {
-    Set<ObjectMethod> methodsToGenerate = EnumSet.noneOf(ObjectMethod.class);
+  static Map<ObjectMethod, ExecutableElement>
+      determineObjectMethodsToGenerate(Set<ExecutableElement> methods) {
+    Map<ObjectMethod, ExecutableElement> methodsToGenerate = new EnumMap<>(ObjectMethod.class);
     for (ExecutableElement method : methods) {
       ObjectMethod override = objectMethodToOverride(method);
       boolean canGenerate = method.getModifiers().contains(Modifier.ABSTRACT)
           || isJavaLangObject((TypeElement) method.getEnclosingElement());
       if (!override.equals(ObjectMethod.NONE) && canGenerate) {
-        methodsToGenerate.add(override);
+        methodsToGenerate.put(override, method);
       }
     }
     return methodsToGenerate;
+  }
+
+  /**
+   * Returns the encoded parameter type of the {@code equals(Object)} method that is to be
+   * generated, or an empty string if the method is not being generated. The parameter type
+   * includes any type annotations, for example {@code @Nullable}.
+   */
+  static String equalsParameterType(Map<ObjectMethod, ExecutableElement> methodsToGenerate) {
+    ExecutableElement equals = methodsToGenerate.get(ObjectMethod.EQUALS);
+    if (equals == null) {
+      return "";  // this will not be referenced because no equals method will be generated
+    }
+    TypeMirror parameterType = equals.getParameters().get(0).asType();
+    return TypeEncoder.encodeWithAnnotations(parameterType);
   }
 
   /**
