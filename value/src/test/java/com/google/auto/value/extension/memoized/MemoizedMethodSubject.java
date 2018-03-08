@@ -19,6 +19,7 @@ package com.google.auto.value.extension.memoized;
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
+import com.google.auto.value.extension.memoized.processor.MemoizeExtension;
 import com.google.auto.value.processor.AutoValueProcessor;
 import com.google.common.collect.ImmutableList;
 import com.google.common.truth.FailureMetadata;

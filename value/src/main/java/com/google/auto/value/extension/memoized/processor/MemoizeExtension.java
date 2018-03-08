@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.value.extension.memoized;
+package com.google.auto.value.extension.memoized.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.value.extension.memoized.processor.ClassNames.MEMOIZED_NAME;
+import static com.google.auto.value.extension.memoized.processor.MemoizedValidator.getAnnotationMirror;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.Iterables.filter;
@@ -67,7 +68,7 @@ import javax.tools.Diagnostic.Kind;
 @AutoService(AutoValueExtension.class)
 public final class MemoizeExtension extends AutoValueExtension {
   private static final ImmutableSet<String> DO_NOT_PULL_DOWN_ANNOTATIONS =
-      ImmutableSet.of(Override.class.getCanonicalName(), Memoized.class.getCanonicalName());
+      ImmutableSet.of(Override.class.getCanonicalName(), MEMOIZED_NAME);
 
   private static final ClassName LAZY_INIT =
       ClassName.get("com.google.errorprone.annotations.concurrent", "LazyInit");
@@ -89,7 +90,7 @@ public final class MemoizeExtension extends AutoValueExtension {
   private static ImmutableSet<ExecutableElement> memoizedMethods(Context context) {
     ImmutableSet.Builder<ExecutableElement> memoizedMethods = ImmutableSet.builder();
     for (ExecutableElement method : methodsIn(context.autoValueClass().getEnclosedElements())) {
-      if (isAnnotationPresent(method, Memoized.class)) {
+      if (getAnnotationMirror(method, MEMOIZED_NAME).isPresent()) {
         memoizedMethods.add(method);
       }
     }

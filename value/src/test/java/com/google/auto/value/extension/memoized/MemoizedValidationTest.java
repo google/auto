@@ -19,6 +19,7 @@ import static com.google.auto.value.extension.memoized.MemoizedMethodSubjectFact
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
 
+import com.google.auto.value.extension.memoized.processor.MemoizedValidator;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;

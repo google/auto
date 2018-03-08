@@ -725,6 +725,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     }
   }
 
+  // TODO(emcmanus,ronshapiro): move to auto-common
   static Optional<AnnotationMirror> getAnnotationMirror(Element element, String annotationName) {
     for (AnnotationMirror annotation : element.getAnnotationMirrors()) {
       TypeElement annotationElement = MoreTypes.asTypeElement(annotation.getAnnotationType());
