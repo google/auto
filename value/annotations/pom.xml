@@ -25,13 +25,12 @@
   </parent>
 
   <groupId>com.google.auto.value</groupId>
-  <artifactId>auto-value-pom-aggregator</artifactId>
+  <artifactId>auto-value-annotations</artifactId>
   <version>HEAD-SNAPSHOT</version>
-  <name>AutoValue</name>
+  <name>AutoValue Annotations</name>
   <description>
     Immutable value-type code generation for Java 1.6+.
   </description>
-  <packaging>pom</packaging>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -39,19 +38,38 @@
     <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
-
-  <modules>
-    <module>annotations</module>
-    <module>processor</module>
-  </modules>
-
   <build>
+    <sourceDirectory>../src/main/java</sourceDirectory>
     <plugins>
       <plugin>
-        <!-- Used to run the functional tests -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>com/google/auto/value/*</include>
+            <include>com/google/auto/value/extension/memoized/*</include>
+          </includes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-invoker-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>disable-java8-doclint</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <additionalparam>-Xdoclint:none</additionalparam>
+      </properties>
+    </profile>
+  </profiles>
 </project>
