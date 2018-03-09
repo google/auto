@@ -28,6 +28,11 @@
   <dependencies>
     <dependency>
       <groupId>com.google.auto.value</groupId>
+      <artifactId>auto-value-annotations</artifactId>
+      <version>@project.version@</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value</artifactId>
       <version>@project.version@</version>
     </dependency>
