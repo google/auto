@@ -19,9 +19,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.google.auto</groupId>
-    <artifactId>auto-parent</artifactId>
-    <version>6</version>
+    <groupId>com.google.auto.value</groupId>
+    <artifactId>auto-value-parent</artifactId>
+    <version>HEAD-SNAPSHOT</version>
   </parent>
 
   <groupId>com.google.auto.value</groupId>

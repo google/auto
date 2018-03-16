@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 /**
  * Simple package-less value type for tests.
  *
- * @see PackagelessValueTypeTest
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @AutoValue
