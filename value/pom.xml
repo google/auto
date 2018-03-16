@@ -25,9 +25,9 @@
   </parent>
 
   <groupId>com.google.auto.value</groupId>
-  <artifactId>auto-value-pom-aggregator</artifactId>
+  <artifactId>auto-value-parent</artifactId>
   <version>HEAD-SNAPSHOT</version>
-  <name>AutoValue</name>
+  <name>AutoValue Parent</name>
   <description>
     Immutable value-type code generation for Java 1.6+.
   </description>
@@ -43,15 +43,7 @@
   <modules>
     <module>annotations</module>
     <module>processor</module>
+    <module>src/it/functional</module>
+    <module>src/it/gwtserializer</module>
   </modules>
-
-  <build>
-    <plugins>
-      <plugin>
-        <!-- Used to run the functional tests -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-invoker-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 </project>

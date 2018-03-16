@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 /**
  * Simple value type for tests.
  *
- * @see SimpleValueTypeTest
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @AutoValue
