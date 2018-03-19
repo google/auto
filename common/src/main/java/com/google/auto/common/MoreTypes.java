@@ -80,6 +80,21 @@ public final class MoreTypes {
     }
   }
 
+  /**
+   * Returns an {@link Equivalence} that can be used to compare types. The standard way to compare
+   * types is {@link javax.lang.model.util.Types#isSameType Types.isSameType}, but this alternative
+   * may be preferred in a number of cases:
+   *
+   * <ul>
+   * <li>If you don't have an instance of {@code Types}.
+   * <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
+   *     of types using {@link java.util.HashSet} with {@link Equivalence#wrap()}.
+   * <li>If you want distinct type variables to be considered equal if they have the same names
+   *     and bounds.
+   * <li>If you want wildcard types to compare equal if they have the same bounds. {@code
+   *     Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
+   * </ul>
+   */
   public static Equivalence<TypeMirror> equivalence() {
     return TypeEquivalence.INSTANCE;
   }
