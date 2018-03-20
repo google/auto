@@ -28,7 +28,7 @@ How do I...
     *   ... [let my builder **accumulate** values for a collection-valued
         property (not require them all at once)?](#accumulate)
     *   ... [accumulate values for a collection-valued property, without
-        **breaking the chain**?](#add)
+        **"breaking the chain"**?](#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
 *   ... [access nested builders while building?](#nested_builders)

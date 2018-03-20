@@ -18,13 +18,13 @@ How do I...
 *   ... [perform other **validation**?](#validate)
 *   ... [use a property of a **mutable** type?](#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](#custom)
-*   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
-*   ... [have multiple **create** methods, or name it/them
+*   ... [have multiple **`create`** methods, or name it/them
     differently?](#create)
+*   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
 *   ... [have AutoValue also implement abstract methods from my
     **supertypes**?](#supertypes)
 *   ... [use AutoValue with a **generic** class?](#generic)
-*   ... [make my class Java- or GWT- **serializable**?](#serialize)
+*   ... [make my class Java- or GWT\-**serializable**?](#serialize)
 *   ... [apply an **annotation** to a generated **field**?](#annotate_field)
 *   ... [use AutoValue to **implement** an **annotation** type?](#annotation)
 *   ... [also include **setter** (mutator) methods?](#setters)
@@ -249,7 +249,7 @@ directly in your own hand-written class or in a supertype.
 There's nothing to it: just add type parameters to your class and to your call
 to the generated constructor.
 
-## <a name="serialize"></a>... make my class Java- or GWT-serializable?
+## <a name="serialize"></a>... make my class Java- or GWT\-serializable?
 
 Just add `implements Serializable` or the `@GwtCompatible(serializable = true)`
 annotation (respectively) to your hand-written class; it (as well as any
