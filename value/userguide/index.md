@@ -174,13 +174,13 @@ How do I...
 *   ... [perform other **validation**?](howto.md#validate)
 *   ... [use a property of a **mutable** type?](howto.md#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](howto.md#custom)
-*   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)
-*   ... [have multiple **create** methods, or name it/them
+*   ... [have multiple **`create`** methods, or name it/them
     differently?](howto.md#create)
+*   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)
 *   ... [have AutoValue also implement abstract methods from my
     **supertypes**?](howto.md#supertypes)
 *   ... [use AutoValue with a **generic** class?](howto.md#generic)
-*   ... [make my class Java- or GWT- **serializable**?](howto.md#serialize)
+*   ... [make my class Java- or GWT\-**serializable**?](howto.md#serialize)
 *   ... [apply an **annotation** to a generated
     **field**?](howto.md#annotate_field)
 *   ... [use AutoValue to **implement** an **annotation**
@@ -196,7 +196,9 @@ How do I...
     API?](howto.md#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract
     class?](howto.md#interface)
-*   ... [**memoize** derived properties?](howto.md#memoize)
+*   ... [**memoize** ("cache") derived properties?](howto.md#memoize)
+*   ... [memoize the result of `hashCode` or
+    `toString`?](howto.md#memoize_hash_tostring)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
 
