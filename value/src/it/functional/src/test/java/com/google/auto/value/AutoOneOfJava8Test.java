@@ -62,10 +62,6 @@ public class AutoOneOfJava8Test {
    */
   @Test
   public void equalsNullable() throws ReflectiveOperationException {
-    if (BugDetector.typeVisitorDropsAnnotations()) {
-      System.err.println("TYPE VISITORS DO NOT SEE TYPE ANNOTATIONS, SKIPPING TEST");
-      return;
-    }
     EqualsNullable x = EqualsNullable.ofThing("foo");
     Class<? extends EqualsNullable> c = x.getClass();
     Method equals = c.getMethod("equals", Object.class);
