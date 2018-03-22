@@ -31,6 +31,7 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
@@ -100,7 +101,7 @@ final class TypeEncoder {
    */
   static String encodeWithAnnotations(TypeMirror type) {
     StringBuilder sb = new StringBuilder();
-    return type.accept(ANNOTATED_ENCODING_TYPE_VISITOR, sb).toString();
+    return ANNOTATED_ENCODING_TYPE_VISITOR.visit2(type, sb).toString();
   }
 
   /**
@@ -186,12 +187,28 @@ final class TypeEncoder {
    */
   private static class EncodingTypeVisitor
       extends SimpleTypeVisitor8<StringBuilder, StringBuilder> {
+    /**
+     * Equivalent to {@code visit(type, sb)} or {@code type.accept(sb)},
+     * except that it fixes a bug with javac versions up to JDK 8, whereby if the type is a
+     * {@code DeclaredType} then the visitor is called with a version of the type where any
+     * annotations have been lost. We can't override {@code visit} because it is final.
+     */
+    StringBuilder visit2(TypeMirror type, StringBuilder sb) {
+      if (type.getKind().equals(TypeKind.DECLARED)) {
+        // There's no point in using MoreTypes.asDeclared here, and in fact we can't, because it
+        // uses a visitor, so it would trigger the bug we're working around.
+        return visitDeclared((DeclaredType) type, sb);
+      } else {
+        return visit(type, sb);
+      }
+    }
+
     @Override protected StringBuilder defaultAction(TypeMirror type, StringBuilder sb) {
       return sb.append(type);
     }
 
     @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
-      return visit(type.getComponentType(), sb).append("[]");
+      return visit2(type.getComponentType(), sb).append("[]");
     }
 
     @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
@@ -212,7 +229,7 @@ final class TypeEncoder {
         for (TypeMirror argument : arguments) {
           sb.append(sep);
           sep = ", ";
-          visit(argument, sb);
+          visit2(argument, sb);
         }
         sb.append(">");
       }
@@ -224,10 +241,10 @@ final class TypeEncoder {
       TypeMirror superBound = type.getSuperBound();
       if (superBound != null) {
         sb.append(" super ");
-        visit(superBound, sb);
+        visit2(superBound, sb);
       } else if (extendsBound != null) {
         sb.append(" extends ");
-        visit(extendsBound, sb);
+        visit2(extendsBound, sb);
       }
       return sb;
     }
@@ -268,7 +285,7 @@ final class TypeEncoder {
      * array type itself, while {@code @Bar Foo[]} would be an annotation on the component type.
      */
     @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
-      visit(type.getComponentType(), sb);
+      visit2(type.getComponentType(), sb);
       List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
       if (!annotationMirrors.isEmpty()) {
         sb.append(" ");

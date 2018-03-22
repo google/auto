@@ -539,10 +539,6 @@ public class AutoValueJava8Test {
    */
   @Test
   public void testEqualsNullable() throws ReflectiveOperationException {
-    if (BugDetector.typeVisitorDropsAnnotations()) {
-      System.err.println("TYPE VISITORS DO NOT SEE TYPE ANNOTATIONS, SKIPPING TEST");
-      return;
-    }
     EqualsNullable x = EqualsNullable.create("foo");
     Class<? extends EqualsNullable> implClass = x.getClass();
     Method equals = implClass.getDeclaredMethod("equals", Object.class);
