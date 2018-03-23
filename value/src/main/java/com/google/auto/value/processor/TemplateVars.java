@@ -44,10 +44,11 @@ import java.util.jar.JarFile;
  * of the fields have been assigned, the {@link #toText()} method returns the result of substituting
  * them into the template.
  *
- * <p>The subclass must be a direct subclass of this class. Fields cannot be static unless they are
- * also final. They cannot be private, though they can be package-private if the class is in the
- * same package as this class. They cannot be primitive or null, so that there is a clear indication
- * when a field has not been set.
+ * <p>The subclass may be a direct subclass of this class or a more distant descendant. Every field
+ * in the starting class and its ancestors up to this class will be included. Fields cannot be
+ * static unless they are also final. They cannot be private, though they can be package-private if
+ * the class is in the same package as this class. They cannot be primitive or null, so that there
+ * is a clear indication when a field has not been set.
  *
  * @author Éamonn McManus
  */
@@ -57,14 +58,20 @@ abstract class TemplateVars {
   private final ImmutableList<Field> fields;
 
   TemplateVars() {
-    if (getClass().getSuperclass() != TemplateVars.class) {
-      throw new IllegalArgumentException("Class must extend TemplateVars directly");
-    }
-    this.fields = getFields(getClass().getDeclaredFields());
+    this.fields = getFields(getClass());
   }
 
-  private static ImmutableList<Field> getFields(Field[] declaredFields) {
+  private static ImmutableList<Field> getFields(Class<?> c) {
     ImmutableList.Builder<Field> fieldsBuilder = ImmutableList.builder();
+    while (c != TemplateVars.class) {
+      addFields(fieldsBuilder, c.getDeclaredFields());
+      c = c.getSuperclass();
+    }
+    return fieldsBuilder.build();
+  }
+
+  private static void addFields(
+      ImmutableList.Builder<Field> fieldsBuilder, Field[] declaredFields) {
     for (Field field : declaredFields) {
       if (field.isSynthetic() || isStaticFinal(field)) {
         continue;
@@ -80,7 +87,6 @@ abstract class TemplateVars {
       }
       fieldsBuilder.add(field);
     }
-    return fieldsBuilder.build();
   }
 
   /**

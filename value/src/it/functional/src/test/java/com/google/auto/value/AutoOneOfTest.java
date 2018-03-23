@@ -20,6 +20,8 @@ import static org.junit.Assert.fail;
 
 import com.google.common.testing.EqualsTester;
 import java.io.Serializable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -414,5 +416,50 @@ public class AutoOneOfTest {
   public void reservedWordProperty() {
     LetterOrPackage pkg = LetterOrPackage.ofPackage("pacquet");
     assertThat(pkg.toString()).isEqualTo("LetterOrPackage{package=pacquet}");
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface CopyTest {
+    int value();
+  }
+
+  @AutoOneOf(AnnotationNotCopied.Kind.class)
+  @CopyTest(23)
+  public abstract static class AnnotationNotCopied {
+    public enum Kind {ACE}
+    public abstract Kind getKind();
+    public abstract String ace();
+
+    public static AnnotationNotCopied ace(String ace) {
+      return AutoOneOf_AutoOneOfTest_AnnotationNotCopied.ace(ace);
+    }
+  }
+
+  @Test
+  public void classAnnotationsNotCopiedByDefault() {
+    assertThat(AnnotationNotCopied.class.isAnnotationPresent(CopyTest.class)).isTrue();
+    AnnotationNotCopied ace = AnnotationNotCopied.ace("ace");
+    assertThat(ace.getClass().isAnnotationPresent(CopyTest.class)).isFalse();
+  }
+
+  @AutoOneOf(AnnotationCopied.Kind.class)
+  @CopyTest(23)
+  @AutoValue.CopyAnnotations
+  public abstract static class AnnotationCopied {
+    public enum Kind {ACE}
+    public abstract Kind getKind();
+    public abstract String ace();
+
+    public static AnnotationCopied ace(String ace) {
+      return AutoOneOf_AutoOneOfTest_AnnotationCopied.ace(ace);
+    }
+  }
+
+  @Test
+  public void classAnnotationsCopiedIfCopyAnnotations() {
+    assertThat(AnnotationCopied.class.isAnnotationPresent(CopyTest.class)).isTrue();
+    AnnotationCopied ace = AnnotationCopied.ace("ace");
+    assertThat(ace.getClass().isAnnotationPresent(CopyTest.class)).isTrue();
+    assertThat(ace.getClass().getAnnotation(CopyTest.class).value()).isEqualTo(23);
   }
 }

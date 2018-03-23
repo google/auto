@@ -66,6 +66,12 @@ final class $generatedClass {
 
 #end
 
+  #foreach ($a in $annotations)
+
+  $a
+
+  #end
+
   // Parent class that each implementation will inherit from.
   private abstract static class Parent_$formalTypes extends $origClass$actualTypes {
 
@@ -81,6 +87,13 @@ final class $generatedClass {
   }
 
 #foreach ($p in $props)
+
+
+  #foreach ($a in $annotations)
+
+  $a
+
+  #end
 
   // Implementation when the contained property is "${p}".
   private static final class Impl_$p$formalTypes extends Parent_$actualTypes {

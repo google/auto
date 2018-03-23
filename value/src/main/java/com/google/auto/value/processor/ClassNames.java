@@ -23,9 +23,10 @@ package com.google.auto.value.processor;
 final class ClassNames {
   private ClassNames() {}
 
-  static final String AUTO_ANNOTATION_NAME = "com.google.auto.value.AutoAnnotation";
-  static final String AUTO_ONE_OF_NAME = "com.google.auto.value.AutoOneOf";
-  static final String AUTO_VALUE_NAME = "com.google.auto.value.AutoValue";
+  static final String AUTO_VALUE_PACKAGE_NAME = "com.google.auto.value.";
+  static final String AUTO_ANNOTATION_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoAnnotation";
+  static final String AUTO_ONE_OF_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoOneOf";
+  static final String AUTO_VALUE_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoValue";
   static final String AUTO_VALUE_BUILDER_NAME = AUTO_VALUE_NAME + ".Builder";
   static final String COPY_ANNOTATIONS_NAME = AUTO_VALUE_NAME + ".CopyAnnotations";
 }
