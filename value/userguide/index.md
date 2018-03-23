@@ -199,6 +199,8 @@ How do I...
 *   ... [**memoize** ("cache") derived properties?](howto.md#memoize)
 *   ... [memoize the result of `hashCode` or
     `toString`?](howto.md#memoize_hash_tostring)
+*   ... [make a class where only one of its properties is ever
+    set?](howto.md#oneof)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
 

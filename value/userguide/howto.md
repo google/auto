@@ -39,6 +39,7 @@ How do I...
 *   ... [**memoize** ("cache") derived properties?](#memoize)
 *   ... [memoize the result of `hashCode` or
     `toString`?](#memoize_hash_tostring)
+*   ... [make a class where only one of its properties is ever set?](#oneof)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -425,4 +426,108 @@ abstract class Foo {
   public abstract String toString();
 }
 ```
+
+## <a name="oneof"></a>... make a class where only one of its properties is ever set?
+
+Often, the best way to do this is using inheritance. Although one
+`@AutoValue` class can't inherit from another, two `@AutoValue` classes can
+inherit from a common parent.
+
+```java
+public abstract class StringOrInteger {
+  public abstract String representation();
+
+  public static StringOrInteger ofString(String s) {
+    return new AutoValue_StringOrInteger_StringValue(s);
+  }
+
+  public static StringOrInteger ofInteger(int i) {
+    return new AutoValue_StringOrInteger_IntegerValue(i);
+  }
+
+  @AutoValue
+  abstract class StringValue extends StringOrInteger {
+    abstract String string();
+
+    @Override
+    public String representation() {
+      return '"' + string() + '"';
+    }
+  }
+
+  @AutoValue
+  abstract class IntegerValue extends StringOrInteger {
+    abstract int integer();
+
+    @Override
+    public String representation() {
+      return Integer.toString(integer());
+    }
+  }
+}
+```
+
+So any `StringOrInteger` instance is actually either a `StringValue` or an
+`IntegerValue`. Clients only care about the `representation()` method, so they
+don't need to know which it is.
+
+But if clients of your class may want to take different actions depending on
+which property is set, there is an alternative to `@AutoValue` called
+`@AutoOneOf`. This effectively creates a
+[*tagged union*](https://en.wikipedia.org/wiki/Tagged_union).
+Here is `StringOrInteger` written using `@AutoOneOf`, with the
+`representation()` method moved to a separate client class:
+
+```java
+@AutoOneOf(StringOrInteger.Kind.class)
+public abstract class StringOrInteger {
+  public enum Kind {STRING, INTEGER}
+  public abstract Kind getKind();
+
+  public abstract String string();
+
+  public abstract int integer();
+
+  public static StringOrInteger ofString(String s) {
+    return AutoOneOf_StringOrInteger.string(s);
+  }
+
+  public static StringOrInteger ofInteger(int i) {
+    return AutoOneOf_StringOrInteger.integer(i);
+  }
+}
+
+public class Client {
+  public String representation(StringOrInteger stringOrInteger) {
+    switch (stringOrInteger.getKind()) {
+      case STRING:
+        return '"' + stringOrInteger.string() + '"';
+      case INTEGER:
+        return Integer.toString(stringOrInteger.integer());
+    }
+    throw new AssertionError(stringOrInteger.getKind());
+  }
+}
+```
+
+Switching on an enum like this can lead to more robust code than using
+`instanceof` checks, especially if a tool like [Error
+Prone](http://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can alert you
+if you add a new variant without updating all your switches. (On the other hand,
+if nothing outside your class references `getKind()`, you should consider if a
+solution using inheritance might be better.)
+
+There must be an enum such as `Kind`, though it doesn't have to be called `Kind`
+and it doesn't have to be nested inside the `@AutoOneOf` class. There must be an
+abstract method returning the enum, though it doesn't have to be called
+`getKind()`. For every value of the enum, there must be an abstract method with
+the same name (ignoring case and underscores). An `@AutoOneOf` class called
+`Foo` will then get a generated class called `AutoOneOf_Foo` that has a static
+factory method for each property, with the same name. In the example, the
+`STRING` value in the enum corresponds to the `string()` property and to the
+`AutoOneOf_StringOrInteger.string` factory method.
+
+Properties in an `@AutoOneOf` class cannot be null. Instead of a
+`StringOrInteger` with a `@Nullable String`, you probably want a
+`@Nullable StringOrInteger` or an `Optional<StringOrInteger>`.
 
