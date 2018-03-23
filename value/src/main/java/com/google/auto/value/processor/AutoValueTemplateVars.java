@@ -31,26 +31,12 @@ import javax.lang.model.util.Types;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @SuppressWarnings("unused")  // the fields in this class are only read via reflection
-class AutoValueTemplateVars extends TemplateVars {
+class AutoValueTemplateVars extends AutoValueOrOneOfTemplateVars {
   /**
    * The properties defined by the parent class's abstract methods. The elements of this set are
    * in the same order as the original abstract method declarations in the AutoValue class.
    */
   ImmutableSet<AutoValueProcessor.Property> props;
-
-  /** Whether to generate an equals(Object) method. */
-  Boolean equals;
-  /** Whether to generate a hashCode() method. */
-  Boolean hashCode;
-  /** Whether to generate a toString() method. */
-  Boolean toString;
-
-  /**
-   * A string representing the parameter type declaration of the equals(Object) method, including
-   * any annotations. If {@link #equals} is false, this field is ignored (but it must still be
-   * non-null).
-   */
-  String equalsParameterType;
 
   /**
    * Whether to include identifiers in strings in the generated code. If false, exception messages
@@ -63,11 +49,6 @@ class AutoValueTemplateVars extends TemplateVars {
   Types types;
 
   /**
-   * The encoding of the {@code Generated} class. Empty if the class is not available.
-   */
-  String generated;
-
-  /**
    * The encoding of the {@code @GwtCompatible} annotation to add to this class, or an empty
    * string if there is none. A non-empty value will look something like
    * {@code "@`com.google.common.annotations.GwtCompatible`(serializable = true)"}, where the
@@ -75,27 +56,9 @@ class AutoValueTemplateVars extends TemplateVars {
    */
   String gwtCompatibleAnnotation;
 
-  /**
-   * The full spelling of any annotation to add to this class, or an empty list if there are none. A
-   * non-empty value might look something like {@code
-   * "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
-   */
-  ImmutableList<String> annotations;
-
   /** The text of the serialVersionUID constant, or empty if there is none. */
   String serialVersionUID;
 
-  /**
-   * The package of the class with the {@code @AutoValue} annotation and its generated subclass.
-   */
-  String pkg;
-  /**
-   * The name of the class with the {@code @AutoValue} annotation, including containing
-   * classes but not including the package name.
-   */
-  String origClass;
-  /** The simple name of the class with the {@code @AutoValue} annotation. */
-  String simpleClassName;
   /** The simple name of the generated subclass. */
   String subclass;
   /**
@@ -109,24 +72,6 @@ class AutoValueTemplateVars extends TemplateVars {
    * will generate subclasses)
    */
   Boolean isFinal = false;
-
-  /**
-   * The formal generic signature of the class with the {@code @AutoValue} annotation and its
-   * generated subclass. This is empty, or contains type variables with optional bounds,
-   * for example {@code <K, V extends K>}.
-   */
-  String formalTypes;
-  /**
-   * The generic signature used by the generated subclass for its superclass reference.
-   * This is empty, or contains only type variables with no bounds, for example
-   * {@code <K, V>}.
-   */
-  String actualTypes;
-  /**
-   * The generic signature in {@link #actualTypes} where every variable has been replaced
-   * by a wildcard, for example {@code <?, ?>}.
-   */
-  String wildcardTypes;
 
   /**
    * The name of the builder type as it should appear in source code, or empty if there is no

@@ -15,7 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.value.processor.ClassNames.AUTO_ONE_OF_NAME;
 import static java.util.stream.Collectors.toMap;
@@ -27,10 +26,10 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -50,13 +49,11 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 /**
- * Javac annotation processor (compiler plugin) for one-of types; user code never references this
- * class.
- *
- * @see AutoOneOf
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * Javac annotation processor (compiler plugin) for {@linkplain com.google.auto.value.AutoOneOf
+ * one-of} types; user code never references this class.
  *
  * @author Éamonn McManus
+ * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_ONE_OF_NAME)
@@ -104,18 +101,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
 
     String subclass = generatedClassName(autoOneOfType, "AutoOneOf_");
     AutoOneOfTemplateVars vars = new AutoOneOfTemplateVars();
-    vars.pkg = TypeSimplifier.packageNameOf(autoOneOfType);
-    vars.origClass = TypeSimplifier.classNameOf(autoOneOfType);
-    vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
     vars.generatedClass = TypeSimplifier.simpleNameOf(subclass);
-    vars.types = processingEnv.getTypeUtils();
     vars.propertyToKind = propertyToKind;
-    Map<ObjectMethod, ExecutableElement> methodsToGenerate =
-        determineObjectMethodsToGenerate(methods);
-    vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
-    vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
-    vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    vars.equalsParameterType = equalsParameterType(methodsToGenerate);
+    defineSharedVarsForType(autoOneOfType, methods, vars);
     defineVarsForType(autoOneOfType, vars, propertyMethods, kindGetter);
 
     String text = vars.toText();
@@ -252,25 +240,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       AutoOneOfTemplateVars vars,
       ImmutableSet<ExecutableElement> propertyMethods,
       ExecutableElement kindGetter) {
-    vars.generated =
-        generatedAnnotation(elementUtils(), processingEnv.getSourceVersion())
-            .map(annotation -> TypeEncoder.encode(annotation.asType()))
-            .orElse("");
-    Map<ExecutableElement, ImmutableList<AnnotationMirror>> annotatedPropertyMethods =
-        emptyListForEachMethod(propertyMethods);
-    vars.props = propertySet(type, annotatedPropertyMethods);
-    vars.formalTypes = TypeEncoder.formalTypeParametersString(type);
-    vars.actualTypes = TypeSimplifier.actualTypeParametersString(type);
-    vars.wildcardTypes = wildcardTypeParametersString(type);
+    vars.props = propertySet(type, propertyMethods, ImmutableListMultimap.of());
     vars.kindGetter = kindGetter.getSimpleName().toString();
     vars.kindType = TypeEncoder.encode(kindGetter.getReturnType());
-  }
-
-  Map<ExecutableElement, ImmutableList<AnnotationMirror>> emptyListForEachMethod(
-      ImmutableSet<ExecutableElement> propertyMethods) {
-    return propertyMethods
-        .stream()
-        .collect(toMap(m -> m, m -> ImmutableList.of(), (a, b) -> a, () -> new LinkedHashMap<>()));
   }
 
   @Override

@@ -93,15 +93,25 @@ public class TemplateVarsTest {
     }
   }
 
-  static class SubSub extends HappyVars {}
+  static class SubHappyVars extends HappyVars {
+    Character character;
+
+    @Override Template parsedTemplate() {
+      return parsedTemplateForString(
+          "integer=$integer string=$string list=$list character=$character");
+    }
+  }
 
   @Test
   public void testSubSub() {
-    try {
-      new SubSub();
-      fail("Did not get expected exception");
-    } catch (IllegalArgumentException expected) {
-    }
+    SubHappyVars vars = new SubHappyVars();
+    vars.integer = 23;
+    vars.string = "wibble";
+    vars.list = ImmutableList.of(5, 17, 23);
+    vars.character = 'ß';
+    String expectedText = "integer=23 string=wibble list=[5, 17, 23] character=ß";
+    String actualText = vars.toText();
+    assertThat(actualText).isEqualTo(expectedText);
   }
 
   static class Private extends TemplateVars {
