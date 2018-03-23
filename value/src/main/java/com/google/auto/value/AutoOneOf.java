@@ -55,7 +55,9 @@ import java.lang.annotation.Target;
  *   throw new AssertionError();
  * }}</pre>
  *
- * <!-- TODO(emcmanus): replace this example with a link to yet-to-be-written documentation. -->
+ * <p>{@code @AutoOneOf} is explained in more detail in the
+ * <a href="https://github.com/google/auto/blob/master/value/userguide/howto.md#oneof">user
+ * guide</a>.
  *
  * @author Chris Nokleberg
  * @author Éamonn McManus
