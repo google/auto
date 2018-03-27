@@ -92,15 +92,19 @@ dependency to the
 [`annotationProcessorPaths`](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#annotationProcessorPaths)
 section.
 
-Gradle users should install the annotation processing plugin [as described in
-these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
+Gradle users can declare the dependencies in their `build.gradle` script:
 
 ```groovy
 dependencies {
-  compileOnly "com.google.auto.value:auto-value-annotations:1.6"
-  apt         "com.google.auto.value:auto-value:1.6"
+  // Use 'api' rather than 'compile' for Android or java-library projects.
+  compile             "com.google.auto.value:auto-value-annotations:1.6"
+  annotationProcessor "com.google.auto.value:auto-value:1.6"
 }
 ```
+
+Note: If you are using a version of Gradle prior to 4.6, you must apply an
+annotation processing plugin [as described in these instructions][tbroyer-apt]
+and use the `apt` configuration instead of `annotationProcessor`.
 
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
 
