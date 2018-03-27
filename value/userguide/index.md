@@ -76,19 +76,29 @@ Maven users should add the following to the project's `pom.xml` file:
 ```xml
 <dependency>
   <groupId>com.google.auto.value</groupId>
+  <artifactId>auto-value-annotations</artifactId>
+  <version>1.6</version>
+</dependency>
+<dependency>
+  <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.5.4</version>
+  <version>1.6</version>
   <scope>provided</scope>
 </dependency>
 ```
+
+Alternatively, instead of using the `provided` scope, you can add the second
+dependency to the
+[`annotationProcessorPaths`](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#annotationProcessorPaths)
+section.
 
 Gradle users should install the annotation processing plugin [as described in
 these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
 
 ```groovy
 dependencies {
-  compileOnly "com.google.auto.value:auto-value:1.5.4"
-  apt         "com.google.auto.value:auto-value:1.5.4"
+  compileOnly "com.google.auto.value:auto-value-annotations:1.6"
+  apt         "com.google.auto.value:auto-value:1.6"
 }
 ```
 
