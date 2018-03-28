@@ -102,6 +102,16 @@ dependencies {
 }
 ```
 
+Those using gradle for Android projects should use
+```groovy
+dependencies {
+  provided "com.google.auto.value:auto-value:1.2"
+  annotationProcessor "com.google.auto.value:auto-value:1.2"
+}
+```
+See https://bitbucket.org/hvisser/android-apt/wiki/Migration for more info about replacing apt with annotationProcessor in gradle for Android.
+
+
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
 
 
