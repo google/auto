@@ -103,8 +103,7 @@ dependencies {
 ```
 
 Note: If you are using a version of Gradle prior to 4.6, you must apply an
-annotation processing plugin [as described in these instructions][tbroyer-apt]
-and use the `apt` configuration instead of `annotationProcessor`.
+annotation processing plugin [as described in these instructions][tbroyer-apt].
 
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
 
