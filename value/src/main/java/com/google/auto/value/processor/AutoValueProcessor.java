@@ -204,6 +204,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     String subclass = generatedSubclassName(type, subclassDepth);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.isFinal = (subclassDepth == 0);
+    vars.modifiers = vars.isFinal ? "final " : "abstract ";
 
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, type.asType());
