@@ -34,6 +34,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -545,5 +546,64 @@ public class AutoValueJava8Test {
     AnnotatedType[] parameterTypes = equals.getAnnotatedParameterTypes();
     assertThat(parameterTypes[0].isAnnotationPresent(EqualsNullable.Nullable.class))
         .isTrue();
+  }
+
+  @AutoValue
+  abstract static class AnnotatedTypeParameter<@Nullable T> {
+    abstract @Nullable T thing();
+
+    static <@Nullable T> AnnotatedTypeParameter<T> create(T thing) {
+      return new AutoValue_AutoValueJava8Test_AnnotatedTypeParameter<T>(thing);
+    }
+  }
+
+  /**
+   * Tests that an annotation on a type parameter of an {@code @AutoValue} class is copied to
+   * the implementation class.
+   */
+  @Test
+  public void testTypeAnnotationCopiedToImplementation() throws ReflectiveOperationException {
+    @Nullable String nullableString = "blibby";
+    AnnotatedTypeParameter<@Nullable String> x = AnnotatedTypeParameter.create(nullableString);
+    Class<?> c = x.getClass();
+    assertThat(c.getTypeParameters()).hasLength(1);
+    TypeVariable<?> typeParameter = c.getTypeParameters()[0];
+    assertThat(typeParameter.getAnnotations())
+        .named(typeParameter.toString())
+        .asList()
+        .contains(nullable());
+  }
+
+  @AutoValue
+  abstract static class AnnotatedTypeParameterWithBuilder<@Nullable T> {
+    abstract @Nullable T thing();
+
+    static <@Nullable T> Builder<T> builder() {
+      return new AutoValue_AutoValueJava8Test_AnnotatedTypeParameterWithBuilder.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<@Nullable T> {
+      abstract Builder<T> setThing(T thing);
+      abstract AnnotatedTypeParameterWithBuilder<T> build();
+    }
+  }
+
+  /**
+   * Tests that an annotation on a type parameter of an {@code @AutoValue} builder is copied to
+   * the implementation class.
+   */
+  @Test
+  public void testTypeAnnotationOnBuilderCopiedToImplementation()
+      throws ReflectiveOperationException {
+    AnnotatedTypeParameterWithBuilder.Builder<@Nullable String> builder =
+        AnnotatedTypeParameterWithBuilder.builder();
+    Class<?> c = builder.getClass();
+    assertThat(c.getTypeParameters()).hasLength(1);
+    TypeVariable<?> typeParameter = c.getTypeParameters()[0];
+    assertThat(typeParameter.getAnnotations())
+        .named(typeParameter.toString())
+        .asList()
+        .contains(nullable());
   }
 }
