@@ -36,11 +36,11 @@ import java.lang.annotation.Target;
  *   public abstract String string();
  *   public abstract int integer();
  *
- *   public static StringOrInteger string(String s) {
+ *   public static StringOrInteger ofString(String s) {
  *     return AutoOneOf_StringOrInteger.string(s);
  *   }
  *
- *   public static StringOrInteger integer(int i) {
+ *   public static StringOrInteger ofInteger(int i) {
  *     return AutoOneOf_StringOrInteger.integer(i);
  *   }
  * }
