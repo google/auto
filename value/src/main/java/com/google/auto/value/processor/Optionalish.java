@@ -97,9 +97,8 @@ public class Optionalish {
   }
 
   /**
-   * Returns a string representing the method call to obtain the nullable version of this Optional.
-   * This will be something like {@code "fromNullable()"} or possibly {@code "ofNullable()"}.
-   * It does not have a final semicolon.
+   * Returns a string representing the method name to call to obtain the nullable version of
+   * this Optional. This will be something like {@code "fromNullable"} or {@code "ofNullable"}.
    *
    * <p>This method is public so that it can be referenced as {@code p.optional.nullable} from
    * templates.
