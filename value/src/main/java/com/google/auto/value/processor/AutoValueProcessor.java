@@ -371,10 +371,9 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   @Override
   Optional<String> nullableAnnotationForMethod(
       ExecutableElement propertyMethod, ImmutableList<AnnotationMirror> methodAnnotations) {
-    OptionalInt nullableAnnotationIndex = nullableAnnotationIndex(methodAnnotations);
-    if (nullableAnnotationIndex.isPresent()) {
-      ImmutableList<String> annotations = annotationStrings(methodAnnotations);
-      return Optional.of(annotations.get(nullableAnnotationIndex.getAsInt()));
+    Optional<String> nullableAnnotationList = nullableAnnotationIfInList(methodAnnotations);
+    if (nullableAnnotationList.isPresent()) {
+      return nullableAnnotationList;
     } else {
       List<? extends AnnotationMirror> typeAnnotations =
           propertyMethod.getReturnType().getAnnotationMirrors();
@@ -383,6 +382,15 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
               ? Optional.of("")
               : Optional.empty();
     }
+  }
+
+  public static Optional<String> nullableAnnotationIfInList(ImmutableList<AnnotationMirror> methodAnnotations) {
+    OptionalInt nullableAnnotationIndex = nullableAnnotationIndex(methodAnnotations);
+    if (nullableAnnotationIndex.isPresent()) {
+      ImmutableList<String> annotations = annotationStrings(methodAnnotations);
+      return Optional.of(annotations.get(nullableAnnotationIndex.getAsInt()));
+    }
+    return Optional.empty();
   }
 
   private static OptionalInt nullableAnnotationIndex(List<? extends AnnotationMirror> annotations) {

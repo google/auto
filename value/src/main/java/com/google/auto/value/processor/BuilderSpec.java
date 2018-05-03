@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.toList;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -34,12 +35,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -288,11 +291,13 @@ class BuilderSpec {
     private final String parameterTypeString;
     private final boolean primitiveParameter;
     private final String copyOf;
+    private final String nullableAnnotation;
 
     public PropertySetter(ExecutableElement setter, TypeMirror propertyType) {
       this.access = SimpleMethod.access(setter);
       this.name = setter.getSimpleName().toString();
-      TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
+      VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
+      TypeMirror parameterType = parameterElement.asType();
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
       Types typeUtils = processingEnv.getTypeUtils();
@@ -300,10 +305,26 @@ class BuilderSpec {
       boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
       if (sameType) {
         this.copyOf = null;
+        this.nullableAnnotation = "";
       } else {
         String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
-        String of = Optionalish.isOptional(propertyType) ? "of" : "copyOf";
+        Optionalish optional = Optionalish.createIfOptional(propertyType);
+        String nullableAnnotation = "";
+        String of;
+        if (optional != null) {
+          ImmutableList<AnnotationMirror> annotationMirrors = ImmutableList.copyOf(parameterElement.getAnnotationMirrors());
+          Optional<String> nullableAnnotationFromParam = AutoValueProcessor.nullableAnnotationIfInList(annotationMirrors);
+          if (nullableAnnotationFromParam.isPresent()) {
+            of = optional.getNullable();
+            nullableAnnotation = nullableAnnotationFromParam.get() + " ";
+          } else {
+            of = "of";
+          }
+        } else {
+          of = "copyOf";
+        }
         this.copyOf = rawTarget + "." + of + "(%s)";
+        this.nullableAnnotation = nullableAnnotation;
       }
     }
 
@@ -337,6 +358,10 @@ class BuilderSpec {
       return primitiveParameter;
     }
 
+    public String getNullableAnnotation() {
+      return nullableAnnotation;
+    }
+
     public String copy(AutoValueProcessor.Property property) {
       if (copyOf == null) {
         return property.toString();
@@ -345,6 +370,7 @@ class BuilderSpec {
       String copy = String.format(copyOf, property);
 
       // Add a null guard only in cases where we are using copyOf and the property is @Nullable.
+      // No guard for the @Nullable annotation case because from/ofNullable doesn't need it
       if (property.isNullable()) {
         copy = String.format("(%s == null ? null : %s)", property, copy);
       }
