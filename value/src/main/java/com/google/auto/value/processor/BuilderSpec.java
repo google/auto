@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.toList;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -41,6 +42,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -306,20 +308,16 @@ class BuilderSpec {
         this.nullableAnnotation = "";
       } else {
         String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
-        Optionalish optional = Optionalish.createIfOptional(propertyType, rawTarget);
+        Optionalish optional = Optionalish.createIfOptional(propertyType);
         String nullableAnnotation = "";
-        String of = null;
+        String of;
         if (optional != null) {
-          for (AnnotationMirror annotationMirror : parameterElement.getAnnotationMirrors()) {
-            AnnotationOutput annotationOutput = new AnnotationOutput(typeSimplifier);
-            String annotationName = annotationOutput.sourceFormForAnnotation(annotationMirror);
-            if (annotationName.equals("@Nullable") || annotationName.endsWith(".Nullable")) {
-              of = optional.getNullable();
-              nullableAnnotation = annotationName + " ";
-              break;
-            }
-          }
-          if (of == null) {
+          ImmutableList<AnnotationMirror> annotationMirrors = ImmutableList.copyOf(parameterElement.getAnnotationMirrors());
+          Optional<String> nullableAnnotationFromParam = AutoValueProcessor.nullableAnnotationIfInList(annotationMirrors);
+          if (nullableAnnotationFromParam.isPresent()) {
+            of = optional.getNullable();
+            nullableAnnotation = nullableAnnotationFromParam.get() + " ";
+          } else {
             of = "of";
           }
         } else {
