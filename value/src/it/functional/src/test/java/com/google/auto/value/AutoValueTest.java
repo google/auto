@@ -1512,6 +1512,54 @@ public class AutoValueTest {
   }
 
   @AutoValue
+  public abstract static class OptionalPropertyWithNullableBuilder {
+    public abstract String notOptional();
+
+    public abstract com.google.common.base.Optional<String> optional();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_OptionalPropertyWithNullableBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder notOptional(String s);
+
+      Builder optional(@Nullable String s);
+
+      OptionalPropertyWithNullableBuilder build();
+    }
+  }
+
+  @Test
+  public void testOmitOptionalWithNullableBuilder() {
+    OptionalPropertyWithNullableBuilder instance1 =
+        OptionalPropertyWithNullableBuilder.builder().notOptional("hello").build();
+    assertThat(instance1.notOptional()).isEqualTo("hello");
+    assertThat(instance1.optional()).isAbsent();
+
+    OptionalPropertyWithNullableBuilder instance2 =
+        OptionalPropertyWithNullableBuilder.builder().notOptional("hello").optional(null).build();
+    assertThat(instance2.notOptional()).isEqualTo("hello");
+    assertThat(instance2.optional()).isAbsent();
+    assertThat(instance1).isEqualTo(instance2);
+
+    OptionalPropertyWithNullableBuilder instance3 =
+        OptionalPropertyWithNullableBuilder.builder()
+            .notOptional("hello")
+            .optional("world")
+            .build();
+    assertThat(instance3.notOptional()).isEqualTo("hello");
+    assertThat(instance3.optional()).hasValue("world");
+
+    try {
+      OptionalPropertyWithNullableBuilder.builder().build();
+      fail("Expected IllegalStateException for unset non-Optional property");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
+  @AutoValue
   public abstract static class NullableOptionalPropertiesWithBuilder {
     @Nullable
     public abstract com.google.common.base.Optional<String> optionalString();
