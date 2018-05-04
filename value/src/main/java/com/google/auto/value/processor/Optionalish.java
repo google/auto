@@ -42,9 +42,11 @@ public class Optionalish {
       "java.util.OptionalLong");
 
   private final DeclaredType optionalType;
+  private final String className;
 
   private Optionalish(DeclaredType optionalType) {
     this.optionalType = optionalType;
+    this.className = MoreElements.asType(optionalType.asElement()).getQualifiedName().toString();
   }
 
   /**
@@ -89,8 +91,7 @@ public class Optionalish {
    * templates.
    */
   public String getEmpty() {
-    TypeElement typeElement = MoreElements.asType(optionalType.asElement());
-    String empty = typeElement.getQualifiedName().toString().startsWith("java.util.")
+    String empty = className.startsWith("java.util.")
         ? ".empty()"
         : ".absent()";
     return TypeEncoder.encodeRaw(optionalType) + empty;
@@ -106,6 +107,12 @@ public class Optionalish {
       default:
         throw new AssertionError("Wrong number of type arguments: " + optionalType);
     }
+  }
+
+  String ofNullable() {
+    return className.equals("java.util.Optional")
+        ? "ofNullable"
+        : "fromNullable";
   }
 
   private static final ImmutableMap<String, TypeKind> PRIMITIVE_TYPE_KINDS = ImmutableMap.of(

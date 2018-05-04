@@ -222,7 +222,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
      * but empty.
      */
     public final String getNullableAnnotation() {
-      return nullableAnnotation.map(s -> s + " ").orElse("");
+      return nullableAnnotation.orElse("");
     }
 
     public boolean isNullable() {
@@ -318,12 +318,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    * {@code @Nullable}, this method returns {@code Optional.of("")}, to indicate that the property
    * is nullable but the <i>method</i> isn't. The {@code @Nullable} annotation will instead appear
    * when the return type of the method is spelled out in the implementation.
-   *
-   * @param methodAnnotations the annotations to include on {@code propertyMethod}. This is
-   *     governed by the {@code AutoValue.CopyAnnotations} logic.
    */
-  abstract Optional<String> nullableAnnotationForMethod(
-      ExecutableElement propertyMethod, ImmutableList<AnnotationMirror> methodAnnotations);
+  abstract Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod);
 
   /**
    * Returns the ordered set of {@link Property} definitions for the given {@code @AutoValue} or
@@ -357,8 +353,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       ImmutableList<AnnotationMirror> annotationMirrors =
           annotatedPropertyMethods.get(propertyMethod);
       ImmutableList<String> annotations = annotationStrings(annotationMirrors);
-      Optional<String> nullableAnnotation =
-          nullableAnnotationForMethod(propertyMethod, annotationMirrors);
+      Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
       Property p = new Property(
           propertyName, identifier, propertyMethod, propertyType, annotations, nullableAnnotation);
       props.add(p);
@@ -394,8 +389,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   }
   
   /** Returns the spelling to be used in the generated code for the given list of annotations. */
-  static ImmutableList<String> annotationStrings(
-      ImmutableList<AnnotationMirror> annotations) {
+  static ImmutableList<String> annotationStrings(List<? extends AnnotationMirror> annotations) {
     // TODO(b/68008628): use ImmutableList.toImmutableList() when that works.
     return ImmutableList.copyOf(annotations
         .stream()

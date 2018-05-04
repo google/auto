@@ -242,9 +242,11 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
     @Override
     ${setter.access}${builderTypeName}${builderActualTypes} ##
-        ${setter.name}(${p.nullableAnnotation}$setter.parameterType $p) {
+        ${setter.name}(${setter.nullableAnnotation}$setter.parameterType $p) {
 
-      #if (!$setter.primitiveParameter && !$p.nullable)
+      ## Omit null check for primitive, or @Nullable, or if we are going to be calling a copy method
+      ## such as Optional.of, which will have its own null check if appropriate.
+      #if (!$setter.primitiveParameter && !$p.nullable && ${setter.copy($p)} == $p)
 
         #if ($identifiers)
 
