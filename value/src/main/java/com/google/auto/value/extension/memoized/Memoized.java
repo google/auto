@@ -43,7 +43,7 @@ import java.lang.annotation.Target;
  * returns {@code null}, the overriding method will throw a {@link NullPointerException}.
  *
  * <p>The overriding method uses
- * <a href="http://errorprone.info/bugpattern/DoubleCheckedLocking">double-checked locking</a> to
+ * <a href="https://errorprone.info/bugpattern/DoubleCheckedLocking">double-checked locking</a> to
  * ensure that the annotated method is called at most once.
  *
  * <h3>Example</h3>
