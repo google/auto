@@ -61,20 +61,20 @@
 ## A reminder that trailing ## here serves to delete the newline, which we don't want in the output.
 #macro (hashCodeExpression $p)
   #if ($p.kind == "LONG")
-    (int) ((this.$p >>> 32) ^ this.$p) ##
+    (int) (($p >>> 32) ^ $p) ##
   #elseif ($p.kind == "FLOAT")
-    Float.floatToIntBits(this.$p) ##
+    Float.floatToIntBits($p) ##
   #elseif ($p.kind == "DOUBLE")
-    (int) ((Double.doubleToLongBits(this.$p) >>> 32) ^ Double.doubleToLongBits(this.$p)) ##
+    (int) ((Double.doubleToLongBits($p) >>> 32) ^ Double.doubleToLongBits($p)) ##
   #elseif ($p.kind == "BOOLEAN")
-    this.$p ? 1231 : 1237 ##
+    $p ? 1231 : 1237 ##
   #elseif ($p.kind.primitive)
-    this.$p ##
+    $p ##
   #elseif ($p.kind == "ARRAY")
-    `java.util.Arrays`.hashCode(this.$p) ##
+    `java.util.Arrays`.hashCode($p) ##
   #elseif ($p.nullable)
-    (this.$p == null) ? 0 : this.${p}.hashCode() ##
+    ($p == null) ? 0 : ${p}.hashCode() ##
   #else
-    this.${p}.hashCode() ##
+    ${p}.hashCode() ##
   #end
 #end
