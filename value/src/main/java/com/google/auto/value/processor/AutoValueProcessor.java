@@ -45,6 +45,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -204,6 +205,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     String subclass = generatedSubclassName(type, subclassDepth);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.isFinal = (subclassDepth == 0);
+    vars.modifiers = vars.isFinal ? "final " : "abstract ";
 
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, type.asType());
@@ -368,19 +370,35 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   }
 
   @Override
-  Optional<String> nullableAnnotationForMethod(
-      ExecutableElement propertyMethod, ImmutableList<AnnotationMirror> methodAnnotations) {
-    OptionalInt nullableAnnotationIndex = nullableAnnotationIndex(methodAnnotations);
+  Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
+    return nullableAnnotationFor(propertyMethod, propertyMethod.getReturnType());
+  }
+
+  /**
+   * Returns an appropriate annotation spelling to indicate the nullability of an element. If the
+   * return value is a non-empty Optional, that indicates that the element is nullable, and the
+   * string should be used to annotate it. If the return value is an empty Optional, the element
+   * is not nullable. The return value can be {@code Optional.of("")}, which indicates that the
+   * element is nullable but that the nullability comes from a type annotation. In this case, the
+   * annotation will appear when the type is written, and must not be specified again. If the
+   * Optional contains a present non-empty string then that string will end with a space.
+   *
+   * @param element the element that might be {@code @Nullable}, either a method or a parameter.
+   * @param elementType the relevant type of the element: the return type for a method, or the
+   *     parameter type for a parameter.
+   */
+  static Optional<String> nullableAnnotationFor(Element element, TypeMirror elementType) {
+    List<? extends AnnotationMirror> typeAnnotations = elementType.getAnnotationMirrors();
+    if (nullableAnnotationIndex(typeAnnotations).isPresent()) {
+      return Optional.of("");
+    }
+    List<? extends AnnotationMirror> elementAnnotations = element.getAnnotationMirrors();
+    OptionalInt nullableAnnotationIndex = nullableAnnotationIndex(elementAnnotations);
     if (nullableAnnotationIndex.isPresent()) {
-      ImmutableList<String> annotations = annotationStrings(methodAnnotations);
-      return Optional.of(annotations.get(nullableAnnotationIndex.getAsInt()));
+      ImmutableList<String> annotations = annotationStrings(elementAnnotations);
+      return Optional.of(annotations.get(nullableAnnotationIndex.getAsInt()) + " ");
     } else {
-      List<? extends AnnotationMirror> typeAnnotations =
-          propertyMethod.getReturnType().getAnnotationMirrors();
-      return
-          nullableAnnotationIndex(typeAnnotations).isPresent()
-              ? Optional.of("")
-              : Optional.empty();
+      return Optional.empty();
     }
   }
 

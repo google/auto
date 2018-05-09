@@ -162,14 +162,15 @@ final class TypeEncoder {
       for (TypeParameterElement typeParameter : typeParameters) {
         sb.append(sep);
         sep = ", ";
-        appendTypeParameterWithBounds(sb, typeParameter);
+        appendTypeParameterWithBounds(typeParameter, sb);
       }
       return sb.append(">").toString();
     }
   }
 
   private static void appendTypeParameterWithBounds(
-      StringBuilder sb, TypeParameterElement typeParameter) {
+      TypeParameterElement typeParameter, StringBuilder sb) {
+    appendAnnotations(typeParameter.getAnnotationMirrors(), sb);
     sb.append(typeParameter.getSimpleName());
     String sep = " extends ";
     for (TypeMirror bound : typeParameter.getBounds()) {
@@ -178,6 +179,13 @@ final class TypeEncoder {
         sep = " & ";
         sb.append(encode(bound));
       }
+    }
+  }
+
+  private static void appendAnnotations(
+      List<? extends AnnotationMirror> annotationMirrors, StringBuilder sb) {
+    for (AnnotationMirror annotationMirror : annotationMirrors) {
+      sb.append(AnnotationOutput.sourceFormForAnnotation(annotationMirror)).append(" ");
     }
   }
 
@@ -307,13 +315,6 @@ final class TypeEncoder {
       }
       appendTypeArguments(type, sb);
       return sb;
-    }
-
-    private void appendAnnotations(
-        List<? extends AnnotationMirror> annotationMirrors, StringBuilder sb) {
-      for (AnnotationMirror annotationMirror : annotationMirrors) {
-        sb.append(AnnotationOutput.sourceFormForAnnotation(annotationMirror)).append(" ");
-      }
     }
   }
 

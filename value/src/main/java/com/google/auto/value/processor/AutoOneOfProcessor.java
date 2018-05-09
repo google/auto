@@ -25,7 +25,6 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -246,8 +245,7 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   }
 
   @Override
-  Optional<String> nullableAnnotationForMethod(
-      ExecutableElement propertyMethod, ImmutableList<AnnotationMirror> methodAnnotations) {
+  Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
     return Optional.empty();
   }
 

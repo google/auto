@@ -16,6 +16,7 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -34,8 +35,10 @@ import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -368,6 +371,54 @@ public class AutoValueJava8Test {
   }
 
   @AutoValue
+  public abstract static class OptionalPropertyWithNullableBuilder {
+    public abstract String notOptional();
+
+    public abstract Optional<String> optional();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_OptionalPropertyWithNullableBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder notOptional(String s);
+
+      Builder optional(@Nullable String s);
+
+      OptionalPropertyWithNullableBuilder build();
+    }
+  }
+
+  @Test
+  public void testOmitOptionalWithNullableBuilder() {
+    OptionalPropertyWithNullableBuilder instance1 =
+        OptionalPropertyWithNullableBuilder.builder().notOptional("hello").build();
+    assertThat(instance1.notOptional()).isEqualTo("hello");
+    assertThat(instance1.optional()).isEmpty();
+
+    OptionalPropertyWithNullableBuilder instance2 =
+        OptionalPropertyWithNullableBuilder.builder().notOptional("hello").optional(null).build();
+    assertThat(instance2.notOptional()).isEqualTo("hello");
+    assertThat(instance2.optional()).isEmpty();
+    assertThat(instance1).isEqualTo(instance2);
+
+    OptionalPropertyWithNullableBuilder instance3 =
+        OptionalPropertyWithNullableBuilder.builder()
+            .notOptional("hello")
+            .optional("world")
+            .build();
+    assertThat(instance3.notOptional()).isEqualTo("hello");
+    assertThat(instance3.optional()).hasValue("world");
+
+    try {
+      OptionalPropertyWithNullableBuilder.builder().build();
+      fail("Expected IllegalStateException for unset non-Optional property");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
+  @AutoValue
   public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> list();
     public abstract @Nullable T t();
@@ -496,6 +547,8 @@ public class AutoValueJava8Test {
 
     abstract @Nullable String foo();
 
+    abstract Optional<String> bar();
+
     static Builder builder() {
       return new AutoValue_AutoValueJava8Test_FunkyNullable.Builder();
     }
@@ -503,13 +556,14 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     interface Builder {
       Builder setFoo(@Nullable String foo);
+      Builder setBar(@Nullable String bar);
       FunkyNullable build();
     }
   }
 
   @Test
   public void testFunkyNullable() {
-    FunkyNullable explicitNull = FunkyNullable.builder().setFoo(null).build();
+    FunkyNullable explicitNull = FunkyNullable.builder().setFoo(null).setBar(null).build();
     FunkyNullable implicitNull = FunkyNullable.builder().build();
     assertThat(explicitNull).isEqualTo(implicitNull);
   }
@@ -545,5 +599,64 @@ public class AutoValueJava8Test {
     AnnotatedType[] parameterTypes = equals.getAnnotatedParameterTypes();
     assertThat(parameterTypes[0].isAnnotationPresent(EqualsNullable.Nullable.class))
         .isTrue();
+  }
+
+  @AutoValue
+  abstract static class AnnotatedTypeParameter<@Nullable T> {
+    abstract @Nullable T thing();
+
+    static <@Nullable T> AnnotatedTypeParameter<T> create(T thing) {
+      return new AutoValue_AutoValueJava8Test_AnnotatedTypeParameter<T>(thing);
+    }
+  }
+
+  /**
+   * Tests that an annotation on a type parameter of an {@code @AutoValue} class is copied to
+   * the implementation class.
+   */
+  @Test
+  public void testTypeAnnotationCopiedToImplementation() throws ReflectiveOperationException {
+    @Nullable String nullableString = "blibby";
+    AnnotatedTypeParameter<@Nullable String> x = AnnotatedTypeParameter.create(nullableString);
+    Class<?> c = x.getClass();
+    assertThat(c.getTypeParameters()).hasLength(1);
+    TypeVariable<?> typeParameter = c.getTypeParameters()[0];
+    assertThat(typeParameter.getAnnotations())
+        .named(typeParameter.toString())
+        .asList()
+        .contains(nullable());
+  }
+
+  @AutoValue
+  abstract static class AnnotatedTypeParameterWithBuilder<@Nullable T> {
+    abstract @Nullable T thing();
+
+    static <@Nullable T> Builder<T> builder() {
+      return new AutoValue_AutoValueJava8Test_AnnotatedTypeParameterWithBuilder.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<@Nullable T> {
+      abstract Builder<T> setThing(T thing);
+      abstract AnnotatedTypeParameterWithBuilder<T> build();
+    }
+  }
+
+  /**
+   * Tests that an annotation on a type parameter of an {@code @AutoValue} builder is copied to
+   * the implementation class.
+   */
+  @Test
+  public void testTypeAnnotationOnBuilderCopiedToImplementation()
+      throws ReflectiveOperationException {
+    AnnotatedTypeParameterWithBuilder.Builder<@Nullable String> builder =
+        AnnotatedTypeParameterWithBuilder.builder();
+    Class<?> c = builder.getClass();
+    assertThat(c.getTypeParameters()).hasLength(1);
+    TypeVariable<?> typeParameter = c.getTypeParameters()[0];
+    assertThat(typeParameter.getAnnotations())
+        .named(typeParameter.toString())
+        .asList()
+        .contains(nullable());
   }
 }

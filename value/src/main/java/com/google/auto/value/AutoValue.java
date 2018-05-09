@@ -86,6 +86,12 @@ public @interface AutoValue {
    *     {@link java.lang.annotation.Inherited} meta-annotation.
    * </ol>
    *
+   * <p>For historical reasons, annotations are always copied from an {@code @AutoValue} property
+   * method to its implementation, unless {@code @CopyAnnotations} is present and explicitly
+   * {@linkplain CopyAnnotations#exclude excludes} that annotation. But annotations are not copied
+   * from the {@code @AutoValue} class itself to its implementation unless {@code @CopyAnnotations}
+   * is present.
+   *
    * <p>When the <i>type</i> of an {@code @AutoValue} property method has annotations, those are
    * part of the type, so they are always copied to the implementation of the method.
    * {@code @CopyAnnotations} has no effect here. For example, suppose {@code @Confidential} is a

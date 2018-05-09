@@ -74,6 +74,12 @@ class AutoValueTemplateVars extends AutoValueOrOneOfTemplateVars {
   Boolean isFinal = false;
 
   /**
+   * The modifiers (for example {@code final} or {@code abstract}) for the generated subclass,
+   * followed by a space if they are not empty.
+   */
+  String modifiers;
+
+  /**
    * The name of the builder type as it should appear in source code, or empty if there is no
    * builder type. If class {@code Address} contains {@code @AutoValue.Builder} class Builder
    * then this will typically be {@code "Address.Builder"}.

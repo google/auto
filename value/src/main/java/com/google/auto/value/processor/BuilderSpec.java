@@ -40,6 +40,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -207,7 +208,8 @@ class BuilderSpec {
         String property = entry.getKey();
         ExecutableElement setter = entry.getValue();
         TypeMirror propertyType = getterToPropertyName.inverse().get(property).getReturnType();
-        setterBuilder.put(property, new PropertySetter(setter, propertyType));
+        setterBuilder.put(
+            property, new PropertySetter(setter, propertyType, processingEnv.getTypeUtils()));
       }
       vars.builderSetters = setterBuilder.build();
 
@@ -282,32 +284,29 @@ class BuilderSpec {
    * method {@code setFoo(Collection<String> foos)}. And, if {@code T} is {@code Optional},
    * it can have a setter with a type that can be copied to {@code T} through {@code Optional.of}.
    */
-  public class PropertySetter {
+  public static class PropertySetter {
     private final String access;
     private final String name;
     private final String parameterTypeString;
     private final boolean primitiveParameter;
+    private final String nullableAnnotation;
     private final String copyOf;
 
-    public PropertySetter(ExecutableElement setter, TypeMirror propertyType) {
+    PropertySetter(ExecutableElement setter, TypeMirror propertyType, Types typeUtils) {
       this.access = SimpleMethod.access(setter);
       this.name = setter.getSimpleName().toString();
-      TypeMirror parameterType = Iterables.getOnlyElement(setter.getParameters()).asType();
+      VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
+      TypeMirror parameterType = parameterElement.asType();
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
-      Types typeUtils = processingEnv.getTypeUtils();
-      TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
-      boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
-      if (sameType) {
-        this.copyOf = null;
-      } else {
-        String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
-        String of = Optionalish.isOptional(propertyType) ? "of" : "copyOf";
-        this.copyOf = rawTarget + "." + of + "(%s)";
-      }
+      Optional<String> maybeNullable =
+          AutoValueProcessor.nullableAnnotationFor(parameterElement, parameterType);
+      this.nullableAnnotation = maybeNullable.orElse("");
+      boolean nullable = maybeNullable.isPresent();
+      this.copyOf = copyOfString(propertyType, parameterType, typeUtils, nullable);
     }
 
-    private String parameterTypeString(ExecutableElement setter, TypeMirror parameterType) {
+    private static String parameterTypeString(ExecutableElement setter, TypeMirror parameterType) {
       if (setter.isVarArgs()) {
         TypeMirror componentType = MoreTypes.asArray(parameterType).getComponentType();
         // This is a bit ugly. It's OK to annotate just the component type, because if it is
@@ -319,6 +318,26 @@ class BuilderSpec {
       } else {
         return TypeEncoder.encodeWithAnnotations(parameterType);
       }
+    }
+
+    private static String copyOfString(
+        TypeMirror propertyType, TypeMirror parameterType, Types typeUtils, boolean nullable) {
+      TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
+      boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
+      if (sameType) {
+        return null;
+      }
+      String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
+      String of;
+      Optionalish optionalish = Optionalish.createIfOptional(propertyType);
+      if (optionalish == null) {
+        of = "copyOf";
+      } else if (nullable) {
+        of = optionalish.ofNullable();
+      } else {
+        of = "of";
+      }
+      return rawTarget + "." + of + "(%s)";
     }
 
     public String getAccess() {
@@ -335,6 +354,10 @@ class BuilderSpec {
 
     public boolean getPrimitiveParameter() {
       return primitiveParameter;
+    }
+
+    public String getNullableAnnotation() {
+      return nullableAnnotation;
     }
 
     public String copy(AutoValueProcessor.Property property) {

@@ -512,7 +512,7 @@ public class Client {
 
 Switching on an enum like this can lead to more robust code than using
 `instanceof` checks, especially if a tool like [Error
-Prone](http://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can alert you
+Prone](https://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can alert you
 if you add a new variant without updating all your switches. (On the other hand,
 if nothing outside your class references `getKind()`, you should consider if a
 solution using inheritance might be better.)
