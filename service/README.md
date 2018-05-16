@@ -47,7 +47,7 @@ In order to activate metadata generation you will need to include
 `auto-service-${version}.jar` in your build at compile time.
 
 In a Maven project, one would include the `auto-service` 
-artifact as an "optional" dependency:
+artifact as a "provided" dependency:
 
 ```xml
 <dependencies>
@@ -55,7 +55,7 @@ artifact as an "optional" dependency:
     <groupId>com.google.auto.service</groupId>
     <artifactId>auto-service</artifactId>
     <version>${version}</version>
-    <optional>true</optional>
+    <scope>provided</scope>
   </dependency>
 </dependencies>
 ```
