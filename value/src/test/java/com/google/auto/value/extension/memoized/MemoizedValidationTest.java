@@ -65,7 +65,7 @@ public class MemoizedValidationTest {
     assertThatMemoizeMethod("@Memoized String method(Object param) { return \"\"; }")
         .hasError("@Memoized methods cannot have parameters");
   }
-  
+
   @Test
   public void notInAutoValueClass() {
     JavaFileObject source =

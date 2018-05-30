@@ -12,7 +12,7 @@
  * the License.
  */
 /**
- * This package contains the annotation processor that implements the
- * {@link com.google.auto.value.AutoValue} API.
+ * This package contains the annotation processor that implements the {@link
+ * com.google.auto.value.AutoValue} API.
  */
 package com.google.auto.value.processor;

@@ -71,8 +71,8 @@ class BuilderSpec {
 
   /**
    * Determines if the {@code @AutoValue} class for this instance has a correct nested
-   * {@code @AutoValue.Builder} class or interface and return a representation of it in an
-   * {@code Optional} if so.
+   * {@code @AutoValue.Builder} class or interface and return a representation of it in an {@code
+   * Optional} if so.
    */
   Optional<Builder> getBuilder() {
     Optional<TypeElement> builderTypeElement = Optional.empty();
@@ -101,9 +101,7 @@ class BuilderSpec {
     }
   }
 
-  /**
-   * Representation of an {@code AutoValue.Builder} class or interface.
-   */
+  /** Representation of an {@code AutoValue.Builder} class or interface. */
   class Builder {
     private final TypeElement builderTypeElement;
     private ImmutableSet<ExecutableElement> toBuilderMethods;
@@ -114,9 +112,10 @@ class BuilderSpec {
 
     /**
      * Finds any methods in the set that return the builder type. If the builder has type parameters
-     * {@code <A, B>}, then the return type of the method must be {@code Builder<A, B>} with
-     * the same parameter names. We enforce elsewhere that the names and bounds of the builder
+     * {@code <A, B>}, then the return type of the method must be {@code Builder<A, B>} with the
+     * same parameter names. We enforce elsewhere that the names and bounds of the builder
      * parameters must be the same as those of the @AutoValue class. Here's a correct example:
+     *
      * <pre>
      * {@code @AutoValue abstract class Foo<A extends Number, B> {
      *   abstract int someProperty();
@@ -127,13 +126,15 @@ class BuilderSpec {
      * }}
      * </pre>
      *
-     * <p>We currently impose that there cannot be more than one such method.</p>
+     * <p>We currently impose that there cannot be more than one such method.
      */
     ImmutableSet<ExecutableElement> toBuilderMethods(
         Types typeUtils, Set<ExecutableElement> abstractMethods) {
 
       List<String> builderTypeParamNames =
-          builderTypeElement.getTypeParameters().stream()
+          builderTypeElement
+              .getTypeParameters()
+              .stream()
               .map(e -> e.getSimpleName().toString())
               .collect(toList());
 
@@ -142,10 +143,13 @@ class BuilderSpec {
         if (builderTypeElement.equals(typeUtils.asElement(method.getReturnType()))) {
           methods.add(method);
           DeclaredType returnType = MoreTypes.asDeclared(method.getReturnType());
-          List<String> typeArguments = returnType.getTypeArguments().stream()
-              .filter(t -> t.getKind().equals(TypeKind.TYPEVAR))
-              .map(t -> typeUtils.asElement(t).getSimpleName().toString())
-              .collect(toList());
+          List<String> typeArguments =
+              returnType
+                  .getTypeArguments()
+                  .stream()
+                  .filter(t -> t.getKind().equals(TypeKind.TYPEVAR))
+                  .map(t -> typeUtils.asElement(t).getSimpleName().toString())
+                  .collect(toList());
           if (!builderTypeParamNames.equals(typeArguments)) {
             errorReporter.reportError(
                 "Builder converter method should return "
@@ -169,27 +173,28 @@ class BuilderSpec {
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
       boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
-      Optional<BuilderMethodClassifier> optionalClassifier = BuilderMethodClassifier.classify(
-          builderMethods,
-          errorReporter,
-          processingEnv,
-          autoValueClass,
-          builderTypeElement,
-          getterToPropertyName,
-          autoValueHasToBuilder);
+      Optional<BuilderMethodClassifier> optionalClassifier =
+          BuilderMethodClassifier.classify(
+              builderMethods,
+              errorReporter,
+              processingEnv,
+              autoValueClass,
+              builderTypeElement,
+              getterToPropertyName,
+              autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
       }
       BuilderMethodClassifier classifier = optionalClassifier.get();
       Set<ExecutableElement> buildMethods = classifier.buildMethods();
       if (buildMethods.size() != 1) {
-        Set<? extends Element> errorElements = buildMethods.isEmpty()
-            ? ImmutableSet.of(builderTypeElement)
-            : buildMethods;
+        Set<? extends Element> errorElements =
+            buildMethods.isEmpty() ? ImmutableSet.of(builderTypeElement) : buildMethods;
         for (Element buildMethod : errorElements) {
           errorReporter.reportError(
               "Builder must have a single no-argument method returning "
-                  + autoValueClass + typeParamsString(),
+                  + autoValueClass
+                  + typeParamsString(),
               buildMethod);
         }
         return;
@@ -233,9 +238,9 @@ class BuilderSpec {
    * property called foo (defined by a method {@code T foo()} or {@code T getFoo()}) can have a
    * getter method in the builder with the same name ({@code foo()} or {@code getFoo()}) and a
    * return type of either {@code T} or {@code Optional<T>}. The {@code Optional<T>} form can be
-   * used to tell whether the property has been set. Here, {@code Optional<T>} can be either
-   * {@code java.util.Optional} or {@code com.google.common.base.Optional}. If {@code T} is {@code
-   * int}, {@code long}, or {@code double}, then instead of {@code Optional<T>} we can have {@code
+   * used to tell whether the property has been set. Here, {@code Optional<T>} can be either {@code
+   * java.util.Optional} or {@code com.google.common.base.Optional}. If {@code T} is {@code int},
+   * {@code long}, or {@code double}, then instead of {@code Optional<T>} we can have {@code
    * OptionalInt} etc. If {@code T} is a primitive type (including these ones but also the other
    * five) then {@code Optional<T>} can be the corresponding boxed type.
    */
@@ -277,12 +282,12 @@ class BuilderSpec {
 
   /**
    * Information about a property setter, referenced from the autovalue.vm template. A property
-   * called foo (defined by a method {@code T foo()} or {@code T getFoo()}) can have a setter
-   * method {@code foo(T)} or {@code setFoo(T)} that returns the builder type. Additionally, it
-   * can have a setter with a type that can be copied to {@code T} through a {@code copyOf} method;
-   * for example a property {@code foo} of type {@code ImmutableSet<String>} can be set with a
-   * method {@code setFoo(Collection<String> foos)}. And, if {@code T} is {@code Optional},
-   * it can have a setter with a type that can be copied to {@code T} through {@code Optional.of}.
+   * called foo (defined by a method {@code T foo()} or {@code T getFoo()}) can have a setter method
+   * {@code foo(T)} or {@code setFoo(T)} that returns the builder type. Additionally, it can have a
+   * setter with a type that can be copied to {@code T} through a {@code copyOf} method; for example
+   * a property {@code foo} of type {@code ImmutableSet<String>} can be set with a method {@code
+   * setFoo(Collection<String> foos)}. And, if {@code T} is {@code Optional}, it can have a setter
+   * with a type that can be copied to {@code T} through {@code Optional.of}.
    */
   public static class PropertySetter {
     private final String access;
@@ -391,8 +396,12 @@ class BuilderSpec {
 
     if (!sameTypeParameters(autoValueClass, builderTypeElement)) {
       errorReporter.reportError(
-          "Type parameters of " + builderTypeElement + " must have same names and bounds as "
-              + "type parameters of " + autoValueClass, builderTypeElement);
+          "Type parameters of "
+              + builderTypeElement
+              + " must have same names and bounds as "
+              + "type parameters of "
+              + autoValueClass,
+          builderTypeElement);
       return Optional.empty();
     }
     return Optional.of(new Builder(builderTypeElement));
@@ -420,8 +429,9 @@ class BuilderSpec {
 
   // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
   private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
-    Set<ExecutableElement> methods = getLocalAndInheritedMethods(
-        typeElement, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
+    Set<ExecutableElement> methods =
+        getLocalAndInheritedMethods(
+            typeElement, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
     ImmutableSet.Builder<ExecutableElement> abstractMethods = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)) {

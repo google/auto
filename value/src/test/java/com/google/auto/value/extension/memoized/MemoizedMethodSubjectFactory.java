@@ -21,8 +21,7 @@ import static com.google.common.truth.Truth.assertAbout;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
 
-final class MemoizedMethodSubjectFactory
-    implements Subject.Factory<MemoizedMethodSubject, String> {
+final class MemoizedMethodSubjectFactory implements Subject.Factory<MemoizedMethodSubject, String> {
 
   static MemoizedMethodSubjectFactory memoizeMethod() {
     return new MemoizedMethodSubjectFactory();

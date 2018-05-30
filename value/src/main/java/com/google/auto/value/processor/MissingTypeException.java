@@ -25,5 +25,4 @@ package com.google.auto.value.processor;
  * @author Éamonn McManus
  */
 @SuppressWarnings("serial")
-class MissingTypeException extends RuntimeException {
-}
+class MissingTypeException extends RuntimeException {}

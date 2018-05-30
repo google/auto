@@ -93,8 +93,8 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
     if (extensions == null) {
       try {
-        extensions = ImmutableList.copyOf(
-            ServiceLoader.load(AutoValueExtension.class, loaderForExtensions));
+        extensions =
+            ImmutableList.copyOf(ServiceLoader.load(AutoValueExtension.class, loaderForExtensions));
         // ServiceLoader.load returns a lazily-evaluated Iterable, so evaluate it eagerly now
         // to discover any exceptions.
       } catch (Throwable t) {
@@ -121,8 +121,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     if (!hasAnnotationMirror(type, AUTO_VALUE_NAME)) {
       // This shouldn't happen unless the compilation environment is buggy,
       // but it has happened in the past and can crash the compiler.
-      errorReporter().abortWithError("annotation processor for @AutoValue was invoked with a type"
-          + " that does not have that annotation; this is probably a compiler bug", type);
+      errorReporter()
+          .abortWithError(
+              "annotation processor for @AutoValue was invoked with a type"
+                  + " that does not have that annotation; this is probably a compiler bug",
+              type);
     }
     if (type.getKind() != ElementKind.CLASS) {
       errorReporter().abortWithError("@AutoValue only applies to classes", type);
@@ -131,8 +134,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       errorReporter().abortWithError("One @AutoValue class may not extend another", type);
     }
     if (implementsAnnotation(type)) {
-      errorReporter().abortWithError("@AutoValue may not be used to implement an annotation"
-          + " interface; try using @AutoAnnotation instead", type);
+      errorReporter()
+          .abortWithError(
+              "@AutoValue may not be used to implement an annotation"
+                  + " interface; try using @AutoAnnotation instead",
+              type);
     }
     checkModifiersIfNested(type);
 
@@ -153,8 +159,9 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     // If there are abstract methods that don't fit any of the categories above, that is an error
     // which we signal explicitly to avoid confusion.
 
-    ImmutableSet<ExecutableElement> methods = getLocalAndInheritedMethods(
-        type, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
+    ImmutableSet<ExecutableElement> methods =
+        getLocalAndInheritedMethods(
+            type, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
     ImmutableSet<ExecutableElement> abstractMethods = abstractMethodsIn(methods);
 
     BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter());
@@ -173,8 +180,9 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     ExtensionContext context =
         new ExtensionContext(processingEnv, type, properties, abstractMethods);
     ImmutableList<AutoValueExtension> applicableExtensions = applicableExtensions(type, context);
-    ImmutableSet<ExecutableElement> consumedMethods = methodsConsumedByExtensions(
-        type, applicableExtensions, context, abstractMethods, properties);
+    ImmutableSet<ExecutableElement> consumedMethods =
+        methodsConsumedByExtensions(
+            type, applicableExtensions, context, abstractMethods, properties);
 
     if (!consumedMethods.isEmpty()) {
       ImmutableSet<ExecutableElement> allAbstractMethods = abstractMethods;
@@ -269,10 +277,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         applicableExtensions.add(0, finalExtensions.get(0));
         break;
       default:
-        errorReporter().reportError(
-            "More than one extension wants to generate the final class: "
-                + finalExtensions.stream().map(this::extensionName).collect(joining(", ")),
-            type);
+        errorReporter()
+            .reportError(
+                "More than one extension wants to generate the final class: "
+                    + finalExtensions.stream().map(this::extensionName).collect(joining(", ")),
+                type);
         break;
     }
     return ImmutableList.copyOf(applicableExtensions);
@@ -290,29 +299,38 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       for (String consumedProperty : extension.consumeProperties(context)) {
         ExecutableElement propertyMethod = properties.get(consumedProperty);
         if (propertyMethod == null) {
-          errorReporter().reportError(
-              "Extension " + extensionName(extension)
-                  + " wants to consume a property that does not exist: " + consumedProperty,
-              type);
+          errorReporter()
+              .reportError(
+                  "Extension "
+                      + extensionName(extension)
+                      + " wants to consume a property that does not exist: "
+                      + consumedProperty,
+                  type);
         } else {
           consumedHere.add(propertyMethod);
         }
       }
       for (ExecutableElement consumedMethod : extension.consumeMethods(context)) {
         if (!abstractMethods.contains(consumedMethod)) {
-          errorReporter().reportError(
-              "Extension " + extensionName(extension)
-                  + " wants to consume a method that is not one of the abstract methods in this"
-                  + " class: " + consumedMethod,
-              type);
+          errorReporter()
+              .reportError(
+                  "Extension "
+                      + extensionName(extension)
+                      + " wants to consume a method that is not one of the abstract methods in this"
+                      + " class: "
+                      + consumedMethod,
+                  type);
         } else {
           consumedHere.add(consumedMethod);
         }
       }
       for (ExecutableElement repeat : intersection(consumed, consumedHere)) {
-        errorReporter().reportError(
-            "Extension " + extensionName(extension) + " wants to consume a method that was already"
-                + " consumed by another extension", repeat);
+        errorReporter()
+            .reportError(
+                "Extension "
+                    + extensionName(extension)
+                    + " wants to consume a method that was already consumed by another extension",
+                repeat);
       }
       consumed.addAll(consumedHere);
     }
@@ -377,11 +395,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   /**
    * Returns an appropriate annotation spelling to indicate the nullability of an element. If the
    * return value is a non-empty Optional, that indicates that the element is nullable, and the
-   * string should be used to annotate it. If the return value is an empty Optional, the element
-   * is not nullable. The return value can be {@code Optional.of("")}, which indicates that the
-   * element is nullable but that the nullability comes from a type annotation. In this case, the
-   * annotation will appear when the type is written, and must not be specified again. If the
-   * Optional contains a present non-empty string then that string will end with a space.
+   * string should be used to annotate it. If the return value is an empty Optional, the element is
+   * not nullable. The return value can be {@code Optional.of("")}, which indicates that the element
+   * is nullable but that the nullability comes from a type annotation. In this case, the annotation
+   * will appear when the type is written, and must not be specified again. If the Optional contains
+   * a present non-empty string then that string will end with a space.
    *
    * @param element the element that might be {@code @Nullable}, either a method or a parameter.
    * @param elementType the relevant type of the element: the return type for a method, or the
@@ -421,8 +439,10 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       String name = method.getSimpleName().toString();
       // TODO(emcmanus): decide whether getfoo() (without a capital) is a getter. Currently it is.
       boolean get = name.startsWith("get") && !name.equals("get");
-      boolean is = name.startsWith("is") && !name.equals("is")
-          && method.getReturnType().getKind() == TypeKind.BOOLEAN;
+      boolean is =
+          name.startsWith("is")
+              && !name.equals("is")
+              && method.getReturnType().getKind() == TypeKind.BOOLEAN;
       if (get || is) {
         getters.add(method);
       }

@@ -61,9 +61,12 @@ class GwtCompatibility {
       if (annotation.getElementValues().isEmpty()) {
         annotationArguments = "";
       } else {
-        annotationArguments = getElementValues(annotation).entrySet().stream()
-            .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
-            .collect(joining(", ", "(", ")"));
+        annotationArguments =
+            getElementValues(annotation)
+                .entrySet()
+                .stream()
+                .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
+                .collect(joining(", ", "(", ")"));
       }
       return "@" + annotationElement.getQualifiedName() + annotationArguments;
     } else {

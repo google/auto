@@ -35,8 +35,7 @@ class TypeMirrorSet extends AbstractSet<TypeMirror> {
   private final Set<Equivalence.Wrapper<TypeMirror>> wrappers =
       new LinkedHashSet<Wrapper<TypeMirror>>();
 
-  TypeMirrorSet() {
-  }
+  TypeMirrorSet() {}
 
   TypeMirrorSet(Collection<? extends TypeMirror> types) {
     addAll(types);

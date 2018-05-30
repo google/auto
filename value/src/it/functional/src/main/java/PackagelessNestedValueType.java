@@ -17,9 +17,7 @@
 import com.google.auto.value.AutoValue;
 import java.util.Map;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 public class PackagelessNestedValueType {
   @AutoValue
   public abstract static class Nested {

@@ -89,8 +89,8 @@ class GwtSerialization {
       vars.useBuilder = !autoVars.builderTypeName.isEmpty();
       vars.builderSetters = autoVars.builderSetters;
       vars.generated = autoVars.generated;
-      String className = (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass
-          + "_CustomFieldSerializer";
+      String className =
+          (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass + "_CustomFieldSerializer";
       vars.serializerClass = TypeSimplifier.simpleNameOf(className);
       vars.props = autoVars.props.stream().map(Property::new).collect(toList());
       vars.classHashString = computeClassHash(autoVars.props, vars.pkg);
@@ -109,7 +109,8 @@ class GwtSerialization {
       this.isCastingUnchecked = TypeSimplifier.isCastingUnchecked(property.getTypeMirror());
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return property.toString();
     }
 
@@ -126,10 +127,10 @@ class GwtSerialization {
     }
 
     /**
-     * Returns the suffix in serializer method names for values of the given type. For example,
-     * if the type is "int" then the returned value will be "Int" because the serializer methods
-     * are called readInt and writeInt. There are methods for all primitive types and String;
-     * every other type uses readObject and writeObject.
+     * Returns the suffix in serializer method names for values of the given type. For example, if
+     * the type is "int" then the returned value will be "Int" because the serializer methods are
+     * called readInt and writeInt. There are methods for all primitive types and String; every
+     * other type uses readObject and writeObject.
      */
     public String getGwtType() {
       TypeMirror typeMirror = property.getTypeMirror();
@@ -162,7 +163,7 @@ class GwtSerialization {
     }
   }
 
-  @SuppressWarnings("unused")  // some fields are only read through reflection
+  @SuppressWarnings("unused") // some fields are only read through reflection
   static class GwtTemplateVars extends TemplateVars {
     /** The properties defined by the parent class's abstract methods. */
     List<Property> props;
@@ -177,25 +178,22 @@ class GwtSerialization {
 
     /**
      * The formal generic signature of the class with the {@code @AutoValue} annotation and its
-     * generated subclass. This is empty, or contains type variables with optional bounds,
-     * for example {@code <K, V extends K>}.
+     * generated subclass. This is empty, or contains type variables with optional bounds, for
+     * example {@code <K, V extends K>}.
      */
     String formalTypes;
     /**
-     * The generic signature used by the generated subclass for its superclass reference.
-     * This is empty, or contains only type variables with no bounds, for example
-     * {@code <K, V>}.
+     * The generic signature used by the generated subclass for its superclass reference. This is
+     * empty, or contains only type variables with no bounds, for example {@code <K, V>}.
      */
     String actualTypes;
 
-    /**
-     * True if the {@code @AutoValue} class is constructed using a generated builder.
-     */
+    /** True if the {@code @AutoValue} class is constructed using a generated builder. */
     Boolean useBuilder;
 
     /**
-     * A multimap from property names (like foo) to the corresponding setter methods
-     * (foo or setFoo).
+     * A multimap from property names (like foo) to the corresponding setter methods (foo or
+     * setFoo).
      */
     Multimap<String, BuilderSpec.PropertySetter> builderSetters;
 
@@ -227,16 +225,17 @@ class GwtSerialization {
         writer.write(text);
       }
     } catch (IOException e) {
-      processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-          "Could not write generated class " + className + ": " + e);
+      processingEnv
+          .getMessager()
+          .printMessage(
+              Diagnostic.Kind.ERROR, "Could not write generated class " + className + ": " + e);
     }
   }
 
   // Compute a hash that is guaranteed to change if the names, types, or order of the fields
   // change. We use TypeEncoder so that we can get a defined string for types, since
   // TypeMirror.toString() isn't guaranteed to remain the same.
-  private String computeClassHash(
-      Iterable<AutoValueProcessor.Property> props, String pkg) {
+  private String computeClassHash(Iterable<AutoValueProcessor.Property> props, String pkg) {
     CRC32 crc = new CRC32();
     String encodedType = TypeEncoder.encode(type.asType()) + ":";
     String decodedType = TypeEncoder.decode(encodedType, processingEnv, "", null);

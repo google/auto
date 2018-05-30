@@ -76,8 +76,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   /**
-   * Issue a compilation error. This method does not throw an exception, since we want to
-   * continue processing and perhaps report other errors.
+   * Issue a compilation error. This method does not throw an exception, since we want to continue
+   * processing and perhaps report other errors.
    */
   private void reportError(Element e, String msg, Object... msgParams) {
     String formattedMessage = String.format(msg, msgParams);
@@ -187,9 +187,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
   /**
    * Returns the hashCode of the given AnnotationValue, if that hashCode is guaranteed to be always
-   * the same. The hashCode of a String or primitive type never changes. The hashCode of a Class
-   * or an enum constant does potentially change in different runs of the same program. The hashCode
-   * of an array doesn't change if the hashCodes of its elements don't. Although we could have a
+   * the same. The hashCode of a String or primitive type never changes. The hashCode of a Class or
+   * an enum constant does potentially change in different runs of the same program. The hashCode of
+   * an array doesn't change if the hashCodes of its elements don't. Although we could have a
    * similar rule for nested annotation values, we currently don't.
    */
   private static Optional<Integer> invariableHash(AnnotationValue annotationValue) {
@@ -197,7 +197,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     if (value instanceof String || Primitives.isWrapperType(value.getClass())) {
       return Optional.of(value.hashCode());
     } else if (value instanceof List<?>) {
-      @SuppressWarnings("unchecked")  // by specification
+      @SuppressWarnings("unchecked") // by specification
       List<? extends AnnotationValue> list = (List<? extends AnnotationValue>) value;
       return invariableHash(list);
     } else {
@@ -242,9 +242,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     boolean overloaded = false;
     Set<String> classNames = new HashSet<String>();
     for (ExecutableElement method : methods) {
-      String qualifiedClassName = fullyQualifiedName(
-          MoreElements.getPackage(method).getQualifiedName().toString(),
-          generatedClassName(method));
+      String qualifiedClassName =
+          fullyQualifiedName(
+              MoreElements.getPackage(method).getQualifiedName().toString(),
+              generatedClassName(method));
       if (!classNames.add(qualifiedClassName)) {
         overloaded = true;
         reportError(method, "@AutoAnnotation methods cannot be overloaded");
@@ -271,8 +272,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
         return (TypeElement) returnTypeElement;
       }
     }
-    throw abortWithError("Return type of @AutoAnnotation method must be an annotation type, not "
-        + returnTypeMirror, method);
+    throw abortWithError(
+        "Return type of @AutoAnnotation method must be an annotation type, not " + returnTypeMirror,
+        method);
   }
 
   private ImmutableMap<String, ExecutableElement> getMemberMethods(TypeElement annotationElement) {
@@ -286,15 +288,12 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private ImmutableMap<String, Member> getMembers(
-      Element context,
-      ImmutableMap<String, ExecutableElement> memberMethods) {
+      Element context, ImmutableMap<String, ExecutableElement> memberMethods) {
     ImmutableMap.Builder<String, Member> members = ImmutableMap.builder();
     for (Map.Entry<String, ExecutableElement> entry : memberMethods.entrySet()) {
       ExecutableElement memberMethod = entry.getValue();
       String name = memberMethod.getSimpleName().toString();
-      members.put(
-          name,
-          new Member(processingEnv, context, memberMethod));
+      members.put(name, new Member(processingEnv, context, memberMethod));
     }
     return members.build();
   }
@@ -313,18 +312,18 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private ImmutableMap<String, Parameter> getParameters(
-      TypeElement annotationElement,
-      ExecutableElement method,
-      Map<String, Member> members) {
+      TypeElement annotationElement, ExecutableElement method, Map<String, Member> members) {
     ImmutableMap.Builder<String, Parameter> parameters = ImmutableMap.builder();
     boolean error = false;
     for (VariableElement parameter : method.getParameters()) {
       String name = parameter.getSimpleName().toString();
       Member member = members.get(name);
       if (member == null) {
-        reportError(parameter,
+        reportError(
+            parameter,
             "@AutoAnnotation method parameter '%s' must have the same name as a member of %s",
-            name, annotationElement);
+            name,
+            annotationElement);
         error = true;
       } else {
         TypeMirror parameterType = parameter.asType();
@@ -332,9 +331,14 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
         if (compatibleTypes(parameterType, memberType)) {
           parameters.put(name, new Parameter(parameterType));
         } else {
-          reportError(parameter,
+          reportError(
+              parameter,
               "@AutoAnnotation method parameter '%s' has type %s but %s.%s has type %s",
-              name, parameterType, annotationElement, name, memberType);
+              name,
+              parameterType,
+              annotationElement,
+              name,
+              memberType);
           error = true;
         }
       }
@@ -354,10 +358,14 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     boolean error = false;
     for (String memberName : members.keySet()) {
       if (!parameters.containsKey(memberName) && !defaultValues.containsKey(memberName)) {
-        reportError(method,
+        reportError(
+            method,
             "@AutoAnnotation method needs a parameter with name '%s' and type %s"
                 + " corresponding to %s.%s, which has no default value",
-            memberName, members.get(memberName).getType(), annotationElement, memberName);
+            memberName,
+            members.get(memberName).getType(),
+            annotationElement,
+            memberName);
         error = true;
       }
     }
@@ -385,9 +393,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       return false;
     }
     TypeMirror arrayElementType = ((ArrayType) memberType).getComponentType();
-    TypeMirror wrappedArrayElementType = arrayElementType.getKind().isPrimitive()
-        ? typeUtils.boxedClass((PrimitiveType) arrayElementType).asType()
-        : arrayElementType;
+    TypeMirror wrappedArrayElementType =
+        arrayElementType.getKind().isPrimitive()
+            ? typeUtils.boxedClass((PrimitiveType) arrayElementType).asType()
+            : arrayElementType;
     TypeElement javaUtilCollection =
         elementUtils.getTypeElement(Collection.class.getCanonicalName());
     DeclaredType collectionOfElement =
@@ -421,7 +430,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private static boolean isGwtCompatible(TypeElement annotationElement) {
-    return annotationElement.getAnnotationMirrors().stream()
+    return annotationElement
+        .getAnnotationMirrors()
+        .stream()
         .map(mirror -> mirror.getAnnotationType().asElement())
         .anyMatch(element -> element.getSimpleName().contentEquals("GwtCompatible"));
   }
@@ -444,8 +455,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       // right thing to do. If we are unable to write for some other reason, we should get a compile
       // error later because user code will have a reference to the code we were supposed to
       // generate (new AutoValue_Foo() or whatever) and that reference will be undefined.
-      processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
-          "Could not write generated class " + className + ": " + e);
+      processingEnv
+          .getMessager()
+          .printMessage(
+              Diagnostic.Kind.WARNING, "Could not write generated class " + className + ": " + e);
     }
   }
 
@@ -454,10 +467,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     private final Element context;
     private final ExecutableElement method;
 
-    Member(
-        ProcessingEnvironment processingEnv,
-        Element context,
-        ExecutableElement method) {
+    Member(ProcessingEnvironment processingEnv, Element context, ExecutableElement method) {
       this.processingEnv = processingEnv;
       this.context = context;
       this.method = method;
@@ -505,7 +515,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       }
       TypeMirror parameter = declared.getTypeArguments().get(0);
       if (parameter.getKind() != TypeKind.WILDCARD) {
-        return true;  // for Class<Foo>
+        return true; // for Class<Foo>
       }
       WildcardType wildcard = (WildcardType) parameter;
       // In theory, we should check if getExtendsBound() != Object, since '?' is equivalent to

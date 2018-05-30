@@ -37,48 +37,47 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
 public class AutoAnnotationCompilationTest {
 
   @Test
   public void testSimple() {
-    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.annotations.MyAnnotation",
-        "package com.example.annotations;",
-        "",
-        "import com.example.enums.MyEnum;",
-        "",
-        "public @interface MyAnnotation {",
-        "  MyEnum value();",
-        "  int defaultedValue() default 23;",
-        "}"
-    );
+    JavaFileObject myAnnotationJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.annotations.MyAnnotation",
+            "package com.example.annotations;",
+            "",
+            "import com.example.enums.MyEnum;",
+            "",
+            "public @interface MyAnnotation {",
+            "  MyEnum value();",
+            "  int defaultedValue() default 23;",
+            "}");
     int invariableHash = ("defaultedValue".hashCode() * 127) ^ 23;
-    JavaFileObject myEnumJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.enums.MyEnum",
-        "package com.example.enums;",
-        "",
-        "public enum MyEnum {",
-        "  ONE",
-        "}"
-    );
-    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.factories.AnnotationFactory",
-        "package com.example.factories;",
-        "",
-        "import com.google.auto.value.AutoAnnotation;",
-        "import com.example.annotations.MyAnnotation;",
-        "import com.example.enums.MyEnum;",
-        "",
-        "public class AnnotationFactory {",
-        "  @AutoAnnotation",
-        "  public static MyAnnotation newMyAnnotation(MyEnum value) {",
-        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value);",
-        "  }",
-        "}");
+    JavaFileObject myEnumJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.enums.MyEnum",
+            "package com.example.enums;",
+            "",
+            "public enum MyEnum {",
+            "  ONE",
+            "}");
+    JavaFileObject annotationFactoryJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.factories.AnnotationFactory",
+            "package com.example.factories;",
+            "",
+            "import com.google.auto.value.AutoAnnotation;",
+            "import com.example.annotations.MyAnnotation;",
+            "import com.example.enums.MyEnum;",
+            "",
+            "public class AnnotationFactory {",
+            "  @AutoAnnotation",
+            "  public static MyAnnotation newMyAnnotation(MyEnum value) {",
+            "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value);",
+            "  }",
+            "}");
     JavaFileObject expectedOutput =
         JavaFileObjects.forSourceLines(
             "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation",
@@ -137,29 +136,32 @@ public class AutoAnnotationCompilationTest {
             "    ;",
             "  }",
             "}");
-    assert_().about(javaSources())
+    assert_()
+        .about(javaSources())
         .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile, myEnumJavaFile))
         .processedWith(new AutoAnnotationProcessor())
         .compilesWithoutError()
-        .and().generatesSources(expectedOutput);
+        .and()
+        .generatesSources(expectedOutput);
   }
 
   @Test
   public void testEmptyPackage() {
-    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
-        "MyAnnotation",
-        "public @interface MyAnnotation {}"
-    );
-    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
-        "AnnotationFactory",
-        "import com.google.auto.value.AutoAnnotation;",
-        "",
-        "public class AnnotationFactory {",
-        "  @AutoAnnotation",
-        "  public static MyAnnotation newMyAnnotation() {",
-        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation();",
-        "  }",
-        "}");
+    JavaFileObject myAnnotationJavaFile =
+        JavaFileObjects.forSourceLines(
+            "MyAnnotation", //
+            "public @interface MyAnnotation {}");
+    JavaFileObject annotationFactoryJavaFile =
+        JavaFileObjects.forSourceLines(
+            "AnnotationFactory",
+            "import com.google.auto.value.AutoAnnotation;",
+            "",
+            "public class AnnotationFactory {",
+            "  @AutoAnnotation",
+            "  public static MyAnnotation newMyAnnotation() {",
+            "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation();",
+            "  }",
+            "}");
     JavaFileObject expectedOutput =
         JavaFileObjects.forSourceLines(
             "AutoAnnotation_AnnotationFactory_newMyAnnotation",
@@ -197,41 +199,43 @@ public class AutoAnnotationCompilationTest {
         .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile))
         .processedWith(new AutoAnnotationProcessor())
         .compilesWithoutError()
-        .and().generatesSources(expectedOutput);
+        .and()
+        .generatesSources(expectedOutput);
   }
 
   @Test
   public void testGwtSimple() {
-    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.annotations.MyAnnotation",
-        "package com.example.annotations;",
-        "",
-        "import com.google.common.annotations.GwtCompatible;",
-        "",
-        "@GwtCompatible",
-        "public @interface MyAnnotation {",
-        "  int[] value();",
-        "}"
-    );
-    JavaFileObject gwtCompatibleJavaFile = JavaFileObjects.forSourceLines(
-        "com.google.common.annotations.GwtCompatible",
-        "package com.google.common.annotations;",
-        "",
-        "public @interface GwtCompatible {}"
-    );
-    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.factories.AnnotationFactory",
-        "package com.example.factories;",
-        "",
-        "import com.google.auto.value.AutoAnnotation;",
-        "import com.example.annotations.MyAnnotation;",
-        "",
-        "public class AnnotationFactory {",
-        "  @AutoAnnotation",
-        "  public static MyAnnotation newMyAnnotation(int[] value) {",
-        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value);",
-        "  }",
-        "}");
+    JavaFileObject myAnnotationJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.annotations.MyAnnotation",
+            "package com.example.annotations;",
+            "",
+            "import com.google.common.annotations.GwtCompatible;",
+            "",
+            "@GwtCompatible",
+            "public @interface MyAnnotation {",
+            "  int[] value();",
+            "}");
+    JavaFileObject gwtCompatibleJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.google.common.annotations.GwtCompatible",
+            "package com.google.common.annotations;",
+            "",
+            "public @interface GwtCompatible {}");
+    JavaFileObject annotationFactoryJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.factories.AnnotationFactory",
+            "package com.example.factories;",
+            "",
+            "import com.google.auto.value.AutoAnnotation;",
+            "import com.example.annotations.MyAnnotation;",
+            "",
+            "public class AnnotationFactory {",
+            "  @AutoAnnotation",
+            "  public static MyAnnotation newMyAnnotation(int[] value) {",
+            "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value);",
+            "  }",
+            "}");
     JavaFileObject expectedOutput =
         JavaFileObjects.forSourceLines(
             "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation",
@@ -285,53 +289,57 @@ public class AutoAnnotationCompilationTest {
             "        + (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)));",
             "  }",
             "}");
-    assert_().about(javaSources())
-        .that(ImmutableList.of(
-            annotationFactoryJavaFile, myAnnotationJavaFile, gwtCompatibleJavaFile))
+    assert_()
+        .about(javaSources())
+        .that(
+            ImmutableList.of(
+                annotationFactoryJavaFile, myAnnotationJavaFile, gwtCompatibleJavaFile))
         .processedWith(new AutoAnnotationProcessor())
         .compilesWithoutError()
-        .and().generatesSources(expectedOutput);
+        .and()
+        .generatesSources(expectedOutput);
   }
 
   @Test
   public void testCollectionsForArrays() {
-    JavaFileObject myAnnotationJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.annotations.MyAnnotation",
-        "package com.example.annotations;",
-        "",
-        "import com.example.enums.MyEnum;",
-        "",
-        "public @interface MyAnnotation {",
-        "  int[] value();",
-        "  MyEnum[] enums() default {};",
-        "}"
-    );
-    JavaFileObject myEnumJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.enums.MyEnum",
-        "package com.example.enums;",
-        "",
-        "public enum MyEnum {",
-        "  ONE",
-        "}"
-    );
-    JavaFileObject annotationFactoryJavaFile = JavaFileObjects.forSourceLines(
-        "com.example.factories.AnnotationFactory",
-        "package com.example.factories;",
-        "",
-        "import com.google.auto.value.AutoAnnotation;",
-        "import com.example.annotations.MyAnnotation;",
-        "import com.example.enums.MyEnum;",
-        "",
-        "import java.util.List;",
-        "import java.util.Set;",
-        "",
-        "public class AnnotationFactory {",
-        "  @AutoAnnotation",
-        "  public static MyAnnotation newMyAnnotation(",
-        "      List<Integer> value, Set<MyEnum> enums) {",
-        "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value, enums);",
-        "  }",
-        "}");
+    JavaFileObject myAnnotationJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.annotations.MyAnnotation",
+            "package com.example.annotations;",
+            "",
+            "import com.example.enums.MyEnum;",
+            "",
+            "public @interface MyAnnotation {",
+            "  int[] value();",
+            "  MyEnum[] enums() default {};",
+            "}");
+    JavaFileObject myEnumJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.enums.MyEnum",
+            "package com.example.enums;",
+            "",
+            "public enum MyEnum {",
+            "  ONE",
+            "}");
+    JavaFileObject annotationFactoryJavaFile =
+        JavaFileObjects.forSourceLines(
+            "com.example.factories.AnnotationFactory",
+            "package com.example.factories;",
+            "",
+            "import com.google.auto.value.AutoAnnotation;",
+            "import com.example.annotations.MyAnnotation;",
+            "import com.example.enums.MyEnum;",
+            "",
+            "import java.util.List;",
+            "import java.util.Set;",
+            "",
+            "public class AnnotationFactory {",
+            "  @AutoAnnotation",
+            "  public static MyAnnotation newMyAnnotation(",
+            "      List<Integer> value, Set<MyEnum> enums) {",
+            "    return new AutoAnnotation_AnnotationFactory_newMyAnnotation(value, enums);",
+            "  }",
+            "}");
     JavaFileObject expectedOutput =
         JavaFileObjects.forSourceLines(
             "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation",
@@ -418,11 +426,13 @@ public class AutoAnnotationCompilationTest {
             "    return a;",
             "  }",
             "}");
-    assert_().about(javaSources())
+    assert_()
+        .about(javaSources())
         .that(ImmutableList.of(annotationFactoryJavaFile, myEnumJavaFile, myAnnotationJavaFile))
         .processedWith(new AutoAnnotationProcessor())
         .compilesWithoutError()
-        .and().generatesSources(expectedOutput);
+        .and()
+        .generatesSources(expectedOutput);
   }
 
   @Test
@@ -446,28 +456,29 @@ public class AutoAnnotationCompilationTest {
     // being undefined, and we do not get an error complaining that this supposed @AutoAnnotation
     // method is not static. We do need to have @AutoAnnotation appear somewhere so that the
     // processor will run.
-    JavaFileObject erroneousJavaFileObject = JavaFileObjects.forSourceLines(
-        "com.example.annotations.Erroneous",
-        "package com.example.annotations;",
-        "",
-        "import com.google.auto.value.AutoAnnotation;",
-        "",
-        "public class Erroneous {",
-        "  @interface Empty {}",
-        "  @AutoAnnotation static Empty newEmpty() {}",
-        "  @NotAutoAnnotation Empty notNewEmpty() {}",
-        "}"
-    );
+    JavaFileObject erroneousJavaFileObject =
+        JavaFileObjects.forSourceLines(
+            "com.example.annotations.Erroneous",
+            "package com.example.annotations;",
+            "",
+            "import com.google.auto.value.AutoAnnotation;",
+            "",
+            "public class Erroneous {",
+            "  @interface Empty {}",
+            "  @AutoAnnotation static Empty newEmpty() {}",
+            "  @NotAutoAnnotation Empty notNewEmpty() {}",
+            "}");
     JavaCompiler javaCompiler = ToolProvider.getSystemJavaCompiler();
     DiagnosticCollector<JavaFileObject> diagnosticCollector =
         new DiagnosticCollector<JavaFileObject>();
-    JavaCompiler.CompilationTask compilationTask = javaCompiler.getTask(
-        (Writer) null,
-        (JavaFileManager) null,
-        diagnosticCollector,
-        ImmutableList.of("-d", tempDir.toString()),
-        (Iterable<String>) null,
-        ImmutableList.of(erroneousJavaFileObject));
+    JavaCompiler.CompilationTask compilationTask =
+        javaCompiler.getTask(
+            (Writer) null,
+            (JavaFileManager) null,
+            diagnosticCollector,
+            ImmutableList.of("-d", tempDir.toString()),
+            (Iterable<String>) null,
+            ImmutableList.of(erroneousJavaFileObject));
     compilationTask.setProcessors(ImmutableList.of(new AutoAnnotationProcessor()));
     boolean result = compilationTask.call();
     assertThat(result).isFalse();

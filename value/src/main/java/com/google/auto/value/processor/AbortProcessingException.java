@@ -24,5 +24,4 @@ package com.google.auto.value.processor;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @SuppressWarnings("serial")
-class AbortProcessingException extends RuntimeException {
-}
+class AbortProcessingException extends RuntimeException {}

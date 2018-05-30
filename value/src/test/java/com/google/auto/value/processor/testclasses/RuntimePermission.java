@@ -16,10 +16,9 @@
 package com.google.auto.value.processor.testclasses;
 
 /**
- * This class just exists to test import behaviour when referencing a class which has the same
- * name as a class in java.lang.
+ * This class just exists to test import behaviour when referencing a class which has the same name
+ * as a class in java.lang.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-public class RuntimePermission {
-}
+public class RuntimePermission {}

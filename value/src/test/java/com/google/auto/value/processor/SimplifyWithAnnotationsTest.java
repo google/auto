@@ -62,48 +62,48 @@ public class SimplifyWithAnnotationsTest {
   @Rule public final Expect expect = Expect.create();
 
   /**
-   * The types that we will compile and then recreate. They are referenced in a context where
-   * {@code Set} is unambiguous but not {@code List}, which allows us to test the placement of
-   * annotations in unqualified types like {@code Set<T>} and qualified types like
-   * {@code java.util.List<T>}.
+   * The types that we will compile and then recreate. They are referenced in a context where {@code
+   * Set} is unambiguous but not {@code List}, which allows us to test the placement of annotations
+   * in unqualified types like {@code Set<T>} and qualified types like {@code java.util.List<T>}.
    */
-  private static final ImmutableList<String> TYPE_SPELLINGS = ImmutableList.of(
-      "Object",
-      "Set",
-      "String",
-      "Nullable",
-      "@Nullable String",
-      "String[]",
-      "@Nullable String[]",
-      "String @Nullable []",
-      "String @Nullable [] @Nullable []",
-      "java.awt.List",
-      "java.util.List<String>",
-      "Set<@Nullable String>",
-      "@Nullable Set<String>",
-      "int",
-      "@Nullable int",  // whatever that might mean
-      "@Nullable int[]",
-      "int @Nullable []",
-      "T",
-      "@Nullable T",
-      "Set<@Nullable T>",
-      "Set<? extends @Nullable T>",
-      "Set<? extends @Nullable String>",
-      "Set<? extends @Nullable String @Nullable []>",
-      "java.util.@Nullable List<@Nullable T>",
-      "java.util.@Nullable List<java.util.@Nullable List<T>>");
+  private static final ImmutableList<String> TYPE_SPELLINGS =
+      ImmutableList.of(
+          "Object",
+          "Set",
+          "String",
+          "Nullable",
+          "@Nullable String",
+          "String[]",
+          "@Nullable String[]",
+          "String @Nullable []",
+          "String @Nullable [] @Nullable []",
+          "java.awt.List",
+          "java.util.List<String>",
+          "Set<@Nullable String>",
+          "@Nullable Set<String>",
+          "int",
+          "@Nullable int", // whatever that might mean
+          "@Nullable int[]",
+          "int @Nullable []",
+          "T",
+          "@Nullable T",
+          "Set<@Nullable T>",
+          "Set<? extends @Nullable T>",
+          "Set<? extends @Nullable String>",
+          "Set<? extends @Nullable String @Nullable []>",
+          "java.util.@Nullable List<@Nullable T>",
+          "java.util.@Nullable List<java.util.@Nullable List<T>>");
 
-  private static final JavaFileObject NULLABLE_FILE_OBJECT = JavaFileObjects.forSourceLines(
-      "pkg.Nullable",
-
-      "package pkg;",
-      "",
-      "import java.lang.annotation.ElementType;",
-      "import java.lang.annotation.Target;",
-      "",
-      "@Target(ElementType.TYPE_USE)",
-      "public @interface Nullable {}");
+  private static final JavaFileObject NULLABLE_FILE_OBJECT =
+      JavaFileObjects.forSourceLines(
+          "pkg.Nullable",
+          "package pkg;",
+          "",
+          "import java.lang.annotation.ElementType;",
+          "import java.lang.annotation.Target;",
+          "",
+          "@Target(ElementType.TYPE_USE)",
+          "public @interface Nullable {}");
 
   private static final JavaFileObject TEST_CLASS_FILE_OBJECT =
       JavaFileObjects.forSourceLines("pkg.TestClass", buildTestClass());
@@ -131,10 +131,11 @@ public class SimplifyWithAnnotationsTest {
   @Test
   public void testSimplifyWithAnnotations() {
     // The real test happens inside the .compile(...), by virtue of TestProcessor.
-    assertThat(javac()
-            .withOptions("-proc:only")
-            .withProcessors(new TestProcessor())
-            .compile(NULLABLE_FILE_OBJECT, TEST_CLASS_FILE_OBJECT))
+    assertThat(
+            javac()
+                .withOptions("-proc:only")
+                .withProcessors(new TestProcessor())
+                .compile(NULLABLE_FILE_OBJECT, TEST_CLASS_FILE_OBJECT))
         .succeededWithoutWarnings();
   }
 
@@ -146,8 +147,7 @@ public class SimplifyWithAnnotationsTest {
     }
 
     @Override
-    public boolean process(
-        Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
       if (roundEnv.processingOver()) {
         TypeElement testClass = processingEnv.getElementUtils().getTypeElement("pkg.TestClass");
         testTypeSpellings(testClass);
@@ -156,9 +156,11 @@ public class SimplifyWithAnnotationsTest {
     }
 
     void testTypeSpellings(TypeElement testClass) {
-      ExecutableElement witness = ElementFilter.methodsIn(testClass.getEnclosedElements()).stream()
-          .filter(m -> m.getSimpleName().contentEquals("witness"))
-          .collect(onlyElement());
+      ExecutableElement witness =
+          ElementFilter.methodsIn(testClass.getEnclosedElements())
+              .stream()
+              .filter(m -> m.getSimpleName().contentEquals("witness"))
+              .collect(onlyElement());
       if (witness.getReturnType().getAnnotationMirrors().isEmpty()) {
         System.err.println("SKIPPING TEST BECAUSE OF BUGGY COMPILER");
         return;

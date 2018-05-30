@@ -53,7 +53,8 @@ public class GwtSerializerTest extends GWTTestCase {
 
     void echo(Generics<Simple> generics, AsyncCallback<Generics<Simple>> callback);
 
-    void echo(GenericsWithBuilder<SimpleWithBuilder> generics,
+    void echo(
+        GenericsWithBuilder<SimpleWithBuilder> generics,
         AsyncCallback<GenericsWithBuilder<SimpleWithBuilder>> callback);
   }
 
@@ -86,9 +87,7 @@ public class GwtSerializerTest extends GWTTestCase {
 
     @Override
     public SimpleWithBuilder echo(SimpleWithBuilder simple) {
-      return SimpleWithBuilder.builder()
-          .message(simple.message())
-          .build();
+      return SimpleWithBuilder.builder().message(simple.message()).build();
     }
 
     @Override
@@ -140,6 +139,7 @@ public class GwtSerializerTest extends GWTTestCase {
     @AutoValue.Builder
     public interface Builder {
       Builder message(String message);
+
       SimpleWithBuilder build();
     }
   }
@@ -148,6 +148,7 @@ public class GwtSerializerTest extends GWTTestCase {
   @GwtCompatible(serializable = true)
   abstract static class Nested {
     public abstract String message();
+
     public abstract Simple simple();
 
     public static Nested create(String message, Simple simple) {
@@ -159,6 +160,7 @@ public class GwtSerializerTest extends GWTTestCase {
   @GwtCompatible(serializable = true)
   abstract static class NestedWithBuilder {
     public abstract String message();
+
     public abstract SimpleWithBuilder simple();
 
     public static Builder builder() {
@@ -168,7 +170,9 @@ public class GwtSerializerTest extends GWTTestCase {
     @AutoValue.Builder
     public interface Builder {
       Builder message(String message);
+
       Builder simple(SimpleWithBuilder simple);
+
       NestedWithBuilder build();
     }
   }
@@ -195,6 +199,7 @@ public class GwtSerializerTest extends GWTTestCase {
     @AutoValue.Builder
     public interface Builder<T> {
       Builder<T> simple(T simple);
+
       GenericsWithBuilder<T> build();
     }
   }
@@ -219,9 +224,7 @@ public class GwtSerializerTest extends GWTTestCase {
 
   public void testSimpleWithBuilder() {
     delayTestFinish(2000);
-    SimpleWithBuilder simple = SimpleWithBuilder.builder()
-        .message("able")
-        .build();
+    SimpleWithBuilder simple = SimpleWithBuilder.builder().message("able").build();
     testService.echo(simple, new AssertEqualsCallback<SimpleWithBuilder>(simple));
   }
 
@@ -233,12 +236,11 @@ public class GwtSerializerTest extends GWTTestCase {
 
   public void testNestedWithBuilder() {
     delayTestFinish(2000);
-    NestedWithBuilder nested = NestedWithBuilder.builder()
-        .message("able")
-        .simple(SimpleWithBuilder.builder()
-            .message("baker")
-            .build())
-        .build();
+    NestedWithBuilder nested =
+        NestedWithBuilder.builder()
+            .message("able")
+            .simple(SimpleWithBuilder.builder().message("baker").build())
+            .build();
     testService.echo(nested, new AssertEqualsCallback<NestedWithBuilder>(nested));
   }
 
@@ -252,10 +254,8 @@ public class GwtSerializerTest extends GWTTestCase {
     delayTestFinish(2000);
     GenericsWithBuilder<SimpleWithBuilder> generics =
         GenericsWithBuilder.<SimpleWithBuilder>builder()
-        .simple(SimpleWithBuilder.builder()
-            .message("able")
-            .build())
-        .build();
+            .simple(SimpleWithBuilder.builder().message("able").build())
+            .build();
     testService.echo(
         generics, new AssertEqualsCallback<GenericsWithBuilder<SimpleWithBuilder>>(generics));
   }

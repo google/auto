@@ -23,20 +23,42 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
 public class JavaScannerTest {
-  private static final ImmutableList<String> TOKENS = ImmutableList.of(
-      "  ", "\"hello \\\" world\\n\"", "'a'", "  ", "'\\t'", "  ", "`com.google.Foo`", "   ",
-      "\n  ", "/* comment * comment \" whatever\n     comment continued */",
-      "  ", "t", "h", "i", "n", "g", " ", "t", "h", "i", "n", "g", "  ", "// line comment", "\n",
-      "/*/ tricky comment */", "\n");
+  private static final ImmutableList<String> TOKENS =
+      ImmutableList.of(
+          "  ",
+          "\"hello \\\" world\\n\"",
+          "'a'",
+          "  ",
+          "'\\t'",
+          "  ",
+          "`com.google.Foo`",
+          "   ",
+          "\n  ",
+          "/* comment * comment \" whatever\n     comment continued */",
+          "  ",
+          "t",
+          "h",
+          "i",
+          "n",
+          "g",
+          " ",
+          "t",
+          "h",
+          "i",
+          "n",
+          "g",
+          "  ",
+          "// line comment",
+          "\n",
+          "/*/ tricky comment */",
+          "\n");
 
   /**
-   * Tests basic scanner functionality. The test concatenates the tokens in {@link #TOKENS}
-   * and then retokenizes that string, checking that the same list of tokens is produced.
+   * Tests basic scanner functionality. The test concatenates the tokens in {@link #TOKENS} and then
+   * retokenizes that string, checking that the same list of tokens is produced.
    */
   @Test
   public void testScanner() {

@@ -69,8 +69,7 @@ public class GeneratedDoesNotExistTest {
   private final ImmutableList<String> javacOptions;
   private final String expectedAnnotation;
 
-  public GeneratedDoesNotExistTest(
-      ImmutableList<String> javacOptions, String expectedAnnotation) {
+  public GeneratedDoesNotExistTest(ImmutableList<String> javacOptions, String expectedAnnotation) {
     this.javacOptions = javacOptions;
     this.expectedAnnotation = expectedAnnotation;
   }
@@ -89,13 +88,12 @@ public class GeneratedDoesNotExistTest {
       ImmutableSet.of("javax.annotation.Generated", "javax.annotation.processing.Generated");
 
   /**
-   * InvocationHandler that forwards every method to an original object, except methods where
-   * there is an implementation in this class with the same signature. So for example in the
-   * subclass {@link ElementsHandler} there is a method
-   * {@link ElementsHandler#getTypeElement(CharSequence)}, which means that a call of
-   * {@link Elements#getTypeElement(CharSequence)} on the proxy with this invocation handler will
-   * end up calling that method, but a call of any of the other methods of {@code Elements} will
-   * end up calling the method on the original object.
+   * InvocationHandler that forwards every method to an original object, except methods where there
+   * is an implementation in this class with the same signature. So for example in the subclass
+   * {@link ElementsHandler} there is a method {@link ElementsHandler#getTypeElement(CharSequence)},
+   * which means that a call of {@link Elements#getTypeElement(CharSequence)} on the proxy with this
+   * invocation handler will end up calling that method, but a call of any of the other methods of
+   * {@code Elements} will end up calling the method on the original object.
    */
   private abstract static class OverridableInvocationHandler<T> implements InvocationHandler {
     final T original;
@@ -176,47 +174,48 @@ public class GeneratedDoesNotExistTest {
 
   @Test
   public void test() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  public static Baz create() {",
-        "    return new AutoValue_Baz();",
-        "  }",
-        "}");
-    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
-        "foo.bar.AutoValue_Baz",
-        "package foo.bar;",
-        "",
-        "final class AutoValue_Baz extends Baz {",
-        "  AutoValue_Baz() {",
-        "  }",
-        "",
-        "  @Override public String toString() {",
-        "    return \"Baz{\"",
-        "        + \"}\";",
-        "  }",
-        "",
-        "  @Override public boolean equals(Object o) {",
-        "    if (o == this) {",
-        "      return true;",
-        "    }",
-        "    if (o instanceof Baz) {",
-        "      return true;",
-        "    }",
-        "    return false;",
-        "  }",
-        "",
-        "  @Override public int hashCode() {",
-        "    int h$ = 1;",
-        "    return h$;",
-        "  }",
-        "}"
-    );
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  public static Baz create() {",
+            "    return new AutoValue_Baz();",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            "final class AutoValue_Baz extends Baz {",
+            "  AutoValue_Baz() {",
+            "  }",
+            "",
+            "  @Override public String toString() {",
+            "    return \"Baz{\"",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override public boolean equals(Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Baz) {",
+            "      return true;",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+            "  @Override public int hashCode() {",
+            "    int h$ = 1;",
+            "    return h$;",
+            "  }",
+            "}");
     Set<String> ignoredGenerated = ConcurrentHashMap.newKeySet();
     Processor autoValueProcessor = new AutoValueProcessor();
     ProcessorHandler handler = new ProcessorHandler(autoValueProcessor, ignoredGenerated);

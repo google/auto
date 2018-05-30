@@ -44,42 +44,38 @@ import javax.lang.model.util.Types;
  *
  * <p>The idea is that types that appear in generated source code use {@link #encode}, which will
  * spell out a type like {@code java.util.List<? extends java.lang.Number>}, except that wherever a
- * class name appears it is replaced by a special token. So the spelling might actually be
- * {@code `java.util.List`<? extends `java.lang.Number`>}. Then once the entire class has been
- * generated, {@code #decode} scans for these tokens to determine what classes need to be imported,
- * and replaces the tokens with the correct spelling given the imports. So here,
- * {@code java.util.List} would be imported, and the final spelling would be
- * {@code List<? extends Number>} (knowing that {@code Number} is implicitly imported). The special
- * token {@code `import`} marks where the imports should be, and {@link #decode} replaces it with
- * the correct list of imports.
+ * class name appears it is replaced by a special token. So the spelling might actually be {@code
+ * `java.util.List`<? extends `java.lang.Number`>}. Then once the entire class has been generated,
+ * {@code #decode} scans for these tokens to determine what classes need to be imported, and
+ * replaces the tokens with the correct spelling given the imports. So here, {@code java.util.List}
+ * would be imported, and the final spelling would be {@code List<? extends Number>} (knowing that
+ * {@code Number} is implicitly imported). The special token {@code `import`} marks where the
+ * imports should be, and {@link #decode} replaces it with the correct list of imports.
  *
  * <p>The funky syntax for type annotations on qualified type names requires an adjustment to this
- * scheme. {@code `«java.util.Map`} stands for {@code java.util.}
- * and {@code `»java.util.Map`} stands for {@code Map}. If {@code java.util.Map} is imported, then
- * {@code `«java.util.Map`} will eventually be empty, but if {@code java.util.Map} is not imported
- * (perhaps because there is another {@code Map} in scope) then {@code `«java.util.Map`} will be
- * {@code java.util.}. The end result is that the code can contain
- * {@code `«java.util.Map`@`javax.annotation.Nullable` `»java.util.Map`}. That might decode to
- * {@code @Nullable Map} or to {@code java.util.@Nullable Map} or even to
- * {@code java.util.@javax.annotation.Nullable Map}.
+ * scheme. {@code `«java.util.Map`} stands for {@code java.util.} and {@code `»java.util.Map`}
+ * stands for {@code Map}. If {@code java.util.Map} is imported, then {@code `«java.util.Map`} will
+ * eventually be empty, but if {@code java.util.Map} is not imported (perhaps because there is
+ * another {@code Map} in scope) then {@code `«java.util.Map`} will be {@code java.util.}. The end
+ * result is that the code can contain {@code `«java.util.Map`@`javax.annotation.Nullable`
+ * `»java.util.Map`}. That might decode to {@code @Nullable Map} or to {@code java.util.@Nullable
+ * Map} or even to {@code java.util.@javax.annotation.Nullable Map}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
 final class TypeEncoder {
-  private TypeEncoder() {}  // There are no instances of this class.
+  private TypeEncoder() {} // There are no instances of this class.
 
-  private static final EncodingTypeVisitor ENCODING_TYPE_VISITOR =
-      new EncodingTypeVisitor();
+  private static final EncodingTypeVisitor ENCODING_TYPE_VISITOR = new EncodingTypeVisitor();
   private static final RawEncodingTypeVisitor RAW_ENCODING_TYPE_VISITOR =
       new RawEncodingTypeVisitor();
   private static final AnnotatedEncodingTypeVisitor ANNOTATED_ENCODING_TYPE_VISITOR =
       new AnnotatedEncodingTypeVisitor();
 
   /**
-   * Returns the encoding for the given type, where class names are marked by special tokens.
-   * The encoding for {@code int} will be {@code int}, but the encoding for
-   * {@code java.util.List<java.lang.Integer>} will be
-   * {@code `java.util.List`<`java.lang.Integer`>}.
+   * Returns the encoding for the given type, where class names are marked by special tokens. The
+   * encoding for {@code int} will be {@code int}, but the encoding for {@code
+   * java.util.List<java.lang.Integer>} will be {@code `java.util.List`<`java.lang.Integer`>}.
    */
   static String encode(TypeMirror type) {
     StringBuilder sb = new StringBuilder();
@@ -87,8 +83,8 @@ final class TypeEncoder {
   }
 
   /**
-   * Like {@link #encode}, except that only the raw type is encoded. So if the given type is
-   * {@code java.util.List<java.lang.Integer>} the result will be {@code `java.util.List`}.
+   * Like {@link #encode}, except that only the raw type is encoded. So if the given type is {@code
+   * java.util.List<java.lang.Integer>} the result will be {@code `java.util.List`}.
    */
   static String encodeRaw(TypeMirror type) {
     StringBuilder sb = new StringBuilder();
@@ -105,24 +101,24 @@ final class TypeEncoder {
   }
 
   /**
-   * Decodes the given string, respelling class names appropriately. The text is scanned for
-   * tokens like {@code `java.util.Locale`} or {@code `«java.util.Locale`} to determine which
-   * classes are referenced. An appropriate set of imports is computed based on the set of those
-   * types. If the special token {@code `import`} appears in {@code text} then it will be replaced
-   * by this set of import statements. Then all of the tokens are replaced by the class names they
-   * represent, spelled appropriately given the import statements.
+   * Decodes the given string, respelling class names appropriately. The text is scanned for tokens
+   * like {@code `java.util.Locale`} or {@code `«java.util.Locale`} to determine which classes are
+   * referenced. An appropriate set of imports is computed based on the set of those types. If the
+   * special token {@code `import`} appears in {@code text} then it will be replaced by this set of
+   * import statements. Then all of the tokens are replaced by the class names they represent,
+   * spelled appropriately given the import statements.
    *
    * @param text the text to be decoded.
-   * @param packageName the package of the generated class. Other classes in the same package
-   *     do not need to be imported.
-   * @param baseType a class or interface that the generated class inherits from. Nested classes
-   *     in that type do not need to be imported, and if another class has the same name as one
-   *     of those nested classes then it will need to be qualified.
+   * @param packageName the package of the generated class. Other classes in the same package do not
+   *     need to be imported.
+   * @param baseType a class or interface that the generated class inherits from. Nested classes in
+   *     that type do not need to be imported, and if another class has the same name as one of
+   *     those nested classes then it will need to be qualified.
    */
   static String decode(
       String text, ProcessingEnvironment processingEnv, String packageName, TypeMirror baseType) {
-    return decode(text, processingEnv.getElementUtils(), processingEnv.getTypeUtils(),
-        packageName, baseType);
+    return decode(
+        text, processingEnv.getElementUtils(), processingEnv.getTypeUtils(), packageName, baseType);
   }
 
   static String decode(
@@ -136,17 +132,17 @@ final class TypeEncoder {
   }
 
   /**
-   * Returns the formal type parameters of the given type.
-   * If we have {@code @AutoValue abstract class Foo<T extends SomeClass>} then this method will
-   * return an encoding of {@code <T extends SomeClass>} for {@code Foo}. Likewise it will return
-   * an encoding of the angle-bracket part of:<br>
+   * Returns the formal type parameters of the given type. If we have {@code @AutoValue abstract
+   * class Foo<T extends SomeClass>} then this method will return an encoding of {@code <T extends
+   * SomeClass>} for {@code Foo}. Likewise it will return an encoding of the angle-bracket part of:
+   * <br>
    * {@code Foo<SomeClass>}<br>
    * {@code Foo<T extends Number>}<br>
    * {@code Foo<E extends Enum<E>>}<br>
    * {@code Foo<K, V extends Comparable<? extends K>>}.
    *
-   * <p>The encoding is simply that classes in the "extends" part are marked, so the examples
-   * will actually look something like this:<br>
+   * <p>The encoding is simply that classes in the "extends" part are marked, so the examples will
+   * actually look something like this:<br>
    * {@code <`bar.baz.SomeClass`>}<br>
    * {@code <T extends `java.lang.Number`>}<br>
    * {@code <E extends `java.lang.Enum`<E>>}<br>
@@ -190,16 +186,16 @@ final class TypeEncoder {
   }
 
   /**
-   * Converts a type into a string, using standard Java syntax, except that every class name
-   * is wrapped in backquotes, like {@code `java.util.List`}.
+   * Converts a type into a string, using standard Java syntax, except that every class name is
+   * wrapped in backquotes, like {@code `java.util.List`}.
    */
   private static class EncodingTypeVisitor
       extends SimpleTypeVisitor8<StringBuilder, StringBuilder> {
     /**
-     * Equivalent to {@code visit(type, sb)} or {@code type.accept(sb)},
-     * except that it fixes a bug with javac versions up to JDK 8, whereby if the type is a
-     * {@code DeclaredType} then the visitor is called with a version of the type where any
-     * annotations have been lost. We can't override {@code visit} because it is final.
+     * Equivalent to {@code visit(type, sb)} or {@code type.accept(sb)}, except that it fixes a bug
+     * with javac versions up to JDK 8, whereby if the type is a {@code DeclaredType} then the
+     * visitor is called with a version of the type where any annotations have been lost. We can't
+     * override {@code visit} because it is final.
      */
     StringBuilder visit2(TypeMirror type, StringBuilder sb) {
       if (type.getKind().equals(TypeKind.DECLARED)) {
@@ -211,15 +207,18 @@ final class TypeEncoder {
       }
     }
 
-    @Override protected StringBuilder defaultAction(TypeMirror type, StringBuilder sb) {
+    @Override
+    protected StringBuilder defaultAction(TypeMirror type, StringBuilder sb) {
       return sb.append(type);
     }
 
-    @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
       return visit2(type.getComponentType(), sb).append("[]");
     }
 
-    @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
       sb.append(declaredTypeName(type));
       appendTypeArguments(type, sb);
       return sb;
@@ -243,7 +242,8 @@ final class TypeEncoder {
       }
     }
 
-    @Override public StringBuilder visitWildcard(WildcardType type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitWildcard(WildcardType type, StringBuilder sb) {
       sb.append("?");
       TypeMirror extendsBound = type.getExtendsBound();
       TypeMirror superBound = type.getSuperBound();
@@ -257,42 +257,45 @@ final class TypeEncoder {
       return sb;
     }
 
-    @Override public StringBuilder visitError(ErrorType t, StringBuilder p) {
+    @Override
+    public StringBuilder visitError(ErrorType t, StringBuilder p) {
       throw new MissingTypeException();
     }
   }
 
-  /**
-   * Like {@link EncodingTypeVisitor} except that type parameters are omitted from the result.
-   */
+  /** Like {@link EncodingTypeVisitor} except that type parameters are omitted from the result. */
   private static class RawEncodingTypeVisitor extends EncodingTypeVisitor {
-    @Override void appendTypeArguments(DeclaredType type, StringBuilder sb) {}
+    @Override
+    void appendTypeArguments(DeclaredType type, StringBuilder sb) {}
   }
 
   /**
-   * Like {@link EncodingTypeVisitor} except that annotations on the visited type are also
-   * included in the resultant string. Class names in those annotations are also encoded using
-   * the {@code `java.util.List`} form.
+   * Like {@link EncodingTypeVisitor} except that annotations on the visited type are also included
+   * in the resultant string. Class names in those annotations are also encoded using the {@code
+   * `java.util.List`} form.
    */
   private static class AnnotatedEncodingTypeVisitor extends EncodingTypeVisitor {
-    @Override public StringBuilder visitPrimitive(PrimitiveType type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitPrimitive(PrimitiveType type, StringBuilder sb) {
       appendAnnotations(type.getAnnotationMirrors(), sb);
       // We can't just append type.toString(), because that will also have the annotation, but
       // without encoding.
       return sb.append(type.getKind().toString().toLowerCase());
     }
 
-    @Override public StringBuilder visitTypeVariable(TypeVariable type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitTypeVariable(TypeVariable type, StringBuilder sb) {
       appendAnnotations(type.getAnnotationMirrors(), sb);
       return sb.append(type.asElement().getSimpleName());
     }
 
     /**
-     * {@inheritDoc}
-     * The result respects the Java syntax, whereby {@code Foo @Bar []} is an annotation on the
-     * array type itself, while {@code @Bar Foo[]} would be an annotation on the component type.
+     * {@inheritDoc} The result respects the Java syntax, whereby {@code Foo @Bar []} is an
+     * annotation on the array type itself, while {@code @Bar Foo[]} would be an annotation on the
+     * component type.
      */
-    @Override public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitArray(ArrayType type, StringBuilder sb) {
       visit2(type.getComponentType(), sb);
       List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
       if (!annotationMirrors.isEmpty()) {
@@ -302,7 +305,8 @@ final class TypeEncoder {
       return sb.append("[]");
     }
 
-    @Override public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
+    @Override
+    public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
       List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
       if (annotationMirrors.isEmpty()) {
         sb.append(declaredTypeName(type));

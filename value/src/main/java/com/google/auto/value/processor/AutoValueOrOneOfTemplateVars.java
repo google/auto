@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableList;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-@SuppressWarnings("unused")  // the fields in this class are only read via reflection
+@SuppressWarnings("unused") // the fields in this class are only read via reflection
 abstract class AutoValueOrOneOfTemplateVars extends TemplateVars {
   /** Whether to generate an equals(Object) method. */
   Boolean equals;
@@ -40,19 +40,15 @@ abstract class AutoValueOrOneOfTemplateVars extends TemplateVars {
    */
   String equalsParameterType;
 
-  /**
-   * The encoding of the {@code Generated} class. Empty if the class is not available.
-   */
+  /** The encoding of the {@code Generated} class. Empty if the class is not available. */
   String generated;
 
-  /**
-   * The package of the class with the {@code @AutoValue} annotation and its generated subclass.
-   */
+  /** The package of the class with the {@code @AutoValue} annotation and its generated subclass. */
   String pkg;
-  
+
   /**
-   * The name of the class with the {@code @AutoValue} annotation, including containing
-   * classes but not including the package name.
+   * The name of the class with the {@code @AutoValue} annotation, including containing classes but
+   * not including the package name.
    */
   String origClass;
 
@@ -74,15 +70,14 @@ abstract class AutoValueOrOneOfTemplateVars extends TemplateVars {
   String formalTypes;
 
   /**
-   * The generic signature used by any generated subclass for its superclass reference.
-   * This is empty, or contains only type variables with no bounds, for example
-   * {@code <K, V>}.
+   * The generic signature used by any generated subclass for its superclass reference. This is
+   * empty, or contains only type variables with no bounds, for example {@code <K, V>}.
    */
   String actualTypes;
 
   /**
-   * The generic signature in {@link #actualTypes} where every variable has been replaced
-   * by a wildcard, for example {@code <?, ?>}.
+   * The generic signature in {@link #actualTypes} where every variable has been replaced by a
+   * wildcard, for example {@code <?, ?>}.
    */
   String wildcardTypes;
 }

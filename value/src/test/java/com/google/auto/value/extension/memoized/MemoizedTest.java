@@ -35,6 +35,7 @@ public class MemoizedTest {
   @AutoValue
   abstract static class ValueWithKeywordName {
     abstract boolean getNative();
+
     abstract boolean getNative0();
 
     @Memoized

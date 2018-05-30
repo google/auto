@@ -25,5 +25,4 @@ import java.lang.annotation.RetentionPolicy;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Empty {
-}
+public @interface Empty {}

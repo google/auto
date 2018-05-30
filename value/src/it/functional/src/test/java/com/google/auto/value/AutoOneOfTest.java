@@ -27,9 +27,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
 public class AutoOneOfTest {
   @AutoValue
@@ -63,10 +61,16 @@ public class AutoOneOfTest {
 
   @AutoOneOf(Pet.Kind.class)
   public abstract static class Pet {
-    public enum Kind {DOG, CAT, TIGER_SHARK}
+    public enum Kind {
+      DOG,
+      CAT,
+      TIGER_SHARK
+    }
 
     public abstract Dog dog();
+
     public abstract Cat cat();
+
     public abstract TigerShark tigerShark();
 
     public static Pet dog(Dog dog) {
@@ -154,9 +158,15 @@ public class AutoOneOfTest {
 
   @AutoOneOf(IntegerOrString.Kind.class)
   abstract static class IntegerOrString {
-    enum Kind {INTEGER, STRING}
+    enum Kind {
+      INTEGER,
+      STRING
+    }
+
     abstract Kind getKind();
+
     abstract int integer();
+
     abstract String string();
 
     static IntegerOrString of(int x) {
@@ -188,7 +198,9 @@ public class AutoOneOfTest {
   @AutoOneOf(Pet.Kind.class)
   public abstract static class PetWithGet {
     public abstract Dog getDog();
+
     public abstract Cat getCat();
+
     public abstract TigerShark getTigerShark();
 
     public static PetWithGet dog(Dog dog) {
@@ -215,16 +227,33 @@ public class AutoOneOfTest {
 
   @AutoOneOf(Primitive.Kind.class)
   public abstract static class Primitive {
-    public enum Kind {A_BYTE, A_SHORT, AN_INT, A_LONG, A_FLOAT, A_DOUBLE, A_CHAR, A_BOOLEAN}
+    public enum Kind {
+      A_BYTE,
+      A_SHORT,
+      AN_INT,
+      A_LONG,
+      A_FLOAT,
+      A_DOUBLE,
+      A_CHAR,
+      A_BOOLEAN
+    }
+
     public abstract Kind getKind();
 
     public abstract byte aByte();
+
     public abstract short aShort();
+
     public abstract int anInt();
+
     public abstract long aLong();
+
     public abstract float aFloat();
+
     public abstract double aDouble();
+
     public abstract char aChar();
+
     public abstract boolean aBoolean();
 
     public static Primitive of(byte x) {
@@ -269,7 +298,9 @@ public class AutoOneOfTest {
 
   @AutoOneOf(OneOfOne.Kind.class)
   public abstract static class OneOfOne {
-    public enum Kind {DOG}
+    public enum Kind {
+      DOG
+    }
 
     public abstract Dog getDog();
 
@@ -303,7 +334,10 @@ public class AutoOneOfTest {
   // might not use all the type parameters.
   @AutoOneOf(TaskResult.Kind.class)
   public abstract static class TaskResult<V extends Serializable> {
-    public enum Kind {VALUE, EXCEPTION}
+    public enum Kind {
+      VALUE,
+      EXCEPTION
+    }
 
     public abstract Kind getKind();
 
@@ -350,8 +384,12 @@ public class AutoOneOfTest {
 
   @AutoOneOf(CustomToString.Kind.class)
   public abstract static class CustomToString {
-    public enum Kind {ACE}
+    public enum Kind {
+      ACE
+    }
+
     public abstract Kind getKind();
+
     public abstract String ace();
 
     public static CustomToString ace(String ace) {
@@ -373,8 +411,12 @@ public class AutoOneOfTest {
 
   @AutoOneOf(AbstractToString.Kind.class)
   public abstract static class AbstractToString {
-    public enum Kind {ACE}
+    public enum Kind {
+      ACE
+    }
+
     public abstract Kind getKind();
+
     public abstract String ace();
 
     public static AbstractToString ace(String ace) {
@@ -398,9 +440,15 @@ public class AutoOneOfTest {
   // that are reserved words.
   @AutoOneOf(LetterOrPackage.Kind.class)
   public abstract static class LetterOrPackage {
-    public enum Kind {LETTER, PACKAGE}
+    public enum Kind {
+      LETTER,
+      PACKAGE
+    }
+
     public abstract Kind getKind();
+
     public abstract String getLetter();
+
     public abstract String getPackage();
 
     public static LetterOrPackage ofLetter(String letter) {
@@ -426,8 +474,12 @@ public class AutoOneOfTest {
   @AutoOneOf(AnnotationNotCopied.Kind.class)
   @CopyTest(23)
   public abstract static class AnnotationNotCopied {
-    public enum Kind {ACE}
+    public enum Kind {
+      ACE
+    }
+
     public abstract Kind getKind();
+
     public abstract String ace();
 
     public static AnnotationNotCopied ace(String ace) {
@@ -446,8 +498,12 @@ public class AutoOneOfTest {
   @CopyTest(23)
   @AutoValue.CopyAnnotations
   public abstract static class AnnotationCopied {
-    public enum Kind {ACE}
+    public enum Kind {
+      ACE
+    }
+
     public abstract Kind getKind();
+
     public abstract String ace();
 
     public static AnnotationCopied ace(String ace) {

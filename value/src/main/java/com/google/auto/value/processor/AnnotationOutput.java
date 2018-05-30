@@ -34,16 +34,16 @@ import javax.tools.Diagnostic;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 final class AnnotationOutput {
-  private AnnotationOutput() {}  // There are no instances of this class.
+  private AnnotationOutput() {} // There are no instances of this class.
 
   /**
-   * Visitor that produces a string representation of an annotation value, suitable for inclusion
-   * in a Java source file as an annotation member or as the initializer of a variable of the
+   * Visitor that produces a string representation of an annotation value, suitable for inclusion in
+   * a Java source file as an annotation member or as the initializer of a variable of the
    * appropriate type. The syntax for the two is the same except for annotation members that are
    * themselves annotations. Within an annotation, an annotation member can be written as
-   * {@code @NestedAnnotation(...)}, while in an initializer it must be written as an object,
-   * for example the construction of an {@code @AutoAnnotation} class. That's why we have this
-   * abstract class and two concrete subclasses.
+   * {@code @NestedAnnotation(...)}, while in an initializer it must be written as an object, for
+   * example the construction of an {@code @AutoAnnotation} class. That's why we have this abstract
+   * class and two concrete subclasses.
    */
   private abstract static class SourceFormVisitor
       extends SimpleAnnotationValueVisitor8<Void, StringBuilder> {
@@ -139,11 +139,14 @@ final class AnnotationOutput {
 
     @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
-      processingEnv.getMessager().printMessage(
-          Diagnostic.Kind.ERROR,
-          "@AutoAnnotation cannot yet supply a default value for annotation-valued member '"
-              + memberName + "'",
-          context);
+      processingEnv
+          .getMessager()
+          .printMessage(
+              Diagnostic.Kind.ERROR,
+              "@AutoAnnotation cannot yet supply a default value for annotation-valued member '"
+                  + memberName
+                  + "'",
+              context);
       sb.append("null");
       return null;
     }
@@ -211,29 +214,29 @@ final class AnnotationOutput {
 
   private static void appendEscaped(StringBuilder sb, char c) {
     switch (c) {
-    case '\\':
-    case '"':
-    case '\'':
-      sb.append('\\').append(c);
-      break;
-    case '\n':
-      sb.append("\\n");
-      break;
-    case '\r':
-      sb.append("\\r");
-      break;
-    case '\t':
-      sb.append("\\t");
-      break;
-    default:
-      if (c < 0x20) {
-        sb.append(String.format("\\%03o", (int) c));
-      } else if (c < 0x7f || Character.isLetter(c)) {
-        sb.append(c);
-      } else {
-        sb.append(String.format("\\u%04x", (int) c));
-      }
-      break;
+      case '\\':
+      case '"':
+      case '\'':
+        sb.append('\\').append(c);
+        break;
+      case '\n':
+        sb.append("\\n");
+        break;
+      case '\r':
+        sb.append("\\r");
+        break;
+      case '\t':
+        sb.append("\\t");
+        break;
+      default:
+        if (c < 0x20) {
+          sb.append(String.format("\\%03o", (int) c));
+        } else if (c < 0x7f || Character.isLetter(c)) {
+          sb.append(c);
+        } else {
+          sb.append(String.format("\\u%04x", (int) c));
+        }
+        break;
     }
   }
 }
