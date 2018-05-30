@@ -27,39 +27,37 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
 public class AutoOneOfCompilationTest {
-  @Rule
-  public final Expect expect = Expect.create();
+  @Rule public final Expect expect = Expect.create();
 
   @Test
   public void success() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.TaskResult",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "import java.io.Serializable;",
-        "",
-        "@AutoOneOf(TaskResult.Kind.class)",
-        "public abstract class TaskResult<V, T extends Throwable> {",
-        "  public enum Kind {VALUE, EXCEPTION}",
-        "  public abstract Kind getKind();",
-        "",
-        "  public abstract V value();",
-        "  public abstract Throwable exception();",
-        "",
-        "  public static <V> TaskResult<V, ?> value(V value) {",
-        "    return AutoOneOf_TaskResult.value(value);",
-        "  }",
-        "",
-        "  public static <T extends Throwable> TaskResult<?, T> exception(T exception) {",
-        "    return AutoOneOf_TaskResult.exception(exception);",
-        "  }",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.TaskResult",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "import java.io.Serializable;",
+            "",
+            "@AutoOneOf(TaskResult.Kind.class)",
+            "public abstract class TaskResult<V, T extends Throwable> {",
+            "  public enum Kind {VALUE, EXCEPTION}",
+            "  public abstract Kind getKind();",
+            "",
+            "  public abstract V value();",
+            "  public abstract Throwable exception();",
+            "",
+            "  public static <V> TaskResult<V, ?> value(V value) {",
+            "    return AutoOneOf_TaskResult.value(value);",
+            "  }",
+            "",
+            "  public static <T extends Throwable> TaskResult<?, T> exception(T exception) {",
+            "    return AutoOneOf_TaskResult.exception(exception);",
+            "  }",
+            "}");
     JavaFileObject expectedOutput =
         JavaFileObjects.forSourceLines(
             "foo.bar.AutoOneOf_TaskResult",
@@ -181,8 +179,7 @@ public class AutoOneOfCompilationTest {
             .withProcessors(new AutoOneOfProcessor())
             .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(javaFileObject);
-    assertThat(compilation)
-        .succeededWithoutWarnings();
+    assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoOneOf_TaskResult")
         .hasSourceEquivalentTo(expectedOutput);
@@ -190,20 +187,21 @@ public class AutoOneOfCompilationTest {
 
   @Test
   public void noKindGetter() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Pet",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "",
-        "@AutoOneOf(Pet.Kind.class)",
-        "public abstract class Pet {",
-        "  public enum Kind {DOG, CAT}",
-        "  public abstract String dog();",
-        "  public abstract String cat();",
-        "}");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  public enum Kind {DOG, CAT}",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
             "foo.bar.Pet must have a no-arg abstract method returning foo.bar.Pet.Kind")
@@ -213,21 +211,22 @@ public class AutoOneOfCompilationTest {
 
   @Test
   public void kindGetterHasParam() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Pet",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "",
-        "@AutoOneOf(Pet.Kind.class)",
-        "public abstract class Pet {",
-        "  public enum Kind {DOG, CAT}",
-        "  public abstract Kind getKind(String wut);",
-        "  public abstract String dog();",
-        "  public abstract String cat();",
-        "}");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  public enum Kind {DOG, CAT}",
+            "  public abstract Kind getKind(String wut);",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
             "foo.bar.Pet must have a no-arg abstract method returning foo.bar.Pet.Kind")
@@ -237,22 +236,23 @@ public class AutoOneOfCompilationTest {
 
   @Test
   public void twoKindGetters() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Pet",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "",
-        "@AutoOneOf(Pet.Kind.class)",
-        "public abstract class Pet {",
-        "  public enum Kind {DOG, CAT}",
-        "  public abstract Kind getKind();",
-        "  public abstract Kind alsoGetKind();",
-        "  public abstract String dog();",
-        "  public abstract String cat();",
-        "}");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  public enum Kind {DOG, CAT}",
+            "  public abstract Kind getKind();",
+            "  public abstract Kind alsoGetKind();",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining("More than one abstract method returns foo.bar.Pet.Kind")
         .inFile(javaFileObject)
@@ -265,21 +265,22 @@ public class AutoOneOfCompilationTest {
 
   @Test
   public void enumMissingCase() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Pet",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "",
-        "@AutoOneOf(Pet.Kind.class)",
-        "public abstract class Pet {",
-        "  public enum Kind {DOG}",
-        "  public abstract Kind getKind();",
-        "  public abstract String dog();",
-        "  public abstract String cat();",
-        "}");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  public enum Kind {DOG}",
+            "  public abstract Kind getKind();",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining("Enum has no constant with name corresponding to property 'cat'")
         .inFile(javaFileObject)
@@ -288,25 +289,26 @@ public class AutoOneOfCompilationTest {
 
   @Test
   public void enumExtraCase() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Pet",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "",
-        "@AutoOneOf(Pet.Kind.class)",
-        "public abstract class Pet {",
-        "  public enum Kind {",
-        "    DOG,",
-        "    CAT,",
-        "    GERBIL,",
-        "  }",
-        "  public abstract Kind getKind();",
-        "  public abstract String dog();",
-        "  public abstract String cat();",
-        "}");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  public enum Kind {",
+            "    DOG,",
+            "    CAT,",
+            "    GERBIL,",
+            "  }",
+            "  public abstract Kind getKind();",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
             "Name of enum constant 'GERBIL' does not correspond to any property name")
@@ -316,25 +318,26 @@ public class AutoOneOfCompilationTest {
 
   @Test
   public void abstractVoidMethod() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Pet",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoOneOf;",
-        "",
-        "@AutoOneOf(Pet.Kind.class)",
-        "public abstract class Pet {",
-        "  public enum Kind {",
-        "    DOG,",
-        "    CAT,",
-        "  }",
-        "  public abstract Kind getKind();",
-        "  public abstract String dog();",
-        "  public abstract String cat();",
-        "  public abstract void frob();",
-        "}");
-    Compilation compilation
-        = javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  public enum Kind {",
+            "    DOG,",
+            "    CAT,",
+            "  }",
+            "  public abstract Kind getKind();",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "  public abstract void frob();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .hadWarningContaining(
             "Abstract methods in @AutoOneOf classes must be non-void with no parameters")

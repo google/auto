@@ -24,11 +24,9 @@ import java.util.Set;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-@SuppressWarnings("unused")  // the fields in this class are only read via reflection
+@SuppressWarnings("unused") // the fields in this class are only read via reflection
 class AutoAnnotationTemplateVars extends TemplateVars {
-  /**
-   * The members of the annotation being implemented.
-   */
+  /** The members of the annotation being implemented. */
   Map<String, AutoAnnotationProcessor.Member> members;
 
   /**
@@ -37,9 +35,7 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   Map<String, AutoAnnotationProcessor.Parameter> params;
 
-  /**
-   * The encoded form of the {@code Generated} class, or empty if it is not available.
-   */
+  /** The encoded form of the {@code Generated} class, or empty if it is not available. */
   String generated;
 
   /**
@@ -48,19 +44,13 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   String pkg;
 
-  /**
-   * The simple name of the generated class, like {@code AutoAnnotation_Foo_bar}.
-   */
+  /** The simple name of the generated class, like {@code AutoAnnotation_Foo_bar}. */
   String className;
 
-  /**
-   * The name of the annotation interface as it can be referenced in the generated code.
-   */
+  /** The name of the annotation interface as it can be referenced in the generated code. */
   String annotationName;
 
-  /**
-   * The fully-qualified name of the annotation interface.
-   */
+  /** The fully-qualified name of the annotation interface. */
   String annotationFullName;
 
   /**
@@ -70,20 +60,18 @@ class AutoAnnotationTemplateVars extends TemplateVars {
   Set<Class<?>> wrapperTypesUsedInCollections;
 
   /**
-   * True if this annotation is marked {@code @GwtCompatible}. That means that we can't use
-   * {@code clone()} to make a copy of an array.
+   * True if this annotation is marked {@code @GwtCompatible}. That means that we can't use {@code
+   * clone()} to make a copy of an array.
    */
   Boolean gwtCompatible;
 
   /**
-   * The names of members that are defaulted (not mentioned) in this {@code @AutoAnnotation},
-   * and whose hash codes are invariable.
+   * The names of members that are defaulted (not mentioned) in this {@code @AutoAnnotation}, and
+   * whose hash codes are invariable.
    */
   Set<String> invariableHashes;
 
-  /**
-   * The sum of the hash code contributions from the members in {@link #invariableHashes}.
-   */
+  /** The sum of the hash code contributions from the members in {@link #invariableHashes}. */
   Integer invariableHashSum;
 
   private static final Template TEMPLATE = parsedTemplateForResource("autoannotation.vm");

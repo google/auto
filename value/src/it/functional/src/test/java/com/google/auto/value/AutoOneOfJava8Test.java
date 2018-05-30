@@ -41,8 +41,12 @@ public class AutoOneOfJava8Test {
     @Retention(RetentionPolicy.RUNTIME)
     public @interface Nullable {}
 
-    public enum Kind {THING}
+    public enum Kind {
+      THING
+    }
+
     public abstract Kind kind();
+
     public abstract String thing();
 
     public static EqualsNullable ofThing(String thing) {
@@ -67,7 +71,6 @@ public class AutoOneOfJava8Test {
     Method equals = c.getMethod("equals", Object.class);
     assertThat(equals.getDeclaringClass()).isNotSameAs(EqualsNullable.class);
     AnnotatedType parameterType = equals.getAnnotatedParameterTypes()[0];
-    assertThat(parameterType.isAnnotationPresent(EqualsNullable.Nullable.class))
-        .isTrue();
+    assertThat(parameterType.isAnnotationPresent(EqualsNullable.Nullable.class)).isTrue();
   }
 }

@@ -31,10 +31,16 @@ import javax.annotation.Nullable;
 @GwtCompatible(serializable = true)
 abstract class GwtValueTypeWithBuilder<T> implements Serializable {
   abstract String string();
+
   abstract int integer();
-  @Nullable abstract GwtValueTypeWithBuilder<T> other();
+
+  @Nullable
+  abstract GwtValueTypeWithBuilder<T> other();
+
   abstract List<GwtValueTypeWithBuilder<T>> others();
+
   abstract ImmutableList<T> list();
+
   abstract ImmutableList<T> otherList();
 
   static <T> Builder<T> builder() {
@@ -44,11 +50,17 @@ abstract class GwtValueTypeWithBuilder<T> implements Serializable {
   @AutoValue.Builder
   interface Builder<T> {
     Builder<T> string(String x);
+
     Builder<T> integer(int x);
+
     Builder<T> other(@Nullable GwtValueTypeWithBuilder<T> x);
+
     Builder<T> others(List<GwtValueTypeWithBuilder<T>> x);
+
     Builder<T> list(ImmutableList<T> x);
+
     Builder<T> otherList(List<T> x);
+
     GwtValueTypeWithBuilder<T> build();
   }
 }

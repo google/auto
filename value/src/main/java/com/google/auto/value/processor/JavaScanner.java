@@ -21,18 +21,18 @@ package com.google.auto.value.processor;
  * just returns token boundaries rather than the tokens themselves.
  *
  * <p>We are not dealing with arbitrary user code so we can assume there are no exotic things like
- * tabs or Unicode escapes that resolve into quotes. The purpose of the scanner here is to
- * return a sequence of offsets that split the string up in a way that allows us to work with
- * spaces without having to worry whether they are inside strings or comments. The particular
- * properties we use are that every string and character literal and every comment is a single
- * token; every newline plus all following indentation is a single token; and every other string
- * of consecutive spaces outside a comment or literal is a single token. That means that we can
- * safely compress a token that starts with a space into a single space, without falsely removing
- * indentation or changing the contents of strings.
+ * tabs or Unicode escapes that resolve into quotes. The purpose of the scanner here is to return a
+ * sequence of offsets that split the string up in a way that allows us to work with spaces without
+ * having to worry whether they are inside strings or comments. The particular properties we use are
+ * that every string and character literal and every comment is a single token; every newline plus
+ * all following indentation is a single token; and every other string of consecutive spaces outside
+ * a comment or literal is a single token. That means that we can safely compress a token that
+ * starts with a space into a single space, without falsely removing indentation or changing the
+ * contents of strings.
  *
- * <p>In addition to real Java syntax, this scanner recognizes tokens of the form
- * {@code `text`}, which are used in the templates to wrap fully-qualified type names, so that they
- * can be extracted and replaced by imported names if possible.
+ * <p>In addition to real Java syntax, this scanner recognizes tokens of the form {@code `text`},
+ * which are used in the templates to wrap fully-qualified type names, so that they can be extracted
+ * and replaced by imported names if possible.
  *
  * @author Éamonn McManus
  */
@@ -76,16 +76,14 @@ class JavaScanner {
   private int spaceEnd(int start) {
     assert s.charAt(start) == ' ' || s.charAt(start) == '\n';
     int i;
-    for (i = start + 1; i < s.length() && s.charAt(i) == ' '; i++) {
-    }
+    for (i = start + 1; i < s.length() && s.charAt(i) == ' '; i++) {}
     return i;
   }
 
   private int blockCommentEnd(int start) {
     assert s.charAt(start) == '/' && s.charAt(start + 1) == '*';
     int i;
-    for (i = start + 2; s.charAt(i) != '*' || s.charAt(i + 1) != '/'; i++) {
-    }
+    for (i = start + 2; s.charAt(i) != '*' || s.charAt(i + 1) != '/'; i++) {}
     return i + 2;
   }
 

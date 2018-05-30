@@ -28,6 +28,7 @@ import java.io.Serializable;
 @GwtCompatible
 abstract class NonSerializableGwtValueType implements Serializable {
   abstract String string();
+
   abstract int integer();
 
   static NonSerializableGwtValueType create(String string, int integer) {

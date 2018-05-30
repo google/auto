@@ -23,7 +23,9 @@ import java.lang.annotation.Target;
  * Specifies that <a href="https://github.com/google/auto/tree/master/value">AutoValue</a> should
  * generate an implementation class for the annotated abstract class, implementing the standard
  * {@link Object} methods like {@link Object#equals equals} to have conventional value semantics. A
- * simple example: <pre>
+ * simple example:
+ *
+ * <pre>
  *
  *   &#64;AutoValue
  *   abstract class Person {
@@ -36,7 +38,6 @@ import java.lang.annotation.Target;
  *   }</pre>
  *
  * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
- *
  * @author Éamonn McManus
  * @author Kevin Bourrillion
  */
@@ -48,7 +49,9 @@ public @interface AutoValue {
    * Specifies that AutoValue should generate an implementation of the annotated class or interface,
    * to serve as a <i>builder</i> for the value-type class it is nested within. As a simple example,
    * here is an alternative way to write the {@code Person} class mentioned in the {@link AutoValue}
-   * example: <pre>
+   * example:
+   *
+   * <pre>
    *
    *   &#64;AutoValue
    *   abstract class Person {
@@ -80,10 +83,10 @@ public @interface AutoValue {
    * <p>The following annotations are excluded:
    *
    * <ol>
-   * <li>AutoValue and its nested annotations;
-   * <li>any annotation appearing in the {@link AutoValue.CopyAnnotations#exclude} field;
-   * <li>any class annotation which is itself annotated with the
-   *     {@link java.lang.annotation.Inherited} meta-annotation.
+   *   <li>AutoValue and its nested annotations;
+   *   <li>any annotation appearing in the {@link AutoValue.CopyAnnotations#exclude} field;
+   *   <li>any class annotation which is itself annotated with the {@link
+   *       java.lang.annotation.Inherited} meta-annotation.
    * </ol>
    *
    * <p>For historical reasons, annotations are always copied from an {@code @AutoValue} property
@@ -95,7 +98,9 @@ public @interface AutoValue {
    * <p>When the <i>type</i> of an {@code @AutoValue} property method has annotations, those are
    * part of the type, so they are always copied to the implementation of the method.
    * {@code @CopyAnnotations} has no effect here. For example, suppose {@code @Confidential} is a
-   * {@link java.lang.annotation.ElementType#TYPE_USE TYPE_USE} annotation: <pre>
+   * {@link java.lang.annotation.ElementType#TYPE_USE TYPE_USE} annotation:
+   *
+   * <pre>
    *
    *   &#64;AutoValue
    *   abstract class Person {

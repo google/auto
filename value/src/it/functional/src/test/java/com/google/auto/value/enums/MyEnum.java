@@ -15,9 +15,9 @@
  */
 package com.google.auto.value.enums;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 public enum MyEnum {
-  ONE, TWO, BUCKLE_MY_SHOE
+  ONE,
+  TWO,
+  BUCKLE_MY_SHOE
 }

@@ -80,14 +80,17 @@ public class TypeEncoderTest {
    */
   private void assertTypeImportsAndSpellings(
       Set<TypeMirror> types, String fakePackage, List<String> imports, List<String> spellings) {
-    String fakeProgram = "START\n`import`\nEND\n"
-        + types.stream().map(TypeEncoder::encode).collect(joining("}\n{", "{", "}"));
-    String decoded = TypeEncoder.decode(
-        fakeProgram, elementUtils, typeUtils, fakePackage, baseWithoutContainedTypes());
-    String expected = "START\n"
-        + imports.stream().map(s -> "import " + s + ";\n").collect(joining())
-        + "\nEND\n"
-        + spellings.stream().collect(joining("}\n{", "{", "}"));
+    String fakeProgram =
+        "START\n`import`\nEND\n"
+            + types.stream().map(TypeEncoder::encode).collect(joining("}\n{", "{", "}"));
+    String decoded =
+        TypeEncoder.decode(
+            fakeProgram, elementUtils, typeUtils, fakePackage, baseWithoutContainedTypes());
+    String expected =
+        "START\n"
+            + imports.stream().map(s -> "import " + s + ";\n").collect(joining())
+            + "\nEND\n"
+            + spellings.stream().collect(joining("}\n{", "{", "}"));
     assertThat(decoded).isEqualTo(expected);
   }
 
@@ -96,20 +99,17 @@ public class TypeEncoderTest {
   @Test
   public void testImportsForNoTypes() {
     assertTypeImportsAndSpellings(
-        typeMirrorSet(),
-        "foo.bar",
-        ImmutableList.of(),
-        ImmutableList.of());
+        typeMirrorSet(), "foo.bar", ImmutableList.of(), ImmutableList.of());
   }
 
   @Test
   public void testImportsForImplicitlyImportedTypes() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeMirrorOf(java.lang.String.class),
-        typeMirrorOf(javax.management.MBeanServer.class),  // Same package, so no import.
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeUtils.getPrimitiveType(TypeKind.BOOLEAN)
-    );
+    Set<TypeMirror> types =
+        typeMirrorSet(
+            typeMirrorOf(java.lang.String.class),
+            typeMirrorOf(javax.management.MBeanServer.class), // Same package, so no import.
+            typeUtils.getPrimitiveType(TypeKind.INT),
+            typeUtils.getPrimitiveType(TypeKind.BOOLEAN));
     assertTypeImportsAndSpellings(
         types,
         "javax.management",
@@ -119,34 +119,37 @@ public class TypeEncoderTest {
 
   @Test
   public void testImportsForPlainTypes() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeMirrorOf(java.lang.String.class),
-        typeMirrorOf(java.net.Proxy.class),
-        typeMirrorOf(java.net.Proxy.Type.class),
-        typeMirrorOf(java.util.regex.Pattern.class),
-        typeMirrorOf(javax.management.MBeanServer.class));
+    Set<TypeMirror> types =
+        typeMirrorSet(
+            typeUtils.getPrimitiveType(TypeKind.INT),
+            typeMirrorOf(java.lang.String.class),
+            typeMirrorOf(java.net.Proxy.class),
+            typeMirrorOf(java.net.Proxy.Type.class),
+            typeMirrorOf(java.util.regex.Pattern.class),
+            typeMirrorOf(javax.management.MBeanServer.class));
     assertTypeImportsAndSpellings(
         types,
         "foo.bar",
         ImmutableList.of(
             "java.net.Proxy", "java.util.regex.Pattern", "javax.management.MBeanServer"),
-        ImmutableList.of(
-            "int", "String", "Proxy", "Proxy.Type", "Pattern", "MBeanServer"));
+        ImmutableList.of("int", "String", "Proxy", "Proxy.Type", "Pattern", "MBeanServer"));
   }
 
   @Test
   public void testImportsForComplicatedTypes() {
     TypeElement list = typeElementOf(java.util.List.class);
     TypeElement map = typeElementOf(java.util.Map.class);
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeMirrorOf(java.util.regex.Pattern.class),
-        typeUtils.getDeclaredType(list,  // List<Timer>
-            typeMirrorOf(java.util.Timer.class)),
-        typeUtils.getDeclaredType(map,   // Map<? extends Timer, ? super BigInteger>
-            typeUtils.getWildcardType(typeMirrorOf(java.util.Timer.class), null),
-            typeUtils.getWildcardType(null, typeMirrorOf(java.math.BigInteger.class))));
+    Set<TypeMirror> types =
+        typeMirrorSet(
+            typeUtils.getPrimitiveType(TypeKind.INT),
+            typeMirrorOf(java.util.regex.Pattern.class),
+            typeUtils.getDeclaredType(
+                list, // List<Timer>
+                typeMirrorOf(java.util.Timer.class)),
+            typeUtils.getDeclaredType(
+                map, // Map<? extends Timer, ? super BigInteger>
+                typeUtils.getWildcardType(typeMirrorOf(java.util.Timer.class), null),
+                typeUtils.getWildcardType(null, typeMirrorOf(java.math.BigInteger.class))));
     // Timer is referenced twice but should obviously only be imported once.
     assertTypeImportsAndSpellings(
         types,
@@ -158,24 +161,23 @@ public class TypeEncoderTest {
             "java.util.Timer",
             "java.util.regex.Pattern"),
         ImmutableList.of(
-            "int",
-            "Pattern",
-            "List<Timer>",
-            "Map<? extends Timer, ? super BigInteger>"));
+            "int", "Pattern", "List<Timer>", "Map<? extends Timer, ? super BigInteger>"));
   }
 
   @Test
   public void testImportsForArrayTypes() {
     TypeElement list = typeElementOf(java.util.List.class);
     TypeElement set = typeElementOf(java.util.Set.class);
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.INT)),
-        typeUtils.getArrayType(typeMirrorOf(java.util.regex.Pattern.class)),
-        typeUtils.getArrayType(          // Set<Matcher[]>[]
-            typeUtils.getDeclaredType(set,
-                typeUtils.getArrayType(typeMirrorOf(java.util.regex.Matcher.class)))),
-        typeUtils.getDeclaredType(list,  // List<Timer[]>
-            typeUtils.getArrayType(typeMirrorOf(java.util.Timer.class))));
+    Set<TypeMirror> types =
+        typeMirrorSet(
+            typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.INT)),
+            typeUtils.getArrayType(typeMirrorOf(java.util.regex.Pattern.class)),
+            typeUtils.getArrayType( // Set<Matcher[]>[]
+                typeUtils.getDeclaredType(
+                    set, typeUtils.getArrayType(typeMirrorOf(java.util.regex.Matcher.class)))),
+            typeUtils.getDeclaredType(
+                list, // List<Timer[]>
+                typeUtils.getArrayType(typeMirrorOf(java.util.Timer.class))));
     // Timer is referenced twice but should obviously only be imported once.
     assertTypeImportsAndSpellings(
         types,
@@ -186,85 +188,59 @@ public class TypeEncoderTest {
             "java.util.Timer",
             "java.util.regex.Matcher",
             "java.util.regex.Pattern"),
-        ImmutableList.of(
-            "int[]",
-            "Pattern[]",
-            "Set<Matcher[]>[]",
-            "List<Timer[]>"));
+        ImmutableList.of("int[]", "Pattern[]", "Set<Matcher[]>[]", "List<Timer[]>"));
   }
 
   @Test
   public void testImportNestedType() {
     Set<TypeMirror> types = typeMirrorSet(typeMirrorOf(java.net.Proxy.Type.class));
     assertTypeImportsAndSpellings(
-        types,
-        "foo.bar",
-        ImmutableList.of("java.net.Proxy"),
-        ImmutableList.of("Proxy.Type"));
+        types, "foo.bar", ImmutableList.of("java.net.Proxy"), ImmutableList.of("Proxy.Type"));
   }
 
   @Test
   public void testImportsForAmbiguousNames() {
     TypeMirror wildcard = typeUtils.getWildcardType(null, null);
-    Set<TypeMirror> types = typeMirrorSet(
-        typeUtils.getPrimitiveType(TypeKind.INT),
-        typeMirrorOf(java.awt.List.class),
-        typeMirrorOf(java.lang.String.class),
-        typeUtils.getDeclaredType(  // List<?>
-            typeElementOf(java.util.List.class), wildcard),
-        typeUtils.getDeclaredType(  // Map<?, ?>
-            typeElementOf(java.util.Map.class), wildcard, wildcard));
+    Set<TypeMirror> types =
+        typeMirrorSet(
+            typeUtils.getPrimitiveType(TypeKind.INT),
+            typeMirrorOf(java.awt.List.class),
+            typeMirrorOf(java.lang.String.class),
+            typeUtils.getDeclaredType( // List<?>
+                typeElementOf(java.util.List.class), wildcard),
+            typeUtils.getDeclaredType( // Map<?, ?>
+                typeElementOf(java.util.Map.class), wildcard, wildcard));
     assertTypeImportsAndSpellings(
         types,
         "foo.bar",
-        ImmutableList.of(
-            "java.util.Map"
-        ),
-        ImmutableList.of(
-            "int",
-            "java.awt.List",
-            "String",
-            "java.util.List<?>",
-            "Map<?, ?>"));
+        ImmutableList.of("java.util.Map"),
+        ImmutableList.of("int", "java.awt.List", "String", "java.util.List<?>", "Map<?, ?>"));
   }
 
   @Test
   public void testSimplifyJavaLangString() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeMirrorOf(java.lang.String.class));
-    assertTypeImportsAndSpellings(
-        types,
-        "foo.bar",
-        ImmutableList.of(),
-        ImmutableList.of("String"));
+    Set<TypeMirror> types = typeMirrorSet(typeMirrorOf(java.lang.String.class));
+    assertTypeImportsAndSpellings(types, "foo.bar", ImmutableList.of(), ImmutableList.of("String"));
   }
 
   @Test
   public void testSimplifyJavaLangThreadState() {
-    Set<TypeMirror> types = typeMirrorSet(
-        typeMirrorOf(java.lang.Thread.State.class));
+    Set<TypeMirror> types = typeMirrorSet(typeMirrorOf(java.lang.Thread.State.class));
     assertTypeImportsAndSpellings(
-        types,
-        "foo.bar",
-        ImmutableList.of(),
-        ImmutableList.of("Thread.State"));
+        types, "foo.bar", ImmutableList.of(), ImmutableList.of("Thread.State"));
   }
 
   @Test
   public void testSimplifyJavaLangNamesake() {
     TypeMirror javaLangType = typeMirrorOf(java.lang.RuntimePermission.class);
-    TypeMirror notJavaLangType = typeMirrorOf(
-        com.google.auto.value.processor.testclasses.RuntimePermission.class);
-    Set<TypeMirror> types = typeMirrorSet(
-        javaLangType,
-        notJavaLangType);
+    TypeMirror notJavaLangType =
+        typeMirrorOf(com.google.auto.value.processor.testclasses.RuntimePermission.class);
+    Set<TypeMirror> types = typeMirrorSet(javaLangType, notJavaLangType);
     assertTypeImportsAndSpellings(
         types,
         "foo.bar",
         ImmutableList.of(),
-        ImmutableList.of(
-            javaLangType.toString(),
-            notJavaLangType.toString()));
+        ImmutableList.of(javaLangType.toString(), notJavaLangType.toString()));
   }
 
   @Test
@@ -278,19 +254,23 @@ public class TypeEncoderTest {
     TypeMirror pattern = typeMirrorOf(java.util.regex.Pattern.class);
     TypeMirror timer = typeMirrorOf(java.util.Timer.class);
     TypeMirror bigInteger = typeMirrorOf(java.math.BigInteger.class);
-    ImmutableMap<TypeMirror, String> typeMap = ImmutableMap.<TypeMirror, String>builder()
-        .put(typeUtils.getPrimitiveType(TypeKind.INT), "int")
-        .put(typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.BYTE)), "byte[]")
-        .put(pattern, "Pattern")
-        .put(typeUtils.getArrayType(pattern), "Pattern[]")
-        .put(typeUtils.getArrayType(typeUtils.getArrayType(pattern)), "Pattern[][]")
-        .put(typeUtils.getDeclaredType(list, typeUtils.getWildcardType(null, null)), "List<?>")
-        .put(typeUtils.getDeclaredType(list, timer), "List<Timer>")
-        .put(typeUtils.getDeclaredType(map, string, integer), "Map<String, Integer>")
-        .put(typeUtils.getDeclaredType(map,
-              typeUtils.getWildcardType(timer, null), typeUtils.getWildcardType(null, bigInteger)),
-            "Map<? extends Timer, ? super BigInteger>")
-        .build();
+    ImmutableMap<TypeMirror, String> typeMap =
+        ImmutableMap.<TypeMirror, String>builder()
+            .put(typeUtils.getPrimitiveType(TypeKind.INT), "int")
+            .put(typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.BYTE)), "byte[]")
+            .put(pattern, "Pattern")
+            .put(typeUtils.getArrayType(pattern), "Pattern[]")
+            .put(typeUtils.getArrayType(typeUtils.getArrayType(pattern)), "Pattern[][]")
+            .put(typeUtils.getDeclaredType(list, typeUtils.getWildcardType(null, null)), "List<?>")
+            .put(typeUtils.getDeclaredType(list, timer), "List<Timer>")
+            .put(typeUtils.getDeclaredType(map, string, integer), "Map<String, Integer>")
+            .put(
+                typeUtils.getDeclaredType(
+                    map,
+                    typeUtils.getWildcardType(timer, null),
+                    typeUtils.getWildcardType(null, bigInteger)),
+                "Map<? extends Timer, ? super BigInteger>")
+            .build();
     assertTypeImportsAndSpellings(
         typeMap.keySet(),
         "foo.bar",
@@ -313,9 +293,10 @@ public class TypeEncoderTest {
     String myPackage = getClass().getPackage().getName();
     String decoded =
         TypeEncoder.decode(text, elementUtils, typeUtils, myPackage, baseWithoutContainedTypes());
-    String expected = "import java.util.List;\n\n"
-        + "{TypeEncoderTest.MultipleBounds<K, V>}"
-        + "{<K extends List<V> & Comparable<K>, V>}";
+    String expected =
+        "import java.util.List;\n\n"
+            + "{TypeEncoderTest.MultipleBounds<K, V>}"
+            + "{<K extends List<V> & Comparable<K>, V>}";
     assertThat(decoded).isEqualTo(expected);
   }
 
@@ -337,9 +318,9 @@ public class TypeEncoderTest {
 
   /**
    * Returns a "base type" for TypeSimplifier that does not contain any nested types. The point
-   * being that every {@code TypeSimplifier} has a base type that the class being generated is
-   * going to extend, and if that class has nested types they will be in scope, and therefore a
-   * possible source of ambiguity.
+   * being that every {@code TypeSimplifier} has a base type that the class being generated is going
+   * to extend, and if that class has nested types they will be in scope, and therefore a possible
+   * source of ambiguity.
    */
   private TypeMirror baseWithoutContainedTypes() {
     return typeMirrorOf(Object.class);
@@ -352,11 +333,10 @@ public class TypeEncoderTest {
   // annotation processor, and propagate any failures out of this test.
   @Test
   public void testErrorTypes() {
-    JavaFileObject source = JavaFileObjects.forSourceString(
-        "ExtendsUndefinedType", "class ExtendsUndefinedType extends UndefinedParent {}");
-    Compilation compilation = javac()
-        .withProcessors(new ErrorTestProcessor())
-        .compile(source);
+    JavaFileObject source =
+        JavaFileObjects.forSourceString(
+            "ExtendsUndefinedType", "class ExtendsUndefinedType extends UndefinedParent {}");
+    Compilation compilation = javac().withProcessors(new ErrorTestProcessor()).compile(source);
     assertThat(compilation).failed();
     assertThat(compilation).hadErrorContaining("UndefinedParent");
     assertThat(compilation).hadErrorCount(1);
@@ -368,8 +348,7 @@ public class TypeEncoderTest {
     Elements elementUtils;
 
     @Override
-    public boolean process(
-        Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
       if (roundEnv.processingOver()) {
         typeUtils = processingEnv.getTypeUtils();
         elementUtils = processingEnv.getElementUtils();
@@ -395,12 +374,13 @@ public class TypeEncoderTest {
       testErrorType(arrayOfError);
     }
 
-    @SuppressWarnings("MissingFail")  // error message gets converted into assertion failure
+    @SuppressWarnings("MissingFail") // error message gets converted into assertion failure
     private void testErrorType(TypeMirror typeWithError) {
       try {
         TypeEncoder.encode(typeWithError);
-        processingEnv.getMessager().printMessage(
-            Diagnostic.Kind.ERROR, "Expected exception for type: " + typeWithError);
+        processingEnv
+            .getMessager()
+            .printMessage(Diagnostic.Kind.ERROR, "Expected exception for type: " + typeWithError);
       } catch (MissingTypeException expected) {
       }
     }

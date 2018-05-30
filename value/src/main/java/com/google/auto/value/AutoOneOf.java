@@ -21,9 +21,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies that the annotated class is a <em>one-of</em> class, also known as a
- * <a href="https://en.wikipedia.org/wiki/Tagged_union"><em>tagged union</em></a>.
- * An {@code @AutoOneOf} class is very similar to an {@link AutoValue @AutoValue} class, in that its
+ * Specifies that the annotated class is a <em>one-of</em> class, also known as a <a
+ * href="https://en.wikipedia.org/wiki/Tagged_union"><em>tagged union</em></a>. An
+ * {@code @AutoOneOf} class is very similar to an {@link AutoValue @AutoValue} class, in that its
  * abstract methods define a set of properties. But unlike {@code @AutoValue}, only one of those
  * properties is defined in any given instance.
  *
@@ -55,9 +55,8 @@ import java.lang.annotation.Target;
  *   throw new AssertionError();
  * }}</pre>
  *
- * <p>{@code @AutoOneOf} is explained in more detail in the
- * <a href="https://github.com/google/auto/blob/master/value/userguide/howto.md#oneof">user
- * guide</a>.
+ * <p>{@code @AutoOneOf} is explained in more detail in the <a
+ * href="https://github.com/google/auto/blob/master/value/userguide/howto.md#oneof">user guide</a>.
  *
  * @author Chris Nokleberg
  * @author Éamonn McManus
@@ -65,8 +64,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 public @interface AutoOneOf {
-  /**
-   * Specifies an enum that has one entry per variant in the one-of.
-   */
+  /** Specifies an enum that has one entry per variant in the one-of. */
   Class<? extends Enum<?>> value();
 }

@@ -34,12 +34,13 @@ import javax.lang.model.util.Types;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 public class Optionalish {
-  private static final ImmutableSet<String> OPTIONAL_CLASS_NAMES = ImmutableSet.of(
-      "com.".concat("google.common.base.Optional"),  // subterfuge to foil shading
-      "java.util.Optional",
-      "java.util.OptionalDouble",
-      "java.util.OptionalInt",
-      "java.util.OptionalLong");
+  private static final ImmutableSet<String> OPTIONAL_CLASS_NAMES =
+      ImmutableSet.of(
+          "com.".concat("google.common.base.Optional"), // subterfuge to foil shading
+          "java.util.Optional",
+          "java.util.OptionalDouble",
+          "java.util.OptionalInt",
+          "java.util.OptionalLong");
 
   private final DeclaredType optionalType;
   private final String className;
@@ -52,8 +53,8 @@ public class Optionalish {
   /**
    * Returns an instance wrapping the given TypeMirror, or null if it is not any kind of Optional.
    *
-   * @param type the TypeMirror for the original optional type, for example
-   *     {@code Optional<String>}.
+   * @param type the TypeMirror for the original optional type, for example {@code
+   *     Optional<String>}.
    */
   static Optionalish createIfOptional(TypeMirror type) {
     if (isOptional(type)) {
@@ -74,9 +75,8 @@ public class Optionalish {
   }
 
   /**
-   * Returns a string representing the raw type of this Optional. This will typically be just
-   * {@code "Optional"}, but it might be {@code "OptionalInt"} or {@code "java.util.Optional"}
-   * for example.
+   * Returns a string representing the raw type of this Optional. This will typically be just {@code
+   * "Optional"}, but it might be {@code "OptionalInt"} or {@code "java.util.Optional"} for example.
    */
   public String getRawType() {
     return TypeEncoder.encodeRaw(optionalType);
@@ -84,16 +84,14 @@ public class Optionalish {
 
   /**
    * Returns a string representing the method call to obtain the empty version of this Optional.
-   * This will be something like {@code "Optional.empty()"} or possibly
-   * {@code "java.util.Optional.empty()"}. It does not have a final semicolon.
+   * This will be something like {@code "Optional.empty()"} or possibly {@code
+   * "java.util.Optional.empty()"}. It does not have a final semicolon.
    *
    * <p>This method is public so that it can be referenced as {@code p.optional.empty} from
    * templates.
    */
   public String getEmpty() {
-    String empty = className.startsWith("java.util.")
-        ? ".empty()"
-        : ".absent()";
+    String empty = className.startsWith("java.util.") ? ".empty()" : ".absent()";
     return TypeEncoder.encodeRaw(optionalType) + empty;
   }
 
@@ -110,15 +108,14 @@ public class Optionalish {
   }
 
   String ofNullable() {
-    return className.equals("java.util.Optional")
-        ? "ofNullable"
-        : "fromNullable";
+    return className.equals("java.util.Optional") ? "ofNullable" : "fromNullable";
   }
 
-  private static final ImmutableMap<String, TypeKind> PRIMITIVE_TYPE_KINDS = ImmutableMap.of(
-      "OptionalDouble", TypeKind.DOUBLE,
-      "OptionalInt", TypeKind.INT,
-      "OptionalLong", TypeKind.LONG);
+  private static final ImmutableMap<String, TypeKind> PRIMITIVE_TYPE_KINDS =
+      ImmutableMap.of(
+          "OptionalDouble", TypeKind.DOUBLE,
+          "OptionalInt", TypeKind.INT,
+          "OptionalLong", TypeKind.LONG);
 
   private TypeMirror getContainedPrimitiveType(Types typeUtils) {
     String simpleName = optionalType.asElement().getSimpleName().toString();

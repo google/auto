@@ -65,8 +65,8 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   @Override
   void processType(TypeElement autoOneOfType) {
     if (autoOneOfType.getKind() != ElementKind.CLASS) {
-      errorReporter().abortWithError(
-          "@" + AUTO_ONE_OF_NAME + " only applies to classes", autoOneOfType);
+      errorReporter()
+          .abortWithError("@" + AUTO_ONE_OF_NAME + " only applies to classes", autoOneOfType);
     }
     checkModifiersIfNested(autoOneOfType);
     DeclaredType kindMirror = mirrorForKindType(autoOneOfType);
@@ -84,8 +84,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     // If there are abstract methods that don't fit any of the categories above, that is an error
     // which we signal explicitly to avoid confusion.
 
-    ImmutableSet<ExecutableElement> methods = getLocalAndInheritedMethods(
-        autoOneOfType, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
+    ImmutableSet<ExecutableElement> methods =
+        getLocalAndInheritedMethods(
+            autoOneOfType, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
     ImmutableSet<ExecutableElement> abstractMethods = abstractMethodsIn(methods);
     ExecutableElement kindGetter =
         findKindGetterOrAbort(autoOneOfType, kindMirror, abstractMethods);
@@ -117,8 +118,11 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     if (!oneOfAnnotation.isPresent()) {
       // This shouldn't happen unless the compilation environment is buggy,
       // but it has happened in the past and can crash the compiler.
-      errorReporter().abortWithError("annotation processor for @AutoOneOf was invoked with a type"
-          + " that does not have that annotation; this is probably a compiler bug", autoOneOfType);
+      errorReporter()
+          .abortWithError(
+              "annotation processor for @AutoOneOf was invoked with a type"
+                  + " that does not have that annotation; this is probably a compiler bug",
+              autoOneOfType);
     }
     AnnotationValue kindValue =
         AnnotationMirrors.getAnnotationValue(oneOfAnnotation.get(), "value");
@@ -139,13 +143,14 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     // transformName(constantName) → constant. The key sets of the two maps must match, and we
     // can then join them to make propertyName → constantName.
     TypeElement kindElement = MoreElements.asType(kindMirror.asElement());
-    Map<String, String> transformedPropertyNames = propertyNames
-        .stream()
-        .collect(toMap(this::transformName, s -> s));
-    Map<String, Element> transformedEnumConstants = kindElement.getEnclosedElements()
-        .stream()
-        .filter(e -> e.getKind().equals(ElementKind.ENUM_CONSTANT))
-        .collect(toMap(e -> transformName(e.getSimpleName().toString()), e -> e));
+    Map<String, String> transformedPropertyNames =
+        propertyNames.stream().collect(toMap(this::transformName, s -> s));
+    Map<String, Element> transformedEnumConstants =
+        kindElement
+            .getEnclosedElements()
+            .stream()
+            .filter(e -> e.getKind().equals(ElementKind.ENUM_CONSTANT))
+            .collect(toMap(e -> transformName(e.getSimpleName().toString()), e -> e));
 
     if (transformedPropertyNames.keySet().equals(transformedEnumConstants.keySet())) {
       ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
@@ -162,19 +167,22 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     transformedPropertyNames.forEach(
         (transformed, property) -> {
           if (!transformedEnumConstants.containsKey(transformed)) {
-            errorReporter().reportError(
-                "Enum has no constant with name corresponding to property '" + property + "'",
-                kindElement);
+            errorReporter()
+                .reportError(
+                    "Enum has no constant with name corresponding to property '" + property + "'",
+                    kindElement);
           }
         });
     // Enum constants that have no property
     transformedEnumConstants.forEach(
         (transformed, constant) -> {
           if (!transformedPropertyNames.containsKey(transformed)) {
-            errorReporter().reportError(
-                "Name of enum constant '" + constant.getSimpleName()
-                    + "' does not correspond to any property name",
-                constant);
+            errorReporter()
+                .reportError(
+                    "Name of enum constant '"
+                        + constant.getSimpleName()
+                        + "' does not correspond to any property name",
+                    constant);
           }
         });
     throw new AbortProcessingException();
@@ -188,23 +196,25 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       TypeElement autoOneOfType,
       TypeMirror kindMirror,
       ImmutableSet<ExecutableElement> abstractMethods) {
-    Set<ExecutableElement> kindGetters = abstractMethods
-        .stream()
-        .filter(e -> sameType(kindMirror, e.getReturnType()))
-        .filter(e -> e.getParameters().isEmpty())
-        .collect(toSet());
+    Set<ExecutableElement> kindGetters =
+        abstractMethods
+            .stream()
+            .filter(e -> sameType(kindMirror, e.getReturnType()))
+            .filter(e -> e.getParameters().isEmpty())
+            .collect(toSet());
     switch (kindGetters.size()) {
       case 0:
-        errorReporter().reportError(
-            autoOneOfType + " must have a no-arg abstract method returning " + kindMirror,
-            autoOneOfType);
+        errorReporter()
+            .reportError(
+                autoOneOfType + " must have a no-arg abstract method returning " + kindMirror,
+                autoOneOfType);
         break;
       case 1:
         return Iterables.getOnlyElement(kindGetters);
       default:
         for (ExecutableElement getter : kindGetters) {
-          errorReporter().reportError(
-              "More than one abstract method returns " + kindMirror, getter);
+          errorReporter()
+              .reportError("More than one abstract method returns " + kindMirror, getter);
         }
     }
     throw new AbortProcessingException();
@@ -226,9 +236,10 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
         // that overrides it. This shows up in AutoValueTest.LukesBase for example.
         // The compilation will fail anyway because the generated concrete classes won't
         // implement this alien method.
-        errorReporter().reportWarning(
-            "Abstract methods in @AutoOneOf classes must be non-void with no parameters",
-            method);
+        errorReporter()
+            .reportWarning(
+                "Abstract methods in @AutoOneOf classes must be non-void with no parameters",
+                method);
       }
     }
     errorReporter().abortIfAnyError();

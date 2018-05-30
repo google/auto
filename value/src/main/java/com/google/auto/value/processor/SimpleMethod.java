@@ -24,9 +24,9 @@ import javax.lang.model.element.Modifier;
  * information, such as a {@code toBuilder()} method, or a {@code build()} method, where only the
  * name and access type is needed in context.
  *
- * <p>It implements JavaBean-style getters which means it can be referenced from templates,
- * for example {@code $method.access}. This template access means that the class and its getters
- * must be public.
+ * <p>It implements JavaBean-style getters which means it can be referenced from templates, for
+ * example {@code $method.access}. This template access means that the class and its getters must be
+ * public.
  */
 public final class SimpleMethod {
   private final String access;

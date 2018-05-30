@@ -75,19 +75,20 @@ public class AutoValueJava8Test {
   // run AutoValueProcessor), but it's better than just ignoring the tests outright.
   @BeforeClass
   public static void setUpClass() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "Test",
-        "import java.lang.annotation.ElementType;",
-        "import java.lang.annotation.Retention;",
-        "import java.lang.annotation.RetentionPolicy;",
-        "import java.lang.annotation.Target;",
-        "public abstract class Test<T> {",
-        "  @Retention(RetentionPolicy.RUNTIME)",
-        "  @Target(ElementType.TYPE_USE)",
-        "  public @interface Nullable {}",
-        "",
-        "  public abstract @Nullable T t();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "Test",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Retention;",
+            "import java.lang.annotation.RetentionPolicy;",
+            "import java.lang.annotation.Target;",
+            "public abstract class Test<T> {",
+            "  @Retention(RetentionPolicy.RUNTIME)",
+            "  @Target(ElementType.TYPE_USE)",
+            "  public @interface Nullable {}",
+            "",
+            "  public abstract @Nullable T t();",
+            "}");
     Compilation compilation =
         Compiler.javac().withProcessors(new BugTestProcessor()).compile(javaFileObject);
     if (compilation.errors().isEmpty()) {
@@ -103,8 +104,8 @@ public class AutoValueJava8Test {
   @SupportedAnnotationTypes("*")
   @SupportedSourceVersion(SourceVersion.RELEASE_8)
   private static class BugTestProcessor extends AbstractProcessor {
-    @Override public boolean process(
-        Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
       if (roundEnv.processingOver()) {
         test();
       }
@@ -133,7 +134,9 @@ public class AutoValueJava8Test {
   @AutoValue
   abstract static class NullableProperties {
     abstract @Nullable String nullableString();
+
     abstract int randomInt();
+
     static NullableProperties create(@Nullable String nullableString, int randomInt) {
       return new AutoValue_AutoValueJava8Test_NullableProperties(nullableString, randomInt);
     }
@@ -159,7 +162,8 @@ public class AutoValueJava8Test {
         AutoValue_AutoValueJava8Test_NullableProperties.class.getDeclaredConstructor(
             String.class, int.class);
     try {
-      assertThat(constructor.getAnnotatedParameterTypes()[0].getAnnotations()).asList()
+      assertThat(constructor.getAnnotatedParameterTypes()[0].getAnnotations())
+          .asList()
           .contains(nullable());
     } catch (AssertionError e) {
       if (javacHandlesTypeAnnotationsCorrectly) {
@@ -171,8 +175,11 @@ public class AutoValueJava8Test {
   @AutoValue
   abstract static class NullableNonNullable {
     abstract @Nullable String nullableString();
+
     abstract @Nullable String otherNullableString();
+
     abstract String nonNullableString();
+
     static NullableNonNullable create(
         String nullableString, String otherNullableString, String nonNullableString) {
       return new AutoValue_AutoValueJava8Test_NullableNonNullable(
@@ -197,8 +204,7 @@ public class AutoValueJava8Test {
         .testEquals();
   }
 
-  public static class Nested {
-  }
+  public static class Nested {}
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target(ElementType.TYPE_USE)
@@ -212,6 +218,7 @@ public class AutoValueJava8Test {
   @AutoValue
   abstract static class NestedNullableProperties {
     abstract @Nullable @OtherTypeAnnotation Nested nullableThing();
+
     abstract int randomInt();
 
     static Builder builder() {
@@ -221,7 +228,9 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder setNullableThing(@Nullable @OtherTypeAnnotation Nested thing);
+
       abstract Builder setRandomInt(int x);
+
       abstract NestedNullableProperties build();
     }
   }
@@ -238,13 +247,15 @@ public class AutoValueJava8Test {
   @Test
   public void testNestedNullablePropertiesAreCopied() throws Exception {
     try {
-      Method generatedGetter = AutoValue_AutoValueJava8Test_NestedNullableProperties.class
-          .getDeclaredMethod("nullableThing");
+      Method generatedGetter =
+          AutoValue_AutoValueJava8Test_NestedNullableProperties.class.getDeclaredMethod(
+              "nullableThing");
       Annotation[] getterAnnotations = generatedGetter.getAnnotatedReturnType().getAnnotations();
       assertThat(getterAnnotations).asList().containsAllOf(nullable(), otherTypeAnnotation());
 
-      Method generatedSetter = AutoValue_AutoValueJava8Test_NestedNullableProperties.Builder.class
-          .getDeclaredMethod("setNullableThing", Nested.class);
+      Method generatedSetter =
+          AutoValue_AutoValueJava8Test_NestedNullableProperties.Builder.class.getDeclaredMethod(
+              "setNullableThing", Nested.class);
       Annotation[] setterAnnotations =
           generatedSetter.getAnnotatedParameterTypes()[0].getAnnotations();
       assertThat(setterAnnotations).asList().containsAllOf(nullable(), otherTypeAnnotation());
@@ -259,8 +270,9 @@ public class AutoValueJava8Test {
   abstract static class PrimitiveArrays {
     @SuppressWarnings("mutable")
     abstract boolean[] booleans();
+
     @SuppressWarnings("mutable")
-    abstract int @Nullable[] ints();
+    abstract int @Nullable [] ints();
 
     static PrimitiveArrays create(boolean[] booleans, int[] ints) {
       // Real code would likely clone these parameters, but here we want to check that the
@@ -276,15 +288,17 @@ public class AutoValueJava8Test {
     int[] ints = {6, 28, 496, 8128, 33550336};
     PrimitiveArrays object1 = PrimitiveArrays.create(booleans.clone(), ints.clone());
     PrimitiveArrays object2 = PrimitiveArrays.create(booleans.clone(), ints.clone());
-    new EqualsTester()
-        .addEqualityGroup(object1, object2)
-        .addEqualityGroup(object0)
-        .testEquals();
+    new EqualsTester().addEqualityGroup(object1, object2).addEqualityGroup(object0).testEquals();
     // EqualsTester also exercises hashCode(). We clone the arrays above to ensure that using the
     // default Object.hashCode() will fail.
 
-    String expectedString = "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
-        + "ints=" + Arrays.toString(ints) + "}";
+    String expectedString =
+        "PrimitiveArrays{booleans="
+            + Arrays.toString(booleans)
+            + ", "
+            + "ints="
+            + Arrays.toString(ints)
+            + "}";
     assertThat(object1.toString()).isEqualTo(expectedString);
 
     assertThat(object1.ints()).isSameAs(object1.ints());
@@ -297,13 +311,10 @@ public class AutoValueJava8Test {
     boolean[] booleans = {false, true, true, false};
     PrimitiveArrays object1 = PrimitiveArrays.create(booleans.clone(), null);
     PrimitiveArrays object2 = PrimitiveArrays.create(booleans.clone(), null);
-    new EqualsTester()
-        .addEqualityGroup(object1, object2)
-        .addEqualityGroup(object0)
-        .testEquals();
+    new EqualsTester().addEqualityGroup(object1, object2).addEqualityGroup(object0).testEquals();
 
-    String expectedString = "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", "
-        + "ints=null}";
+    String expectedString =
+        "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", " + "ints=null}";
     assertThat(object1.toString()).isEqualTo(expectedString);
 
     assertThat(object1.booleans()).isSameAs(object1.booleans());
@@ -325,6 +336,7 @@ public class AutoValueJava8Test {
   @AutoValue
   public abstract static class NullablePropertyWithBuilder {
     public abstract String notNullable();
+
     public abstract @Nullable String nullable();
 
     public static Builder builder() {
@@ -334,31 +346,28 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     public interface Builder {
       Builder notNullable(String s);
+
       Builder nullable(@Nullable String s);
+
       NullablePropertyWithBuilder build();
     }
   }
 
   @Test
   public void testOmitNullableWithBuilder() {
-    NullablePropertyWithBuilder instance1 = NullablePropertyWithBuilder.builder()
-        .notNullable("hello")
-        .build();
+    NullablePropertyWithBuilder instance1 =
+        NullablePropertyWithBuilder.builder().notNullable("hello").build();
     assertThat(instance1.notNullable()).isEqualTo("hello");
     assertThat(instance1.nullable()).isNull();
 
-    NullablePropertyWithBuilder instance2 = NullablePropertyWithBuilder.builder()
-        .notNullable("hello")
-        .nullable(null)
-        .build();
+    NullablePropertyWithBuilder instance2 =
+        NullablePropertyWithBuilder.builder().notNullable("hello").nullable(null).build();
     assertThat(instance2.notNullable()).isEqualTo("hello");
     assertThat(instance2.nullable()).isNull();
     assertThat(instance1).isEqualTo(instance2);
 
-    NullablePropertyWithBuilder instance3 = NullablePropertyWithBuilder.builder()
-        .notNullable("hello")
-        .nullable("world")
-        .build();
+    NullablePropertyWithBuilder instance3 =
+        NullablePropertyWithBuilder.builder().notNullable("hello").nullable("world").build();
     assertThat(instance3.notNullable()).isEqualTo("hello");
     assertThat(instance3.nullable()).isEqualTo("world");
 
@@ -421,9 +430,12 @@ public class AutoValueJava8Test {
   @AutoValue
   public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> list();
+
     public abstract @Nullable T t();
+
     @SuppressWarnings("mutable")
     public abstract int[] ints();
+
     public abstract int noGetter();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
@@ -433,12 +445,17 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     public interface Builder<T extends Comparable<T>> {
       Builder<T> setList(ImmutableList<T> list);
+
       Builder<T> setT(T t);
+
       Builder<T> setInts(int[] ints);
+
       Builder<T> setNoGetter(int x);
 
       ImmutableList<T> list();
+
       T t();
+
       int[] ints();
 
       BuilderWithUnprefixedGetters<T> build();
@@ -486,9 +503,12 @@ public class AutoValueJava8Test {
   @AutoValue
   public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> getList();
+
     public abstract T getT();
+
     @SuppressWarnings("mutable")
     public abstract int @Nullable [] getInts();
+
     public abstract int getNoGetter();
 
     public static <T extends Comparable<T>> Builder<T> builder() {
@@ -498,12 +518,17 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     public abstract static class Builder<T extends Comparable<T>> {
       public abstract Builder<T> setList(ImmutableList<T> list);
+
       public abstract Builder<T> setT(T t);
+
       public abstract Builder<T> setInts(int[] ints);
+
       public abstract Builder<T> setNoGetter(int x);
 
       abstract ImmutableList<T> getList();
+
       abstract T getT();
+
       abstract int[] getInts();
 
       public abstract BuilderWithPrefixedGetters<T> build();
@@ -556,7 +581,9 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     interface Builder {
       Builder setFoo(@Nullable String foo);
+
       Builder setBar(@Nullable String bar);
+
       FunkyNullable build();
     }
   }
@@ -597,8 +624,7 @@ public class AutoValueJava8Test {
     Class<? extends EqualsNullable> implClass = x.getClass();
     Method equals = implClass.getDeclaredMethod("equals", Object.class);
     AnnotatedType[] parameterTypes = equals.getAnnotatedParameterTypes();
-    assertThat(parameterTypes[0].isAnnotationPresent(EqualsNullable.Nullable.class))
-        .isTrue();
+    assertThat(parameterTypes[0].isAnnotationPresent(EqualsNullable.Nullable.class)).isTrue();
   }
 
   @AutoValue
@@ -611,8 +637,8 @@ public class AutoValueJava8Test {
   }
 
   /**
-   * Tests that an annotation on a type parameter of an {@code @AutoValue} class is copied to
-   * the implementation class.
+   * Tests that an annotation on a type parameter of an {@code @AutoValue} class is copied to the
+   * implementation class.
    */
   @Test
   public void testTypeAnnotationCopiedToImplementation() throws ReflectiveOperationException {
@@ -638,13 +664,14 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     abstract static class Builder<@Nullable T> {
       abstract Builder<T> setThing(T thing);
+
       abstract AnnotatedTypeParameterWithBuilder<T> build();
     }
   }
 
   /**
-   * Tests that an annotation on a type parameter of an {@code @AutoValue} builder is copied to
-   * the implementation class.
+   * Tests that an annotation on a type parameter of an {@code @AutoValue} builder is copied to the
+   * implementation class.
    */
   @Test
   public void testTypeAnnotationOnBuilderCopiedToImplementation()

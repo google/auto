@@ -58,17 +58,16 @@ class EclipseHack {
 
   /**
    * Returns a map containing the real return types of the given methods, knowing that they appear
-   * in the given type. This means that if the given type is say
-   * {@code StringIterator implements Iterator<String>} then we want the {@code next()} method
-   * to map to String, rather than the {@code T} that it returns as inherited from
-   * {@code Iterator<T>}. This method is in EclipseHack because if it weren't for
-   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590">this Eclipse bug</a> it would
-   * be trivial. Unfortunately, versions of Eclipse up to at least 4.5 have a bug where the
-   * {@link Types#asMemberOf} method throws IllegalArgumentException if given a method that is
-   * inherited from an interface. Fortunately, Eclipse's implementation of
-   * {@link Elements#getAllMembers} does the type substitution that {@code asMemberOf} would have
-   * done. But javac's implementation doesn't. So we try the way that would work if Eclipse weren't
-   * buggy, and only if we get IllegalArgumentException do we use {@code getAllMembers}.
+   * in the given type. This means that if the given type is say {@code StringIterator implements
+   * Iterator<String>} then we want the {@code next()} method to map to String, rather than the
+   * {@code T} that it returns as inherited from {@code Iterator<T>}. This method is in EclipseHack
+   * because if it weren't for <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590">this
+   * Eclipse bug</a> it would be trivial. Unfortunately, versions of Eclipse up to at least 4.5 have
+   * a bug where the {@link Types#asMemberOf} method throws IllegalArgumentException if given a
+   * method that is inherited from an interface. Fortunately, Eclipse's implementation of {@link
+   * Elements#getAllMembers} does the type substitution that {@code asMemberOf} would have done. But
+   * javac's implementation doesn't. So we try the way that would work if Eclipse weren't buggy, and
+   * only if we get IllegalArgumentException do we use {@code getAllMembers}.
    */
   ImmutableMap<ExecutableElement, TypeMirror> methodReturnTypes(
       Set<ExecutableElement> methods, DeclaredType in) {
@@ -97,10 +96,10 @@ class EclipseHack {
   }
 
   /**
-   * Constructs a map from name to method of the no-argument methods in the given type. We need
-   * this because an ExecutableElement returned by {@link Elements#getAllMembers} will not compare
-   * equal to the original ExecutableElement if {@code getAllMembers} substituted type parameters,
-   * as it does in Eclipse.
+   * Constructs a map from name to method of the no-argument methods in the given type. We need this
+   * because an ExecutableElement returned by {@link Elements#getAllMembers} will not compare equal
+   * to the original ExecutableElement if {@code getAllMembers} substituted type parameters, as it
+   * does in Eclipse.
    */
   private Map<Name, ExecutableElement> noArgMethodsIn(DeclaredType in) {
     Types typeUtils = processingEnv.getTypeUtils();

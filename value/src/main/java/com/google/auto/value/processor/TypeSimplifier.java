@@ -78,9 +78,8 @@ final class TypeSimplifier {
    * @param base a base class that the class containing the references will extend. This is needed
    *     because nested classes in that class or one of its ancestors are in scope in the generated
    *     subclass, so a reference to another class with the same name as one of them is ambiguous.
-   *
-   * @throws MissingTypeException if one of the input types contains an error (typically,
-   *     is undefined).
+   * @throws MissingTypeException if one of the input types contains an error (typically, is
+   *     undefined).
    */
   TypeSimplifier(
       Elements elementUtils,
@@ -138,15 +137,14 @@ final class TypeSimplifier {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      return typeParameters.stream()
+      return typeParameters
+          .stream()
           .map(e -> e.getSimpleName().toString())
           .collect(joining(", ", "<", ">"));
     }
   }
 
-  /**
-   * Returns the name of the given type, including any enclosing types but not the package.
-   */
+  /** Returns the name of the given type, including any enclosing types but not the package. */
   static String classNameOf(TypeElement type) {
     String name = type.getQualifiedName().toString();
     String pkgName = packageNameOf(type);
@@ -182,11 +180,11 @@ final class TypeSimplifier {
    *
    * <p>This method operates on a {@code Set<TypeMirror>} rather than just a {@code Set<String>}
    * because it is not strictly possible to determine what part of a fully-qualified type name is
-   * the package and what part is the top-level class. For example, {@code java.util.Map.Entry} is
-   * a class called {@code Map.Entry} in a package called {@code java.util} assuming Java
-   * conventions are being followed, but it could theoretically also be a class called {@code Entry}
-   * in a package called {@code java.util.Map}. Since we are operating as part of the compiler, our
-   * goal should be complete correctness, and the only way to achieve that is to operate on the real
+   * the package and what part is the top-level class. For example, {@code java.util.Map.Entry} is a
+   * class called {@code Map.Entry} in a package called {@code java.util} assuming Java conventions
+   * are being followed, but it could theoretically also be a class called {@code Entry} in a
+   * package called {@code java.util.Map}. Since we are operating as part of the compiler, our goal
+   * should be complete correctness, and the only way to achieve that is to operate on the real
    * representations of types.
    *
    * @param codePackageName The name of the package where the class containing these references is
@@ -194,8 +192,8 @@ final class TypeSimplifier {
    * @param referenced The complete set of declared types (classes and interfaces) that will be
    *     referenced in the generated code.
    * @param defined The complete set of declared types (classes and interfaces) that are defined
-   *     within the scope of the generated class (i.e. nested somewhere in its superclass chain,
-   *     or in its interface set)
+   *     within the scope of the generated class (i.e. nested somewhere in its superclass chain, or
+   *     in its interface set)
    * @return a map where the keys are fully-qualified types and the corresponding values indicate
    *     whether the type should be imported, and how the type should be spelled in the source code.
    */
@@ -263,7 +261,8 @@ final class TypeSimplifier {
    * {@code Map.Entry} everywhere rather than {@code Entry}.
    */
   private static Set<TypeMirror> topLevelTypes(Types typeUtil, Set<TypeMirror> types) {
-    return types.stream()
+    return types
+        .stream()
         .map(typeMirror -> MoreElements.asType(typeUtil.asElement(typeMirror)))
         .map(typeElement -> topLevelType(typeElement).asType())
         .collect(toCollection(TypeMirrorSet::new));
@@ -316,9 +315,9 @@ final class TypeSimplifier {
   }
 
   /**
-   * Returns true if casting to the given type will elicit an unchecked warning from the
-   * compiler. Only generic types such as {@code List<String>} produce such warnings. There will be
-   * no warning if the type's only generic parameters are simple wildcards, as in {@code Map<?, ?>}.
+   * Returns true if casting to the given type will elicit an unchecked warning from the compiler.
+   * Only generic types such as {@code List<String>} produce such warnings. There will be no warning
+   * if the type's only generic parameters are simple wildcards, as in {@code Map<?, ?>}.
    */
   static boolean isCastingUnchecked(TypeMirror type) {
     return new CastingUncheckedVisitor().visit(type, false);
@@ -330,25 +329,30 @@ final class TypeSimplifier {
    * erased.
    */
   private static class CastingUncheckedVisitor extends SimpleTypeVisitor8<Boolean, Boolean> {
-    @Override protected Boolean defaultAction(TypeMirror e, Boolean p) {
+    @Override
+    protected Boolean defaultAction(TypeMirror e, Boolean p) {
       return p;
     }
 
-    @Override public Boolean visitUnknown(TypeMirror t, Boolean p) {
+    @Override
+    public Boolean visitUnknown(TypeMirror t, Boolean p) {
       // We don't know whether casting is unchecked for this mysterious type but assume it is,
       // so we will insert a possible-unnecessary @SuppressWarnings("unchecked").
       return true;
     }
 
-    @Override public Boolean visitArray(ArrayType t, Boolean p) {
+    @Override
+    public Boolean visitArray(ArrayType t, Boolean p) {
       return visit(t.getComponentType(), p);
     }
 
-    @Override public Boolean visitDeclared(DeclaredType t, Boolean p) {
+    @Override
+    public Boolean visitDeclared(DeclaredType t, Boolean p) {
       return p || t.getTypeArguments().stream().anyMatch(this::uncheckedTypeArgument);
     }
 
-    @Override public Boolean visitTypeVariable(TypeVariable t, Boolean p) {
+    @Override
+    public Boolean visitTypeVariable(TypeVariable t, Boolean p) {
       return true;
     }
 

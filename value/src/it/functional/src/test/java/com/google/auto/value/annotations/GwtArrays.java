@@ -25,5 +25,6 @@ import com.google.common.annotations.GwtCompatible;
 @GwtCompatible
 public @interface GwtArrays {
   String[] strings();
+
   int[] ints();
 }

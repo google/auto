@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.io.File;
@@ -90,8 +91,8 @@ abstract class TemplateVars {
   }
 
   /**
-   * Returns the result of substituting the variables defined by the fields of this class
-   * (a concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
+   * Returns the result of substituting the variables defined by the fields of this class (a
+   * concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
    */
   String toText() {
     Map<String, Object> vars = toVars();
@@ -129,10 +130,7 @@ abstract class TemplateVars {
       return Template.parseFrom(resourceName, TemplateVars::readerFromUrl);
     } catch (IOException t) {
       // Chain the original exception so we can see both problems.
-      Throwable cause;
-      for (cause = exception; cause.getCause() != null; cause = cause.getCause()) {
-      }
-      cause.initCause(t);
+      Throwables.getRootCause(exception).initCause(t);
       throw new AssertionError(exception);
     }
   }

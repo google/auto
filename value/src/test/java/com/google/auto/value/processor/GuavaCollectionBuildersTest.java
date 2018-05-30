@@ -33,13 +33,15 @@ import org.junit.runners.JUnit4;
 /**
  * Validates the assumptions AutoValue makes about Guava immutable collection builders. We expect
  * for each public class {@code com.google.common.collect.ImmutableFoo} that:
+ *
  * <ul>
- * <li>it contains a public nested class {@code ImmutableFoo.Builder} with the same type parameters;
- * <li>there is a public static method {@code ImmutableFoo.builder()} that returns
- *     {@code ImmutableFoo.Builder};
- * <li>there is a method {@code ImmutableFoo.Builder.build()} that returns {@code ImmutableFoo};
- * <li>and there is a method in {@code ImmutableFoo.Builder} called either {@code addAll}
- *     or {@code putAll} with a single parameter to which {@code ImmutableFoo} can be assigned.
+ *   <li>it contains a public nested class {@code ImmutableFoo.Builder} with the same type
+ *       parameters;
+ *   <li>there is a public static method {@code ImmutableFoo.builder()} that returns {@code
+ *       ImmutableFoo.Builder};
+ *   <li>there is a method {@code ImmutableFoo.Builder.build()} that returns {@code ImmutableFoo};
+ *   <li>and there is a method in {@code ImmutableFoo.Builder} called either {@code addAll} or
+ *       {@code putAll} with a single parameter to which {@code ImmutableFoo} can be assigned.
  * </ul>
  *
  * @author emcmanus@google.com (Éamonn McManus)
@@ -86,7 +88,8 @@ public class GuavaCollectionBuildersTest {
     ParameterizedType builderMethodParameterizedReturn = (ParameterizedType) builderMethodReturn;
     Class<?> builderClass = Class.forName(c.getName() + "$Builder");
     expect.that(builderMethod.getReturnType()).isEqualTo(builderClass);
-    expect.that(Arrays.toString(builderMethodParameterizedReturn.getActualTypeArguments()))
+    expect
+        .that(Arrays.toString(builderMethodParameterizedReturn.getActualTypeArguments()))
         .named(c.getName())
         .isEqualTo(Arrays.toString(builderClass.getTypeParameters()));
 

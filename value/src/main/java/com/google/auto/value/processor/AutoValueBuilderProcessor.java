@@ -71,8 +71,7 @@ public class AutoValueBuilderProcessor extends AbstractProcessor {
   private void validate(Element annotatedType, String errorMessage) {
     Element container = annotatedType.getEnclosingElement();
     if (!hasAnnotationMirror(container, AUTO_VALUE_NAME)) {
-      processingEnv.getMessager().printMessage(
-          Diagnostic.Kind.ERROR, errorMessage, annotatedType);
+      processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, errorMessage, annotatedType);
     }
   }
 }

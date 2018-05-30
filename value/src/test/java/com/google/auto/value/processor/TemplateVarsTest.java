@@ -55,7 +55,8 @@ public class TemplateVarsTest {
     List<Integer> list;
     private static final String IGNORED_STATIC_FINAL = "hatstand";
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       return parsedTemplateForString("integer=$integer string=$string list=$list");
     }
   }
@@ -75,7 +76,7 @@ public class TemplateVarsTest {
     happy.integer = 23;
     happy.string = "wibble";
     happy.list = ImmutableList.of(5, 17, 23);
-    assertThat(HappyVars.IGNORED_STATIC_FINAL).isEqualTo("hatstand");  // avoids unused warning
+    assertThat(HappyVars.IGNORED_STATIC_FINAL).isEqualTo("hatstand"); // avoids unused warning
     String expectedText = "integer=23 string=wibble list=[5, 17, 23]";
     String actualText = happy.toText();
     assertThat(actualText).isEqualTo(expectedText);
@@ -96,7 +97,8 @@ public class TemplateVarsTest {
   static class SubHappyVars extends HappyVars {
     Character character;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       return parsedTemplateForString(
           "integer=$integer string=$string list=$list character=$character");
     }
@@ -118,7 +120,8 @@ public class TemplateVarsTest {
     Integer integer;
     private String unusedString;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -136,7 +139,8 @@ public class TemplateVarsTest {
     Integer integer;
     static String string;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -150,11 +154,12 @@ public class TemplateVarsTest {
     }
   }
 
-  static class Primitive extends TemplateVars{
+  static class Primitive extends TemplateVars {
     int integer;
     String string;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -189,10 +194,11 @@ public class TemplateVarsTest {
   private void doTestBrokenInputStream(Exception exception) throws Exception {
     URLClassLoader shadowLoader = new ShadowLoader(getClass().getClassLoader(), exception);
     Runnable brokenInputStreamTest =
-        (Runnable) shadowLoader
-            .loadClass(BrokenInputStreamTest.class.getName())
-            .getConstructor()
-            .newInstance();
+        (Runnable)
+            shadowLoader
+                .loadClass(BrokenInputStreamTest.class.getName())
+                .getConstructor()
+                .newInstance();
     brokenInputStreamTest.run();
   }
 

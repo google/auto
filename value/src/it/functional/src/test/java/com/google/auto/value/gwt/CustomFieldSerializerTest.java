@@ -52,8 +52,12 @@ public class CustomFieldSerializerTest {
   @GwtCompatible(serializable = true)
   abstract static class ValueType implements Serializable {
     abstract String string();
+
     abstract int integer();
-    @Nullable abstract ValueType other();
+
+    @Nullable
+    abstract ValueType other();
+
     abstract List<ValueType> others();
 
     static ValueType create(String string, int integer, @Nullable ValueType other) {
@@ -61,10 +65,7 @@ public class CustomFieldSerializerTest {
     }
 
     static ValueType create(
-        String string,
-        int integer,
-        @Nullable ValueType other,
-        List<ValueType> others) {
+        String string, int integer, @Nullable ValueType other, List<ValueType> others) {
       return new AutoValue_CustomFieldSerializerTest_ValueType(string, integer, other, others);
     }
   }
@@ -93,6 +94,7 @@ public class CustomFieldSerializerTest {
   @GwtCompatible(serializable = true)
   abstract static class ValueTypeWithGetters implements Serializable {
     abstract String getPackage();
+
     abstract boolean isDefault();
 
     static ValueTypeWithGetters create(String pkg, boolean dflt) {
@@ -128,7 +130,7 @@ public class CustomFieldSerializerTest {
     Map<Integer, Integer> map = ImmutableMap.of(2, 2);
     AutoValue_CustomFieldSerializerTest_GenericValueType<Integer, Integer> instance =
         (AutoValue_CustomFieldSerializerTest_GenericValueType<Integer, Integer>)
-             GenericValueType.create(map);
+            GenericValueType.create(map);
     AutoValue_CustomFieldSerializerTest_GenericValueType_CustomFieldSerializer.serialize(
         streamWriter, instance);
     verify(streamWriter).writeObject(map);
@@ -139,6 +141,7 @@ public class CustomFieldSerializerTest {
   @GwtCompatible(serializable = true)
   abstract static class ValueTypeWithBuilder implements Serializable {
     abstract String string();
+
     abstract ImmutableList<String> strings();
 
     static Builder builder() {
@@ -148,7 +151,9 @@ public class CustomFieldSerializerTest {
     @AutoValue.Builder
     interface Builder {
       Builder string(String x);
+
       Builder strings(ImmutableList<String> x);
+
       ValueTypeWithBuilder build();
     }
   }
@@ -169,6 +174,7 @@ public class CustomFieldSerializerTest {
   @GwtCompatible(serializable = true)
   abstract static class ValueTypeWithBuilderAndGetters implements Serializable {
     abstract String getPackage();
+
     abstract boolean isDefault();
 
     static Builder builder() {
@@ -178,7 +184,9 @@ public class CustomFieldSerializerTest {
     @AutoValue.Builder
     interface Builder {
       Builder setPackage(String x);
+
       Builder setDefault(boolean x);
+
       ValueTypeWithBuilderAndGetters build();
     }
   }
@@ -187,10 +195,7 @@ public class CustomFieldSerializerTest {
   public void testCustomFieldSerializerWithBuilderAndGetters() throws SerializationException {
     AutoValue_CustomFieldSerializerTest_ValueTypeWithBuilderAndGetters instance =
         (AutoValue_CustomFieldSerializerTest_ValueTypeWithBuilderAndGetters)
-            ValueTypeWithBuilderAndGetters.builder()
-                .setPackage("s")
-                .setDefault(false)
-                .build();
+            ValueTypeWithBuilderAndGetters.builder().setPackage("s").setDefault(false).build();
     AutoValue_CustomFieldSerializerTest_ValueTypeWithBuilderAndGetters_CustomFieldSerializer
         .serialize(streamWriter, instance);
     verify(streamWriter).writeString("s");
@@ -211,6 +216,7 @@ public class CustomFieldSerializerTest {
     @AutoValue.Builder
     interface Builder<K extends Comparable<K>, V extends K> {
       Builder<K, V> map(Map<K, V> map);
+
       GenericValueTypeWithBuilder<K, V> build();
     }
   }
@@ -220,7 +226,7 @@ public class CustomFieldSerializerTest {
     Map<Integer, Integer> map = ImmutableMap.of(2, 2);
     AutoValue_CustomFieldSerializerTest_GenericValueTypeWithBuilder<Integer, Integer> instance =
         (AutoValue_CustomFieldSerializerTest_GenericValueTypeWithBuilder<Integer, Integer>)
-             GenericValueTypeWithBuilder.<Integer, Integer>builder().map(map).build();
+            GenericValueTypeWithBuilder.<Integer, Integer>builder().map(map).build();
     AutoValue_CustomFieldSerializerTest_GenericValueTypeWithBuilder_CustomFieldSerializer.serialize(
         streamWriter, instance);
     verify(streamWriter).writeObject(map);

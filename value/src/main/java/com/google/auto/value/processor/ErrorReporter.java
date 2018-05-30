@@ -80,9 +80,7 @@ class ErrorReporter {
     throw new AbortProcessingException();
   }
 
-  /**
-   * Abandon the processing of this class if any errors have been output.
-   */
+  /** Abandon the processing of this class if any errors have been output. */
   void abortIfAnyError() {
     if (anyErrors) {
       throw new AbortProcessingException();
