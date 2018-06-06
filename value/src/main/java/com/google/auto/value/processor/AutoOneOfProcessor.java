@@ -250,7 +250,8 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       AutoOneOfTemplateVars vars,
       ImmutableSet<ExecutableElement> propertyMethods,
       ExecutableElement kindGetter) {
-    vars.props = propertySet(type, propertyMethods, ImmutableListMultimap.of());
+    vars.props =
+        propertySet(type, propertyMethods, ImmutableListMultimap.of(), ImmutableListMultimap.of());
     vars.kindGetter = kindGetter.getSimpleName().toString();
     vars.kindType = TypeEncoder.encode(kindGetter.getReturnType());
   }

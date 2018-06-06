@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  *
  * <pre>
  *
- *   &#64;AutoValue
+ *   {@code @}AutoValue
  *   abstract class Person {
  *     static Person create(String name, int id) {
  *       return new AutoValue_Person(name, id);
@@ -53,7 +53,7 @@ public @interface AutoValue {
    *
    * <pre>
    *
-   *   &#64;AutoValue
+   *   {@code @}AutoValue
    *   abstract class Person {
    *     static Builder builder() {
    *       return new AutoValue_Person.Builder();
@@ -62,7 +62,7 @@ public @interface AutoValue {
    *     abstract String name();
    *     abstract int id();
    *
-   *     &#64;AutoValue.Builder
+   *     {@code @}AutoValue.Builder
    *     interface Builder {
    *       Builder name(String x);
    *       Builder id(int x);
@@ -95,6 +95,34 @@ public @interface AutoValue {
    * from the {@code @AutoValue} class itself to its implementation unless {@code @CopyAnnotations}
    * is present.
    *
+   * <p>If you want to copy annotations from your {@literal @}AutoValue-annotated class's methods to
+   * the generated fields in the AutoValue_... implementation, annotate your method
+   * with {@literal @}AutoValue.CopyAnnotations. For example, if Example.java is:<pre>
+
+   *   {@code @}Immutable
+   *   {@code @}AutoValue
+   *   abstract class Example {
+   *     {@code @}CopyAnnotations
+   *     {@code @}SuppressWarnings("Immutable") // justification ...
+   *     abstract Object getObject();
+   *     // other details ...
+   *   }</pre>
+   *
+   * <p>Then AutoValue will generate the following AutoValue_Example.java:<pre>
+   *
+   *   final class AutoValue_Example extends Example {
+   *     {@code @}SuppressWarnings("Immutable")
+   *     private final Object object;
+   *
+   *     {@code @}SuppressWarnings("Immutable")
+   *     {@code @}Override
+   *     Object getObject() {
+   *       return object;
+   *     }
+   *
+   *     // other details ...
+   *   }</pre>
+   *
    * <p>When the <i>type</i> of an {@code @AutoValue} property method has annotations, those are
    * part of the type, so they are always copied to the implementation of the method.
    * {@code @CopyAnnotations} has no effect here. For example, suppose {@code @Confidential} is a
@@ -102,13 +130,13 @@ public @interface AutoValue {
    *
    * <pre>
    *
-   *   &#64;AutoValue
+   *   {@code @}AutoValue
    *   abstract class Person {
-   *     static Person create(&#64;Confidential String name, int id) {
+   *     static Person create({@code @}Confidential String name, int id) {
    *       return new AutoValue_Person(name, id);
    *     }
    *
-   *     abstract &#64;Confidential String name();
+   *     abstract {@code @}Confidential String name();
    *     abstract int id();
    *   }</pre>
    *

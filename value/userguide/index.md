@@ -194,8 +194,6 @@ How do I...
     **supertypes**?](howto.md#supertypes)
 *   ... [use AutoValue with a **generic** class?](howto.md#generic)
 *   ... [make my class Java- or GWT\-**serializable**?](howto.md#serialize)
-*   ... [apply an **annotation** to a generated
-    **field**?](howto.md#annotate_field)
 *   ... [use AutoValue to **implement** an **annotation**
     type?](howto.md#annotation)
 *   ... [also include **setter** (mutator) methods?](howto.md#setters)
@@ -214,6 +212,8 @@ How do I...
     `toString`?](howto.md#memoize_hash_tostring)
 *   ... [make a class where only one of its properties is ever
     set?](howto.md#oneof)
+*   ... [copy annotations from a class/method to the implemented
+    class/method/field?](howto.md#copy_annotations)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
 

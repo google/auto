@@ -25,7 +25,6 @@ How do I...
     **supertypes**?](#supertypes)
 *   ... [use AutoValue with a **generic** class?](#generic)
 *   ... [make my class Java- or GWT\-**serializable**?](#serialize)
-*   ... [apply an **annotation** to a generated **field**?](#annotate_field)
 *   ... [use AutoValue to **implement** an **annotation** type?](#annotation)
 *   ... [also include **setter** (mutator) methods?](#setters)
 *   ... [also generate **`compareTo`**?](#compareTo)
@@ -40,6 +39,8 @@ How do I...
 *   ... [memoize the result of `hashCode` or
     `toString`?](#memoize_hash_tostring)
 *   ... [make a class where only one of its properties is ever set?](#oneof)
+*   ... [copy annotations from a class/method to the implemented
+    class/method/field?](#copy_annotations)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -256,12 +257,6 @@ Just add `implements Serializable` or the `@GwtCompatible(serializable = true)`
 annotation (respectively) to your hand-written class; it (as well as any
 `serialVersionUID`) will be duplicated on the generated class, and you'll be
 good to go.
-
-## <a name="annotate_field"></a>... apply an annotation to a generated field?
-
-This is not currently supported; however any annotations on your
-hand-written abstract accessor methods will also appear on the generated
-implementations of these methods.
 
 ## <a name="annotation"></a>... use AutoValue to implement an annotation type?
 
@@ -530,4 +525,78 @@ factory method for each property, with the same name. In the example, the
 Properties in an `@AutoOneOf` class cannot be null. Instead of a
 `StringOrInteger` with a `@Nullable String`, you probably want a
 `@Nullable StringOrInteger` or an `Optional<StringOrInteger>`.
+
+## <a name="copy_annotations"></a>... copy annotations from a class/method to the implemented class/method/field?
+
+### Copying to the generated class
+
+If you want to copy annotations from your `@AutoValue`-annotated class to the
+generated `AutoValue_...` implemention, annotate your class with
+[`@AutoValue.CopyAnnotations`].
+
+For example, if `Example.java` is:
+
+```java
+@AutoValue
+@AutoValue.CopyAnnotations
+@SuppressWarnings("Immutable") // justification ...
+abstract class Example {
+  // details ...
+}
+```
+
+Then `@AutoValue` will generate `AutoValue_Example.java`:
+
+```java
+@SuppressWarnings("Immutable")
+final class AutoValue_Example extends Example {
+  // implementation ...
+}
+```
+
+### Copying to the generated method
+
+For historical reasons, annotations on methods of an `@AutoValue`-annotated
+class are copied to the generated implementation class's methods. However, if
+you want to exclude some annotations from being copied, you can use
+[`@AutoValue.CopyAnnotations`]'s `exclude` method to stop this behavior.
+
+### Copying to the generated field
+
+If you want to copy annotations from your `@AutoValue`-annotated class's methods
+to the generated fields in the `AutoValue_...` implementation, annotate your
+method with [`@AutoValue.CopyAnnotations`].
+
+For example, if `Example.java` is:
+
+```java
+@Immutable
+@AutoValue
+abstract class Example {
+  @CopyAnnotations
+  @SuppressWarnings("Immutable") // justification ...
+  abstract Object getObject();
+
+  // other details ...
+}
+```
+
+Then `@AutoValue` will generate `AutoValue_Example.java`:
+
+```java
+final class AutoValue_Example extends Example {
+  @SuppressWarnings("Immutable")
+  private final Object object;
+
+  @SuppressWarnings("Immutable")
+  @Override
+  Object getObject() {
+    return object;
+  }
+
+  // other details ...
+}
+```
+
+[`@AutoValue.CopyAnnotations`]: http://static.javadoc.io/com.google.auto.value/auto-value/1.6/com/google/auto/value/AutoValue.CopyAnnotations.html
 
