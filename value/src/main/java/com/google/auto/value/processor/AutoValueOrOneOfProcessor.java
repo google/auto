@@ -40,7 +40,9 @@ import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -138,7 +141,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     private final String identifier;
     private final ExecutableElement method;
     private final String type;
-    private final ImmutableList<String> annotations;
+    private final ImmutableList<String> fieldAnnotations;
+    private final ImmutableList<String> methodAnnotations;
     private final Optional<String> nullableAnnotation;
     private final Optionalish optional;
 
@@ -147,13 +151,15 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         String identifier,
         ExecutableElement method,
         String type,
-        ImmutableList<String> annotations,
+        ImmutableList<String> fieldAnnotations,
+        ImmutableList<String> methodAnnotations,
         Optional<String> nullableAnnotation) {
       this.name = name;
       this.identifier = identifier;
       this.method = method;
       this.type = type;
-      this.annotations = annotations;
+      this.fieldAnnotations = fieldAnnotations;
+      this.methodAnnotations = methodAnnotations;
       this.nullableAnnotation = nullableAnnotation;
       TypeMirror propertyType = method.getReturnType();
       this.optional = Optionalish.createIfOptional(propertyType);
@@ -200,8 +206,20 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       return method.getReturnType().getKind();
     }
 
-    public List<String> getAnnotations() {
-      return annotations;
+    /**
+     * Returns the annotations (in string form) that should be applied to the property's field
+     * declaration.
+     */
+    public List<String> getFieldAnnotations() {
+      return fieldAnnotations;
+    }
+
+    /**
+     * Returns the annotations (in string form) that should be applied to the property's method
+     * implementation.
+     */
+    public List<String> getMethodAnnotations() {
+      return methodAnnotations;
     }
 
     /**
@@ -342,6 +360,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   final ImmutableSet<Property> propertySet(
       TypeElement type,
       ImmutableSet<ExecutableElement> propertyMethods,
+      ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods) {
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         propertyNameToMethodMap(propertyMethods).inverse();
@@ -358,9 +377,11 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       String propertyType = TypeEncoder.encodeWithAnnotations(returnType);
       String propertyName = methodToPropertyName.get(propertyMethod);
       String identifier = methodToIdentifier.get(propertyMethod);
-      ImmutableList<AnnotationMirror> annotationMirrors =
+      ImmutableList<String> fieldAnnotations =
+          annotationStrings(annotatedPropertyFields.get(propertyMethod));
+      ImmutableList<AnnotationMirror> methodAnnotationMirrors =
           annotatedPropertyMethods.get(propertyMethod);
-      ImmutableList<String> annotations = annotationStrings(annotationMirrors);
+      ImmutableList<String> methodAnnotations = annotationStrings(methodAnnotationMirrors);
       Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
       Property p =
           new Property(
@@ -368,7 +389,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
               identifier,
               propertyMethod,
               propertyType,
-              annotations,
+              fieldAnnotations,
+              methodAnnotations,
               nullableAnnotation);
       props.add(p);
       if (p.isNullable() && returnType.getKind().isPrimitive()) {
@@ -863,17 +885,71 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
     // We need to exclude type annotations from the ones being output on the method, since
     // they will be output as part of the method's return type.
+    Set<String> returnTypeAnnotations = getReturnTypeAnnotations(method, a -> true);
+    Set<String> excluded = union(excludedAnnotations, returnTypeAnnotations);
+    return annotationsToCopy(type, method, excluded);
+  }
+
+  final ImmutableListMultimap<ExecutableElement, AnnotationMirror> propertyFieldAnnotationMap(
+      TypeElement type, ImmutableSet<ExecutableElement> propertyMethods) {
+    ImmutableListMultimap.Builder<ExecutableElement, AnnotationMirror> builder =
+        ImmutableListMultimap.builder();
+    for (ExecutableElement propertyMethod : propertyMethods) {
+      builder.putAll(propertyMethod, propertyFieldAnnotations(type, propertyMethod));
+    }
+    return builder.build();
+  }
+
+  private ImmutableList<AnnotationMirror> propertyFieldAnnotations(
+      TypeElement type, ExecutableElement method) {
+    if (!hasAnnotationMirror(method, COPY_ANNOTATIONS_NAME)) {
+      return ImmutableList.of();
+    }
+    ImmutableSet<String> excludedAnnotations =
+        ImmutableSet.<String>builder()
+            .addAll(getExcludedClasses(method))
+            .add(Override.class.getCanonicalName())
+            .build();
+
+    // We need to exclude type annotations from the ones being output on the method, since
+    // they will be output as part of the field's type.
     Set<String> returnTypeAnnotations =
+        getReturnTypeAnnotations(method, this::annotationAppliesToFields);
+    Set<String> nonFieldAnnotations =
         method
-            .getReturnType()
             .getAnnotationMirrors()
             .stream()
             .map(a -> a.getAnnotationType().asElement())
             .map(MoreElements::asType)
+            .filter(a -> !annotationAppliesToFields(a))
             .map(e -> e.getQualifiedName().toString())
             .collect(toSet());
-    Set<String> excluded = union(excludedAnnotations, returnTypeAnnotations);
+
+    Set<String> excluded =
+        ImmutableSet.<String>builder()
+            .addAll(excludedAnnotations)
+            .addAll(returnTypeAnnotations)
+            .addAll(nonFieldAnnotations)
+            .build();
     return annotationsToCopy(type, method, excluded);
+  }
+
+  private Set<String> getReturnTypeAnnotations(
+      ExecutableElement method, Predicate<TypeElement> typeFilter) {
+    return method
+        .getReturnType()
+        .getAnnotationMirrors()
+        .stream()
+        .map(a -> a.getAnnotationType().asElement())
+        .map(MoreElements::asType)
+        .filter(typeFilter)
+        .map(e -> e.getQualifiedName().toString())
+        .collect(toSet());
+  }
+
+  private boolean annotationAppliesToFields(TypeElement annotation) {
+    Target target = annotation.getAnnotation(Target.class);
+    return target == null || Arrays.asList(target.value()).contains(ElementType.FIELD);
   }
 
   private boolean annotationVisibleFrom(AnnotationMirror annotation, Element from) {

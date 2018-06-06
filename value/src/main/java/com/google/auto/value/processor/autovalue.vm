@@ -49,6 +49,11 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 ## Fields
 
 #foreach ($p in $props)
+  #foreach ($a in ${p.fieldAnnotations})
+
+  ${a}##
+  #end
+
   private final $p.type $p;
 #end
 
@@ -91,7 +96,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
 #foreach ($p in $props)
 
-  #foreach ($a in ${p.annotations})
+  #foreach ($a in ${p.methodAnnotations})
 
   ${a}##
   #end

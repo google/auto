@@ -377,9 +377,12 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         propertyNameToMethodMap(propertyMethods).inverse();
+    ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
+        propertyFieldAnnotationMap(type, propertyMethods);
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
         propertyMethodAnnotationMap(type, propertyMethods);
-    vars.props = propertySet(type, propertyMethods, annotatedPropertyMethods);
+    vars.props =
+        propertySet(type, propertyMethods, annotatedPropertyFields, annotatedPropertyMethods);
     vars.serialVersionUID = getSerialVersionUID(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     if (builder.isPresent()) {
