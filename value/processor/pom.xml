@@ -52,6 +52,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.google.escapevelocity</groupId>
+      <artifactId>escapevelocity</artifactId>
+      <version>0.9</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>

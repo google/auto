@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableSet;
+import com.google.escapevelocity.Template;
 import java.util.Map;
 
 /**

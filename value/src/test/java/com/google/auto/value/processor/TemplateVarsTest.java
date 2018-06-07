@@ -21,10 +21,10 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.logging.Level.WARNING;
 import static org.junit.Assert.fail;
 
-import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.Reflection;
+import com.google.escapevelocity.Template;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

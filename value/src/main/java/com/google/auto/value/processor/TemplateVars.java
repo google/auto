@@ -15,10 +15,10 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.escapevelocity.Template;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilterInputStream;
