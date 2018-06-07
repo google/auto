@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.escapevelocity.Template;
 import java.util.Map;
 import java.util.Set;
 

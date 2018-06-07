@@ -18,8 +18,8 @@ package com.google.auto.value.processor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
-import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.Multimap;
+import com.google.escapevelocity.Template;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;

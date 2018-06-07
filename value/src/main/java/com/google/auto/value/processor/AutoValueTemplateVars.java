@@ -16,11 +16,11 @@
 package com.google.auto.value.processor;
 
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
-import com.google.auto.value.processor.escapevelocity.Template;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.escapevelocity.Template;
 import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.util.Types;
