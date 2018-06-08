@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google Inc.
+ * Copyright (C) 2018 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ import org.junit.runners.JUnit4;
 
 /** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
-public class CompilationTest {
+public class AutoValueCompilationTest {
   @Rule public final Expect expect = Expect.create();
 
   @Test
