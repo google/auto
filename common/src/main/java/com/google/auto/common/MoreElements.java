@@ -18,6 +18,7 @@ package com.google.auto.common;
 
 import static javax.lang.model.element.ElementKind.PACKAGE;
 
+import com.google.auto.common.Overrides.ExplicitOverrides;
 import com.google.common.annotations.Beta;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -299,11 +300,27 @@ public final class MoreElements {
    */
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
       TypeElement type, Types typeUtils, Elements elementUtils) {
-    // TODO(emcmanus): detect if the Types and Elements are the javac ones, and use
-    //   NativeOverrides if so. We may need to adjust the logic further to avoid the bug
-    //   tested for by MoreElementsTest.getLocalAndInheritedMethods_DaggerBug.
-    Overrides overrides = new Overrides.ExplicitOverrides(typeUtils);
-    return getLocalAndInheritedMethods(type, overrides);
+    return getLocalAndInheritedMethods(type, new ExplicitOverrides(typeUtils));
+  }
+
+  /**
+   * Tests whether one method, as a member of a given type, overrides another method.
+   *
+   * <p>This method does the same thing as {@link Elements#overrides(ExecutableElement,
+   * ExecutableElement, TypeElement)}, but in a way that is more consistent between compilers, in
+   * particular between javac and ecj (the Eclipse compiler).
+   *
+   * @param overrider the first method, possible overrider
+   * @param overridden the second method, possibly being overridden
+   * @param type the type of which the first method is a member
+   * @return {@code true} if and only if the first method overrides the second
+   */
+  public static boolean overrides(
+      ExecutableElement overrider,
+      ExecutableElement overridden,
+      TypeElement type,
+      Types typeUtils) {
+    return new ExplicitOverrides(typeUtils).overrides(overrider, overridden, type);
   }
 
   private static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
