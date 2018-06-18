@@ -16,7 +16,10 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
+import static com.google.auto.factory.processor.Classes.getPackage;
+import static com.google.auto.factory.processor.Classes.getSimpleName;
 import static com.google.auto.factory.processor.Mirrors.isProvider;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -29,6 +32,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -47,6 +51,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 
@@ -64,7 +69,7 @@ final class FactoryWriter {
 
   private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
 
-  void writeFactory(final FactoryDescriptor descriptor)
+  void writeFactory(final FactoryDescriptor descriptor, final ImmutableMap<CharSequence, TypeName> factories)
       throws IOException {
     String factoryName = getSimpleName(descriptor.name()).toString();
     TypeSpec.Builder factory = classBuilder(factoryName);
@@ -86,7 +91,7 @@ final class FactoryWriter {
       factory.addSuperinterface(TypeName.get(implementingType));
     }
 
-    addConstructorAndProviderFields(factory, descriptor);
+    addConstructorAndProviderFields(factory, descriptor, factories);
     addFactoryMethods(factory, descriptor);
     addImplementationMethods(factory, descriptor);
     addCheckNotNullMethod(factory, descriptor);
@@ -98,7 +103,7 @@ final class FactoryWriter {
   }
 
   private void addConstructorAndProviderFields(
-      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+      TypeSpec.Builder factory, FactoryDescriptor descriptor, ImmutableMap<CharSequence, TypeName> factories) {
     MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
     if (descriptor.publicType()) {
       constructor.addModifiers(PUBLIC);
@@ -106,8 +111,7 @@ final class FactoryWriter {
     Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
     for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
       ProviderField provider = providerFields.next();
-      TypeName typeName = TypeName.get(provider.key().type()).box();
-      TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
+      TypeName providerType = getProviderType(factories, provider);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
         // only qualify the constructor parameter
@@ -118,6 +122,18 @@ final class FactoryWriter {
     }
 
     factory.addMethod(constructor.build());
+  }
+
+  private static TypeName getProviderType(ImmutableMap<CharSequence, TypeName> factories, ProviderField provider) {
+    TypeMirror type = provider.key().type();
+    TypeName typeName;
+    if (type instanceof ErrorType) {
+      typeName = factories.get(type.toString());
+    } else {
+      typeName = TypeName.get(type).box();
+    }
+    checkNotNull(typeName,"Type of '%s' could not be resolved.", provider.name());
+    return ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
   }
 
   private void addFactoryMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
@@ -247,24 +263,5 @@ final class FactoryWriter {
       }
     }
     return false;
-  }
-
-  private static CharSequence getSimpleName(CharSequence fullyQualifiedName) {
-    int lastDot = lastIndexOf(fullyQualifiedName, '.');
-    return fullyQualifiedName.subSequence(lastDot + 1, fullyQualifiedName.length());
-  }
-
-  private static String getPackage(CharSequence fullyQualifiedName) {
-    int lastDot = lastIndexOf(fullyQualifiedName, '.');
-    return fullyQualifiedName.subSequence(0, lastDot).toString();
-  }
-
-  private static int lastIndexOf(CharSequence charSequence, char c) {
-    for (int i = charSequence.length() - 1; i >= 0; i--) {
-      if (charSequence.charAt(i) == c) {
-        return i;
-      }
-    }
-    return -1;
   }
 }

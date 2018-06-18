@@ -433,6 +433,16 @@ public class AutoFactoryProcessorTest {
         .generatesSources(loadExpectedFile("expected/OnlyPrimitivesFactory.java"));
   }
 
+  @Test public void dependendFactory() {
+    assertThat(
+            JavaFileObjects.forResource("good/PublicClass.java"),
+            JavaFileObjects.forResource("good/SimpleClassDependingOnFactory.java"))
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(loadExpectedFile("expected/SimpleClassDependingOnFactoryFactory.java"));
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     try {
       List<String> sourceLines = Resources.readLines(Resources.getResource(resourceName), UTF_8);

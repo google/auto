@@ -23,11 +23,15 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.googlejavaformat.java.filer.FormattingFiler;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.TypeName;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -127,8 +131,16 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     ImmutableSetMultimap<String, ImplementationMethodDescriptor>
         implementationMethodDescriptors = implementationMethodDescriptorsBuilder.build();
 
+    ImmutableMap<String, Collection<FactoryMethodDescriptor>>
+        implementationMethodDescriptorsMap = indexedMethods.build().asMap();
+    ImmutableMap.Builder<CharSequence, TypeName> factoriesBuilder = ImmutableMap.builder();
+    for (String name : implementationMethodDescriptorsMap.keySet()) {
+        TypeName typeName = ClassName.bestGuess(name).withoutAnnotations();
+        factoriesBuilder.put(Classes.getSimpleName(name), typeName);
+    }
+    ImmutableMap<CharSequence, TypeName> factories = factoriesBuilder.build();
     for (Entry<String, Collection<FactoryMethodDescriptor>> entry
-        : indexedMethods.build().asMap().entrySet()) {
+        : implementationMethodDescriptorsMap.entrySet()) {
       ImmutableSet.Builder<TypeMirror> extending = ImmutableSet.builder();
       ImmutableSortedSet.Builder<TypeMirror> implementing =
           ImmutableSortedSet.orderedBy(
@@ -170,7 +182,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                   publicType,
                   ImmutableSet.copyOf(entry.getValue()),
                   implementationMethodDescriptors.get(entry.getKey()),
-                  allowSubclasses));
+                  allowSubclasses),
+              factories);
         } catch (IOException e) {
           messager.printMessage(Kind.ERROR, "failed");
         }
