@@ -1,5 +1,9 @@
 # AutoValue Changes
 
+**This document is obsolete.** For details of changes in releases since 1.5,
+see the [releases page](https://github.com/google/auto/releases) for the Auto
+project.
+
 ## 1.4 → 1.5
 
 ### Functional changes
@@ -249,4 +253,3 @@ later.
 
 
 [AutoValueExtension]: src/main/java/com/google/auto/value/extension/AutoValueExtension.java
-

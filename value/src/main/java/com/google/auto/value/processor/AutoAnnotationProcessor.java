@@ -182,7 +182,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   private String getGeneratedTypeName() {
     return generatedAnnotation(elementUtils, processingEnv.getSourceVersion())
         .map(generatedAnnotation -> TypeEncoder.encode(generatedAnnotation.asType()))
-        .orElse(null);
+        .orElse("");
   }
 
   /**
