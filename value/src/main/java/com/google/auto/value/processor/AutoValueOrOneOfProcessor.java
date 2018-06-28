@@ -36,7 +36,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.beans.Introspector;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
@@ -558,7 +557,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       assert name.startsWith("is");
       name = name.substring(2);
     }
-    return Introspector.decapitalize(name);
+    return PropertyNames.decapitalizeLikeJavaBeans(name);
   }
 
   /**
