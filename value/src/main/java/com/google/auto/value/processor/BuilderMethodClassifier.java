@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
-import java.beans.Introspector;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -345,7 +344,7 @@ class BuilderMethodClassifier {
       propertyName = methodName;
     } else if (valueGetter == null && methodName.startsWith("set") && methodName.length() > 3) {
       propertyNameToSetters = propertyNameToPrefixedSetters;
-      propertyName = Introspector.decapitalize(methodName.substring(3));
+      propertyName = PropertyNames.decapitalizeLikeJavaBeans(methodName.substring(3));
       valueGetter = propertyNameToGetter.get(propertyName);
       if (valueGetter == null) {
         // If our property is defined by a getter called getOAuth() then it is called "OAuth"
@@ -354,7 +353,7 @@ class BuilderMethodClassifier {
         // is defined by a getter called oAuth() then it is called "oAuth", but you would still
         // expect to be able to set it using setOAuth(x). Hence the second try using a decapitalize
         // method without the quirky two-leading-capitals rule.
-        propertyName = decapitalize(methodName.substring(3));
+        propertyName = PropertyNames.decapitalizeNormally(methodName.substring(3));
         valueGetter = propertyNameToGetter.get(propertyName);
       }
     }
@@ -548,13 +547,6 @@ class BuilderMethodClassifier {
     // This is not internationalizationally correct, but it corresponds to what
     // Introspector.decapitalize does.
     return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
-  }
-
-  // Equivalent to Introspector.decapitalize but without the quirky exception whereby
-  // Introspector.decapitalize("OAuth").equals("OAuth"). (If the first two letters are capitals
-  // then Introspector.decapitalize does nothing.)
-  private static String decapitalize(String propertyName) {
-    return Character.toLowerCase(propertyName.charAt(0)) + propertyName.substring(1);
   }
 
   private String typeParamsString() {
