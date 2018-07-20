@@ -15,6 +15,7 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertFalse;
@@ -32,6 +33,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.lang.model.element.AnnotationMirror;
@@ -107,6 +109,26 @@ public class MoreElementsTest {
         fail();
       } catch (IllegalArgumentException expected) {
       }
+    }
+  }
+
+  @Test
+  public void asTypeParameterElement() {
+    Element typeParameterElement =
+        getOnlyElement(
+            compilation
+                .getElements()
+                .getTypeElement(List.class.getCanonicalName())
+                .getTypeParameters());
+    assertThat(MoreElements.asTypeParameter(typeParameterElement)).isEqualTo(typeParameterElement);
+  }
+
+  @Test
+  public void asTypeParameterElement_illegalArgument() {
+    try {
+      MoreElements.asTypeParameter(javaLangPackageElement);
+      fail();
+    } catch (IllegalArgumentException expected) {
     }
   }
 
