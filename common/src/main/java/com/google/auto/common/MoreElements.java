@@ -37,6 +37,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -127,6 +128,33 @@ public final class MoreElements {
    */
   public static TypeElement asType(Element element) {
     return element.accept(TypeElementVisitor.INSTANCE, null);
+  }
+
+  /**
+   * Returns the given {@link Element} instance as {@link TypeParameterElement}.
+   *
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
+   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   *
+   * @throws NullPointerException if {@code element} is {@code null}
+   * @throws IllegalArgumentException if {@code element} isn't a {@link TypeParameterElement}.
+   */
+  public static TypeParameterElement asTypeParameter(Element element) {
+    return element.accept(TypeParameterElementVisitor.INSTANCE, null);
+  }
+
+  private static final class TypeParameterElementVisitor
+      extends CastingElementVisitor<TypeParameterElement> {
+    private static final TypeParameterElementVisitor INSTANCE = new TypeParameterElementVisitor();
+
+    TypeParameterElementVisitor() {
+      super("type parameter element");
+    }
+
+    @Override
+    public TypeParameterElement visitTypeParameter(TypeParameterElement e, Void ignore) {
+      return e;
+    }
   }
 
   private static final class VariableElementVisitor extends CastingElementVisitor<VariableElement> {
