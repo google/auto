@@ -32,6 +32,10 @@
     Immutable value-type code generation for Java 1.6+.
   </description>
 
+  <properties>
+    <java.version>1.7</java.version>
+  </properties>
+
   <scm>
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
