@@ -83,7 +83,7 @@ class GwtSerialization {
     if (shouldWriteGwtSerializer()) {
       GwtTemplateVars vars = new GwtTemplateVars();
       vars.pkg = autoVars.pkg;
-      vars.subclass = autoVars.subclass;
+      vars.subclass = autoVars.finalSubclass;
       vars.formalTypes = autoVars.formalTypes;
       vars.actualTypes = autoVars.actualTypes;
       vars.useBuilder = !autoVars.builderTypeName.isEmpty();
