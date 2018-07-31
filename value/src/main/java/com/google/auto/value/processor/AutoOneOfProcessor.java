@@ -36,7 +36,6 @@ import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -46,6 +45,8 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * Javac annotation processor (compiler plugin) for {@linkplain com.google.auto.value.AutoOneOf
@@ -56,7 +57,7 @@ import javax.lang.model.type.TypeMirror;
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_ONE_OF_NAME)
-@SupportedOptions("com.google.auto.value.OmitIdentifiers")
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   public AutoOneOfProcessor() {
     super(AUTO_ONE_OF_NAME);

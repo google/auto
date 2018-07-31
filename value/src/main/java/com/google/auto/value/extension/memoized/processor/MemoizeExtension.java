@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
@@ -75,6 +76,11 @@ public final class MemoizeExtension extends AutoValueExtension {
 
   private static final AnnotationSpec SUPPRESS_WARNINGS =
       AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "Immutable").build();
+
+  @Override
+  public IncrementalExtensionType incrementalType(ProcessingEnvironment processingEnvironment) {
+    return IncrementalExtensionType.ISOLATING;
+  }
 
   @Override
   public boolean applicable(Context context) {
