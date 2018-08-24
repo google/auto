@@ -144,14 +144,14 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
       $origClass$wildcardTypes that = ($origClass$wildcardTypes) o;
       return ##
-           #foreach ($p in $props)
-           (#equalsThatExpression ($p))##
-             #if ($foreach.hasNext)
+          #foreach ($p in $props)
+          (#equalsThatExpression ($p))##
+            #if ($foreach.hasNext)
 
-           && ##
-             #end
-           #end
-           ;
+          && ##
+            #end
+          #end
+          ;
   #end
 
     }
