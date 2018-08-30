@@ -109,6 +109,38 @@ public abstract class AutoValueExtension {
   }
 
   /**
+   * Indicates to an annotation processor environment supporting incremental annotation processing
+   * (currently a feature specific to Gradle starting with version 4.8) the incremental type of an
+   * Extension.
+   *
+   * <p>The constants for this enum are ordered by increasing performance (but also constraints).
+   *
+   * @see <a
+   *     href="https://docs.gradle.org/current/userguide/java_plugin.html#sec:incremental_annotation_processing">Gradle
+   *     documentation of its incremental annotation processing</a>
+   */
+  public enum IncrementalExtensionType {
+    UNKNOWN,
+    AGGREGATING,
+    ISOLATING
+  }
+
+  /**
+   * Determines the incremental type of this Extension.
+   *
+   * <p>The {@link ProcessingEnvironment} can be used, among other things, to obtain the processor
+   * options, using {@link ProcessingEnvironment#getOptions()}.
+   *
+   * <p>The actual incremental type of the AutoValue processor as a whole will be the loosest
+   * incremental types of the Extensions present in the annotation processor path. The default
+   * returned value is {@link IncrementalExtensionType#UNKNOWN}, which will disable incremental
+   * annotation processing entirely.
+   */
+  public IncrementalExtensionType incrementalType(ProcessingEnvironment processingEnvironment) {
+    return IncrementalExtensionType.UNKNOWN;
+  }
+
+  /**
    * Determines whether this Extension applies to the given context.
    *
    * @param context The Context of the code generation for this class.

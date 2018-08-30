@@ -57,6 +57,17 @@
       <version>0.9</version>
     </dependency>
     <dependency>
+      <groupId>net.ltgt.gradle.incap</groupId>
+      <artifactId>incap</artifactId>
+      <version>0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>net.ltgt.gradle.incap</groupId>
+      <artifactId>incap-processor</artifactId>
+      <version>0.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
