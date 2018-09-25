@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +44,6 @@ import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -51,6 +51,8 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * Javac annotation processor (compiler plugin) for value types; user code never references this
@@ -61,8 +63,10 @@ import javax.lang.model.type.TypeMirror;
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_VALUE_NAME)
-@SupportedOptions("com.google.auto.value.OmitIdentifiers")
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.DYNAMIC)
 public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
+  private static final String OMIT_IDENTIFIERS_OPTION = "com.google.auto.value.OmitIdentifiers";
+
   public AutoValueProcessor() {
     this(AutoValueProcessor.class.getClassLoader());
   }
@@ -110,6 +114,28 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         extensions = ImmutableList.of();
       }
     }
+  }
+
+  @Override
+  public Set<String> getSupportedOptions() {
+    AutoValueExtension.IncrementalExtensionType incrementalType =
+        extensions.stream()
+            .map(e -> e.incrementalType(processingEnv))
+            .min(Comparator.naturalOrder())
+            .orElse(AutoValueExtension.IncrementalExtensionType.ISOLATING);
+    switch (incrementalType) {
+      case ISOLATING:
+        return ImmutableSet.of(
+            OMIT_IDENTIFIERS_OPTION,
+            IncrementalAnnotationProcessorType.ISOLATING.getProcessorOption());
+      case AGGREGATING:
+        return ImmutableSet.of(
+            OMIT_IDENTIFIERS_OPTION,
+            IncrementalAnnotationProcessorType.AGGREGATING.getProcessorOption());
+      case UNKNOWN:
+        return ImmutableSet.of(OMIT_IDENTIFIERS_OPTION);
+    }
+    throw new AssertionError(incrementalType);
   }
 
   private static String generatedSubclassName(TypeElement type, int depth) {
@@ -201,8 +227,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.types = processingEnv.getTypeUtils();
-    vars.identifiers =
-        !processingEnv.getOptions().containsKey("com.google.auto.value.OmitIdentifiers");
+    vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     defineSharedVarsForType(type, methods, vars);
     defineVarsForType(type, vars, toBuilderMethods, propertyMethods, builder);
 
