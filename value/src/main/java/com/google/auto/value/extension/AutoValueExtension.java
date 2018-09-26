@@ -109,6 +109,62 @@ public abstract class AutoValueExtension {
   }
 
   /**
+   * Indicates to an annotation processor environment supporting incremental annotation processing
+   * (currently a feature specific to Gradle starting with version 4.8) the incremental type of an
+   * Extension.
+   *
+   * <p>The constants for this enum are ordered by increasing performance (but also constraints).
+   *
+   * @see <a
+   *     href="https://docs.gradle.org/current/userguide/java_plugin.html#sec:incremental_annotation_processing">Gradle
+   *     documentation of its incremental annotation processing</a>
+   */
+  public enum IncrementalExtensionType {
+    /**
+     * The incrementality of this extension is unknown, or it is neither aggregating nor isolating.
+     */
+    UNKNOWN,
+
+    /**
+     * This extension is <i>aggregating</i>, meaning that it may generate outputs based on several
+     * annotated input classes and it respects the constraints imposed on aggregating processors.
+     * It is unusual for AutoValue extensions to be aggregating.
+     *
+     * @see <a
+     *     href="https://docs.gradle.org/current/userguide/java_plugin.html#aggregating_annotation_processors">Gradle
+     *     definition of aggregating processors</a>
+     */
+    AGGREGATING,
+
+    /**
+     * This extension is <i>isolating</i>, meaning roughly that its output depends on the
+     * {@code @AutoValue} class and its dependencies, but not on other {@code @AutoValue} classes
+     * that might be compiled at the same time. The constraints that an isolating extension must
+     * respect are the same as those that Gradle imposes on an isolating annotation processor.
+     *
+     * @see <a
+     *     href="https://docs.gradle.org/current/userguide/java_plugin.html#isolating_annotation_processors">Gradle
+     *     definition of isolating processors</a>
+     */
+    ISOLATING
+  }
+
+  /**
+   * Determines the incremental type of this Extension.
+   *
+   * <p>The {@link ProcessingEnvironment} can be used, among other things, to obtain the processor
+   * options, using {@link ProcessingEnvironment#getOptions()}.
+   *
+   * <p>The actual incremental type of the AutoValue processor as a whole will be the loosest
+   * incremental types of the Extensions present in the annotation processor path. The default
+   * returned value is {@link IncrementalExtensionType#UNKNOWN}, which will disable incremental
+   * annotation processing entirely.
+   */
+  public IncrementalExtensionType incrementalType(ProcessingEnvironment processingEnvironment) {
+    return IncrementalExtensionType.UNKNOWN;
+  }
+
+  /**
    * Determines whether this Extension applies to the given context.
    *
    * @param context The Context of the code generation for this class.

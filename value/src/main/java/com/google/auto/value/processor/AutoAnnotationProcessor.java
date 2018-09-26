@@ -58,6 +58,8 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * Javac annotation processor (compiler plugin) to generate annotation implementations. User code
@@ -66,6 +68,7 @@ import javax.tools.JavaFileObject;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @AutoService(Processor.class)
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @SupportedAnnotationTypes(AUTO_ANNOTATION_NAME)
 public class AutoAnnotationProcessor extends AbstractProcessor {
   public AutoAnnotationProcessor() {}

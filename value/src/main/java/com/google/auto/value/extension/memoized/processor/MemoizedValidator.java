@@ -33,12 +33,15 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * An annotation {@link Processor} that reports errors for {@link Memoized @Memoized} methods that
  * are not inside {@code AutoValue}-annotated classes.
  */
 @AutoService(Processor.class)
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @SupportedAnnotationTypes(MEMOIZED_NAME)
 public final class MemoizedValidator extends AbstractProcessor {
   @Override

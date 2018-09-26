@@ -30,6 +30,8 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * Annotation processor that checks that the type that {@code AutoValue.Builder} is applied to is
@@ -39,6 +41,7 @@ import javax.tools.Diagnostic;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @SupportedAnnotationTypes(AUTO_VALUE_BUILDER_NAME)
 public class AutoValueBuilderProcessor extends AbstractProcessor {
   @Override
