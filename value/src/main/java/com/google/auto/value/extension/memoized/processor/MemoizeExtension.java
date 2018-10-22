@@ -62,6 +62,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic.Kind;
 
@@ -165,8 +166,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     private MethodSpec constructor() {
       MethodSpec.Builder constructor = constructorBuilder();
       for (Map.Entry<String, ExecutableElement> property : context.properties().entrySet()) {
-        constructor.addParameter(
-            TypeName.get(property.getValue().getReturnType()), property.getKey() + "$");
+        constructor.addParameter(annotatedReturnType(property.getValue()), property.getKey() + "$");
       }
       List<String> namesWithDollars = new ArrayList<String>();
       for (String property : context.properties().keySet()) {
@@ -189,8 +189,7 @@ public final class MemoizeExtension extends AutoValueExtension {
         this.method = method;
         validate();
         cacheField =
-            buildCacheField(
-                TypeName.get(method.getReturnType()), method.getSimpleName().toString());
+            buildCacheField(annotatedReturnType(method), method.getSimpleName().toString());
         fields.add(cacheField);
         override =
             methodBuilder(method.getSimpleName().toString())
@@ -299,14 +298,9 @@ public final class MemoizeExtension extends AutoValueExtension {
         if (method.getReturnType().getKind().isPrimitive()) {
           return new CheckBooleanField();
         }
-        for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-          if (annotationMirror
-              .getAnnotationType()
-              .asElement()
-              .getSimpleName()
-              .contentEquals("Nullable")) {
-            return new CheckBooleanField();
-          }
+        if (containsNullable(method.getAnnotationMirrors())
+            || containsNullable(method.getReturnType().getAnnotationMirrors())) {
+          return new CheckBooleanField();
         }
         return new NullMeansUninitialized();
       }
@@ -372,5 +366,22 @@ public final class MemoizeExtension extends AutoValueExtension {
       return Optional.empty();
     }
     return Optional.of(AnnotationSpec.builder(LAZY_INIT).build());
+  }
+
+  /** True if one of the given annotations is {@code @Nullable} in any package. */
+  private static boolean containsNullable(List<? extends AnnotationMirror> annotations) {
+    return annotations.stream()
+        .map(a -> a.getAnnotationType().asElement().getSimpleName())
+        .anyMatch(n -> n.contentEquals("Nullable"));
+  }
+
+  /** The return type of the given method, including type annotations. */
+  private static TypeName annotatedReturnType(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
+    List<AnnotationSpec> annotations =
+        returnType.getAnnotationMirrors().stream()
+            .map(AnnotationSpec::get)
+            .collect(toList());
+    return TypeName.get(returnType).annotated(annotations);
   }
 }
