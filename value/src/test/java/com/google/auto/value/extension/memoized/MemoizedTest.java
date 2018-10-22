@@ -20,7 +20,9 @@ import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
-import javax.annotation.Nullable;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,10 +57,15 @@ public class MemoizedTest {
     private int notNullableCount;
     private int nullableCount;
     private int returnsNullCount;
+    private int nullableWithTypeAnnotationCount;
+    private int returnsNullWithTypeAnnotationCount;
     private int notNullableButReturnsNullCount;
     private int throwsExceptionCount;
 
+    @javax.annotation.Nullable
     abstract String string();
+
+    abstract @org.checkerframework.checker.nullness.qual.Nullable String stringWithTypeAnnotation();
 
     abstract HashCodeAndToStringCounter counter();
 
@@ -74,16 +81,31 @@ public class MemoizedTest {
     }
 
     @Memoized
-    @Nullable
+    @javax.annotation.Nullable
     String nullable() {
       nullableCount++;
       return "nullable derived " + string() + " " + nullableCount;
     }
 
     @Memoized
-    @Nullable
+    @javax.annotation.Nullable
     String returnsNull() {
       returnsNullCount++;
+      return null;
+    }
+
+    @Memoized
+    @org.checkerframework.checker.nullness.qual.Nullable
+    String nullableWithTypeAnnotation() {
+      nullableWithTypeAnnotationCount++;
+      return "nullable derived " + stringWithTypeAnnotation() + " "
+          + nullableWithTypeAnnotationCount;
+    }
+
+    @Memoized
+    @org.checkerframework.checker.nullness.qual.Nullable
+    String returnsNullWithTypeAnnotation() {
+      returnsNullWithTypeAnnotationCount++;
       return null;
     }
 
@@ -140,7 +162,8 @@ public class MemoizedTest {
 
   @Before
   public void setUp() {
-    value = new AutoValue_MemoizedTest_Value("string", new HashCodeAndToStringCounter());
+    value = new AutoValue_MemoizedTest_Value(
+        "string", "stringWithTypeAnnotation", new HashCodeAndToStringCounter());
     listValue = new AutoValue_MemoizedTest_ListValue<Integer, String>(0, "hello");
   }
 
@@ -176,10 +199,25 @@ public class MemoizedTest {
   }
 
   @Test
+  public void nullableWithTypeAnnotation() {
+    assertThat(value.nullableWithTypeAnnotation())
+        .isEqualTo("nullable derived stringWithTypeAnnotation 1");
+    assertThat(value.nullableWithTypeAnnotation()).isSameAs(value.nullableWithTypeAnnotation());
+    assertThat(value.nullableWithTypeAnnotationCount).isEqualTo(1);
+  }
+
+  @Test
   public void returnsNull() {
     assertThat(value.returnsNull()).isNull();
     assertThat(value.returnsNull()).isNull();
     assertThat(value.returnsNullCount).isEqualTo(1);
+  }
+
+  @Test
+  public void returnsNullWithTypeAnnotation() {
+    assertThat(value.returnsNullWithTypeAnnotation()).isNull();
+    assertThat(value.returnsNullWithTypeAnnotation()).isNull();
+    assertThat(value.returnsNullWithTypeAnnotationCount).isEqualTo(1);
   }
 
   @Test
@@ -230,5 +268,36 @@ public class MemoizedTest {
     assertThat(value.getMemoizedNative()).isTrue();
     assertThat(value.getNative0()).isFalse();
     assertThat(value.getMemoizedNative0()).isFalse();
+  }
+
+  @Test
+  public void nullableHasAnnotation() throws ReflectiveOperationException {
+    Method nullable = AutoValue_MemoizedTest_Value.class.getDeclaredMethod("nullable");
+    assertThat(nullable.isAnnotationPresent(javax.annotation.Nullable.class)).isTrue();
+  }
+
+  @Test
+  public void nullableWithTypeAnnotationHasAnnotation() throws ReflectiveOperationException {
+    Method nullable =
+        AutoValue_MemoizedTest_Value.class.getDeclaredMethod("nullableWithTypeAnnotation");
+    AnnotatedType returnType = nullable.getAnnotatedReturnType();
+    assertThat(returnType.isAnnotationPresent(
+                   org.checkerframework.checker.nullness.qual.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void nullableConstructorParameter() throws ReflectiveOperationException {
+    // Constructor parameters are potentially:
+    // [0] @javax.annotation.Nullable String string,
+    // [1] @org.checkerframework.checker.nullness.qual.Nullable String stringWithTypeAnnotation,
+    // [2] HashCodeAndToStringCounter counter
+    // We don't currently copy @javax.annotation.Nullable because it is not a TYPE_USE annotation.
+    Constructor<?> constructor = AutoValue_MemoizedTest_Value.class.getDeclaredConstructor(
+        String.class, String.class, HashCodeAndToStringCounter.class);
+    AnnotatedType paramType = constructor.getAnnotatedParameterTypes()[1];
+    assertThat(paramType.isAnnotationPresent(
+                   org.checkerframework.checker.nullness.qual.Nullable.class))
+        .isTrue();
   }
 }

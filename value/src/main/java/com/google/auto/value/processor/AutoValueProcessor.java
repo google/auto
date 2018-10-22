@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,6 +68,13 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   private static final String OMIT_IDENTIFIERS_OPTION = "com.google.auto.value.OmitIdentifiers";
 
+  // We moved MemoizeExtension to a different package, which had an unexpected effect:
+  // now if an old version of AutoValue is in the class path, ServiceLoader can pick up both the
+  // old and the new versions of MemoizeExtension. So we exclude the old version if we see it.
+  // The new version will be bundled with this processor so we should always find it.
+  private static final String OLD_MEMOIZE_EXTENSION =
+      "com.google.auto.value.extension.memoized.MemoizeExtension";
+
   public AutoValueProcessor() {
     this(AutoValueProcessor.class.getClassLoader());
   }
@@ -97,8 +105,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
     if (extensions == null) {
       try {
-        extensions =
-            ImmutableList.copyOf(ServiceLoader.load(AutoValueExtension.class, loaderForExtensions));
+        ServiceLoader<AutoValueExtension> serviceLoader =
+            ServiceLoader.load(AutoValueExtension.class, loaderForExtensions);
+        extensions = ImmutableList.copyOf(
+            Iterables.filter(
+                serviceLoader, ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION)));
         // ServiceLoader.load returns a lazily-evaluated Iterable, so evaluate it eagerly now
         // to discover any exceptions.
       } catch (Throwable t) {
