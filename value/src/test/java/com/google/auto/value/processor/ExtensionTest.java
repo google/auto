@@ -146,7 +146,7 @@ public class ExtensionTest {
             "    }",
             "    if (o instanceof Baz) {",
             "      Baz that = (Baz) o;",
-            "      return (this.foo.equals(that.foo()));",
+            "      return this.foo.equals(that.foo());",
             "    }",
             "    return false;",
             "  }",
