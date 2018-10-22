@@ -40,12 +40,6 @@ import org.junit.runners.JUnit4;
  */
 @RunWith(JUnit4.class)
 public class PropertyAnnotationsTest {
-  private static final String PROPERTY_ANNOTATIONS_TEST =
-      PropertyAnnotationsTest.class.getName();
-  private static final String IMPORT_PROPERTY_ANNOTATIONS_TEST =
-      "import " + PROPERTY_ANNOTATIONS_TEST + ";";
-  private static final String IMPORT_JAVAX_ANNOTATION_NULLABLE =
-      "import javax.annotation.Nullable;";
   private static final String TEST_ANNOTATION =
       "@PropertyAnnotationsTest.TestAnnotation";
   private static final String TEST_ARRAY_ANNOTATION =
@@ -237,7 +231,7 @@ public class PropertyAnnotationsTest {
                   "    }",
                   "    if (o instanceof Baz) {",
                   "      Baz that = (Baz) o;",
-                  "      return (this.buh == that.buh());",
+                  "      return this.buh == that.buh();",
                   "    }",
                   "    return false;",
                   "  }",

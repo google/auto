@@ -37,6 +37,8 @@
 ## As an example, if $p is the `foo` property and $p.kind is FLOAT,
 ## this becomes `Float.floatToIntBits(this.foo) == Float.floatToIntBits(that.foo())`
 ## or `...that.getFoo()...`.
+## The expression should be surrounded by parentheses if otherwise there might be precedence
+## problems when it is followed by &&.
 ## A reminder that trailing ## here serves to delete the newline, which we don't want in the output.
 #macro (equalsThatExpression $p)
   #if ($p.kind == "FLOAT")
@@ -49,7 +51,7 @@
     `java.util.Arrays`.equals(this.$p, ##
         (that instanceof $subclass) ? (($subclass) that).$p : that.${p.getter}()) ##
   #elseif ($p.nullable)
-    (this.$p == null) ? (that.${p.getter}() == null) : this.${p}.equals(that.${p.getter}()) ##
+    (this.$p == null ? that.${p.getter}() == null : this.${p}.equals(that.${p.getter}())) ##
   #else
     this.${p}.equals(that.${p.getter}()) ##
   #end

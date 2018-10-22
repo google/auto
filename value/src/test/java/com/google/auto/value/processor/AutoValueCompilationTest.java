@@ -101,7 +101,7 @@ public class AutoValueCompilationTest {
             "    }",
             "    if (o instanceof Baz) {",
             "      Baz that = (Baz) o;",
-            "      return (this.buh == that.buh());",
+            "      return this.buh == that.buh();",
             "    }",
             "    return false;",
             "  }",
@@ -195,9 +195,9 @@ public class AutoValueCompilationTest {
             "    }",
             "    if (o instanceof Baz) {",
             "      Baz that = (Baz) o;",
-            "      return (Arrays.equals(this.ints, (that instanceof AutoValue_Baz) "
-                + "? ((AutoValue_Baz) that).ints : that.ints()))",
-            "          && (this.arrays.equals(that.arrays()));",
+            "      return Arrays.equals(this.ints, (that instanceof AutoValue_Baz) "
+                + "? ((AutoValue_Baz) that).ints : that.ints())",
+            "          && this.arrays.equals(that.arrays());",
             "    }",
             "    return false;",
             "  }",
@@ -924,17 +924,17 @@ public class AutoValueCompilationTest {
             "    }",
             "    if (o instanceof Baz) {",
             "      Baz<?> that = (Baz<?>) o;",
-            "      return (this.anInt == that.anInt())",
-            "          && (Arrays.equals(this.aByteArray, "
+            "      return this.anInt == that.anInt()",
+            "          && Arrays.equals(this.aByteArray, "
                 + "(that instanceof AutoValue_Baz) "
-                + "? ((AutoValue_Baz) that).aByteArray : that.aByteArray()))",
-            "          && (Arrays.equals(this.aNullableIntArray, "
+                + "? ((AutoValue_Baz) that).aByteArray : that.aByteArray())",
+            "          && Arrays.equals(this.aNullableIntArray, "
                 + "(that instanceof AutoValue_Baz) "
-                + "? ((AutoValue_Baz) that).aNullableIntArray : that.aNullableIntArray()))",
-            "          && (this.aList.equals(that.aList()))",
-            "          && (this.anImmutableList.equals(that.anImmutableList()))",
-            "          && (this.anOptionalString.equals(that.anOptionalString()))",
-            "          && (this.aNestedAutoValue.equals(that.aNestedAutoValue()));",
+                + "? ((AutoValue_Baz) that).aNullableIntArray : that.aNullableIntArray())",
+            "          && this.aList.equals(that.aList())",
+            "          && this.anImmutableList.equals(that.anImmutableList())",
+            "          && this.anOptionalString.equals(that.anOptionalString())",
+            "          && this.aNestedAutoValue.equals(that.aNestedAutoValue());",
             "    }",
             "    return false;",
             "  }",
