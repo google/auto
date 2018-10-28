@@ -57,7 +57,9 @@ final class $generatedClass {
 
   #if (!$p.kind.primitive)
 
-    ${p}.getClass();  // NullPointerException if null
+    if ($p == null) {
+      throw new NullPointerException();
+    }
 
   #end
 
