@@ -21,6 +21,7 @@ import static com.google.auto.value.extension.memoized.processor.MemoizedValidat
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -28,6 +29,7 @@ import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.lang.model.element.Modifier.VOLATILE;
 import static javax.lang.model.type.TypeKind.VOID;
@@ -64,6 +66,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 
 /** An extension that implements the {@link Memoized} contract. */
@@ -110,6 +113,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     private final String classToExtend;
     private final boolean isFinal;
     private final Elements elements;
+    private final Types types;
     private final SourceVersion sourceVersion;
     private final Messager messager;
     private final Optional<AnnotationSpec> lazyInitAnnotation;
@@ -121,6 +125,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       this.classToExtend = classToExtend;
       this.isFinal = isFinal;
       this.elements = context.processingEnvironment().getElementUtils();
+      this.types = context.processingEnvironment().getTypeUtils();
       this.sourceVersion = context.processingEnvironment().getSourceVersion();
       this.messager = context.processingEnvironment().getMessager();
       this.lazyInitAnnotation = getLazyInitAnnotation(elements);
@@ -139,6 +144,9 @@ public final class MemoizeExtension extends AutoValueExtension {
         MethodOverrider methodOverrider = new MethodOverrider(method);
         generated.addFields(methodOverrider.fields());
         generated.addMethod(methodOverrider.method());
+      }
+      if (isHashCodeMemoized() && !isEqualsFinal()) {
+        generated.addMethod(equalsWithHashCodeCheck());
       }
       if (hasErrors) {
         return null;
@@ -174,6 +182,40 @@ public final class MemoizeExtension extends AutoValueExtension {
       }
       constructor.addStatement("super($L)", Joiner.on(", ").join(namesWithDollars));
       return constructor.build();
+    }
+
+    private boolean isHashCodeMemoized() {
+      return memoizedMethods(context).stream()
+          .anyMatch(method -> method.getSimpleName().contentEquals("hashCode"));
+    }
+
+    private boolean isEqualsFinal() {
+      TypeMirror objectType = elements.getTypeElement(Object.class.getCanonicalName()).asType();
+      ExecutableElement equals =
+          MoreElements.getLocalAndInheritedMethods(context.autoValueClass(), types, elements)
+              .stream()
+              .filter(method -> method.getSimpleName().contentEquals("equals"))
+              .filter(method -> method.getParameters().size() == 1)
+              .filter(
+                  method ->
+                      types.isSameType(getOnlyElement(method.getParameters()).asType(), objectType))
+              .findFirst()
+              .get();
+      return equals.getModifiers().contains(FINAL);
+    }
+
+    private MethodSpec equalsWithHashCodeCheck() {
+      return methodBuilder("equals")
+          .addModifiers(PUBLIC)
+          .returns(TypeName.BOOLEAN)
+          .addAnnotation(Override.class)
+          .addParameter(TypeName.OBJECT, "that")
+          .addStatement(
+              "return that instanceof $N "
+                  + "&& this.hashCode() == that.hashCode() "
+                  + "&& super.equals(that)",
+              className)
+          .build();
     }
 
     /**

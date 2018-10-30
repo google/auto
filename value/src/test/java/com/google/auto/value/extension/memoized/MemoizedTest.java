@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.memoized.MemoizedTest.HashCodeEqualsOptimization.EqualsCounter;
 import com.google.common.collect.ImmutableList;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
@@ -157,6 +158,53 @@ public class MemoizedTest {
     @Override
     public String toString() {
       return "a string" + ++toStringCount;
+    }
+  }
+
+  @AutoValue
+  abstract static class HashCodeEqualsOptimization {
+    int overrideHashCode;
+    int hashCodeCount;
+
+    abstract EqualsCounter equalsCounter();
+
+    @Memoized
+    @Override
+    public int hashCode() {
+      hashCodeCount++;
+      return overrideHashCode;
+    }
+
+    static class EqualsCounter {
+      int equalsCount;
+
+      @Override
+      public int hashCode() {
+        return 0;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        equalsCount++;
+        return true;
+      }
+    }
+  }
+
+  @AutoValue
+  abstract static class HashCodeEqualsOptimizationOffWhenEqualsIsFinal {
+    int hashCodeCount;
+
+    @Override
+    @Memoized
+    public int hashCode() {
+      hashCodeCount++;
+      return 1;
+    }
+
+    @Override
+    public final boolean equals(Object that) {
+      return that instanceof HashCodeEqualsOptimizationOffWhenEqualsIsFinal;
     }
   }
 
@@ -299,5 +347,52 @@ public class MemoizedTest {
     assertThat(paramType.isAnnotationPresent(
                    org.checkerframework.checker.nullness.qual.Nullable.class))
         .isTrue();
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization() {
+    HashCodeEqualsOptimization first =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+    HashCodeEqualsOptimization second =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+
+    first.overrideHashCode = 2;
+    second.overrideHashCode = 2;
+    assertThat(first.equals(second)).isTrue();
+    assertThat(first.equalsCounter().equalsCount).isEqualTo(1);
+
+    HashCodeEqualsOptimization otherwiseEqualsButDifferentHashCode =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+    otherwiseEqualsButDifferentHashCode.overrideHashCode = 4;
+
+    assertThat(otherwiseEqualsButDifferentHashCode.equals(first)).isFalse();
+    assertThat(otherwiseEqualsButDifferentHashCode.equalsCounter().equalsCount).isEqualTo(0);
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization_otherTypes() {
+    HashCodeEqualsOptimization optimizedEquals =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+
+    assertThat(optimizedEquals.equals(new Object())).isFalse();
+    assertThat(optimizedEquals.equals(null)).isFalse();
+
+    assertThat(optimizedEquals.equalsCounter().equalsCount).isEqualTo(0);
+    assertThat(optimizedEquals.hashCodeCount).isEqualTo(0);
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization_offWhenEqualsIsFinal() {
+    HashCodeEqualsOptimizationOffWhenEqualsIsFinal memoizedHashCodeAndFinalEqualsMethod =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimizationOffWhenEqualsIsFinal();
+    HashCodeEqualsOptimizationOffWhenEqualsIsFinal second =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimizationOffWhenEqualsIsFinal();
+
+    assertThat(memoizedHashCodeAndFinalEqualsMethod.equals(second)).isTrue();
+    assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(0);
+
+    memoizedHashCodeAndFinalEqualsMethod.hashCode();
+    memoizedHashCodeAndFinalEqualsMethod.hashCode();
+    assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(1);
   }
 }
