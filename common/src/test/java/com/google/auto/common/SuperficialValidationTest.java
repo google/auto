@@ -246,8 +246,6 @@ public class SuperficialValidationTest {
         .failsToCompile();
   }
 
-  // TODO(gak): Enable when b/17584340 is resolved.
-  /*
   @Test
   public void invalidAnnotationValue() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines("test.Outer",
@@ -272,7 +270,6 @@ public class SuperficialValidationTest {
           }
         }).failsToCompile();
   }
-  */
 
   private abstract static class AssertingProcessor extends AbstractProcessor {
     @Override
