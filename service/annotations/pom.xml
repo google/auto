@@ -25,13 +25,12 @@
   </parent>
 
   <groupId>com.google.auto.service</groupId>
-  <artifactId>auto-service-aggregator</artifactId>
+  <artifactId>auto-service-annotations</artifactId>
   <version>HEAD-SNAPSHOT</version>
-  <name>AutoService Aggregator</name>
+  <name>AutoService</name>
   <description>
-    Aggregator POM for @AutoService
+    Provider-configuration files for ServiceLoader.
   </description>
-  <packaging>pom</packaging>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -40,8 +39,22 @@
     <tag>HEAD</tag>
   </scm>
 
-  <modules>
-    <module>annotations</module>
-    <module>processor</module>
-  </modules>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <!-- disable processing because the definition in META-INF/services breaks javac -->
+          <compilerArgument>-proc:none</compilerArgument>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
