@@ -31,6 +31,7 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
+import static javax.lang.model.element.Modifier.TRANSIENT;
 import static javax.lang.model.element.Modifier.VOLATILE;
 import static javax.lang.model.type.TypeKind.VOID;
 import static javax.lang.model.util.ElementFilter.methodsIn;
@@ -324,11 +325,11 @@ public final class MemoizeExtension extends AutoValueExtension {
 
       /**
        * Builds a {@link FieldSpec} for use in property caching. Field will be {@code private
-       * volatile} and have the given type and name. If the @LazyInit annotation is available it is
-       * added as well.
+       * transient volatile} and have the given type and name. If the @LazyInit annotation is
+       * available it is added as well.
        */
       private FieldSpec buildCacheField(TypeName type, String name) {
-        FieldSpec.Builder builder = FieldSpec.builder(type, name, PRIVATE, VOLATILE);
+        FieldSpec.Builder builder = FieldSpec.builder(type, name, PRIVATE, TRANSIENT, VOLATILE);
         if (lazyInitAnnotation.isPresent()) {
           builder.addAnnotation(lazyInitAnnotation.get());
           builder.addAnnotation(SUPPRESS_WARNINGS);
