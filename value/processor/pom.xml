@@ -172,6 +172,10 @@
                   <pattern>com.squareup.javapoet</pattern>
                   <shadedPattern>autovalue.shaded.com.squareup.javapoet$</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>net.ltgt.gradle.incap</pattern>
+                  <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap$</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
