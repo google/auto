@@ -59,12 +59,12 @@
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap</artifactId>
-      <version>0.1</version>
+      <version>0.2</version>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap-processor</artifactId>
-      <version>0.1</version>
+      <version>0.2</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -171,6 +171,10 @@
                 <relocation>
                   <pattern>com.squareup.javapoet</pattern>
                   <shadedPattern>autovalue.shaded.com.squareup.javapoet$</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>net.ltgt.gradle.incap</pattern>
+                  <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap$</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
