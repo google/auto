@@ -661,7 +661,7 @@ public class ExtensionTest {
   }
 
   @SupportedOptions(CustomAnnotation.CUSTOM_OPTION)
-  @SupportedAnnotationTypes("com.google.auto.value.processor.ExtensionTest$CustomAnnotation")
+  @SupportedAnnotationTypes("com.google.auto.value.processor.ExtensionTest.CustomAnnotation")
   static class ExtensionWithAnnotatedOptions extends AutoValueExtension {
 
     @Override
