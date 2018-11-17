@@ -40,6 +40,8 @@ import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -620,6 +622,70 @@ public class ExtensionTest {
     success
         .and()
         .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
+  }
+
+  /**
+   * Tests that extensions providing their own (annotated) annotation types or options get picked up.
+   */
+  @Test
+  public void extensionsWithAnnotatedOptions() {
+    ExtensionWithAnnotatedOptions extension = new ExtensionWithAnnotatedOptions();
+
+    // Ensure default annotation support works
+    assertTrue(extension.getSupportedAnnotationTypes().contains(CustomAnnotation.class.getCanonicalName()));
+    assertTrue(extension.getSupportedOptions().contains(CustomAnnotation.CUSTOM_OPTION));
+
+    // Ensure it's carried over to the AutoValue processor
+    assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedAnnotationTypes()
+        .contains(CustomAnnotation.class.getCanonicalName()));
+    assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions()
+        .contains(CustomAnnotation.CUSTOM_OPTION));
+  }
+
+  /**
+   * Tests that extensions providing their own implemented annotation types or options get picked up.
+   */
+  @Test
+  public void extensionsWithImplementedOptions() {
+    ExtensionWithImplementedOptions extension = new ExtensionWithImplementedOptions();
+
+    // Ensure it's carried over to the AutoValue processor
+    assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedAnnotationTypes()
+        .contains(CustomAnnotation.class.getCanonicalName()));
+    assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions()
+        .contains(CustomAnnotation.CUSTOM_OPTION));
+  }
+
+  @interface CustomAnnotation {
+    String CUSTOM_OPTION = "customAnnotation.customOption";
+  }
+
+  @SupportedOptions(CustomAnnotation.CUSTOM_OPTION)
+  @SupportedAnnotationTypes("com.google.auto.value.processor.ExtensionTest$CustomAnnotation")
+  static class ExtensionWithAnnotatedOptions extends AutoValueExtension {
+
+    @Override
+    public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
+      return null;
+    }
+  }
+
+  static class ExtensionWithImplementedOptions extends AutoValueExtension {
+
+    @Override
+    public Set<String> getSupportedOptions() {
+      return ImmutableSet.of(CustomAnnotation.CUSTOM_OPTION);
+    }
+
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+      return ImmutableSet.of(CustomAnnotation.class.getCanonicalName());
+    }
+
+    @Override
+    public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
+      return null;
+    }
   }
 
   private static class FooExtension extends AutoValueExtension {
