@@ -57,8 +57,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
@@ -71,6 +73,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 
 /** An extension that implements the {@link Memoized} contract. */
+@SupportedAnnotationTypes(MEMOIZED_NAME)
 @AutoService(AutoValueExtension.class)
 public final class MemoizeExtension extends AutoValueExtension {
   private static final ImmutableSet<String> DO_NOT_PULL_DOWN_ANNOTATIONS =
