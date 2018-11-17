@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.intersection;
 import static java.util.stream.Collectors.joining;
@@ -42,9 +43,9 @@ import java.util.OptionalInt;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
-import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -63,7 +64,6 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
-@SupportedAnnotationTypes(AUTO_VALUE_NAME)
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.DYNAMIC)
 public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   private static final String OMIT_IDENTIFIERS_OPTION = "com.google.auto.value.OmitIdentifiers";
@@ -128,25 +128,43 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   }
 
   @Override
+  public Set<String> getSupportedAnnotationTypes() {
+    return ImmutableSet.<String>builder()
+        .add(AUTO_VALUE_NAME)
+        .addAll(extensions.stream()
+            .map(AutoValueExtension::getSupportedAnnotationTypes)
+            .flatMap(Set::stream)
+            .collect(toImmutableSet()))
+        .build();
+  }
+
+  @Override
   public Set<String> getSupportedOptions() {
+    ImmutableSet.Builder<String> builder = ImmutableSet.builder();
     AutoValueExtension.IncrementalExtensionType incrementalType =
         extensions.stream()
+            .peek(e -> builder.addAll(e.getSupportedOptions()))
             .map(e -> e.incrementalType(processingEnv))
             .min(Comparator.naturalOrder())
             .orElse(AutoValueExtension.IncrementalExtensionType.ISOLATING);
     switch (incrementalType) {
       case ISOLATING:
-        return ImmutableSet.of(
+        builder.add(
             OMIT_IDENTIFIERS_OPTION,
             IncrementalAnnotationProcessorType.ISOLATING.getProcessorOption());
+        break;
       case AGGREGATING:
-        return ImmutableSet.of(
+        builder.add(
             OMIT_IDENTIFIERS_OPTION,
             IncrementalAnnotationProcessorType.AGGREGATING.getProcessorOption());
+        break;
       case UNKNOWN:
-        return ImmutableSet.of(OMIT_IDENTIFIERS_OPTION);
+        builder.add(OMIT_IDENTIFIERS_OPTION);
+        break;
+      default:
+        throw new AssertionError(incrementalType);
     }
-    throw new AssertionError(incrementalType);
+    return builder.build();
   }
 
   private static String generatedSubclassName(TypeElement type, int depth) {
