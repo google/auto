@@ -208,7 +208,7 @@ public abstract class AutoValueExtension {
    */
   public Set<String> getSupportedOptions() {
       SupportedOptions so = this.getClass().getAnnotation(SupportedOptions.class);
-      if  (so == null) {
+      if (so == null) {
         return Collections.emptySet();
       } else {
         return ImmutableSet.copyOf(so.value());
