@@ -46,6 +46,7 @@ import java.util.Set;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -63,6 +64,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
  * @author Éamonn McManus
  */
+@SupportedAnnotationTypes(AUTO_VALUE_NAME)
 @AutoService(Processor.class)
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.DYNAMIC)
 public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
@@ -125,17 +127,6 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         extensions = ImmutableList.of();
       }
     }
-  }
-
-  @Override
-  public Set<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.<String>builder()
-        .add(AUTO_VALUE_NAME)
-        .addAll(extensions.stream()
-            .map(AutoValueExtension::getSupportedAnnotationTypes)
-            .flatMap(Set::stream)
-            .collect(toImmutableSet()))
-        .build();
   }
 
   @Override
