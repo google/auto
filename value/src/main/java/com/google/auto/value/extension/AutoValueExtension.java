@@ -173,9 +173,9 @@ public abstract class AutoValueExtension {
    * Analogous to {@link Processor#getSupportedOptions()}, here to allow extensions to report their
    * own.
    *
-   * <p>If the extension class is annotated with {@link
-   * SupportedOptions}, return an unmodifiable set with the same set
-   * of strings as the annotation.  If the class is not so
+   * <p>By default - if the extension class is annotated with {@link
+   * SupportedOptions}, this will return an unmodifiable set with the same set
+   * of strings as the annotation. If the class is not so
    * annotated, an empty set is returned.
    *
    * @return the set of options recognized by this extension or an
@@ -195,9 +195,9 @@ public abstract class AutoValueExtension {
    * Analogous to {@link Processor#getSupportedAnnotationTypes()}, here to allow extensions to
    * report their own.
    *
-   * <p>If the extension class is annotated with {@link
-   * SupportedAnnotationTypes}, return an unmodifiable set with the
-   * same set of strings as the annotation.  If the class is not so
+   * <p>By default - if the extension class is annotated with {@link
+   * SupportedAnnotationTypes}, this will return an unmodifiable set with the
+   * same set of strings as the annotation. If the class is not so
    * annotated, an empty set is returned.
    *
    * @return the names of the annotation types supported by this extension
