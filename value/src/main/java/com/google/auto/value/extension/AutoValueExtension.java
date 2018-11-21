@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
@@ -169,33 +170,8 @@ public abstract class AutoValueExtension {
   }
 
   /**
-   * Returns the options recognized by this extension.  An
-   * implementation of the processing tool must provide a way to
-   * pass extension-specific options distinctly from options passed
-   * to the tool itself, see {@link ProcessingEnvironment#getOptions
-   * getOptions}.
-   *
-   * <p>Each string returned in the set must be a period separated
-   * sequence of {@linkplain
-   * javax.lang.model.SourceVersion#isIdentifier identifiers}:
-   *
-   * <blockquote>
-   * <dl>
-   * <dt><i>SupportedOptionString:</i>
-   * <dd><i>Identifiers</i>
-   *
-   * <dt><i>Identifiers:</i>
-   * <dd> <i>Identifier</i>
-   * <dd> <i>Identifier</i> {@code .} <i>Identifiers</i>
-   *
-   * <dt><i>Identifier:</i>
-   * <dd>Syntactic identifier, including keywords and literals
-   * </dl>
-   * </blockquote>
-   *
-   * <p> A tool might use this information to determine if any
-   * options provided by a user are unrecognized by any extension,
-   * in which case it may wish to report a warning.
+   * Analogous to {@link Processor#getSupportedOptions()}, here to allow extensions to report their
+   * own.
    *
    * <p>If the extension class is annotated with {@link
    * SupportedOptions}, return an unmodifiable set with the same set
@@ -216,34 +192,8 @@ public abstract class AutoValueExtension {
   }
 
   /**
-   * Returns the names of the annotation types supported by this
-   * extension.  An element of the result may be the canonical
-   * (fully qualified) name of a supported annotation type.
-   * Alternately it may be of the form &quot;<tt><i>name</i>.*</tt>&quot;
-   * representing the set of all annotation types with canonical
-   * names beginning with &quot;<tt><i>name.</i></tt>&quot;.  Finally, {@code
-   * "*"} by itself represents the set of all annotation types,
-   * including the empty set.  Note that a extension should not
-   * claim {@code "*"} unless it is actually processing all files;
-   * claiming unnecessary annotations may cause a performance
-   * slowdown in some environments.
-   *
-   * <p>Each string returned in the set must be accepted by the
-   * following grammar:
-   *
-   * <blockquote>
-   * <dl>
-   * <dt><i>SupportedAnnotationTypeString:</i>
-   * <dd><i>TypeName</i> <i>DotStar</i><sub><i>opt</i></sub>
-   * <dd><tt>*</tt>
-   *
-   * <dt><i>DotStar:</i>
-   * <dd><tt>.</tt> <tt>*</tt>
-   * </dl>
-   * </blockquote>
-   *
-   * where <i>TypeName</i> is as defined in
-   * <cite>The Java&trade; Language Specification</cite>.
+   * Analogous to {@link Processor#getSupportedAnnotationTypes()}, here to allow extensions to
+   * report their own.
    *
    * <p>If the extension class is annotated with {@link
    * SupportedAnnotationTypes}, return an unmodifiable set with the
