@@ -40,7 +40,6 @@ import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -632,12 +631,9 @@ public class ExtensionTest {
     ExtensionWithAnnotatedOptions extension = new ExtensionWithAnnotatedOptions();
 
     // Ensure default annotation support works
-    assertTrue(extension.getSupportedAnnotationTypes().contains(CustomAnnotation.class.getCanonicalName()));
     assertTrue(extension.getSupportedOptions().contains(CustomAnnotation.CUSTOM_OPTION));
 
     // Ensure it's carried over to the AutoValue processor
-    assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedAnnotationTypes()
-        .contains(CustomAnnotation.class.getCanonicalName()));
     assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions()
         .contains(CustomAnnotation.CUSTOM_OPTION));
   }
@@ -650,8 +646,6 @@ public class ExtensionTest {
     ExtensionWithImplementedOptions extension = new ExtensionWithImplementedOptions();
 
     // Ensure it's carried over to the AutoValue processor
-    assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedAnnotationTypes()
-        .contains(CustomAnnotation.class.getCanonicalName()));
     assertTrue(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions()
         .contains(CustomAnnotation.CUSTOM_OPTION));
   }
@@ -661,7 +655,6 @@ public class ExtensionTest {
   }
 
   @SupportedOptions(CustomAnnotation.CUSTOM_OPTION)
-  @SupportedAnnotationTypes("com.google.auto.value.processor.ExtensionTest.CustomAnnotation")
   static class ExtensionWithAnnotatedOptions extends AutoValueExtension {
 
     @Override
@@ -675,11 +668,6 @@ public class ExtensionTest {
     @Override
     public Set<String> getSupportedOptions() {
       return ImmutableSet.of(CustomAnnotation.CUSTOM_OPTION);
-    }
-
-    @Override
-    public Set<String> getSupportedAnnotationTypes() {
-      return ImmutableSet.of(CustomAnnotation.class.getCanonicalName());
     }
 
     @Override

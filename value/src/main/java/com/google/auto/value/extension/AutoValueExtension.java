@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
-import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -189,27 +188,6 @@ public abstract class AutoValueExtension {
       } else {
         return ImmutableSet.copyOf(so.value());
       }
-  }
-
-  /**
-   * Analogous to {@link Processor#getSupportedAnnotationTypes()}, here to allow extensions to
-   * report their own.
-   *
-   * <p>By default - if the extension class is annotated with {@link
-   * SupportedAnnotationTypes}, this will return an unmodifiable set with the
-   * same set of strings as the annotation. If the class is not so
-   * annotated, an empty set is returned.
-   *
-   * @return the names of the annotation types supported by this extension
-   * @see SupportedAnnotationTypes
-   */
-  public Set<String> getSupportedAnnotationTypes() {
-    SupportedAnnotationTypes sat = this.getClass().getAnnotation(SupportedAnnotationTypes.class);
-    if  (sat == null) {
-      return Collections.emptySet();
-    } else {
-      return ImmutableSet.copyOf(sat.value());
-    }
   }
 
   /**
