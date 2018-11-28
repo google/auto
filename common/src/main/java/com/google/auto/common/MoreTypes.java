@@ -423,7 +423,7 @@ public final class MoreTypes {
       Element element = t.asElement();
       if (visiting.contains(element)) {
         return 0;
-          }
+      }
       Set<Element> newVisiting = new HashSet<Element>(visiting);
       newVisiting.add(element);
       int result = hashKind(HASH_SEED, t);
@@ -457,9 +457,9 @@ public final class MoreTypes {
       result += t.getLowerBound().accept(this, visiting);
       TypeParameterElement element = (TypeParameterElement) t.asElement();
       for (TypeMirror bound : element.getBounds()) {
-            result *= HASH_MULTIPLIER;
+        result *= HASH_MULTIPLIER;
         result += bound.accept(this, visiting);
-          }
+      }
       return result;
     }
 
@@ -477,7 +477,7 @@ public final class MoreTypes {
     public Integer visitUnknown(TypeMirror t, Set<Element> visiting) {
       throw new UnsupportedOperationException();
     }
-      };
+  };
 
   private static int hashList(List<? extends TypeMirror> mirrors, Set<Element> visiting) {
     int result = HASH_SEED;
@@ -561,24 +561,24 @@ public final class MoreTypes {
 
     @Override
     protected Element defaultAction(TypeMirror e, Void p) {
-          throw new IllegalArgumentException(e + " cannot be converted to an Element");
-        }
+      throw new IllegalArgumentException(e + " cannot be converted to an Element");
+    }
 
     @Override
     public Element visitDeclared(DeclaredType t, Void p) {
-          return t.asElement();
-        }
+      return t.asElement();
+    }
 
     @Override
     public Element visitError(ErrorType t, Void p) {
-          return t.asElement();
-        }
+      return t.asElement();
+    }
 
     @Override
     public Element visitTypeVariable(TypeVariable t, Void p) {
-          return t.asElement();
-        }
-      };
+      return t.asElement();
+    }
+  };
 
   // TODO(gak): consider removing these two methods as they're pretty trivial now
   public static TypeElement asTypeElement(TypeMirror mirror) {

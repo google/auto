@@ -542,7 +542,7 @@ public class OverridesTest {
       tmpDir.mkdir();
       File dummySourceFile = new File(tmpDir, "Dummy.java");
       try {
-        Files.write("class Dummy {}", dummySourceFile, Charsets.UTF_8);
+        Files.asCharSink(dummySourceFile, Charsets.UTF_8).write("class Dummy {}");
         evaluate(dummySourceFile);
       } finally {
         dummySourceFile.delete();
