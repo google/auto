@@ -35,6 +35,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
+    <guava.version>27.0.1-jre</guava.version>
   </properties>
 
   <scm>
@@ -73,7 +74,12 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>23.5-jre</version>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava-gwt</artifactId>
+        <version>${guava.version}</version>
       </dependency>
       <dependency>
         <groupId>com.squareup</groupId>
@@ -96,7 +102,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava-testlib</artifactId>
-        <version>23.5-jre</version>
+        <version>${guava.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.testing.compile</groupId>
