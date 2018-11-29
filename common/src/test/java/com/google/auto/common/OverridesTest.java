@@ -75,12 +75,14 @@ import org.junit.runners.model.Statement;
  */
 @RunWith(Parameterized.class)
 public class OverridesTest {
+  private static final ImmutableSet<String> TOO_NEW_FOR_ECJ = ImmutableSet.of("9", "10", "11");
+
   @Parameterized.Parameters(name = "{0}")
   public static List<Object[]> data() {
     List<Object[]> compilerTypes = new ArrayList<Object[]>();
     compilerTypes.add(new Object[] {CompilerType.JAVAC});
-    if (!"9".equals(JAVA_SPECIFICATION_VERSION.value())) {
-      // TODO(emcmanus): make this test pass with ECJ on Java 9.
+    if (!TOO_NEW_FOR_ECJ.contains(JAVA_SPECIFICATION_VERSION.value())) {
+      // TODO(emcmanus): make this test pass with ECJ on Java > 8.
       // Currently it complains because it can't find java.lang.Object. Probably we need a newer
       // version of ECJ.
       compilerTypes.add(new Object[] {CompilerType.ECJ});
