@@ -414,6 +414,11 @@ public abstract class Animal {
 }
 ```
 
+The name of this method must be exactly the property name (`countries` here)
+followed by the string `Builder`. Even if the properties follow the
+`getCountries()` convention, the builder method must be `countriesBuilder()`
+and not `getCountriesBuilder()`.
+
 You may notice a small problem with this example: the caller can no longer
 create their instance in a single chained statement:
 
