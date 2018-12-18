@@ -21,11 +21,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.reflect.Reflection;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Set;
@@ -34,10 +37,8 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
-import javax.tools.ForwardingJavaFileManager;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaCompiler.CompilationTask;
-import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -105,22 +106,14 @@ public class GeneratedAnnotationsTest {
     StandardJavaFileManager standardFileManager =
         compiler.getStandardFileManager(/* diagnostics= */ null, /* locale= */ null, UTF_8);
     standardFileManager.setLocation(StandardLocation.CLASS_OUTPUT, ImmutableList.of(tempDir));
-    ForwardingJavaFileManager<StandardJavaFileManager> fileManager =
-        new ForwardingJavaFileManager<StandardJavaFileManager>(standardFileManager) {
-          @Override
-          public Iterable<JavaFileObject> list(
-              Location location, String packageName, Set<Kind> kinds, boolean recurse)
-              throws IOException {
-            if (packageToMask != null && packageName.equals(packageToMask)) {
-              return ImmutableList.of();
-            }
-            return super.list(location, packageName, kinds, recurse);
-          }
-        };
+    StandardJavaFileManager proxyFileManager =
+        Reflection.newProxy(
+            StandardJavaFileManager.class,
+            new FileManagerInvocationHandler(standardFileManager, packageToMask));
     CompilationTask task =
         compiler.getTask(
             /* out= */ null,
-            fileManager,
+            proxyFileManager,
             /* diagnosticListener= */ null,
             options,
             /* classes= */ null,
@@ -137,17 +130,65 @@ public class GeneratedAnnotationsTest {
     return new String(Files.readAllBytes(tempDir.toPath().resolve("G.java")), UTF_8);
   }
 
+  /**
+   * Used to produce a {@link StandardJavaFileManager} where a certain package appears to have
+   * no classes. The results are exactly those from the proxied {@code StandardJavaFileManager}
+   * except for the {@link StandardJavaFileManager#list list} method when its {@code packageName}
+   * argument is the given package, in which case the result is an empty list.
+   *
+   * <p>We can't use {@link javax.tools.ForwardingJavaFileManager} because at least some JDK
+   * versions require the file manager to be a {@code StandardJavaFileManager} when the
+   * {@code --release} flag is given.
+   */
+  private static class FileManagerInvocationHandler implements InvocationHandler {
+    private final StandardJavaFileManager fileManager;
+    private final String packageToMask;
+
+    FileManagerInvocationHandler(StandardJavaFileManager fileManager, String packageToMask) {
+      this.fileManager = fileManager;
+      this.packageToMask = packageToMask;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      if (method.getName().equals("list")) {
+        String packageName = (String) args[1];
+        if (packageName.equals(packageToMask)) {
+          return ImmutableList.of();
+        }
+      }
+      return method.invoke(fileManager, args);
+    }
+  }
+
   @Test
   public void source8() throws Exception {
-    String generated = runProcessor(ImmutableList.of("-source", "8", "-target", "8"), null);
+    // Post-JDK8, we need to use --release 8 in order to be able to see the javax.annotation
+    // package, which was deleted from the JDK in that release. On JDK8, there is no --release
+    // option, so we have to use -source 8 -target 8.
+    ImmutableList<String> options =
+        isJdk9OrLater()
+            ? ImmutableList.of("--release", "8")
+            : ImmutableList.of("-source", "8", "-target", "8");
+    String generated = runProcessor(options, null);
     assertThat(generated).contains(JAVAX_ANNOTATION_GENERATED);
     assertThat(generated).doesNotContain(JAVAX_ANNOTATION_PROCESSING_GENERATED);
   }
 
   @Test
   public void source8_masked() throws Exception {
+    // It appears that the StandardJavaFileManager hack that removes a package does not work in
+    // conjunction with --release. This is probably a bug. What we find is that
+    // Elements.getTypeElement returns a value for javax.annotation.Generated even though
+    // javax.annotation is being masked. It doesn't seem to go through the StandardJavaFileManager
+    // interface to get it. So, we continue using the -source 8 -target 8 options. Those don't
+    // actually get the JDK8 API when running post-JDK8, so we end up testing what we want.
+    //
+    // An alternative would be to delete this test method. JDK8 always has
+    // javax.annotation.Generated so it isn't really meaningful to test it without.
+    ImmutableList<String> options = ImmutableList.of("-source", "8", "-target", "8");
     String generated =
-        runProcessor(ImmutableList.of("-source", "8", "-target", "8"), "javax.annotation");
+        runProcessor(options, "javax.annotation");
     assertThat(generated).doesNotContain(JAVAX_ANNOTATION_GENERATED);
     assertThat(generated).doesNotContain(JAVAX_ANNOTATION_PROCESSING_GENERATED);
   }
