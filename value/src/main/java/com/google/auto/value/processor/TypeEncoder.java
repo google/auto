@@ -17,9 +17,11 @@ package com.google.auto.value.processor;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -69,8 +71,6 @@ final class TypeEncoder {
   private static final EncodingTypeVisitor ENCODING_TYPE_VISITOR = new EncodingTypeVisitor();
   private static final RawEncodingTypeVisitor RAW_ENCODING_TYPE_VISITOR =
       new RawEncodingTypeVisitor();
-  private static final AnnotatedEncodingTypeVisitor ANNOTATED_ENCODING_TYPE_VISITOR =
-      new AnnotatedEncodingTypeVisitor();
 
   /**
    * Returns the encoding for the given type, where class names are marked by special tokens. The
@@ -96,8 +96,20 @@ final class TypeEncoder {
    * covers the details of annotation encoding.
    */
   static String encodeWithAnnotations(TypeMirror type) {
+    return encodeWithAnnotations(type, ImmutableSet.of());
+  }
+
+  /**
+   * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
+   * covers the details of annotation encoding.
+   *
+   * @param excludedAnnotationTypes annotations not to include in the encoding. For example, if
+   *     {@code com.example.Nullable} is in this set then the encoding will not include this
+   *     {@code @Nullable} annotation.
+   */
+  static String encodeWithAnnotations(TypeMirror type, Set<TypeMirror> excludedAnnotationTypes) {
     StringBuilder sb = new StringBuilder();
-    return ANNOTATED_ENCODING_TYPE_VISITOR.visit2(type, sb).toString();
+    return new AnnotatedEncodingTypeVisitor(excludedAnnotationTypes).visit2(type, sb).toString();
   }
 
   /**
@@ -275,9 +287,30 @@ final class TypeEncoder {
    * `java.util.List`} form.
    */
   private static class AnnotatedEncodingTypeVisitor extends EncodingTypeVisitor {
+    private final Set<TypeMirror> excludedAnnotationTypes;
+
+    AnnotatedEncodingTypeVisitor(Set<TypeMirror> excludedAnnotationTypes) {
+      this.excludedAnnotationTypes = excludedAnnotationTypes;
+    }
+
+    private void appendAnnotationsWithExclusions(
+        List<? extends AnnotationMirror> annotations, StringBuilder sb) {
+      // Optimization for the very common cases where there are no annotations or there are no
+      // exclusions.
+      if (annotations.isEmpty() || excludedAnnotationTypes.isEmpty()) {
+        appendAnnotations(annotations, sb);
+        return;
+      }
+      List<AnnotationMirror> includedAnnotations =
+          annotations.stream()
+              .filter(a -> !excludedAnnotationTypes.contains(a.getAnnotationType()))
+              .collect(toList());
+      appendAnnotations(includedAnnotations, sb);
+    }
+
     @Override
     public StringBuilder visitPrimitive(PrimitiveType type, StringBuilder sb) {
-      appendAnnotations(type.getAnnotationMirrors(), sb);
+      appendAnnotationsWithExclusions(type.getAnnotationMirrors(), sb);
       // We can't just append type.toString(), because that will also have the annotation, but
       // without encoding.
       return sb.append(type.getKind().toString().toLowerCase());
@@ -285,7 +318,7 @@ final class TypeEncoder {
 
     @Override
     public StringBuilder visitTypeVariable(TypeVariable type, StringBuilder sb) {
-      appendAnnotations(type.getAnnotationMirrors(), sb);
+      appendAnnotationsWithExclusions(type.getAnnotationMirrors(), sb);
       return sb.append(type.asElement().getSimpleName());
     }
 
@@ -300,7 +333,7 @@ final class TypeEncoder {
       List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
       if (!annotationMirrors.isEmpty()) {
         sb.append(" ");
-        appendAnnotations(annotationMirrors, sb);
+        appendAnnotationsWithExclusions(annotationMirrors, sb);
       }
       return sb.append("[]");
     }
@@ -314,7 +347,7 @@ final class TypeEncoder {
         String className = className(type);
         // See the class doc comment for an explanation of « and » here.
         sb.append("`«").append(className).append("`");
-        appendAnnotations(annotationMirrors, sb);
+        appendAnnotationsWithExclusions(annotationMirrors, sb);
         sb.append("`»").append(className).append("`");
       }
       appendTypeArguments(type, sb);

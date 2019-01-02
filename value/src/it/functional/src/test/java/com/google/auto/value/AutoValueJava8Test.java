@@ -157,6 +157,15 @@ public class AutoValueJava8Test {
   }
 
   @Test
+  public void testNullablePropertyImplementationIsNullable() throws NoSuchMethodException {
+    Method method =
+        AutoValue_AutoValueJava8Test_NullableProperties.class.getDeclaredMethod("nullableString");
+    assertThat(method.getAnnotatedReturnType().getAnnotations())
+        .asList()
+        .contains(nullable());
+  }
+
+  @Test
   public void testNullablePropertyConstructorParameterIsNullable() throws NoSuchMethodException {
     Constructor<?> constructor =
         AutoValue_AutoValueJava8Test_NullableProperties.class.getDeclaredConstructor(
@@ -165,6 +174,44 @@ public class AutoValueJava8Test {
       assertThat(constructor.getAnnotatedParameterTypes()[0].getAnnotations())
           .asList()
           .contains(nullable());
+    } catch (AssertionError e) {
+      if (javacHandlesTypeAnnotationsCorrectly) {
+        throw e;
+      }
+    }
+  }
+
+  @AutoValue
+  abstract static class NullablePropertiesNotCopied {
+    @AutoValue.CopyAnnotations(exclude = Nullable.class)
+    abstract @Nullable String nullableString();
+
+    abstract int randomInt();
+
+    NullablePropertiesNotCopied create(String notNullableAfterAll, int randomInt) {
+      return new AutoValue_AutoValueJava8Test_NullablePropertiesNotCopied(
+          notNullableAfterAll, randomInt);
+    }
+  }
+
+  @Test
+  public void testExcludedNullablePropertyImplementation() throws NoSuchMethodException {
+    Method method = AutoValue_AutoValueJava8Test_NullablePropertiesNotCopied.class
+        .getDeclaredMethod("nullableString");
+    assertThat(method.getAnnotatedReturnType().getAnnotations())
+        .asList()
+        .doesNotContain(nullable());
+  }
+
+  @Test
+  public void testExcludedNullablePropertyConstructorParameter() throws NoSuchMethodException {
+    Constructor<?> constructor =
+        AutoValue_AutoValueJava8Test_NullablePropertiesNotCopied.class.getDeclaredConstructor(
+            String.class, int.class);
+    try {
+      assertThat(constructor.getAnnotatedParameterTypes()[0].getAnnotations())
+          .asList()
+          .doesNotContain(nullable());
     } catch (AssertionError e) {
       if (javacHandlesTypeAnnotationsCorrectly) {
         throw e;
@@ -267,6 +314,7 @@ public class AutoValueJava8Test {
   }
 
   @AutoValue
+  @SuppressWarnings("AutoValueImmutableFields")
   abstract static class PrimitiveArrays {
     @SuppressWarnings("mutable")
     abstract boolean[] booleans();
@@ -428,6 +476,7 @@ public class AutoValueJava8Test {
   }
 
   @AutoValue
+  @SuppressWarnings("AutoValueImmutableFields")
   public abstract static class BuilderWithUnprefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> list();
 
@@ -501,6 +550,7 @@ public class AutoValueJava8Test {
   }
 
   @AutoValue
+  @SuppressWarnings("AutoValueImmutableFields")
   public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> getList();
 
@@ -641,7 +691,7 @@ public class AutoValueJava8Test {
    * implementation class.
    */
   @Test
-  public void testTypeAnnotationCopiedToImplementation() throws ReflectiveOperationException {
+  public void testTypeAnnotationCopiedToImplementation() {
     @Nullable String nullableString = "blibby";
     AnnotatedTypeParameter<@Nullable String> x = AnnotatedTypeParameter.create(nullableString);
     Class<?> c = x.getClass();
@@ -674,8 +724,7 @@ public class AutoValueJava8Test {
    * implementation class.
    */
   @Test
-  public void testTypeAnnotationOnBuilderCopiedToImplementation()
-      throws ReflectiveOperationException {
+  public void testTypeAnnotationOnBuilderCopiedToImplementation() {
     AnnotatedTypeParameterWithBuilder.Builder<@Nullable String> builder =
         AnnotatedTypeParameterWithBuilder.builder();
     Class<?> c = builder.getClass();

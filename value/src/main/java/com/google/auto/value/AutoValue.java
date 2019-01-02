@@ -124,8 +124,10 @@ public @interface AutoValue {
    *   }</pre>
    *
    * <p>When the <i>type</i> of an {@code @AutoValue} property method has annotations, those are
-   * part of the type, so they are always copied to the implementation of the method.
-   * {@code @CopyAnnotations} has no effect here. For example, suppose {@code @Confidential} is a
+   * part of the type, so by default they are copied to the implementation of the method. But if
+   * a type annotation is mentioned in {@code exclude} then it is not copied.
+   *
+   * <p>For example, suppose {@code @Confidential} is a
    * {@link java.lang.annotation.ElementType#TYPE_USE TYPE_USE} annotation:
    *
    * <pre>
@@ -141,7 +143,15 @@ public @interface AutoValue {
    *   }</pre>
    *
    * Then the implementation of the {@code name()} method will also have return type
-   * {@code @Confidential String}.
+   * {@code @Confidential String}. But if {@code name()} were written like this...
+   *
+   * <pre>
+   *
+   *     {@code @AutoValue.CopyAnnotations(exclude = Confidential.class)}
+   *     abstract {@code @}Confidential String name();</pre>
+   *
+   * <p>...then the implementation of {@code name()} would have return type {@code String} without
+   * the annotation.
    *
    * @author Carmi Grushko
    */
