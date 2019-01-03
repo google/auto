@@ -248,8 +248,14 @@ public class TemplateVarsTest {
 
     @Override
     public InputStream getResourceAsStream(String resource) {
-      result.add(resource);
-      return new BrokenInputStream(super.getResourceAsStream(resource));
+      // Make sure this is actually the resource we are expecting. If we're using JaCoCo or the
+      // like, we might end up reading some other resource, and we don't want to break that.
+      if (resource.startsWith("com/google/auto")) {
+        result.add(resource);
+        return new BrokenInputStream(super.getResourceAsStream(resource));
+      } else {
+        return super.getResourceAsStream(resource);
+      }
     }
 
     private class BrokenInputStream extends InputStream {

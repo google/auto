@@ -24,6 +24,7 @@ import static com.google.auto.value.processor.ClassNames.COPY_ANNOTATIONS_NAME;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Sets.union;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -373,7 +374,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     ImmutableSet.Builder<Property> props = ImmutableSet.builder();
     for (ExecutableElement propertyMethod : propertyMethods) {
       TypeMirror returnType = returnTypes.get(propertyMethod);
-      String propertyType = TypeEncoder.encodeWithAnnotations(returnType);
+      String propertyType =
+          TypeEncoder.encodeWithAnnotations(returnType, getExcludedAnnotationTypes(propertyMethod));
       String propertyName = methodToPropertyName.get(propertyMethod);
       String identifier = methodToIdentifier.get(propertyMethod);
       ImmutableList<String> fieldAnnotations =
@@ -808,7 +810,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.
     if (hasAnnotationMirror(type, COPY_ANNOTATIONS_NAME)) {
       Set<String> excludedAnnotations =
-          union(getExcludedClasses(type), getAnnotationsMarkedWithInherited(type));
+          union(getExcludedAnnotationClassNames(type), getAnnotationsMarkedWithInherited(type));
 
       return copyAnnotations(type, type, excludedAnnotations);
     } else {
@@ -826,9 +828,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   /**
    * Returns the contents of the {@code AutoValue.CopyAnnotations.exclude} element, as a set of
-   * strings that are fully-qualified class names.
+   * {@code TypeMirror} where each type is an annotation type.
    */
-  private Set<String> getExcludedClasses(Element element) {
+  private Set<TypeMirror> getExcludedAnnotationTypes(Element element) {
     Optional<AnnotationMirror> maybeAnnotation =
         getAnnotationMirror(element, COPY_ANNOTATIONS_NAME);
     if (!maybeAnnotation.isPresent()) {
@@ -840,7 +842,18 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         (List<AnnotationValue>) getAnnotationValue(maybeAnnotation.get(), "exclude").getValue();
     return excludedClasses
         .stream()
-        .map(annotationValue -> MoreTypes.asTypeElement((DeclaredType) annotationValue.getValue()))
+        .map(annotationValue -> (DeclaredType) annotationValue.getValue())
+        .collect(toCollection(TypeMirrorSet::new));
+  }
+
+  /**
+   * Returns the contents of the {@code AutoValue.CopyAnnotations.exclude} element, as a set of
+   * strings that are fully-qualified class names.
+   */
+  private Set<String> getExcludedAnnotationClassNames(Element element) {
+    return getExcludedAnnotationTypes(element)
+        .stream()
+        .map(MoreTypes::asTypeElement)
         .map(typeElement -> typeElement.getQualifiedName().toString())
         .collect(toSet());
   }
@@ -878,7 +891,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       TypeElement type, ExecutableElement method) {
     ImmutableSet<String> excludedAnnotations =
         ImmutableSet.<String>builder()
-            .addAll(getExcludedClasses(method))
+            .addAll(getExcludedAnnotationClassNames(method))
             .add(Override.class.getCanonicalName())
             .build();
 
@@ -906,7 +919,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     }
     ImmutableSet<String> excludedAnnotations =
         ImmutableSet.<String>builder()
-            .addAll(getExcludedClasses(method))
+            .addAll(getExcludedAnnotationClassNames(method))
             .add(Override.class.getCanonicalName())
             .build();
 
