@@ -15,10 +15,12 @@
  */
 package com.google.auto.value.extension;
 
-import java.util.Collections;
+import com.google.common.collect.ImmutableSet;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
@@ -165,6 +167,26 @@ public abstract class AutoValueExtension {
   }
 
   /**
+   * Analogous to {@link Processor#getSupportedOptions()}, here to allow extensions to report their
+   * own.
+   *
+   * <p>By default, if the extension class is annotated with {@link SupportedOptions}, this will
+   * return a set with the strings in the annotation. If the class is not so annotated, an empty set
+   * is returned.
+   *
+   * @return the set of options recognized by this extension or an empty set if none
+   * @see SupportedOptions
+   */
+  public Set<String> getSupportedOptions() {
+    SupportedOptions so = this.getClass().getAnnotation(SupportedOptions.class);
+    if (so == null) {
+      return ImmutableSet.of();
+    } else {
+      return ImmutableSet.copyOf(so.value());
+    }
+  }
+
+  /**
    * Determines whether this Extension applies to the given context.
    *
    * @param context The Context of the code generation for this class.
@@ -210,7 +232,7 @@ public abstract class AutoValueExtension {
    * @param context the Context of the code generation for this class.
    */
   public Set<String> consumeProperties(Context context) {
-    return Collections.emptySet();
+    return ImmutableSet.of();
   }
 
   /**
@@ -232,7 +254,7 @@ public abstract class AutoValueExtension {
    * @param context the Context of the code generation for this class.
    */
   public Set<ExecutableElement> consumeMethods(Context context) {
-    return Collections.emptySet();
+    return ImmutableSet.of();
   }
 
   /**
