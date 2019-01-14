@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -622,6 +623,59 @@ public class ExtensionTest {
         .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
   }
 
+  private static final String CUSTOM_OPTION = "customAnnotation.customOption";
+
+  /**
+   * Tests that extensions providing their own (annotated) annotation types or options get picked
+   * up.
+   */
+  @Test
+  public void extensionsWithAnnotatedOptions() {
+    ExtensionWithAnnotatedOptions extension = new ExtensionWithAnnotatedOptions();
+
+    // Ensure default annotation support works
+    assertThat(extension.getSupportedOptions()).contains(CUSTOM_OPTION);
+
+    // Ensure it's carried over to the AutoValue processor
+    assertThat(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions())
+        .contains(CUSTOM_OPTION);
+  }
+
+  /**
+   * Tests that extensions providing their own implemented annotation types or options get picked
+   * up.
+   */
+  @Test
+  public void extensionsWithImplementedOptions() {
+    ExtensionWithImplementedOptions extension = new ExtensionWithImplementedOptions();
+
+    // Ensure it's carried over to the AutoValue processor
+    assertThat(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions())
+        .contains(CUSTOM_OPTION);
+  }
+
+  @SupportedOptions(CUSTOM_OPTION)
+  static class ExtensionWithAnnotatedOptions extends AutoValueExtension {
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      return null;
+    }
+  }
+
+  static class ExtensionWithImplementedOptions extends AutoValueExtension {
+    @Override
+    public Set<String> getSupportedOptions() {
+      return ImmutableSet.of(CUSTOM_OPTION);
+    }
+
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      return null;
+    }
+  }
+
   private static class FooExtension extends AutoValueExtension {
 
     @Override
@@ -813,7 +867,7 @@ public class ExtensionTest {
       // This is perhaps overgeneral. It is simply going to generate this:
       // @Override void writeToParcel(Object parcel, int flags) {}
       ExecutableElement methodToImplement = writeToParcelMethod(context);
-      assertEquals(TypeKind.VOID, methodToImplement.getReturnType().getKind());
+      assertThat(methodToImplement.getReturnType().getKind()).isEqualTo(TypeKind.VOID);
       ImmutableList.Builder<String> typesAndNamesBuilder = ImmutableList.builder();
       for (VariableElement p : methodToImplement.getParameters()) {
         typesAndNamesBuilder.add(p.asType() + " " + p.getSimpleName());

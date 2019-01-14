@@ -129,22 +129,28 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
   @Override
   public Set<String> getSupportedOptions() {
+    ImmutableSet.Builder<String> builder = ImmutableSet.builder();
     AutoValueExtension.IncrementalExtensionType incrementalType =
         extensions.stream()
             .map(e -> e.incrementalType(processingEnv))
             .min(Comparator.naturalOrder())
             .orElse(AutoValueExtension.IncrementalExtensionType.ISOLATING);
+    builder.add(OMIT_IDENTIFIERS_OPTION).addAll(optionsFor(incrementalType));
+    for (AutoValueExtension extension : extensions) {
+      builder.addAll(extension.getSupportedOptions());
+    }
+    return builder.build();
+  }
+
+  private static ImmutableSet<String> optionsFor(
+      AutoValueExtension.IncrementalExtensionType incrementalType) {
     switch (incrementalType) {
       case ISOLATING:
-        return ImmutableSet.of(
-            OMIT_IDENTIFIERS_OPTION,
-            IncrementalAnnotationProcessorType.ISOLATING.getProcessorOption());
+        return ImmutableSet.of(IncrementalAnnotationProcessorType.ISOLATING.getProcessorOption());
       case AGGREGATING:
-        return ImmutableSet.of(
-            OMIT_IDENTIFIERS_OPTION,
-            IncrementalAnnotationProcessorType.AGGREGATING.getProcessorOption());
+        return ImmutableSet.of(IncrementalAnnotationProcessorType.AGGREGATING.getProcessorOption());
       case UNKNOWN:
-        return ImmutableSet.of(OMIT_IDENTIFIERS_OPTION);
+        return ImmutableSet.of();
     }
     throw new AssertionError(incrementalType);
   }
