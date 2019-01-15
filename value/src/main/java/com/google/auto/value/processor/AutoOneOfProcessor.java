@@ -259,6 +259,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
 
   @Override
   Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
+    if (nullableAnnotationFor(propertyMethod, propertyMethod.getReturnType()).isPresent()) {
+      errorReporter().reportError("@AutoOneOf properties cannot be @Nullable", propertyMethod);
+    }
     return Optional.empty();
   }
 

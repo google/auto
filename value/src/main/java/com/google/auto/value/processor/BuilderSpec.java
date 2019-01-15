@@ -305,7 +305,7 @@ class BuilderSpec {
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
       Optional<String> maybeNullable =
-          AutoValueProcessor.nullableAnnotationFor(parameterElement, parameterType);
+          AutoValueOrOneOfProcessor.nullableAnnotationFor(parameterElement, parameterType);
       this.nullableAnnotation = maybeNullable.orElse("");
       boolean nullable = maybeNullable.isPresent();
       this.copyOf = copyOfString(propertyType, parameterType, typeUtils, nullable);
