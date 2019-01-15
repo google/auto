@@ -348,4 +348,34 @@ public class AutoOneOfCompilationTest {
         .inFile(javaFileObject)
         .onLineContaining("frob");
   }
+
+  @Test
+  public void cantBeNullable() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  @interface Nullable {}",
+            "",
+            "  public enum Kind {",
+            "    DOG,",
+            "    CAT,",
+            "  }",
+            "  public abstract Kind getKind();",
+            "  public abstract @Nullable String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoOneOf properties cannot be @Nullable")
+        .inFile(javaFileObject)
+        .onLineContaining("@Nullable String dog()");
+
+  }
 }

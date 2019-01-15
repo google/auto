@@ -52,6 +52,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Predicate;
 import javax.annotation.processing.AbstractProcessor;
@@ -517,6 +518,47 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   private static boolean gettersAllPrefixed(Set<ExecutableElement> methods) {
     return prefixedGettersIn(methods).size() == methods.size();
+  }
+
+  /**
+   * Returns an appropriate annotation spelling to indicate the nullability of an element. If the
+   * return value is a non-empty Optional, that indicates that the element is nullable, and the
+   * string should be used to annotate it. If the return value is an empty Optional, the element is
+   * not nullable. The return value can be {@code Optional.of("")}, which indicates that the element
+   * is nullable but that the nullability comes from a type annotation. In this case, the annotation
+   * will appear when the type is written, and must not be specified again. If the Optional contains
+   * a present non-empty string then that string will end with a space.
+   *
+   * @param element the element that might be {@code @Nullable}, either a method or a parameter.
+   * @param elementType the relevant type of the element: the return type for a method, or the
+   *     parameter type for a parameter.
+   */
+  static Optional<String> nullableAnnotationFor(Element element, TypeMirror elementType) {
+    List<? extends AnnotationMirror> typeAnnotations = elementType.getAnnotationMirrors();
+    if (nullableAnnotationIndex(typeAnnotations).isPresent()) {
+      return Optional.of("");
+    }
+    List<? extends AnnotationMirror> elementAnnotations = element.getAnnotationMirrors();
+    OptionalInt nullableAnnotationIndex = nullableAnnotationIndex(elementAnnotations);
+    if (nullableAnnotationIndex.isPresent()) {
+      ImmutableList<String> annotations = annotationStrings(elementAnnotations);
+      return Optional.of(annotations.get(nullableAnnotationIndex.getAsInt()) + " ");
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  private static OptionalInt nullableAnnotationIndex(List<? extends AnnotationMirror> annotations) {
+    for (int i = 0; i < annotations.size(); i++) {
+      if (isNullable(annotations.get(i))) {
+        return OptionalInt.of(i);
+      }
+    }
+    return OptionalInt.empty();
+  }
+
+  private static boolean isNullable(AnnotationMirror annotation) {
+    return annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable");
   }
 
   /**
