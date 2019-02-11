@@ -88,7 +88,7 @@ public final class MoreTypes {
    * <ul>
    * <li>If you don't have an instance of {@code Types}.
    * <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
-   *     of types using {@link java.util.HashSet} with {@link Equivalence#wrap()}.
+   *     of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
    * <li>If you want distinct type variables to be considered equal if they have the same names
    *     and bounds.
    * <li>If you want wildcard types to compare equal if they have the same bounds. {@code
