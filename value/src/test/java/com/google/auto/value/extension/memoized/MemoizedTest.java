@@ -382,6 +382,17 @@ public class MemoizedTest {
   }
 
   @Test
+  public void hashCodeEqualsOptimization_hashCodeIgnoredForSameInstance() {
+    HashCodeEqualsOptimization optimizedEquals =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+
+    assertThat(optimizedEquals.equals(optimizedEquals)).isTrue();
+
+    assertThat(optimizedEquals.equalsCounter().equalsCount).isEqualTo(0);
+    assertThat(optimizedEquals.hashCodeCount).isEqualTo(0);
+  }
+
+  @Test
   public void hashCodeEqualsOptimization_offWhenEqualsIsFinal() {
     HashCodeEqualsOptimizationOffWhenEqualsIsFinal memoizedHashCodeAndFinalEqualsMethod =
         new AutoValue_MemoizedTest_HashCodeEqualsOptimizationOffWhenEqualsIsFinal();
