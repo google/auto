@@ -211,6 +211,9 @@ public final class MemoizeExtension extends AutoValueExtension {
           .returns(TypeName.BOOLEAN)
           .addAnnotation(Override.class)
           .addParameter(TypeName.OBJECT, "that")
+          .beginControlFlow("if (this == that)")
+          .addStatement("return true")
+          .endControlFlow()
           .addStatement(
               "return that instanceof $N "
                   + "&& this.hashCode() == that.hashCode() "
