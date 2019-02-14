@@ -187,6 +187,8 @@ How do I...
 *   ... [perform other **validation**?](howto.md#validate)
 *   ... [use a property of a **mutable** type?](howto.md#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](howto.md#custom)
+*   ... [have AutoValue implement a concrete or default
+    method?](howto.md#concrete)
 *   ... [have multiple **`create`** methods, or name it/them
     differently?](howto.md#create)
 *   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)

@@ -18,6 +18,7 @@ How do I...
 *   ... [perform other **validation**?](#validate)
 *   ... [use a property of a **mutable** type?](#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](#custom)
+*   ... [have AutoValue implement a concrete or default method?](#concrete)
 *   ... [have multiple **`create`** methods, or name it/them
     differently?](#create)
 *   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
@@ -180,9 +181,13 @@ from [guava-testlib](http://github.com/google/guava).
 Best practice: mark your underriding methods `final` to make it clear to future
 readers that these methods aren't overridden by AutoValue.
 
-Note that this also works if the underriding method was defined in one of your
-abstract class's supertypes. If this is the case and you *want* AutoValue to
-override it, you can "re-abstract" the method in your own class:
+## <a name="concrete"></a>... have AutoValue implement a concrete or default method?
+
+If a parent class defines a concrete (non-abstract) method that you would like
+AutoValue to implement, you can *redeclare* it as abstract. This applies to
+`Object` methods like `toString()`, but also to property methods that you would
+like to have AutoValue implement. It also applies to default methods in
+interfaces.
 
 ```java
 @AutoValue
@@ -194,7 +199,16 @@ class PleaseOverrideExample extends SuperclassThatDefinesToString {
 }
 ```
 
-<!-- TODO(kevinb): should the latter part have been split out? -->
+```java
+@AutoValue
+class PleaseReimplementDefaultMethod implements InterfaceWithDefaultMethod {
+  ...
+
+  // cause AutoValue to implement this even though the interface has a default
+  // implementation
+  @Override public abstract int numberOfLegs();
+}
+```
 
 ## <a name="create"></a>... have multiple `create` methods, or name it/them differently?
 
