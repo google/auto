@@ -771,7 +771,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
           "An @"
               + simpleAnnotationName
               + " property that is a primitive array returns the original array, which can"
-              + " therefore be modified by the caller. If this OK, you can suppress this warning"
+              + " therefore be modified by the caller. If this is OK, you can suppress this warning"
               + " with @SuppressWarnings(\"mutable\"). Otherwise, you should replace the property"
               + " with an immutable type, perhaps a simple wrapper around the original array.";
       boolean sameClass = getter.getEnclosingElement().equals(autoValueClass);
