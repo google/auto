@@ -108,10 +108,14 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         ImmutableListMultimap.builder();
     ImmutableSetMultimap.Builder<String, ImplementationMethodDescriptor>
         implementationMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
+      ImmutableSetMultimap.Builder<String, Element>
+        targetTypeMappingsBuilder = ImmutableSetMultimap.builder();
+
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
         String factoryName = declaration.get().getFactoryName();
+        targetTypeMappingsBuilder.put(factoryName, declaration.get().targetType());
         TypeElement extendingType = declaration.get().extendingType();
         implementationMethodDescriptorsBuilder.putAll(
             factoryName, implementationMethods(extendingType, element));
@@ -130,6 +134,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
     ImmutableSetMultimap<String, ImplementationMethodDescriptor>
         implementationMethodDescriptors = implementationMethodDescriptorsBuilder.build();
+    ImmutableSetMultimap<String, Element> targetTypeMappings = targetTypeMappingsBuilder.build();
 
     for (Entry<String, Collection<FactoryMethodDescriptor>> entry
         : indexedMethods.build().asMap().entrySet()) {
@@ -169,6 +174,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
           factoryWriter.writeFactory(
               FactoryDescriptor.create(
                   entry.getKey(),
+                  Iterables.getOnlyElement(targetTypeMappings.get(entry.getKey())),
                   Iterables.getOnlyElement(extending.build()),
                   implementing.build(),
                   publicType,

@@ -81,6 +81,8 @@ final class FactoryWriter {
       factory.addModifiers(PUBLIC);
     }
 
+    factory.addOriginatingElement(descriptor.originatingElement());
+
     factory.superclass(TypeName.get(descriptor.extendingType()));
     for (TypeMirror implementingType : descriptor.implementingTypes()) {
       factory.addSuperinterface(TypeName.get(implementingType));

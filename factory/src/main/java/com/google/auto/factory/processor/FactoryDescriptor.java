@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.type.TypeMirror;
 
 /**
@@ -48,6 +49,7 @@ abstract class FactoryDescriptor {
       };
 
   abstract String name();
+  abstract Element originatingElement();
   abstract TypeMirror extendingType();
   abstract ImmutableSet<TypeMirror> implementingTypes();
   abstract boolean publicType();
@@ -74,6 +76,7 @@ abstract class FactoryDescriptor {
 
   static FactoryDescriptor create(
       String name,
+      Element originatingElement,
       TypeMirror extendingType,
       ImmutableSet<TypeMirror> implementingTypes,
       boolean publicType,
@@ -131,6 +134,7 @@ abstract class FactoryDescriptor {
 
     return new AutoValue_FactoryDescriptor(
         name,
+        originatingElement,
         extendingType,
         implementingTypes,
         publicType,
