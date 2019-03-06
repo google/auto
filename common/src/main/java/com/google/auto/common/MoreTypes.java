@@ -21,6 +21,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static javax.lang.model.type.TypeKind.ARRAY;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
+import static javax.lang.model.type.TypeKind.INTERSECTION;
 import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
 
@@ -28,11 +29,9 @@ import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -48,6 +47,7 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.IntersectionType;
 import javax.lang.model.type.NoType;
 import javax.lang.model.type.NullType;
 import javax.lang.model.type.PrimitiveType;
@@ -225,6 +225,15 @@ public final class MoreTypes {
     }
 
     @Override
+    public Boolean visitIntersection(IntersectionType a, EqualVisitorParam p) {
+      if (p.type.getKind().equals(INTERSECTION)) {
+        IntersectionType b = (IntersectionType) p.type;
+        return equalLists(a.getBounds(), b.getBounds(), p.visiting);
+      }
+      return false;
+    }
+
+    @Override
     public Boolean visitTypeVariable(TypeVariable a, EqualVisitorParam p) {
       if (p.type.getKind().equals(TYPEVAR)) {
         TypeVariable b = (TypeVariable) p.type;
@@ -286,23 +295,6 @@ public final class MoreTypes {
     }
   }
 
-  private static final Class<?> INTERSECTION_TYPE;
-  private static final Method GET_BOUNDS;
-
-  static {
-    Class<?> c;
-    Method m;
-    try {
-      c = Class.forName("javax.lang.model.type.IntersectionType");
-      m = c.getMethod("getBounds");
-    } catch (Exception e) {
-      c = null;
-      m = null;
-    }
-    INTERSECTION_TYPE = c;
-    GET_BOUNDS = m;
-  }
-
   private static boolean equal(TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
     // TypeMirror.equals is not guaranteed to return true for types that are equal, but we can
     // assume that if it does return true then the types are equal. This check also avoids getting
@@ -317,13 +309,6 @@ public final class MoreTypes {
     EqualVisitorParam p = new EqualVisitorParam();
     p.type = b;
     p.visiting = visiting;
-    if (INTERSECTION_TYPE != null) {
-      if (isIntersectionType(a)) {
-        return equalIntersectionTypes(a, b, visiting);
-      } else if (isIntersectionType(b)) {
-        return false;
-      }
-    }
     return (a == b) || (a != null && b != null && a.accept(EqualVisitor.INSTANCE, p));
   }
 
@@ -341,34 +326,6 @@ public final class MoreTypes {
       return null;
     }
     return enclosing;
-  }
-
-  private static boolean isIntersectionType(TypeMirror t) {
-    return t != null && t.getKind().name().equals("INTERSECTION");
-  }
-
-  // The representation of an intersection type, as in <T extends Number & Comparable<T>>, changed
-  // between Java 7 and Java 8. In Java 7 it was modeled as a fake DeclaredType, and our logic
-  // for DeclaredType does the right thing. In Java 8 it is modeled as a new type IntersectionType.
-  // In order for our code to run on Java 7 (and Java 6) we can't even mention IntersectionType,
-  // so we can't override visitIntersectionType(IntersectionType). Instead, we discover through
-  // reflection whether IntersectionType exists, and if it does we extract the bounds of the
-  // intersection ((Number, Comparable<T>) in the example) and compare them directly.
-  @SuppressWarnings("unchecked")
-  private static boolean equalIntersectionTypes(
-      TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
-    if (!isIntersectionType(b)) {
-      return false;
-    }
-    List<? extends TypeMirror> aBounds;
-    List<? extends TypeMirror> bBounds;
-    try {
-      aBounds = (List<? extends TypeMirror>) GET_BOUNDS.invoke(a);
-      bBounds = (List<? extends TypeMirror>) GET_BOUNDS.invoke(b);
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    return equalLists(aBounds, bBounds, visiting);
   }
 
   private static boolean equalLists(
@@ -595,8 +552,8 @@ public final class MoreTypes {
   }
 
   /**
-   * Returns a {@link ArrayType} if the {@link TypeMirror} represents a primitive array or throws an
-   * {@link IllegalArgumentException}.
+   * Returns a {@link ArrayType} if the {@link TypeMirror} represents an array or throws an {@link
+   * IllegalArgumentException}.
    */
   public static ArrayType asArray(TypeMirror maybeArrayType) {
     return maybeArrayType.accept(ArrayTypeVisitor.INSTANCE, null);
@@ -606,7 +563,7 @@ public final class MoreTypes {
     private static final ArrayTypeVisitor INSTANCE = new ArrayTypeVisitor();
 
     ArrayTypeVisitor() {
-      super("primitive array");
+      super("array");
     }
 
     @Override
@@ -679,6 +636,27 @@ public final class MoreTypes {
   }
 
   /**
+   * Returns an {@link IntersectionType} if the {@link TypeMirror} represents an intersection-type
+   * or throws an {@link IllegalArgumentException}.
+   */
+  public static IntersectionType asIntersection(TypeMirror maybeIntersectionType) {
+    return maybeIntersectionType.accept(IntersectionTypeVisitor.INSTANCE, null);
+  }
+
+  private static final class IntersectionTypeVisitor extends CastingTypeVisitor<IntersectionType> {
+    private static final IntersectionTypeVisitor INSTANCE = new IntersectionTypeVisitor();
+
+    IntersectionTypeVisitor() {
+      super("intersection type");
+    }
+
+    @Override
+    public IntersectionType visitIntersection(IntersectionType type, Void ignore) {
+      return type;
+    }
+  }
+
+  /**
    * Returns a {@link NoType} if the {@link TypeMirror} represents an non-type such as void, or
    * package, etc. or throws an {@link IllegalArgumentException}.
    */
@@ -742,7 +720,7 @@ public final class MoreTypes {
   }
 
   //
-  // visitUnionType would go here, but it is a 1.7 API.
+  // visitUnionType would go here, but isn't relevant for annotation processors
   //
 
   /**
