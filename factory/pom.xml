@@ -73,6 +73,17 @@
       <groupId>javax.inject</groupId>
       <artifactId>javax.inject</artifactId>
     </dependency>
+    <dependency>
+      <groupId>net.ltgt.gradle.incap</groupId>
+      <artifactId>incap</artifactId>
+      <version>0.2</version>
+    </dependency>
+    <dependency>
+      <groupId>net.ltgt.gradle.incap</groupId>
+      <artifactId>incap-processor</artifactId>
+      <version>0.2</version>
+      <scope>provided</scope>
+    </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>com.google.testing.compile</groupId>

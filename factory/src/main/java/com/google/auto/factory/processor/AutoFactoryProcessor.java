@@ -15,6 +15,8 @@
  */
 package com.google.auto.factory.processor;
 
+import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.ISOLATING;
+
 import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
@@ -51,6 +53,7 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
@@ -58,6 +61,7 @@ import javax.tools.Diagnostic.Kind;
  * @author Gregory Kick
  */
 @AutoService(Processor.class)
+@IncrementalAnnotationProcessor(ISOLATING)
 public final class AutoFactoryProcessor extends AbstractProcessor {
   private FactoryDescriptorGenerator factoryDescriptorGenerator;
   private AutoFactoryDeclaration.Factory declarationFactory;
