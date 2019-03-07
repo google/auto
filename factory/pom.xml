@@ -77,6 +77,7 @@
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap</artifactId>
       <version>0.2</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
