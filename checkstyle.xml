@@ -44,8 +44,8 @@
         <module name="TypeName"/>
 
 
-        <!-- Checks for imports                              -->
-        <!-- See http://checkstyle.sf.net/config_import.html -->
+        <!-- Checks for imports                               -->
+        <!-- See http://checkstyle.sf.net/config_imports.html -->
         <module name="AvoidStarImport"/>
         <module name="IllegalImport"/> <!-- defaults to sun.* packages -->
         <module name="RedundantImport"/>
@@ -80,8 +80,8 @@
         </module>
 
 
-        <!-- Modifier Checks                                    -->
-        <!-- See http://checkstyle.sf.net/config_modifiers.html -->
+        <!-- Modifier Checks                                   -->
+        <!-- See http://checkstyle.sf.net/config_modifier.html -->
         <!--module name="ModifierOrder"/-->
         <module name="RedundantModifier"/>
 
