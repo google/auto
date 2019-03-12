@@ -735,4 +735,39 @@ public class AutoValueJava8Test {
         .asList()
         .contains(nullable());
   }
+
+  // b/127701294
+  @AutoValue
+  abstract static class OptionalOptional {
+    abstract Optional<Optional<String>> maybeJustMaybe();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_OptionalOptional.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder maybeJustMaybe(Optional<String> maybe);
+      abstract OptionalOptional build();
+    }
+  }
+
+  @Test
+  public void testOptionalOptional_empty() {
+    OptionalOptional empty = OptionalOptional.builder().build();
+    assertThat(empty.maybeJustMaybe()).isEmpty();
+  }
+
+  @Test
+  public void testOptionalOptional_ofEmpty() {
+    OptionalOptional ofEmpty = OptionalOptional.builder().maybeJustMaybe(Optional.empty()).build();
+    assertThat(ofEmpty.maybeJustMaybe()).hasValue(Optional.empty());
+  }
+
+  @Test
+  public void testOptionalOptional_ofSomething() {
+    OptionalOptional ofSomething =
+        OptionalOptional.builder().maybeJustMaybe(Optional.of("foo")).build();
+    assertThat(ofSomething.maybeJustMaybe()).hasValue(Optional.of("foo"));
+  }
 }
