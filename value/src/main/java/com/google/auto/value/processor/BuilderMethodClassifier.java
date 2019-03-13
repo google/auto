@@ -59,6 +59,7 @@ class BuilderMethodClassifier {
   private final TypeElement autoValueClass;
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
+  private final ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
 
   private final Set<ExecutableElement> buildMethods = new LinkedHashSet<>();
@@ -77,13 +78,15 @@ class BuilderMethodClassifier {
       ProcessingEnvironment processingEnv,
       TypeElement autoValueClass,
       TypeElement builderType,
-      ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+      ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
+    this.getterToPropertyType = getterToPropertyType;
     ImmutableMap.Builder<String, ExecutableElement> getterToPropertyNameBuilder =
         ImmutableMap.builder();
     for (ExecutableElement getter : getterToPropertyName.keySet()) {
@@ -102,6 +105,9 @@ class BuilderMethodClassifier {
    * @param autoValueClass the {@code AutoValue} class containing the builder.
    * @param builderType the builder class or interface within {@code autoValueClass}.
    * @param getterToPropertyName a map from getter methods to the properties they get.
+   * @param getterToPropertyType a map from getter methods to their return types. The return types
+   *     here use type parameters from the builder class (if any) rather than from the {@code
+   *     AutoValue} class, even though the getter methods are in the latter.
    * @param autoValueHasToBuilder true if the containing {@code @AutoValue} class has a {@code
    *     toBuilder()} method.
    * @return an {@code Optional} that contains the results of the classification if it was
@@ -114,10 +120,16 @@ class BuilderMethodClassifier {
       TypeElement autoValueClass,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType,
       boolean autoValueHasToBuilder) {
     BuilderMethodClassifier classifier =
         new BuilderMethodClassifier(
-            errorReporter, processingEnv, autoValueClass, builderType, getterToPropertyName);
+            errorReporter,
+            processingEnv,
+            autoValueClass,
+            builderType,
+            getterToPropertyName,
+            getterToPropertyType);
     if (classifier.classifyMethods(methods, autoValueHasToBuilder)) {
       return Optional.of(classifier);
     } else {
@@ -163,11 +175,11 @@ class BuilderMethodClassifier {
   /** Classifies the given methods and sets the state of this object based on what is found. */
   private boolean classifyMethods(
       Iterable<ExecutableElement> methods, boolean autoValueHasToBuilder) {
-    boolean ok = true;
+    int startErrorCount = errorReporter.errorCount();
     for (ExecutableElement method : methods) {
-      ok &= classifyMethod(method);
+      classifyMethod(method);
     }
-    if (!ok) {
+    if (errorReporter.errorCount() > startErrorCount) {
       return false;
     }
     Multimap<String, ExecutableElement> propertyNameToSetter;
@@ -183,57 +195,55 @@ class BuilderMethodClassifier {
           propertyNameToUnprefixedSetters.values().iterator().next());
       return false;
     }
-    for (Map.Entry<ExecutableElement, String> getterEntry : getterToPropertyName.entrySet()) {
-      String property = getterEntry.getValue();
-      TypeMirror propertyType = getterEntry.getKey().getReturnType();
-      boolean hasSetter = propertyNameToSetter.containsKey(property);
-      PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
-      boolean hasBuilder = propertyBuilder != null;
-      if (hasBuilder) {
-        // If property bar of type Bar has a barBuilder() that returns BarBuilder, then it must be
-        // possible to make a BarBuilder from a Bar if either (1) the @AutoValue class has a
-        // toBuilder() or (2) there is also a setBar(Bar). Making BarBuilder from Bar is possible
-        // if Bar either has a toBuilder() method or is a Guava immutable collection (in which case
-        // we can use addAll or putAll).
-        boolean canMakeBarBuilder =
-            (propertyBuilder.getBuiltToBuilder() != null || propertyBuilder.getCopyAll() != null);
-        boolean needToMakeBarBuilder = (autoValueHasToBuilder || hasSetter);
-        if (needToMakeBarBuilder && !canMakeBarBuilder) {
-          String error =
-              String.format(
-                  "Property builder method returns %1$s but there is no way to make that type from "
-                      + "%2$s: %2$s does not have a non-static toBuilder() method that returns %1$s",
-                  propertyBuilder.getBuilderTypeMirror(), propertyType);
-          errorReporter.reportError(error, propertyBuilder.getPropertyBuilderMethod());
-        }
-      } else if (!hasSetter) {
-        // We have neither barBuilder() nor setBar(Bar), so we should complain.
-        String setterName = settersPrefixed ? prefixWithSet(property) : property;
-        String error =
-            String.format(
-                "Expected a method with this signature: %s%s %s(%s), or a %sBuilder() method",
-                builderType, typeParamsString(), setterName, propertyType, property);
-        errorReporter.reportError(error, builderType);
-        ok = false;
-      }
-    }
-    return ok;
+    getterToPropertyName.forEach(
+        (getter, property) -> {
+          TypeMirror propertyType = getterToPropertyType.get(getter);
+          boolean hasSetter = propertyNameToSetter.containsKey(property);
+          PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
+          boolean hasBuilder = propertyBuilder != null;
+          if (hasBuilder) {
+            // If property bar of type Bar has a barBuilder() that returns BarBuilder, then it must
+            // be possible to make a BarBuilder from a Bar if either (1) the @AutoValue class has a
+            // toBuilder() or (2) there is also a setBar(Bar). Making BarBuilder from Bar is
+            // possible if Bar either has a toBuilder() method or is a Guava immutable collection
+            // (in which case we can use addAll or putAll).
+            boolean canMakeBarBuilder =
+                (propertyBuilder.getBuiltToBuilder() != null
+                    || propertyBuilder.getCopyAll() != null);
+            boolean needToMakeBarBuilder = (autoValueHasToBuilder || hasSetter);
+            if (needToMakeBarBuilder && !canMakeBarBuilder) {
+              String error =
+                  String.format(
+                      "Property builder method returns %1$s but there is no way to make that type"
+                          + " from %2$s: %2$s does not have a non-static toBuilder() method that"
+                          + " returns %1$s",
+                      propertyBuilder.getBuilderTypeMirror(), propertyType);
+              errorReporter.reportError(error, propertyBuilder.getPropertyBuilderMethod());
+            }
+          } else if (!hasSetter) {
+            // We have neither barBuilder() nor setBar(Bar), so we should complain.
+            String setterName = settersPrefixed ? prefixWithSet(property) : property;
+            String error =
+                String.format(
+                    "Expected a method with this signature: %s%s %s(%s), or a %sBuilder() method",
+                    builderType, typeParamsString(), setterName, propertyType, property);
+            errorReporter.reportError(error, builderType);
+          }
+        });
+    return errorReporter.errorCount() == startErrorCount;
   }
 
-  /**
-   * Classifies a method and update the state of this object based on what is found.
-   *
-   * @return true if the method was successfully classified, false if an error has been reported.
-   */
-  private boolean classifyMethod(ExecutableElement method) {
+  /** Classifies a method and update the state of this object based on what is found. */
+  private void classifyMethod(ExecutableElement method) {
     switch (method.getParameters().size()) {
       case 0:
-        return classifyMethodNoArgs(method);
+        classifyMethodNoArgs(method);
+        break;
       case 1:
-        return classifyMethodOneArg(method);
+        classifyMethodOneArg(method);
+        break;
       default:
         errorReporter.reportError("Builder methods must have 0 or 1 parameters", method);
-        return false;
     }
   }
 
@@ -290,9 +300,9 @@ class BuilderMethodClassifier {
   private boolean classifyGetter(
       ExecutableElement builderGetter, ExecutableElement originalGetter) {
     String propertyName = getterToPropertyName.get(originalGetter);
+    TypeMirror originalGetterType = getterToPropertyType.get(originalGetter);
     TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
     String builderGetterTypeString = TypeEncoder.encodeWithAnnotations(builderGetterType);
-    TypeMirror originalGetterType = originalGetter.getReturnType();
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
       builderGetters.put(
           propertyName,
@@ -321,7 +331,7 @@ class BuilderMethodClassifier {
         String.format(
             "Method matches a property of %1$s but has return type %2$s instead of %3$s "
                 + "or an Optional wrapping of %3$s",
-            autoValueClass, builderGetterType, originalGetter.getReturnType());
+            autoValueClass, builderGetterType, originalGetterType);
     errorReporter.reportError(error, builderGetter);
     return false;
   }
@@ -405,7 +415,7 @@ class BuilderMethodClassifier {
    * @return true if the types correspond, false if an error has been reported.
    */
   private boolean checkSetterParameter(ExecutableElement valueGetter, ExecutableElement setter) {
-    TypeMirror targetType = valueGetter.getReturnType();
+    TypeMirror targetType = getterToPropertyType.get(valueGetter);
     TypeMirror parameterType = setter.getParameters().get(0).asType();
     if (TYPE_EQUIVALENCE.equivalent(parameterType, targetType)) {
       return true;
@@ -432,42 +442,65 @@ class BuilderMethodClassifier {
       ImmutableList<ExecutableElement> copyOfMethods,
       ExecutableElement valueGetter,
       ExecutableElement setter) {
-    TypeMirror targetType = valueGetter.getReturnType();
+    DeclaredType targetType = MoreTypes.asDeclared(getterToPropertyType.get(valueGetter));
     TypeMirror parameterType = setter.getParameters().get(0).asType();
     for (ExecutableElement copyOfMethod : copyOfMethods) {
       if (canMakeCopyUsing(copyOfMethod, targetType, parameterType)) {
         return true;
       }
     }
-    DeclaredType targetDeclaredType = MoreTypes.asDeclared(targetType);
-    String targetTypeSimpleName = targetDeclaredType.asElement().getSimpleName().toString();
+    String targetTypeSimpleName = targetType.asElement().getSimpleName().toString();
     String error =
         String.format(
             "Parameter type of setter method should be %s to match getter %s.%s, or it should be a "
-                + "type that can be passed to %s.copyOf",
-            targetType, autoValueClass, valueGetter.getSimpleName(), targetTypeSimpleName);
+                + "type that can be passed to %s.%s",
+            targetType,
+            autoValueClass,
+            valueGetter.getSimpleName(),
+            targetTypeSimpleName,
+            copyOfMethods.get(0).getSimpleName());
     errorReporter.reportError(error, setter);
     return false;
   }
 
   /**
    * Returns true if {@code copyOfMethod} can be used to copy the {@code parameterType} to the
-   * {@code targetType}.
+   * {@code targetType}. For example, we might have a property of type {@code ImmutableSet<T>} and
+   * our setter has a parameter of type {@code Set<? extends T>}. Can we use {@code
+   * ImmutableSet<E> ImmutableSet.copyOf(Collection<? extends E>)} to set the property? What about
+   * {@code ImmutableSet<E> ImmutableSet.copyOf(E[])}?
+   *
+   * <p>The example here is deliberately complicated, in that it has a type parameter of its own,
+   * presumably because the {@code @AutoValue} class is {@code Foo<T>}. One subtle point is that the
+   * builder will then be {@code Builder<T>} where this {@code T} is a <i>different</i> type
+   * variable. However, we've used {@link TypeVariables} to ensure that the {@code T} in {@code
+   * ImmutableSet<T>} is actually the one from {@code Builder<T>} instead of the original one from
+   * {@code Foo<T>}.}
+   *
+   * @param copyOfMethod the candidate method to do the copy, {@code
+   *     ImmutableSet.copyOf(Collection<? extends E>)} or {@code ImmutableSet.copyOf(E[])} in the
+   *     examples.
+   * @param targetType the type of the property to be set, {@code ImmutableSet<T>} in the example.
+   * @param parameterType the type of the setter parameter, {@code Set<? extends T>} in the example.
+   * @return true if the method can be used to make the right type of result from the given
+   *     parameter type.
    */
   private boolean canMakeCopyUsing(
-      ExecutableElement copyOfMethod, TypeMirror targetType, TypeMirror parameterType) {
+      ExecutableElement copyOfMethod, DeclaredType targetType, TypeMirror parameterType) {
     // We have a parameter type, for example Set<? extends T>, and we want to know if it can be
     // passed to the given copyOf method, which might for example be one of these methods from
     // ImmutableSet:
     //    public static <E> ImmutableSet<E> copyOf(Collection<? extends E> elements)
     //    public static <E> ImmutableSet<E> copyOf(E[] elements)
     // Additionally, if it can indeed be passed to the method, we want to know whether the result
-    // (here ImmutableSet<? extends T>) is compatible with the property to be set, bearing in mind
-    // that the T in question is the one from the @AutoValue class and not the Builder class.
+    // (here ImmutableSet<? extends T>) is compatible with the property to be set.
     // The logic to do that properly would be quite complex, and we don't get much help from the
     // annotation processing API, so for now we simply check that the erased types correspond.
     // This means that an incorrect type will lead to a compilation error in the generated code,
     // which is less than ideal.
+    // We can't use Types.asMemberOf to do the substitution for us, because the methods in question
+    // are static. So even if our target type is ImmutableSet<String>, if we ask what the type of
+    // copyOf is in ImmutableSet<String> it will still tell us <T> Optional<T> (T).
     // TODO(b/20691134): make this work properly
     TypeMirror erasedParameterType = typeUtils.erasure(parameterType);
     TypeMirror erasedCopyOfParameterType =
@@ -494,10 +527,10 @@ class BuilderMethodClassifier {
       return ImmutableList.of();
     }
     String copyOf = Optionalish.isOptional(targetType) ? "of" : "copyOf";
-    TypeElement immutableTargetType = MoreElements.asType(typeUtils.asElement(targetType));
+    TypeElement targetTypeElement = MoreElements.asType(typeUtils.asElement(targetType));
     ImmutableList.Builder<ExecutableElement> copyOfMethods = ImmutableList.builder();
     for (ExecutableElement method :
-        ElementFilter.methodsIn(immutableTargetType.getEnclosedElements())) {
+        ElementFilter.methodsIn(targetTypeElement.getEnclosedElements())) {
       if (method.getSimpleName().contentEquals(copyOf)
           && method.getParameters().size() == 1
           && method.getModifiers().contains(Modifier.STATIC)) {

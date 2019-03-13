@@ -3048,4 +3048,27 @@ public class AutoValueTest {
             .build();
     assertThat(x).isNotNull();
   }
+
+  // b/28382293
+  @AutoValue
+  abstract static class GenericExtends {
+    abstract ImmutableSet<Number> metrics();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_GenericExtends.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setMetrics(ImmutableSet<? extends Number> metrics);
+      abstract GenericExtends build();
+    }
+  }
+
+  @Test
+  public void testGenericExtends() {
+    ImmutableSet<Integer> ints = ImmutableSet.of(1, 2, 3);
+    GenericExtends g = GenericExtends.builder().setMetrics(ints).build();
+    assertThat(g.metrics()).isEqualTo(ints);
+  }
 }

@@ -415,8 +415,6 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
         ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
-    ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
-        propertyNameToMethodMap(propertyMethods).inverse();
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
         propertyFieldAnnotationMap(type, propertyMethods);
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
@@ -426,6 +424,8 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     vars.serialVersionUID = getSerialVersionUID(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     if (builder.isPresent()) {
+      ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
+          propertyNameToMethodMap(propertyMethods).inverse();
       builder.get().defineVars(vars, methodToPropertyName);
     }
   }

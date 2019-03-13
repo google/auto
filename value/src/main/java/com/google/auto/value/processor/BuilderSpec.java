@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -42,6 +41,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -173,6 +173,13 @@ class BuilderSpec {
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
       boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
+      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType =
+          TypeVariables.rewriteReturnTypes(
+              processingEnv.getElementUtils(),
+              processingEnv.getTypeUtils(),
+              getterToPropertyName.keySet(),
+              autoValueClass,
+              builderTypeElement);
       Optional<BuilderMethodClassifier> optionalClassifier =
           BuilderMethodClassifier.classify(
               builderMethods,
@@ -181,6 +188,7 @@ class BuilderSpec {
               autoValueClass,
               builderTypeElement,
               getterToPropertyName,
+              getterToPropertyType,
               autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
@@ -207,15 +215,21 @@ class BuilderSpec {
       vars.buildMethod = Optional.of(new SimpleMethod(buildMethod));
       vars.builderGetters = classifier.builderGetters();
 
+      DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderTypeElement.asType());
       ImmutableMultimap.Builder<String, PropertySetter> setterBuilder = ImmutableMultimap.builder();
-      for (Map.Entry<String, ExecutableElement> entry :
-          classifier.propertyNameToSetters().entries()) {
-        String property = entry.getKey();
-        ExecutableElement setter = entry.getValue();
-        TypeMirror propertyType = getterToPropertyName.inverse().get(property).getReturnType();
-        setterBuilder.put(
-            property, new PropertySetter(setter, propertyType, processingEnv.getTypeUtils()));
-      }
+      classifier.propertyNameToSetters().forEach(
+          (property, setter) -> {
+        ExecutableElement getter = getterToPropertyName.inverse().get(property);
+        // Get the effective parameter type, which might need asMemberOf in cases where the method
+        // is inherited from a generic ancestor type and references type parameters.
+        ExecutableType setterMirror = MoreTypes.asExecutable(
+            processingEnv.getTypeUtils().asMemberOf(builderTypeMirror, setter));
+        TypeMirror parameterType = Iterables.getOnlyElement(setterMirror.getParameterTypes());
+        TypeMirror propertyType = getterToPropertyType.get(getter);
+        PropertySetter propertySetter = new PropertySetter(
+            setter, parameterType, propertyType, processingEnv.getTypeUtils());
+        setterBuilder.put(property, propertySetter);
+      });
       vars.builderSetters = setterBuilder.build();
 
       vars.builderPropertyBuilders =
@@ -297,13 +311,16 @@ class BuilderSpec {
     private final String nullableAnnotation;
     private final String copyOf;
 
-    PropertySetter(ExecutableElement setter, TypeMirror propertyType, Types typeUtils) {
+    PropertySetter(
+        ExecutableElement setter,
+        TypeMirror parameterType,
+        TypeMirror propertyType,
+        Types typeUtils) {
       this.access = SimpleMethod.access(setter);
       this.name = setter.getSimpleName().toString();
-      VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      TypeMirror parameterType = parameterElement.asType();
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
+      VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
       Optional<String> maybeNullable =
           AutoValueOrOneOfProcessor.nullableAnnotationFor(parameterElement, parameterType);
       this.nullableAnnotation = maybeNullable.orElse("");
@@ -325,13 +342,13 @@ class BuilderSpec {
       }
     }
 
-    private static String copyOfString(
+    private String copyOfString(
         TypeMirror propertyType, TypeMirror parameterType, Types typeUtils, boolean nullable) {
-      TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
-      boolean sameType = typeUtils.isSameType(typeUtils.erasure(parameterType), erasedPropertyType);
+      boolean sameType = typeUtils.isAssignable(parameterType, propertyType);
       if (sameType) {
         return null;
       }
+      TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
       String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
       String of;
       Optionalish optionalish = Optionalish.createIfOptional(propertyType);

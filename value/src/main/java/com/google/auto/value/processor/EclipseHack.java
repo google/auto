@@ -40,14 +40,19 @@ import javax.lang.model.util.Types;
  * @author Éamonn McManus
  */
 class EclipseHack {
-  private final ProcessingEnvironment processingEnv;
+  private final Elements elementUtils;
+  private final Types typeUtils;
 
   EclipseHack(ProcessingEnvironment processingEnv) {
-    this.processingEnv = processingEnv;
+    this(processingEnv.getElementUtils(), processingEnv.getTypeUtils());
+  }
+
+  EclipseHack(Elements elementUtils, Types typeUtils) {
+    this.elementUtils = elementUtils;
+    this.typeUtils = typeUtils;
   }
 
   TypeMirror methodReturnType(ExecutableElement method, DeclaredType in) {
-    Types typeUtils = processingEnv.getTypeUtils();
     try {
       TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
       return MoreTypes.asExecutable(methodMirror).getReturnType();
@@ -71,7 +76,6 @@ class EclipseHack {
    */
   ImmutableMap<ExecutableElement, TypeMirror> methodReturnTypes(
       Set<ExecutableElement> methods, DeclaredType in) {
-    Types typeUtils = processingEnv.getTypeUtils();
     ImmutableMap.Builder<ExecutableElement, TypeMirror> map = ImmutableMap.builder();
     Map<Name, ExecutableElement> noArgMethods = null;
     for (ExecutableElement method : methods) {
@@ -102,8 +106,6 @@ class EclipseHack {
    * does in Eclipse.
    */
   private Map<Name, ExecutableElement> noArgMethodsIn(DeclaredType in) {
-    Types typeUtils = processingEnv.getTypeUtils();
-    Elements elementUtils = processingEnv.getElementUtils();
     TypeElement autoValueType = MoreElements.asType(typeUtils.asElement(in));
     List<ExecutableElement> allMethods =
         ElementFilter.methodsIn(elementUtils.getAllMembers(autoValueType));

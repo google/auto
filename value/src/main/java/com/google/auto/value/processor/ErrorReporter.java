@@ -23,12 +23,11 @@ import javax.tools.Diagnostic;
 /**
  * Handle error reporting for an annotation processor.
  *
- * @see AutoValue
  * @author Éamonn McManus
  */
 class ErrorReporter {
   private final Messager messager;
-  private boolean anyErrors;
+  private int errorCount;
 
   ErrorReporter(ProcessingEnvironment processingEnv) {
     this.messager = processingEnv.getMessager();
@@ -65,7 +64,7 @@ class ErrorReporter {
    */
   void reportError(String msg, Element e) {
     messager.printMessage(Diagnostic.Kind.ERROR, msg, e);
-    anyErrors = true;
+    errorCount++;
   }
 
   /**
@@ -80,9 +79,14 @@ class ErrorReporter {
     throw new AbortProcessingException();
   }
 
+  /** The number of errors that have been output by calls to {@link #reportError}. */
+  int errorCount() {
+    return errorCount;
+  }
+
   /** Abandon the processing of this class if any errors have been output. */
   void abortIfAnyError() {
-    if (anyErrors) {
+    if (errorCount > 0) {
       throw new AbortProcessingException();
     }
   }
