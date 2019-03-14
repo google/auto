@@ -1428,13 +1428,6 @@ public class AutoValueCompilationTest {
 
   @Test
   public void autoValueBuilderWrongTypeSetterWithCopyOfGenericallyWrong() {
-    // This puts the finger on our insufficient error-detection logic for the case where the
-    // parameter would be compatible with copyOf were it not for generics. Currently, this leads to
-    // a compile error in the generated code. We don't want to suppose anything about the error
-    // message the compiler might come up with. It might be something like this for example:
-    //   incompatible types: inference variable E has incompatible bounds
-    //        equality constraints: java.lang.String
-    //        lower bounds: java.lang.Integer
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1460,7 +1453,15 @@ public class AutoValueCompilationTest {
         javac()
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
-    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "Parameter type of setter method should be "
+                + "com.google.common.collect.ImmutableList<java.lang.String> to match getter "
+                + "foo.bar.Baz.blam, or it should be a type that can be passed to "
+                + "ImmutableList.copyOf to produce "
+                + "com.google.common.collect.ImmutableList<java.lang.String>")
+        .inFile(javaFileObject)
+        .onLine(15);
   }
 
   @Test

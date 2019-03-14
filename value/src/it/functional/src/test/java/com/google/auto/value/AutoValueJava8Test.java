@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -769,5 +770,57 @@ public class AutoValueJava8Test {
     OptionalOptional ofSomething =
         OptionalOptional.builder().maybeJustMaybe(Optional.of("foo")).build();
     assertThat(ofSomething.maybeJustMaybe()).hasValue(Optional.of("foo"));
+  }
+
+  @AutoValue
+  abstract static class OptionalExtends {
+    abstract Optional<? extends Predicate<? super Integer>> predicate();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_OptionalExtends.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setPredicate(Predicate<? super Integer> predicate);
+      abstract OptionalExtends build();
+    }
+  }
+
+  @Test
+  public void testOptionalExtends() {
+    Predicate<Number> predicate = n -> n.toString().equals("0");
+    OptionalExtends t = OptionalExtends.builder().setPredicate(predicate).build();
+    assertThat(t.predicate()).hasValue(predicate);
+  }
+
+  // This example historically compiled because the check for static methods was incomplete.
+  // Since Optional.of(T) erases to Optional.of(Object), we accepted Optional<Integer> as an
+  // argument to Optional.of in order to produce the Optional<? extends Number>. That's wrong,
+  // but when emitting code we considered that since the LHS and RHS were both Optional, we didn't
+  // need to use Optional.of but could just assign them, and it ended up working. So essentially
+  // two bugs related to the abuse of erasure canceled each other out.
+  // Now that we have more precise checking, we need to check assignability rather than equality
+  // between setter parameter and getter return, at least for cases like this.
+  @AutoValue
+  abstract static class OptionalWildcard {
+    abstract Optional<? extends Number> maybeNumber();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_OptionalWildcard.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setMaybeNumber(Optional<Integer> n);
+      abstract OptionalWildcard build();
+    }
+  }
+
+  @Test
+  public void testOptionalWildcard() {
+    Optional<Integer> five = Optional.of(5);
+    OptionalWildcard t = OptionalWildcard.builder().setMaybeNumber(five).build();
+    assertThat(t.maybeNumber()).hasValue(5);
   }
 }
