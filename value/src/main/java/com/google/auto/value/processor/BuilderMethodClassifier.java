@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 import java.util.LinkedHashMap;
@@ -39,6 +38,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -416,10 +416,24 @@ class BuilderMethodClassifier {
    */
   private boolean checkSetterParameter(ExecutableElement valueGetter, ExecutableElement setter) {
     TypeMirror targetType = getterToPropertyType.get(valueGetter);
-    TypeMirror parameterType = setter.getParameters().get(0).asType();
-    if (TYPE_EQUIVALENCE.equivalent(parameterType, targetType)) {
+    ExecutableType finalSetter =
+        MoreTypes.asExecutable(
+            typeUtils.asMemberOf(MoreTypes.asDeclared(builderType.asType()), setter));
+    TypeMirror parameterType = finalSetter.getParameterTypes().get(0);
+    if (typeUtils.isSameType(parameterType, targetType)) {
       return true;
     }
+    if (typeUtils.isSameType(typeUtils.erasure(parameterType), typeUtils.erasure(targetType))
+        && typeUtils.isAssignable(parameterType, targetType)) {
+      // This funky check matches some cases that were allowed using the old erasure-based logic,
+      // while still avoiding the generation of incorrect code. For example, we allowed
+      // an Optional<? extends Foo> to be set from an Optional<Foo>.
+      // We could just allow the parameter type to be assignable-to rather than equivalent-to in
+      // general, but let's not make that semantic change right now.
+      return true;
+    }
+
+    // Parameter type is not equal to property type, but might be convertible with copyOf.
     ImmutableList<ExecutableElement> copyOfMethods = copyOfMethods(targetType);
     if (!copyOfMethods.isEmpty()) {
       return canMakeCopyUsing(copyOfMethods, valueGetter, setter);
@@ -453,12 +467,13 @@ class BuilderMethodClassifier {
     String error =
         String.format(
             "Parameter type of setter method should be %s to match getter %s.%s, or it should be a "
-                + "type that can be passed to %s.%s",
+                + "type that can be passed to %s.%s to produce %s",
             targetType,
             autoValueClass,
             valueGetter.getSimpleName(),
             targetTypeSimpleName,
-            copyOfMethods.get(0).getSimpleName());
+            copyOfMethods.get(0).getSimpleName(),
+            targetType);
     errorReporter.reportError(error, setter);
     return false;
   }
@@ -494,26 +509,12 @@ class BuilderMethodClassifier {
     //    public static <E> ImmutableSet<E> copyOf(E[] elements)
     // Additionally, if it can indeed be passed to the method, we want to know whether the result
     // (here ImmutableSet<? extends T>) is compatible with the property to be set.
-    // The logic to do that properly would be quite complex, and we don't get much help from the
-    // annotation processing API, so for now we simply check that the erased types correspond.
-    // This means that an incorrect type will lead to a compilation error in the generated code,
-    // which is less than ideal.
     // We can't use Types.asMemberOf to do the substitution for us, because the methods in question
     // are static. So even if our target type is ImmutableSet<String>, if we ask what the type of
     // copyOf is in ImmutableSet<String> it will still tell us <T> Optional<T> (T).
-    // TODO(b/20691134): make this work properly
-    TypeMirror erasedParameterType = typeUtils.erasure(parameterType);
-    TypeMirror erasedCopyOfParameterType =
-        typeUtils.erasure(Iterables.getOnlyElement(copyOfMethod.getParameters()).asType());
-    // erasedParameterType is Set in the example and erasedCopyOfParameterType is Collection
-    if (!typeUtils.isAssignable(erasedParameterType, erasedCopyOfParameterType)) {
-      return false;
-    }
-    TypeMirror erasedCopyOfReturnType = typeUtils.erasure(copyOfMethod.getReturnType());
-    TypeMirror erasedTargetType = typeUtils.erasure(targetType);
-    // erasedCopyOfReturnType and erasedTargetType are both ImmutableSet in the example.
-    // In fact for Guava immutable collections the check could be for equality.
-    return typeUtils.isAssignable(erasedCopyOfReturnType, erasedTargetType);
+    // Instead, we do the variable substitutions ourselves.
+    return TypeVariables.canAssignStaticMethodResult(
+        copyOfMethod, parameterType, targetType, typeUtils);
   }
 
   /**

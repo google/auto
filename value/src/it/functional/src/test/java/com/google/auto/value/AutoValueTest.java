@@ -3071,4 +3071,57 @@ public class AutoValueTest {
     GenericExtends g = GenericExtends.builder().setMetrics(ints).build();
     assertThat(g.metrics()).isEqualTo(ints);
   }
+
+  abstract static class Parent<T> {
+    abstract List<T> getList();
+  }
+
+  @AutoValue
+  abstract static class Child extends Parent<String> {
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_Child.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setList(List<String> list);
+      abstract Child build();
+    }
+  }
+
+  @Test
+  public void nonGenericExtendsGeneric() {
+    List<String> list = ImmutableList.of("foo", "bar", "baz");
+    Child child = Child.builder().setList(list).build();
+    assertThat(child.getList()).containsExactlyElementsIn(list).inOrder();
+  }
+
+  abstract static class AbstractGenericParentWithBuilder<T> {
+    abstract T foo();
+
+    abstract static class Builder<T, B extends Builder<T, B>> {
+      abstract B foo(T s);
+    }
+  }
+
+  @AutoValue
+  abstract static class ChildOfAbstractGenericParentWithBuilder<T>
+      extends AbstractGenericParentWithBuilder<T> {
+    static <T> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_ChildOfAbstractGenericParentWithBuilder.Builder<T>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<T>
+        extends AbstractGenericParentWithBuilder.Builder<T, Builder<T>> {
+      abstract ChildOfAbstractGenericParentWithBuilder<T> build();
+    }
+  }
+
+  @Test
+  public void genericExtendsGeneric() {
+    ChildOfAbstractGenericParentWithBuilder<String> child =
+        ChildOfAbstractGenericParentWithBuilder.<String>builder().foo("foo").build();
+    assertThat(child.foo()).isEqualTo("foo");
+  }
 }

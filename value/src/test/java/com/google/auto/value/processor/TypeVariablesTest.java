@@ -17,6 +17,8 @@ package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.truth.Expect;
 import com.google.testing.compile.CompilationRule;
 import java.util.List;
 import java.util.Map;
@@ -28,13 +30,15 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class TypeVariablesTest {
-  @ClassRule public static CompilationRule compilationRule = new CompilationRule();
+  @ClassRule public static final CompilationRule compilationRule = new CompilationRule();
+  @Rule public final Expect expect = Expect.create();
 
   private static Elements elementUtils;
   private static Types typeUtils;
@@ -143,7 +147,46 @@ public class TypeVariablesTest {
     assertThat(typeUtils.isAssignable(setBarParameter, rewrittenGetBarReturn)).isTrue();
   }
 
+  @Test
+  public void canAssignStaticMethodResult() {
+    TypeElement immutableMap = elementUtils.getTypeElement(ImmutableMap.class.getCanonicalName());
+    TypeElement string = elementUtils.getTypeElement(String.class.getCanonicalName());
+    TypeElement integer = elementUtils.getTypeElement(Integer.class.getCanonicalName());
+    TypeElement number = elementUtils.getTypeElement(Number.class.getCanonicalName());
+    TypeMirror immutableMapStringNumber =
+        typeUtils.getDeclaredType(immutableMap, string.asType(), number.asType());
+    TypeMirror immutableMapStringInteger =
+        typeUtils.getDeclaredType(immutableMap, string.asType(), integer.asType());
+    TypeElement map = elementUtils.getTypeElement(Map.class.getCanonicalName());
+    TypeMirror erasedMap = typeUtils.erasure(map.asType());
+    // If the target type is ImmutableMap<String, Number> then we should be able to use
+    //   static <K, V> ImmutableMap<K, V> ImmutableMap.copyOf(Map<? extends K, ? extends V>)
+    // with a parameter of type ImmutableMap<String, Integer>.
+    List<ExecutableElement> immutableMapMethods =
+        ElementFilter.methodsIn(immutableMap.getEnclosedElements());
+    ExecutableElement copyOf = methodNamed(immutableMapMethods, "copyOf", erasedMap);
+    expect.that(
+        TypeVariables.canAssignStaticMethodResult(
+            copyOf, immutableMapStringInteger, immutableMapStringNumber, typeUtils))
+        .isTrue();
+    expect.that(
+        TypeVariables.canAssignStaticMethodResult(
+            copyOf, immutableMapStringNumber, immutableMapStringInteger, typeUtils))
+        .isFalse();
+  }
+
   private static ExecutableElement methodNamed(List<ExecutableElement> methods, String name) {
     return methods.stream().filter(m -> m.getSimpleName().contentEquals(name)).findFirst().get();
+  }
+
+  private static ExecutableElement methodNamed(
+      List<ExecutableElement> methods, String name, TypeMirror erasedParameterType) {
+    return methods.stream()
+        .filter(m -> m.getSimpleName().contentEquals(name))
+        .filter(m -> m.getParameters().size() == 1)
+        .filter(m -> typeUtils.isSameType(
+                    erasedParameterType, typeUtils.erasure(m.getParameters().get(0).asType())))
+        .findFirst()
+        .get();
   }
 }
