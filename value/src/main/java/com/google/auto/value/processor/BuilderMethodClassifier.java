@@ -423,15 +423,6 @@ class BuilderMethodClassifier {
     if (typeUtils.isSameType(parameterType, targetType)) {
       return true;
     }
-    if (typeUtils.isSameType(typeUtils.erasure(parameterType), typeUtils.erasure(targetType))
-        && typeUtils.isAssignable(parameterType, targetType)) {
-      // This funky check matches some cases that were allowed using the old erasure-based logic,
-      // while still avoiding the generation of incorrect code. For example, we allowed
-      // an Optional<? extends Foo> to be set from an Optional<Foo>.
-      // We could just allow the parameter type to be assignable-to rather than equivalent-to in
-      // general, but let's not make that semantic change right now.
-      return true;
-    }
 
     // Parameter type is not equal to property type, but might be convertible with copyOf.
     ImmutableList<ExecutableElement> copyOfMethods = copyOfMethods(targetType);
