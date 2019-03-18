@@ -793,34 +793,4 @@ public class AutoValueJava8Test {
     OptionalExtends t = OptionalExtends.builder().setPredicate(predicate).build();
     assertThat(t.predicate()).hasValue(predicate);
   }
-
-  // This example historically compiled because the check for static methods was incomplete.
-  // Since Optional.of(T) erases to Optional.of(Object), we accepted Optional<Integer> as an
-  // argument to Optional.of in order to produce the Optional<? extends Number>. That's wrong,
-  // but when emitting code we considered that since the LHS and RHS were both Optional, we didn't
-  // need to use Optional.of but could just assign them, and it ended up working. So essentially
-  // two bugs related to the abuse of erasure canceled each other out.
-  // Now that we have more precise checking, we need to check assignability rather than equality
-  // between setter parameter and getter return, at least for cases like this.
-  @AutoValue
-  abstract static class OptionalWildcard {
-    abstract Optional<? extends Number> maybeNumber();
-
-    static Builder builder() {
-      return new AutoValue_AutoValueJava8Test_OptionalWildcard.Builder();
-    }
-
-    @AutoValue.Builder
-    abstract static class Builder {
-      abstract Builder setMaybeNumber(Optional<Integer> n);
-      abstract OptionalWildcard build();
-    }
-  }
-
-  @Test
-  public void testOptionalWildcard() {
-    Optional<Integer> five = Optional.of(5);
-    OptionalWildcard t = OptionalWildcard.builder().setMaybeNumber(five).build();
-    assertThat(t.maybeNumber()).hasValue(5);
-  }
 }
