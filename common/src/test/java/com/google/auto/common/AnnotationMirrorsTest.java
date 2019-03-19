@@ -199,8 +199,10 @@ public class AnnotationMirrorsTest {
     try {
       AnnotationMirrors.getAnnotationValue(annotationOn(TestClassBlah.class), "a");
     } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessage(
-          "@com.google.auto.common.AnnotationMirrorsTest.Outer does not define an element a()");
+      assertThat(e)
+          .hasMessageThat()
+          .isEqualTo(
+              "@com.google.auto.common.AnnotationMirrorsTest.Outer does not define an element a()");
       return;
     }
     fail("Should have thrown.");

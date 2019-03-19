@@ -525,13 +525,13 @@ public class AutoValueJava8Test {
       builder.list();
       fail("Attempt to retrieve unset list property should have failed");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Property \"list\" has not been set");
+      assertThat(e).hasMessageThat().isEqualTo("Property \"list\" has not been set");
     }
     try {
       builder.ints();
       fail("Attempt to retrieve unset ints property should have failed");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Property \"ints\" has not been set");
+      assertThat(e).hasMessageThat().isEqualTo("Property \"ints\" has not been set");
     }
 
     builder.setList(names);
@@ -599,7 +599,7 @@ public class AutoValueJava8Test {
       builder.getList();
       fail("Attempt to retrieve unset list property should have failed");
     } catch (IllegalStateException e) {
-      assertThat(e).hasMessage("Property \"list\" has not been set");
+      assertThat(e).hasMessageThat().isEqualTo("Property \"list\" has not been set");
     }
 
     builder.setList(names);

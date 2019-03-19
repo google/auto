@@ -274,7 +274,9 @@ public class MemoizedTest {
       value.notNullableButReturnsNull();
       fail();
     } catch (NullPointerException expected) {
-      assertThat(expected).hasMessage("notNullableButReturnsNull() cannot return null");
+      assertThat(expected)
+          .hasMessageThat()
+          .isEqualTo("notNullableButReturnsNull() cannot return null");
     }
     assertThat(value.notNullableButReturnsNullCount).isEqualTo(1);
   }

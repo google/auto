@@ -1923,7 +1923,7 @@ public class AutoValueTest {
       if (omitIdentifiers) {
         assertThat(e).hasMessageThat().isNull();
       } else {
-        assertThat(e).hasMessage("Property \"list\" has not been set");
+        assertThat(e).hasMessageThat().isEqualTo("Property \"list\" has not been set");
       }
     }
     try {
@@ -1933,7 +1933,7 @@ public class AutoValueTest {
       if (omitIdentifiers) {
         assertThat(e).hasMessageThat().isNull();
       } else {
-        assertThat(e).hasMessage("Property \"ints\" has not been set");
+        assertThat(e).hasMessageThat().isEqualTo("Property \"ints\" has not been set");
       }
     }
 
@@ -2014,7 +2014,7 @@ public class AutoValueTest {
       if (omitIdentifiers) {
         assertThat(e).hasMessageThat().isNull();
       } else {
-        assertThat(e).hasMessage("Property \"list\" has not been set");
+        assertThat(e).hasMessageThat().isEqualTo("Property \"list\" has not been set");
       }
     }
 
@@ -2307,7 +2307,7 @@ public class AutoValueTest {
       if (omitIdentifiers) {
         assertThat(e).hasMessageThat().isNull();
       } else {
-        assertThat(e).hasMessage("Cannot set things after calling thingsBuilder()");
+        assertThat(e).hasMessageThat().isEqualTo("Cannot set things after calling thingsBuilder()");
       }
     }
   }
