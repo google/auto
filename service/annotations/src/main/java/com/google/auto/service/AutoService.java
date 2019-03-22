@@ -23,12 +23,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * An annotation for service providers as described in {@link java.util.ServiceLoader}. The {@link
- * com.google.auto.service.processor.AutoServiceProcessor} generates the configuration files which
- * allows service providers to be loaded with {@link java.util.ServiceLoader#load(Class)}.
+ * An annotation for service providers as described in {@link java.util.ServiceLoader}. The
+ * annotation processor generates the configuration files that allow the annotated class to be
+ * loaded with {@link java.util.ServiceLoader#load(Class)}.
  *
- * <p>Service providers assert that they conform to the service provider specification.
- * Specifically, they must:
+ * <p>The annotated class must conform to the service provider specification. Specifically, it must:
  *
  * <ul>
  *   <li>be a non-inner, non-anonymous, concrete class
