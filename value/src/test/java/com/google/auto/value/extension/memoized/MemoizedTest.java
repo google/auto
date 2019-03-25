@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.auto.value.extension.memoized.MemoizedTest.HashCodeEqualsOptimization.EqualsCounter;
 import com.google.common.collect.ImmutableList;
 import java.lang.reflect.AnnotatedType;
@@ -49,6 +50,29 @@ public class MemoizedTest {
     @Memoized
     boolean getMemoizedNative0() {
       return getNative0();
+    }
+  }
+
+  @AutoValue
+  @CopyAnnotations
+  @javax.annotation.Nullable
+  abstract static class ValueWithCopyAnnotations {
+    abstract boolean getNative();
+
+    @Memoized
+    boolean getMemoizedNative() {
+      return getNative();
+    }
+  }
+
+  @AutoValue
+  @javax.annotation.Nullable
+  abstract static class ValueWithoutCopyAnnotations {
+    abstract boolean getNative();
+
+    @Memoized
+    boolean getMemoizedNative() {
+      return getNative();
     }
   }
 
@@ -318,6 +342,25 @@ public class MemoizedTest {
     assertThat(value.getMemoizedNative()).isTrue();
     assertThat(value.getNative0()).isFalse();
     assertThat(value.getMemoizedNative0()).isFalse();
+  }
+
+  @Test
+  public void copyAnnotations() {
+    ValueWithCopyAnnotations valueWithCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithCopyAnnotations(true);
+    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations(true);
+
+    assertThat(
+            valueWithCopyAnnotations
+                .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isTrue();
+    assertThat(
+            valueWithoutCopyAnnotations
+                .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isFalse();
   }
 
   @Test
