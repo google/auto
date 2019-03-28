@@ -183,14 +183,20 @@ public class TemplateVarsTest {
     doTestBrokenInputStream(new NullPointerException("BrokenInputStream"));
   }
 
+  @Test
+  public void testBrokenInputStream_IllegalStateException() throws Exception {
+    doTestBrokenInputStream(new IllegalStateException("BrokenInputStream"));
+  }
+
   // This is a complicated test that tries to simulates the failures that are worked around in
   // Template.parsedTemplateForResource. Those failures means that the InputStream returned by
-  // ClassLoader.getResourceAsStream sometimes throws IOException or NullPointerException while it
-  // is being read. To simulate that, we make a second ClassLoader with the same configuration as
-  // the one that runs this test, and we override getResourceAsStream so that it wraps the returned
-  // InputStream in a BrokenInputStream, which throws an exception after a certain number of
-  // characters.  We check that that exception was indeed seen, and that we did indeed try to read
-  // the resource we're interested in, and that we succeeded in loading a Template nevertheless.
+  // ClassLoader.getResourceAsStream sometimes throws IOException or NullPointerException or
+  // IllegalStateException while it is being read. To simulate that, we make a second ClassLoader
+  // with the same configuration as the one that runs this test, and we override getResourceAsStream
+  // so that it wraps the returned InputStream in a BrokenInputStream, which throws an exception
+  // after a certain number of characters. We check that that exception was indeed seen, and that
+  // we did indeed try to read the resource we're interested in, and that we succeeded in loading a
+  // Template nevertheless.
   private void doTestBrokenInputStream(Exception exception) throws Exception {
     URLClassLoader shadowLoader = new ShadowLoader(getClass().getClassLoader(), exception);
     Runnable brokenInputStreamTest =
