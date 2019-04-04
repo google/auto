@@ -26,6 +26,7 @@ import com.google.auto.service.AutoService;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -118,7 +119,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         if (t instanceof ServiceConfigurationError) {
           warning.append(" This may be due to a corrupt jar file in the compiler's classpath.");
         }
-        warning.append(" Exception: ").append(t);
+        warning.append("\n").append(Throwables.getStackTraceAsString(t));
         errorReporter().reportWarning(warning.toString(), null);
         extensions = ImmutableList.of();
       }

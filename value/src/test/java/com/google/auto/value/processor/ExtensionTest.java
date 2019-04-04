@@ -616,7 +616,7 @@ public class ExtensionTest {
             .processedWith(new AutoValueProcessor(badJarLoader))
             .compilesWithoutError();
     success.withWarningContaining(
-        "This may be due to a corrupt jar file in the compiler's classpath. Exception: "
+        "This may be due to a corrupt jar file in the compiler's classpath.\n  "
             + ServiceConfigurationError.class.getName());
     success
         .and()
