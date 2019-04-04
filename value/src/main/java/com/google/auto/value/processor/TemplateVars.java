@@ -119,8 +119,9 @@ abstract class TemplateVars {
       return Template.parseFrom(resourceName, TemplateVars::readerFromResource);
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);
-    } catch (IOException | NullPointerException e) {
-      // https://github.com/google/auto/pull/439 says that we can also get NullPointerException.
+    } catch (IOException | NullPointerException | IllegalStateException e) {
+      // https://github.com/google/auto/pull/439 says that we can get NullPointerException.
+      // https://github.com/google/auto/issues/715 says that we can get IllegalStateException
       return retryParseAfterException(resourceName, e);
     }
   }
