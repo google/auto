@@ -53,11 +53,30 @@ artifact as an "optional" dependency:
 <dependencies>
   <dependency>
     <groupId>com.google.auto.service</groupId>
+    <artifactId>auto-service-annotations</groupId>
+    <version>${version}</version>
+  </dependency>
+  <dependency>
+    <groupId>com.google.auto.service</groupId>
     <artifactId>auto-service</artifactId>
     <version>${version}</version>
     <optional>true</optional>
   </dependency>
 </dependencies>
+```
+Alternatively, instead of using the `optional` scope, you can add the dependency to the
+[annotationProcessorPaths](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#annotationProcessorPaths) 
+section of the configuration for the `maven-compiler-plugin`. 
+
+In a Gradle project, one would include the `auto-service-annotations`
+artifact as a `compileOnly` dependency and `auto-service`
+as an `annotationProcessor`:
+
+```kotlin
+dependencies {
+  compileOnly("com.google.auto.service:auto-service-annotations:${version}")
+  annotationProcessor("com.google.auto.service:auto-service:${version}")
+}
 ```
 
 License
