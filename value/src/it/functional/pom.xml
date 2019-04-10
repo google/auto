@@ -22,12 +22,12 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>HEAD-SNAPSHOT</version>
+    <version>1.6.5</version>
   </parent>
 
   <groupId>com.google.auto.value.it.functional</groupId>
   <artifactId>functional</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.6.5</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
     <exclude.tests>this-matches-nothing</exclude.tests>
