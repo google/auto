@@ -40,7 +40,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -104,13 +103,10 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
     if (extensions == null) {
       try {
-        ServiceLoader<AutoValueExtension> serviceLoader =
-            ServiceLoader.load(AutoValueExtension.class, loaderForExtensions);
         extensions = ImmutableList.copyOf(
             Iterables.filter(
-                serviceLoader, ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION)));
-        // ServiceLoader.load returns a lazily-evaluated Iterable, so evaluate it eagerly now
-        // to discover any exceptions.
+                SimpleServiceLoader.load(AutoValueExtension.class, loaderForExtensions),
+                ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION)));
       } catch (Throwable t) {
         StringBuilder warning = new StringBuilder();
         warning.append(
