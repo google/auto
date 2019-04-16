@@ -18,6 +18,8 @@ package com.google.auto.value.processor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.escapevelocity.Template;
 import java.io.IOException;
@@ -88,6 +90,7 @@ class GwtSerialization {
       vars.actualTypes = autoVars.actualTypes;
       vars.useBuilder = !autoVars.builderTypeName.isEmpty();
       vars.builderSetters = autoVars.builderSetters;
+      vars.builderPropertyBuilders = autoVars.builderPropertyBuilders;
       vars.generated = autoVars.generated;
       String className =
           (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass + "_CustomFieldSerializer";
@@ -196,6 +199,15 @@ class GwtSerialization {
      * setFoo).
      */
     Multimap<String, BuilderSpec.PropertySetter> builderSetters;
+
+    /**
+     * A map from property names to information about the associated property builder. A property
+     * called foo (defined by a method foo() or getFoo()) can have a property builder called
+     * fooBuilder(). The type of foo must be a type that has an associated builder following certain
+     * conventions. Guava immutable types such as ImmutableList follow those conventions, as do many
+     * {@code @AutoValue} types.
+     */
+    ImmutableMap<String, PropertyBuilder> builderPropertyBuilders = ImmutableMap.of();
 
     /** The simple name of the generated GWT serializer class. */
     String serializerClass;
