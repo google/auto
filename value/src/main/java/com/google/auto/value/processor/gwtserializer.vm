@@ -49,14 +49,27 @@ public final class $serializerClass$formalTypes
     $p.type $p = ${p.gwtCast}streamReader.read${p.gwtType}();
 #end
 #if ($useBuilder)
-    return (${subclass}${actualTypes}) new ${subclass}.Builder${actualTypes}()
+
+    ${subclass}.Builder${actualTypes} builder$ = new ${subclass}.Builder${actualTypes}();
   #foreach ($p in $props)
-        .${builderSetters[$p.name].iterator().next().name}($p)
+
+    #if ($builderSetters[$p.name].empty)
+      #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
+
+    builder$.${propertyBuilder.propertyBuilderMethod}.${propertyBuilder.copyAll}($p);
+
+    #else
+
+    builder$.${builderSetters[$p.name].iterator().next().name}($p);
+    #end
   #end
-        .build();
+
+    return (${subclass}${actualTypes}) builder$.build();
 #else
+
     return new ${subclass}$actualTypes(
         #foreach ($p in $props) $p #if ($foreach.hasNext) , #end #end);
+
 #end
   }
 

@@ -43,6 +43,8 @@ abstract class GwtValueTypeWithBuilder<T> implements Serializable {
 
   abstract ImmutableList<T> otherList();
 
+  abstract ImmutableList<String> listWithBuilder();
+
   static <T> Builder<T> builder() {
     return new AutoValue_GwtValueTypeWithBuilder.Builder<T>();
   }
@@ -60,6 +62,8 @@ abstract class GwtValueTypeWithBuilder<T> implements Serializable {
     Builder<T> list(ImmutableList<T> x);
 
     Builder<T> otherList(List<T> x);
+
+    ImmutableList.Builder<String> listWithBuilderBuilder();
 
     GwtValueTypeWithBuilder<T> build();
   }
