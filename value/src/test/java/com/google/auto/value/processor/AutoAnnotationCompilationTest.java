@@ -15,24 +15,15 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.assertAbout;
-import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth.assert_;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static com.google.common.truth.Truth8.assertThat;
+import static com.google.testing.compile.CompilationSubject.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.ImmutableList;
+import com.google.testing.compile.Compilation;
+import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.List;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
-import javax.tools.ToolProvider;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -88,7 +79,8 @@ public class AutoAnnotationCompilationTest {
             GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
-            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation",
+            "     implements MyAnnotation {",
             "  private final MyEnum value;",
             "  private static final int defaultedValue = 23;",
             "",
@@ -136,13 +128,15 @@ public class AutoAnnotationCompilationTest {
             "    ;",
             "  }",
             "}");
-    assert_()
-        .about(javaSources())
-        .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile, myEnumJavaFile))
-        .processedWith(new AutoAnnotationProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoAnnotationProcessor())
+            .compile(annotationFactoryJavaFile, myAnnotationJavaFile, myEnumJavaFile);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile(
+            "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation")
+        .hasSourceEquivalentTo(expectedOutput);
   }
 
   @Test
@@ -168,7 +162,8 @@ public class AutoAnnotationCompilationTest {
             GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
-            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation",
+            "    implements MyAnnotation {",
             "  AutoAnnotation_AnnotationFactory_newMyAnnotation() {",
             "  }",
             "",
@@ -195,12 +190,14 @@ public class AutoAnnotationCompilationTest {
             "    return 0;",
             "  }",
             "}");
-    assertAbout(javaSources())
-        .that(ImmutableList.of(annotationFactoryJavaFile, myAnnotationJavaFile))
-        .processedWith(new AutoAnnotationProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoAnnotationProcessor())
+            .compile(annotationFactoryJavaFile, myAnnotationJavaFile);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("AutoAnnotation_AnnotationFactory_newMyAnnotation")
+        .hasSourceEquivalentTo(expectedOutput);
   }
 
   @Test
@@ -246,7 +243,8 @@ public class AutoAnnotationCompilationTest {
             GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
-            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation"
+                + " {",
             "  private final int[] value;",
             "",
             "  AutoAnnotation_AnnotationFactory_newMyAnnotation(int[] value) {",
@@ -289,15 +287,15 @@ public class AutoAnnotationCompilationTest {
             "        + (" + 127 * "value".hashCode() + " ^ (Arrays.hashCode(value)));",
             "  }",
             "}");
-    assert_()
-        .about(javaSources())
-        .that(
-            ImmutableList.of(
-                annotationFactoryJavaFile, myAnnotationJavaFile, gwtCompatibleJavaFile))
-        .processedWith(new AutoAnnotationProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoAnnotationProcessor())
+            .compile(annotationFactoryJavaFile, myAnnotationJavaFile, gwtCompatibleJavaFile);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile(
+            "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation")
+        .hasSourceEquivalentTo(expectedOutput);
   }
 
   @Test
@@ -354,7 +352,8 @@ public class AutoAnnotationCompilationTest {
             GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"" + AutoAnnotationProcessor.class.getName() + "\")",
-            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation {",
+            "final class AutoAnnotation_AnnotationFactory_newMyAnnotation implements MyAnnotation"
+                + " {",
             "  private final int[] value;",
             "  private final MyEnum[] enums;",
             "",
@@ -426,28 +425,19 @@ public class AutoAnnotationCompilationTest {
             "    return a;",
             "  }",
             "}");
-    assert_()
-        .about(javaSources())
-        .that(ImmutableList.of(annotationFactoryJavaFile, myEnumJavaFile, myAnnotationJavaFile))
-        .processedWith(new AutoAnnotationProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoAnnotationProcessor())
+            .compile(annotationFactoryJavaFile, myEnumJavaFile, myAnnotationJavaFile);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile(
+            "com.example.factories.AutoAnnotation_AnnotationFactory_newMyAnnotation")
+        .hasSourceEquivalentTo(expectedOutput);
   }
 
   @Test
-  public void testMissingClass() throws IOException {
-    File tempDir = File.createTempFile("AutoAnnotationCompilationTest", "");
-    assertTrue(tempDir.delete());
-    assertTrue(tempDir.mkdir());
-    try {
-      doTestMissingClass(tempDir);
-    } finally {
-      removeDirectory(tempDir);
-    }
-  }
-
-  private void doTestMissingClass(File tempDir) {
+  public void testMissingClass() {
     // Test that referring to an undefined annotation does not trigger @AutoAnnotation processing.
     // The class Erroneous references an undefined annotation @NotAutoAnnotation. If we didn't have
     // any special treatment of undefined types then we could run into a compiler bug where
@@ -468,24 +458,16 @@ public class AutoAnnotationCompilationTest {
             "  @AutoAnnotation static Empty newEmpty() {}",
             "  @NotAutoAnnotation Empty notNewEmpty() {}",
             "}");
-    JavaCompiler javaCompiler = ToolProvider.getSystemJavaCompiler();
-    DiagnosticCollector<JavaFileObject> diagnosticCollector =
-        new DiagnosticCollector<JavaFileObject>();
-    JavaCompiler.CompilationTask compilationTask =
-        javaCompiler.getTask(
-            (Writer) null,
-            (JavaFileManager) null,
-            diagnosticCollector,
-            ImmutableList.of("-d", tempDir.toString()),
-            (Iterable<String>) null,
-            ImmutableList.of(erroneousJavaFileObject));
-    compilationTask.setProcessors(ImmutableList.of(new AutoAnnotationProcessor()));
-    boolean result = compilationTask.call();
-    assertThat(result).isFalse();
-    List<Diagnostic<? extends JavaFileObject>> diagnostics = diagnosticCollector.getDiagnostics();
-    assertThat(diagnostics).isNotEmpty();
-    assertThat(diagnostics.get(0).getMessage(null)).contains("NotAutoAnnotation");
-    assertThat(diagnostics.get(0).getMessage(null)).doesNotContain("static");
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoAnnotationProcessor())
+            .compile(erroneousJavaFileObject);
+    assertThat(compilation).hadErrorContaining("NotAutoAnnotation");
+    assertThat(
+            compilation.errors().stream()
+                .map(diag -> diag.getMessage(null))
+                .filter(m -> m.contains("static")))
+        .isEmpty();
   }
 
   private static void removeDirectory(File dir) {
