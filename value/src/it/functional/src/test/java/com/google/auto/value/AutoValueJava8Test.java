@@ -16,6 +16,7 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.Truth8.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static org.junit.Assert.fail;
@@ -698,8 +699,8 @@ public class AutoValueJava8Test {
     Class<?> c = x.getClass();
     assertThat(c.getTypeParameters()).hasLength(1);
     TypeVariable<?> typeParameter = c.getTypeParameters()[0];
-    assertThat(typeParameter.getAnnotations())
-        .named(typeParameter.toString())
+    assertWithMessage(typeParameter.toString())
+        .that(typeParameter.getAnnotations())
         .asList()
         .contains(nullable());
   }
@@ -731,8 +732,8 @@ public class AutoValueJava8Test {
     Class<?> c = builder.getClass();
     assertThat(c.getTypeParameters()).hasLength(1);
     TypeVariable<?> typeParameter = c.getTypeParameters()[0];
-    assertThat(typeParameter.getAnnotations())
-        .named(typeParameter.toString())
+    assertWithMessage(typeParameter.toString())
+        .that(typeParameter.getAnnotations())
         .asList()
         .contains(nullable());
   }
