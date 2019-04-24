@@ -17,6 +17,7 @@ package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.common.collect.ImmutableSet;
@@ -261,14 +262,18 @@ public class SuperficialValidationTest {
         "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement))
-                .named("testClassElement is valid").isFalse();
-          }
-        }).failsToCompile();
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
+                assertWithMessage("testClassElement is valid")
+                    .that(SuperficialValidation.validateElement(testClassElement))
+                    .isFalse();
+              }
+            })
+        .failsToCompile();
   }
 
   private abstract static class AssertingProcessor extends AbstractProcessor {

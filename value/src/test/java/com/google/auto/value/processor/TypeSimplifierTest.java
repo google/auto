@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.testing.compile.CompilationRule;
 import java.util.List;
@@ -226,8 +227,8 @@ public class TypeSimplifierTest {
       }
       TypeMirror fieldType = field.asType();
       boolean actualUnchecked = TypeSimplifier.isCastingUnchecked(fieldType);
-      assertThat(actualUnchecked)
-          .named("Unchecked-cast status for " + fieldType)
+      assertWithMessage("Unchecked-cast status for " + fieldType)
+          .that(actualUnchecked)
           .isEqualTo(expectUnchecked);
     }
   }
