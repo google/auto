@@ -2450,7 +2450,7 @@ public class AutoValueTest {
         annotationsOnSuperclass.add(annotation.annotationType());
       }
       assertThat(annotationsOnSuperclass)
-          .containsAllOf(
+          .containsAtLeast(
               CopiedAnnotation.class, ExcludedAnnotation.class, InheritedAnnotation.class);
     }
 
