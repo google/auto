@@ -317,7 +317,7 @@ public class MemoizedTest {
         value.throwsException();
         fail();
       } catch (SomeCheckedException expected2) {
-        assertThat(expected2).isNotSameAs(expected1);
+        assertThat(expected2).isNotSameInstanceAs(expected1);
       }
     }
     assertThat(value.throwsExceptionCount).isEqualTo(2);
