@@ -18,9 +18,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
+  <!-- TODO(cpovirk): Remove parent entirely? -->
   <parent>
-    <groupId>com.google.auto</groupId>
-    <artifactId>auto-parent</artifactId>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
     <version>7</version>
   </parent>
 
@@ -38,11 +39,13 @@
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <version>27.0.1-jre</version>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
@@ -63,11 +66,13 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
+      <version>0.44</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
