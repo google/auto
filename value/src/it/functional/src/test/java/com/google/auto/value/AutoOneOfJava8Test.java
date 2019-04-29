@@ -69,7 +69,7 @@ public class AutoOneOfJava8Test {
     EqualsNullable x = EqualsNullable.ofThing("foo");
     Class<? extends EqualsNullable> c = x.getClass();
     Method equals = c.getMethod("equals", Object.class);
-    assertThat(equals.getDeclaringClass()).isNotSameAs(EqualsNullable.class);
+    assertThat(equals.getDeclaringClass()).isNotSameInstanceAs(EqualsNullable.class);
     AnnotatedType parameterType = equals.getAnnotatedParameterTypes()[0];
     assertThat(parameterType.isAnnotationPresent(EqualsNullable.Nullable.class)).isTrue();
   }

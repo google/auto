@@ -1283,7 +1283,7 @@ public class AutoValueTest {
     MoreComplexInheritance instance1 = MoreComplexInheritance.create();
     MoreComplexInheritance instance2 = MoreComplexInheritance.create();
     assertThat(instance1).isEqualTo(instance2);
-    assertThat(instance1).isNotSameAs(instance2);
+    assertThat(instance1).isNotSameInstanceAs(instance2);
   }
 
   // Test that we are not misled by the privateness of an ancestor into thinking that its methods
@@ -1311,7 +1311,7 @@ public class AutoValueTest {
     EffectiveVisibility instance1 = EffectiveVisibility.create();
     EffectiveVisibility instance2 = EffectiveVisibility.create();
     assertThat(instance1).isEqualTo(instance2);
-    assertThat(instance1).isNotSameAs(instance2);
+    assertThat(instance1).isNotSameInstanceAs(instance2);
   }
 
   @AutoValue
