@@ -20,9 +20,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.google.auto</groupId>
-    <artifactId>auto-parent</artifactId>
-    <version>6</version>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
   </parent>
 
   <groupId>com.google.auto.factory</groupId>
@@ -32,6 +32,14 @@
   <description>
     JSR-330-compatible factories.
   </description>
+  <url>https://github.com/google/auto/tree/master/factory</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.8</java.version>
+    <guava.version>27.0.1-jre</guava.version>
+    <truth.version>0.44</truth.version>
+  </properties>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -39,6 +47,23 @@
     <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>http://github.com/google/auto/issues</url>
+  </issueManagement>
+
+  <licenses>
+    <license>
+      <name>Apache 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Google LLC</name>
+    <url>http://www.google.com</url>
+  </organization>
 
   <dependencies>
     <dependency>
@@ -60,38 +85,46 @@
     <dependency>
       <groupId>com.google.googlejavaformat</groupId>
       <artifactId>google-java-format</artifactId>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
     </dependency>
     <dependency>
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
+      <version>1.9.0</version>
     </dependency>
     <dependency>
       <groupId>javax.inject</groupId>
       <artifactId>javax.inject</artifactId>
+      <version>1</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
+      <version>0.16</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
+      <version>${truth.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -105,12 +138,52 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <compilerArgument>-Xlint:all</compilerArgument>
+          <showWarnings>true</showWarnings>
+          <showDeprecation>true</showDeprecation>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-java</artifactId>
+            <version>0.9.4</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.0.2</version>
+      </plugin>
+      <plugin>
         <artifactId>maven-invoker-plugin</artifactId>
+        <version>3.0.1</version>
+        <configuration>
+          <addTestClassPath>true</addTestClassPath>
+          <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+          <pomIncludes>
+            <pomInclude>*/pom.xml</pomInclude>
+          </pomIncludes>
+          <streamLogs>true</streamLogs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>integration-test</id>
+            <goals>
+              <goal>install</goal>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.immutables.tools</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>4</version>
       </plugin>
     </plugins>
   </build>

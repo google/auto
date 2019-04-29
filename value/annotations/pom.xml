@@ -31,6 +31,7 @@
   <description>
     Immutable value-type code generation for Java 1.6+.
   </description>
+  <url>https://github.com/google/auto/tree/master/value</url>
 
   <properties>
     <java.version>1.7</java.version>

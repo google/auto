@@ -31,6 +31,7 @@
   <description>
     Immutable value-type code generation for Java 1.6+.
   </description>
+  <url>https://github.com/google/auto/tree/master/value</url>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -100,6 +101,11 @@
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.truth.extensions</groupId>
+      <artifactId>truth-java8-extension</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

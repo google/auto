@@ -24,6 +24,7 @@
     <artifactId>auto-value-parent</artifactId>
     <version>HEAD-SNAPSHOT</version>
   </parent>
+  <url>https://github.com/google/auto/tree/master/value</url>
 
   <groupId>com.google.auto.value.it.gwtserializer</groupId>
   <artifactId>gwtserializer</artifactId>
