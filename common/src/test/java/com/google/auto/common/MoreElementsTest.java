@@ -260,7 +260,7 @@ public class MoreElementsTest {
     Set<ExecutableElement> childTypeMethods =
         MoreElements.getLocalAndInheritedMethods(childType, elements);
     Set<ExecutableElement> objectMethods = visibleMethodsFromObject();
-    assertThat(childTypeMethods).containsAllIn(objectMethods);
+    assertThat(childTypeMethods).containsAtLeastElementsIn(objectMethods);
     Set<ExecutableElement> nonObjectMethods = Sets.difference(childTypeMethods, objectMethods);
     assertThat(nonObjectMethods).containsExactly(
         getMethod(ParentClass.class, "foo"),
@@ -282,7 +282,7 @@ public class MoreElementsTest {
     Set<ExecutableElement> childTypeMethods =
         MoreElements.getLocalAndInheritedMethods(childType, types, elements);
     Set<ExecutableElement> objectMethods = visibleMethodsFromObject();
-    assertThat(childTypeMethods).containsAllIn(objectMethods);
+    assertThat(childTypeMethods).containsAtLeastElementsIn(objectMethods);
     Set<ExecutableElement> nonObjectMethods = Sets.difference(childTypeMethods, objectMethods);
     assertThat(nonObjectMethods).containsExactly(
         getMethod(ParentClass.class, "foo"),
