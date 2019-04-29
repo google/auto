@@ -300,14 +300,14 @@ public class AutoValueJava8Test {
           AutoValue_AutoValueJava8Test_NestedNullableProperties.class.getDeclaredMethod(
               "nullableThing");
       Annotation[] getterAnnotations = generatedGetter.getAnnotatedReturnType().getAnnotations();
-      assertThat(getterAnnotations).asList().containsAllOf(nullable(), otherTypeAnnotation());
+      assertThat(getterAnnotations).asList().containsAtLeast(nullable(), otherTypeAnnotation());
 
       Method generatedSetter =
           AutoValue_AutoValueJava8Test_NestedNullableProperties.Builder.class.getDeclaredMethod(
               "setNullableThing", Nested.class);
       Annotation[] setterAnnotations =
           generatedSetter.getAnnotatedParameterTypes()[0].getAnnotations();
-      assertThat(setterAnnotations).asList().containsAllOf(nullable(), otherTypeAnnotation());
+      assertThat(setterAnnotations).asList().containsAtLeast(nullable(), otherTypeAnnotation());
     } catch (AssertionError e) {
       if (javacHandlesTypeAnnotationsCorrectly) {
         throw e;

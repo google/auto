@@ -339,12 +339,13 @@ public class MoreElementsTest {
         methods.add(method);
       }
     }
-    assertThat(methods).containsAllOf(
-        getMethod(Object.class, "clone"),
-        getMethod(Object.class, "finalize"),
-        getMethod(Object.class, "wait"),
-        getMethod(Object.class, "wait", longMirror),
-        getMethod(Object.class, "wait", longMirror, intMirror));
+    assertThat(methods)
+        .containsAtLeast(
+            getMethod(Object.class, "clone"),
+            getMethod(Object.class, "finalize"),
+            getMethod(Object.class, "wait"),
+            getMethod(Object.class, "wait", longMirror),
+            getMethod(Object.class, "wait", longMirror, intMirror));
     return methods;
   }
 
