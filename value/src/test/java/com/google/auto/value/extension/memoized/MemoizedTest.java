@@ -259,14 +259,14 @@ public class MemoizedTest {
   @Test
   public void notNullable() {
     assertThat(value.notNullable()).isEqualTo("derived string 1");
-    assertThat(value.notNullable()).isSameAs(value.notNullable());
+    assertThat(value.notNullable()).isSameInstanceAs(value.notNullable());
     assertThat(value.notNullableCount).isEqualTo(1);
   }
 
   @Test
   public void nullable() {
     assertThat(value.nullable()).isEqualTo("nullable derived string 1");
-    assertThat(value.nullable()).isSameAs(value.nullable());
+    assertThat(value.nullable()).isSameInstanceAs(value.nullable());
     assertThat(value.nullableCount).isEqualTo(1);
   }
 
@@ -274,7 +274,8 @@ public class MemoizedTest {
   public void nullableWithTypeAnnotation() {
     assertThat(value.nullableWithTypeAnnotation())
         .isEqualTo("nullable derived stringWithTypeAnnotation 1");
-    assertThat(value.nullableWithTypeAnnotation()).isSameAs(value.nullableWithTypeAnnotation());
+    assertThat(value.nullableWithTypeAnnotation())
+        .isSameInstanceAs(value.nullableWithTypeAnnotation());
     assertThat(value.nullableWithTypeAnnotationCount).isEqualTo(1);
   }
 

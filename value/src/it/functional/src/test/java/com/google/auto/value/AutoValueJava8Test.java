@@ -351,7 +351,7 @@ public class AutoValueJava8Test {
             + "}";
     assertThat(object1.toString()).isEqualTo(expectedString);
 
-    assertThat(object1.ints()).isSameAs(object1.ints());
+    assertThat(object1.ints()).isSameInstanceAs(object1.ints());
   }
 
   @Test
@@ -367,7 +367,7 @@ public class AutoValueJava8Test {
         "PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", " + "ints=null}";
     assertThat(object1.toString()).isEqualTo(expectedString);
 
-    assertThat(object1.booleans()).isSameAs(object1.booleans());
+    assertThat(object1.booleans()).isSameInstanceAs(object1.booleans());
     assertThat(object1.booleans()).isEqualTo(booleans);
     object1.booleans()[0] ^= true;
     assertThat(object1.booleans()).isNotEqualTo(booleans);
@@ -536,7 +536,7 @@ public class AutoValueJava8Test {
     }
 
     builder.setList(names);
-    assertThat(builder.list()).isSameAs(names);
+    assertThat(builder.list()).isSameInstanceAs(names);
     builder.setInts(ints);
     assertThat(builder.ints()).isEqualTo(ints);
     // The array is not cloned by the getter, so the client can modify it (but shouldn't).
@@ -545,7 +545,7 @@ public class AutoValueJava8Test {
     ints[0] = 6;
 
     BuilderWithUnprefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
-    assertThat(instance.list()).isSameAs(names);
+    assertThat(instance.list()).isSameInstanceAs(names);
     assertThat(instance.t()).isNull();
     assertThat(instance.ints()).isEqualTo(ints);
     assertThat(instance.noGetter()).isEqualTo(noGetter);
@@ -604,12 +604,12 @@ public class AutoValueJava8Test {
     }
 
     builder.setList(names);
-    assertThat(builder.getList()).isSameAs(names);
+    assertThat(builder.getList()).isSameInstanceAs(names);
     builder.setT(name);
     assertThat(builder.getInts()).isNull();
 
     BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
-    assertThat(instance.getList()).isSameAs(names);
+    assertThat(instance.getList()).isSameInstanceAs(names);
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
