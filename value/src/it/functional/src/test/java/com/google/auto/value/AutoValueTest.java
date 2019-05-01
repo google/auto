@@ -1061,7 +1061,7 @@ public class AutoValueTest {
                 + Arrays.toString(ints)
                 + "}");
     assertThat(object1.toString()).isEqualTo(expectedString);
-    assertThat(object1.ints()).isSameAs(object1.ints());
+    assertThat(object1.ints()).isSameInstanceAs(object1.ints());
   }
 
   @Test
@@ -1078,7 +1078,7 @@ public class AutoValueTest {
             : ("PrimitiveArrays{booleans=" + Arrays.toString(booleans) + ", " + "ints=null}");
     assertThat(object1.toString()).isEqualTo(expectedString);
 
-    assertThat(object1.booleans()).isSameAs(object1.booleans());
+    assertThat(object1.booleans()).isSameInstanceAs(object1.booleans());
     assertThat(object1.booleans()).isEqualTo(booleans);
     object1.booleans()[0] ^= true;
     assertThat(object1.booleans()).isNotEqualTo(booleans);
@@ -1938,7 +1938,7 @@ public class AutoValueTest {
     }
 
     builder.setList(names);
-    assertThat(builder.list()).isSameAs(names);
+    assertThat(builder.list()).isSameInstanceAs(names);
     builder.setInts(ints);
     assertThat(builder.ints()).isEqualTo(ints);
     builder.setoAuth("OAuth");
@@ -1951,7 +1951,7 @@ public class AutoValueTest {
     ints[0] = 6;
 
     BuilderWithUnprefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
-    assertThat(instance.list()).isSameAs(names);
+    assertThat(instance.list()).isSameInstanceAs(names);
     assertThat(instance.t()).isNull();
     assertThat(instance.ints()).isEqualTo(ints);
     assertThat(instance.noGetter()).isEqualTo(noGetter);
@@ -2019,13 +2019,13 @@ public class AutoValueTest {
     }
 
     builder.setList(names);
-    assertThat(builder.getList()).isSameAs(names);
+    assertThat(builder.getList()).isSameInstanceAs(names);
     builder.setT(name);
     assertThat(builder.getInts()).isNull();
     builder.setOAuth("OAuth");
 
     BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
-    assertThat(instance.getList()).isSameAs(names);
+    assertThat(instance.getList()).isSameInstanceAs(names);
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
@@ -2273,8 +2273,8 @@ public class AutoValueTest {
     ImmutableList<Integer> things = ImmutableList.of(17, 23);
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder =
         BuilderWithCollectionBuilderAndSetter.<Integer>builder().setThings(things);
-    assertThat(builder.things()).isSameAs(things);
-    assertThat(builder.build().things()).isSameAs(things);
+    assertThat(builder.things()).isSameInstanceAs(things);
+    assertThat(builder.build().things()).isSameInstanceAs(things);
 
     List<Integer> moreThings = Arrays.asList(5, 17, 23);
     BuilderWithCollectionBuilderAndSetter.Builder<Integer> builder2 =
@@ -2852,7 +2852,7 @@ public class AutoValueTest {
   public void testParentInterfaceOverridesGrandparent() {
     ItemVersionId version = new ItemVersionId();
     FakeItem fakeItem = FakeItem.builder().setVersionId(version).build();
-    assertThat(fakeItem.getVersionId()).isSameAs(version);
+    assertThat(fakeItem.getVersionId()).isSameInstanceAs(version);
   }
 
   /** Fake ApkVersionCode class. */

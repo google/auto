@@ -110,7 +110,7 @@ public class AutoOneOfTest {
   public void getCorrectType() {
     Dog marvin = Dog.create("Marvin");
     Pet petMarvin = Pet.dog(marvin);
-    assertThat(petMarvin.dog()).isSameAs(marvin);
+    assertThat(petMarvin.dog()).isSameInstanceAs(marvin);
   }
 
   @Test
