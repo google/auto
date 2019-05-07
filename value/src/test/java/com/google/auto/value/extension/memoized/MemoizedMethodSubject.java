@@ -28,9 +28,11 @@ import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
 
 final class MemoizedMethodSubject extends Subject<MemoizedMethodSubject, String> {
+  private final String actual;
 
-  MemoizedMethodSubject(FailureMetadata failureMetadata, String subject) {
-    super(failureMetadata, subject);
+  MemoizedMethodSubject(FailureMetadata failureMetadata, String actual) {
+    super(failureMetadata, actual);
+    this.actual = actual;
   }
 
   void hasError(String error) {
@@ -42,7 +44,7 @@ final class MemoizedMethodSubject extends Subject<MemoizedMethodSubject, String>
             "",
             "@AutoValue abstract class Value {",
             "  abstract String string();",
-            getSubject(),
+            actual,
             "}");
     assertAbout(javaSource())
         .that(file)
