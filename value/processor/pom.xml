@@ -53,6 +53,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <version>2.3.3</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.escapevelocity</groupId>
       <artifactId>escapevelocity</artifactId>
       <version>0.9</version>

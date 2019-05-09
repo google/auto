@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Primitives;
+import com.google.errorprone.annotations.FormatMethod;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
@@ -82,6 +83,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
    * Issue a compilation error. This method does not throw an exception, since we want to continue
    * processing and perhaps report other errors.
    */
+  @FormatMethod
   private void reportError(Element e, String msg, Object... msgParams) {
     String formattedMessage = String.format(msg, msgParams);
     processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, formattedMessage, e);
@@ -91,8 +93,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
    * Issue a compilation error and return an exception that, when thrown, will cause the processing
    * of this class to be abandoned. This does not prevent the processing of other classes.
    */
-  private AbortProcessingException abortWithError(String msg, Element e) {
-    reportError(e, msg);
+  @FormatMethod
+  private AbortProcessingException abortWithError(Element e, String msg, Object... msgParams) {
+    reportError(e, msg, msgParams);
     return new AbortProcessingException();
   }
 
@@ -141,7 +144,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
   private void processMethod(ExecutableElement method) {
     if (!method.getModifiers().contains(Modifier.STATIC)) {
-      throw abortWithError("@AutoAnnotation method must be static", method);
+      throw abortWithError(method, "@AutoAnnotation method must be static");
     }
 
     TypeElement annotationElement = getAnnotationReturnType(method);
@@ -276,8 +279,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       }
     }
     throw abortWithError(
-        "Return type of @AutoAnnotation method must be an annotation type, not " + returnTypeMirror,
-        method);
+        method,
+        "Return type of @AutoAnnotation method must be an annotation type, not %s",
+        returnTypeMirror);
   }
 
   private ImmutableMap<String, ExecutableElement> getMemberMethods(TypeElement annotationElement) {
