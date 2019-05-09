@@ -257,13 +257,6 @@ final class $className implements $annotationName {
   #end
 #end
 
-## Compute the member name's contribution to the hashcode directly in the
-## template engine, to avoid triggering a compiler error for integer overflow.
-#macro (memberNameHash $m)
-  #set ($hc = 127 * $m.toString().hashCode())
-  ${hc} ##
-#end
-
 ## The hashCode is the sum of two parts, an invariable part and a variable part. The invariable part
 ## comes from defaulted members (ones that don't appear in the @AutoAnnotation method parameters)
 ## whose values have hash codes that never change. (That doesn't include Class constants, for
@@ -285,8 +278,8 @@ final class $className implements $annotationName {
     #foreach ($m in $members)
       #if (!$invariableHashes.contains($m.toString()))
 
-        + (#memberNameHash($m) ^ (#memberHashCodeExpression($m)))
-            // #memberNameHash($m) is 127 * "${m}".hashCode()
+        + ($m.nameHash ^ (#memberHashCodeExpression($m)))
+            // $m.nameHash is 127 * "${m}".hashCode()
       #end
     #end
 

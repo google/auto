@@ -499,6 +499,12 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       return getTypeMirror().getKind();
     }
 
+    // Used as part of the hashCode() computation.
+    // See https://docs.oracle.com/javase/8/docs/api/java/lang/annotation/Annotation.html#hashCode--
+    public int getNameHash() {
+      return 127 * toString().hashCode();
+    }
+
     public boolean isArrayOfClassWithBounds() {
       if (getTypeMirror().getKind() != TypeKind.ARRAY) {
         return false;
