@@ -356,11 +356,21 @@ class PropertyBuilderClassifier {
     // with the same name.
     Map<String, ExecutableElement> methods = new LinkedHashMap<String, ExecutableElement>();
     for (ExecutableElement method : ElementFilter.methodsIn(elementUtils.getAllMembers(type))) {
-      if (method.getParameters().isEmpty()) {
+      if (method.getParameters().isEmpty() && !isStaticInterfaceMethodNotIn(method, type)) {
         methods.put(method.getSimpleName().toString(), method);
       }
     }
     return methods;
+  }
+
+  // Work around an Eclipse compiler bug: https://bugs.eclipse.org/bugs/show_bug.cgi?id=547185
+  // The result of Elements.getAllMembers includes static methods declared in superinterfaces.
+  // That's wrong because those aren't inherited. So this method checks whether the given method is
+  // a static interface method not in the given type.
+  private static boolean isStaticInterfaceMethodNotIn(ExecutableElement method, TypeElement type) {
+    return method.getModifiers().contains(Modifier.STATIC)
+        && !method.getEnclosingElement().equals(type)
+        && method.getEnclosingElement().getKind().equals(ElementKind.INTERFACE);
   }
 
   private Optional<ExecutableElement> addAllPutAll(TypeElement barBuilderTypeElement) {
