@@ -27,24 +27,21 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
 )
 final class CheckerFrameworkNullableFactory {
 
-  private final Provider<String> providedNullableDeclProvider;
-  private final Provider<String> providedNullableTypeProvider;
+  private final Provider<String> java_lang_StringProvider;
 
   @Inject
   CheckerFrameworkNullableFactory(
-      Provider<String> providedNullableDeclProvider,
-      Provider<String> providedNullableTypeProvider) {
-    this.providedNullableDeclProvider = checkNotNull(providedNullableDeclProvider, 1);
-    this.providedNullableTypeProvider = checkNotNull(providedNullableTypeProvider, 2);
+      Provider<String> java_lang_StringProvider) {
+    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1);
   }
 
   CheckerFrameworkNullable create(
       @NullableDecl String nullableDecl, @NullableType String nullableType) {
     return new CheckerFrameworkNullable(
         nullableDecl,
-        providedNullableDeclProvider.get(),
+        java_lang_StringProvider.get(),
         nullableType,
-        providedNullableTypeProvider.get());
+        java_lang_StringProvider.get());
   }
 
   private static <T> T checkNotNull(T reference, int argumentIndex) {
