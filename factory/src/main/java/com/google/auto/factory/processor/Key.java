@@ -38,9 +38,11 @@ import javax.lang.model.util.Types;
  * @author Gregory Kick
  */
 @AutoValue
+// TODO(ronshapiro): reuse dagger.model.Key?
 abstract class Key {
 
-  abstract TypeMirror type();
+  abstract Equivalence.Wrapper<TypeMirror> type();
+
   abstract Optional<Equivalence.Wrapper<AnnotationMirror>> qualifierWrapper();
 
   Optional<AnnotationMirror> qualifier() {
@@ -80,7 +82,8 @@ abstract class Key {
             ? MoreTypes.asDeclared(type).getTypeArguments().get(0)
             : boxedType(type, types);
     return new AutoValue_Key(
-        keyType, wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), qualifier));
+        MoreTypes.equivalence().wrap(keyType),
+        wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), qualifier));
   }
 
   /**
@@ -95,7 +98,7 @@ abstract class Key {
 
   @Override
   public String toString() {
-    String typeQualifiedName = MoreTypes.asTypeElement(type()).toString();
+    String typeQualifiedName = MoreTypes.asTypeElement(type().get()).toString();
     return qualifier().isPresent()
         ? qualifier().get() + "/" + typeQualifiedName
         : typeQualifiedName;

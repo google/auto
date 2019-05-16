@@ -106,7 +106,7 @@ final class FactoryWriter {
     Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
     for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
       ProviderField provider = providerFields.next();
-      TypeName typeName = TypeName.get(provider.key().type()).box();
+      TypeName typeName = TypeName.get(provider.key().type().get()).box();
       TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
