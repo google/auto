@@ -56,6 +56,10 @@ abstract class FactoryDescriptor {
   abstract boolean allowSubclasses();
   abstract ImmutableMap<Key, ProviderField> providers();
 
+  final AutoFactoryDeclaration declaration() {
+    return Iterables.getFirst(methodDescriptors(), null).declaration();
+  }
+
   private static class UniqueNameSet {
     private final Set<String> uniqueNames = new HashSet<String>();
 
