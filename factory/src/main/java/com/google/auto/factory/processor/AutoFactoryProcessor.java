@@ -51,12 +51,15 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
  *
  * @author Gregory Kick
  */
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
   private FactoryDescriptorGenerator factoryDescriptorGenerator;
