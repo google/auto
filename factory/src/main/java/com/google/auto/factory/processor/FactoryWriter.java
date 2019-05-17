@@ -67,7 +67,9 @@ final class FactoryWriter {
   void writeFactory(final FactoryDescriptor descriptor)
       throws IOException {
     String factoryName = getSimpleName(descriptor.name()).toString();
-    TypeSpec.Builder factory = classBuilder(factoryName);
+    TypeSpec.Builder factory =
+        classBuilder(factoryName)
+            .addOriginatingElement(descriptor.declaration().targetType());
     generatedAnnotationSpec(
             elements,
             sourceVersion,
