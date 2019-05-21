@@ -44,11 +44,12 @@ public class AutoOneOfCompilationTest {
             "",
             "@AutoOneOf(TaskResult.Kind.class)",
             "public abstract class TaskResult<V, T extends Throwable> {",
-            "  public enum Kind {VALUE, EXCEPTION}",
+            "  public enum Kind {VALUE, EXCEPTION, EMPTY}",
             "  public abstract Kind getKind();",
             "",
             "  public abstract V value();",
             "  public abstract Throwable exception();",
+            "  public abstract void empty();",
             "",
             "  public static <V> TaskResult<V, ?> value(V value) {",
             "    return AutoOneOf_TaskResult.value(value);",
@@ -83,6 +84,10 @@ public class AutoOneOfCompilationTest {
             "    return new Impl_exception<V, T>(exception);",
             "  }",
             "",
+            "  static TaskResult<?, ?> empty() {",
+            "    return Impl_empty.INSTANCE;",
+            "  }",
+            "",
             "  // Parent class that each implementation will inherit from.",
             "  private abstract static class Parent_<V, T extends Throwable> "
                 + "extends TaskResult<V, T> {",
@@ -95,6 +100,11 @@ public class AutoOneOfCompilationTest {
             "    public Throwable exception() {",
             "      throw new UnsupportedOperationException(getKind().toString());",
             "    }",
+            "",
+            "    @Override",
+            "    public void empty() {",
+            "      throw new UnsupportedOperationException(getKind().toString());",
+            "    }",
             "  }",
             "",
             "  // Implementation when the contained property is \"value\".",
@@ -104,11 +114,6 @@ public class AutoOneOfCompilationTest {
             "",
             "    Impl_value(V value) {",
             "      this.value = value;",
-            "    }",
-            "",
-            "    @Override",
-            "    public TaskResult.Kind getKind() {",
-            "      return TaskResult.Kind.VALUE;",
             "    }",
             "",
             "    @Override",
@@ -136,6 +141,11 @@ public class AutoOneOfCompilationTest {
             "    public int hashCode() {",
             "      return value.hashCode();",
             "    }",
+            "",
+            "    @Override",
+            "    public TaskResult.Kind getKind() {",
+            "      return TaskResult.Kind.VALUE;",
+            "    }",
             "  }",
             "",
             "  // Implementation when the contained property is \"exception\".",
@@ -145,11 +155,6 @@ public class AutoOneOfCompilationTest {
             "",
             "    Impl_exception(Throwable exception) {",
             "      this.exception = exception;",
-            "    }",
-            "",
-            "    @Override",
-            "    public TaskResult.Kind getKind() {",
-            "      return TaskResult.Kind.EXCEPTION;",
             "    }",
             "",
             "    @Override",
@@ -176,6 +181,42 @@ public class AutoOneOfCompilationTest {
             "    @Override",
             "    public int hashCode() {",
             "      return exception.hashCode();",
+            "    }",
+            "",
+            "    @Override",
+            "    public TaskResult.Kind getKind() {",
+            "      return TaskResult.Kind.EXCEPTION;",
+            "    }",
+            "  }",
+            "",
+            "  // Implementation when the contained property is \"empty\".",
+            "  private static final class Impl_empty<V, T extends Throwable> "
+                + "extends Parent_<V, T> {",
+            "    static final Impl_empty<?, ?> INSTANCE = new Impl_empty<>();",
+            "",
+            "    private Impl_empty() {}",
+            "",
+            "    @Override",
+            "    public void empty() {}",
+            "",
+            "    @Override",
+            "    public String toString() {",
+            "      return \"TaskResult{empty}\";",
+            "    }",
+            "",
+            "    @Override",
+            "    public boolean equals(Object x) {",
+            "      return x == this;",
+            "    }",
+            "",
+            "    @Override",
+            "    public int hashCode() {",
+            "      return System.identityHashCode(this);",
+            "    }",
+            "",
+            "    @Override",
+            "    public TaskResult.Kind getKind() {",
+            "      return TaskResult.Kind.EMPTY;",
             "    }",
             "  }");
     Compilation compilation =
@@ -318,35 +359,6 @@ public class AutoOneOfCompilationTest {
             "Name of enum constant 'GERBIL' does not correspond to any property name")
         .inFile(javaFileObject)
         .onLineContaining("GERBIL");
-  }
-
-  @Test
-  public void abstractVoidMethod() {
-    JavaFileObject javaFileObject =
-        JavaFileObjects.forSourceLines(
-            "foo.bar.Pet",
-            "package foo.bar;",
-            "",
-            "import com.google.auto.value.AutoOneOf;",
-            "",
-            "@AutoOneOf(Pet.Kind.class)",
-            "public abstract class Pet {",
-            "  public enum Kind {",
-            "    DOG,",
-            "    CAT,",
-            "  }",
-            "  public abstract Kind getKind();",
-            "  public abstract String dog();",
-            "  public abstract String cat();",
-            "  public abstract void frob();",
-            "}");
-    Compilation compilation =
-        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
-    assertThat(compilation)
-        .hadWarningContaining(
-            "Abstract methods in @AutoOneOf classes must be non-void with no parameters")
-        .inFile(javaFileObject)
-        .onLineContaining("frob");
   }
 
   @Test

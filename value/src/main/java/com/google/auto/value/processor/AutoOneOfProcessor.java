@@ -64,6 +64,11 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   }
 
   @Override
+  boolean propertiesCanBeVoid() {
+    return true;
+  }
+
+  @Override
   void processType(TypeElement autoOneOfType) {
     if (autoOneOfType.getKind() != ElementKind.CLASS) {
       errorReporter()
@@ -255,6 +260,10 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
         propertySet(type, propertyMethods, ImmutableListMultimap.of(), ImmutableListMultimap.of());
     vars.kindGetter = kindGetter.getSimpleName().toString();
     vars.kindType = TypeEncoder.encode(kindGetter.getReturnType());
+    TypeElement javaIoSerializable = elementUtils().getTypeElement("java.io.Serializable");
+    vars.serializable =
+        javaIoSerializable != null  // just in case
+        && typeUtils().isAssignable(type.asType(), javaIoSerializable.asType());
   }
 
   @Override

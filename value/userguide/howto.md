@@ -536,9 +536,52 @@ factory method for each property, with the same name. In the example, the
 `STRING` value in the enum corresponds to the `string()` property and to the
 `AutoOneOf_StringOrInteger.string` factory method.
 
+Properties in an `@AutoOneOf` class can be `void` to indicate that the
+corresponding variant has no data. In that case, the factory method for that
+variant has no parameters:
+
+```java
+@AutoOneOf(Transform.Kind.class)
+public abstract class Transform {
+  public enum Kind {NONE, CIRCLE_CROP, BLUR}
+  public abstract Kind getKind();
+
+  abstract void none();
+
+  abstract void circleCrop();
+
+  public abstract BlurTransformParameters blur();
+
+  public static Transform ofNone() {
+    return AutoOneOf_Transform.none();
+  }
+  
+  public static Transform ofCircleCrop() {
+    return AutoOneOf_Transform.circleCrop();
+  }
+
+  public static Transform ofBlur(BlurTransformParmeters params) {}
+    return AutoOneOf_Transform.blur(params);
+  }
+}
+```
+
+Here, the `NONE` and `CIRCLE_CROP` variants have no associated data but are
+distinct from each other. The `BLUR` variant does have data. The `none()`
+and `circleCrop()` methods are package-private; they must exist to configure
+`@AutoOneOf`, but calling them is not very useful. (It does nothing if the
+instance is of the correct variant, or throws an exception otherwise.)
+
+The `AutoOneOf_Transform.none()` and `AutoOneOf_Transform.circleCrop()` methods
+return the same instance every time they are called.
+
+If one of the `void` variants means "none", consider using an `Optional<Transform>` or
+a `@Nullable Transform` instead of that variant.
+
 Properties in an `@AutoOneOf` class cannot be null. Instead of a
 `StringOrInteger` with a `@Nullable String`, you probably want a
-`@Nullable StringOrInteger` or an `Optional<StringOrInteger>`.
+`@Nullable StringOrInteger` or an `Optional<StringOrInteger>`, or an empty
+variant as just described.
 
 ## <a name="copy_annotations"></a>... copy annotations from a class/method to the implemented class/method/field?
 

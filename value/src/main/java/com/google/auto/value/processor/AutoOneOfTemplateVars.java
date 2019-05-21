@@ -44,6 +44,9 @@ class AutoOneOfTemplateVars extends AutoValueOrOneOfTemplateVars {
   /** Maps property names like {@code dog} to enum constants like {@code DOG}. */
   Map<String, String> propertyToKind;
 
+  /** True if this {@code @AutoOneOf} class is Serializable. */
+  Boolean serializable;
+
   private static final Template TEMPLATE = parsedTemplateForResource("autooneof.vm");
 
   @Override
