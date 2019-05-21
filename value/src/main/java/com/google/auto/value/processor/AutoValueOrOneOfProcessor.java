@@ -719,16 +719,21 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    * Returns the subset of property methods in the given set of abstract methods. A property method
    * has no arguments, is not void, and is not {@code hashCode()} or {@code toString()}.
    */
-  static ImmutableSet<ExecutableElement> propertyMethodsIn(Set<ExecutableElement> abstractMethods) {
+  ImmutableSet<ExecutableElement> propertyMethodsIn(Set<ExecutableElement> abstractMethods) {
     ImmutableSet.Builder<ExecutableElement> properties = ImmutableSet.builder();
     for (ExecutableElement method : abstractMethods) {
       if (method.getParameters().isEmpty()
-          && method.getReturnType().getKind() != TypeKind.VOID
+          && (method.getReturnType().getKind() != TypeKind.VOID || propertiesCanBeVoid())
           && objectMethodToOverride(method) == ObjectMethod.NONE) {
         properties.add(method);
       }
     }
     return properties.build();
+  }
+
+  /** True if void properties are allowed. */
+  boolean propertiesCanBeVoid() {
+    return false;
   }
 
   /**

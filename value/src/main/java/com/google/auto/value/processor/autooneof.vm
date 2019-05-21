@@ -46,6 +46,14 @@ final class $generatedClass {
 ## Factory methods.
 #foreach ($p in $props)
 
+  #if ($p.type == "void")
+
+  static $origClass$wildcardTypes $p() {
+    return Impl_${p}.INSTANCE;
+  }
+
+  #else
+
   ## If the @AutoOneOf type is TaskResult<V extends Serializable>, then we might have here:
   ## static <V extends Serializable> TaskResult<V> value(V value) {
   ##   return new Impl_value<V>(value);
@@ -55,16 +63,18 @@ final class $generatedClass {
 
   static $formalTypes $origClass$actualTypes $p($p.type $p) {
 
-  #if (!$p.kind.primitive)
+    #if (!$p.kind.primitive)
 
     if ($p == null) {
       throw new NullPointerException();
     }
 
-  #end
+    #end
 
     return new Impl_$p$actualTypes($p);
   }
+
+  #end
 
 #end
 
@@ -99,6 +109,59 @@ final class $generatedClass {
 
   // Implementation when the contained property is "${p}".
   private static final class Impl_$p$formalTypes extends Parent_$actualTypes {
+
+  #if ($p.type == "void")
+
+    // There is only one instance of this class.
+    static final Impl_$p$wildcardTypes INSTANCE = new ##
+      #if ($wildcardTypes == "") Impl_$p() #else Impl_$p<>() #end;
+
+    private Impl_$p() {}
+
+    @Override
+    public void ${p.getter}() {}
+
+    #if ($serializable)
+
+    private Object readResolve() {
+      return INSTANCE;
+    }
+
+    #end
+
+    #if ($toString)
+
+    @Override
+    public String toString() {
+      return "${simpleClassName}{$p.name}";
+    }
+
+    #end
+
+    ## The implementations of equals and hashCode are equivalent to the ones
+    ## we inherit from Object. We only need to define them if they're redeclared
+    ## as abstract in an ancestor class. But currently we define them always.
+
+    #if ($equals)
+
+    @Override
+    public boolean equals($equalsParameterType x) {
+      return x == this;
+    }
+
+    #end
+
+    #if ($hashCode)
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(this);
+    }
+
+    #end
+
+  #else
+
     private final $p.type $p;
 
     Impl_$p($p.type $p) {
@@ -106,25 +169,20 @@ final class $generatedClass {
     }
 
     @Override
-    public $kindType ${kindGetter}() {
-      return ${kindType}.$propertyToKind[$p.name];
-    }
-
-    @Override
     public $p.type ${p.getter}() {
       return $p;
     }
 
-  #if ($toString)
+    #if ($toString)
 
     @Override
     public String toString() {
       return "${simpleClassName}{$p.name=" + this.$p + "}";
     }
 
-  #end
+    #end
 
-  #if ($equals)
+    #if ($equals)
 
     @Override
     public boolean equals($equalsParameterType x) {
@@ -137,16 +195,23 @@ final class $generatedClass {
       }
     }
 
-  #end
+    #end
 
-  #if ($hashCode)
+    #if ($hashCode)
 
     @Override
     public int hashCode() {
       return #hashCodeExpression($p);
     }
 
+    #end
+
   #end
+
+    @Override
+    public $kindType ${kindGetter}() {
+      return ${kindType}.$propertyToKind[$p.name];
+    }
 
   }
 
