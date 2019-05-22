@@ -25,13 +25,13 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -41,7 +41,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -214,23 +213,7 @@ class BuilderSpec {
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethod = Optional.of(new SimpleMethod(buildMethod));
       vars.builderGetters = classifier.builderGetters();
-
-      DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderTypeElement.asType());
-      ImmutableMultimap.Builder<String, PropertySetter> setterBuilder = ImmutableMultimap.builder();
-      classifier.propertyNameToSetters().forEach(
-          (property, setter) -> {
-        ExecutableElement getter = getterToPropertyName.inverse().get(property);
-        // Get the effective parameter type, which might need asMemberOf in cases where the method
-        // is inherited from a generic ancestor type and references type parameters.
-        ExecutableType setterMirror = MoreTypes.asExecutable(
-            processingEnv.getTypeUtils().asMemberOf(builderTypeMirror, setter));
-        TypeMirror parameterType = Iterables.getOnlyElement(setterMirror.getParameterTypes());
-        TypeMirror propertyType = getterToPropertyType.get(getter);
-        PropertySetter propertySetter = new PropertySetter(
-            setter, parameterType, propertyType, processingEnv.getTypeUtils());
-        setterBuilder.put(property, propertySetter);
-      });
-      vars.builderSetters = setterBuilder.build();
+      vars.builderSetters = classifier.propertyNameToSetters();
 
       vars.builderPropertyBuilders =
           ImmutableMap.copyOf(classifier.propertyNameToPropertyBuilder());
@@ -304,18 +287,18 @@ class BuilderSpec {
    * with a type that can be copied to {@code T} through {@code Optional.of}.
    */
   public static class PropertySetter {
+    private final ExecutableElement setter;
     private final String access;
     private final String name;
     private final String parameterTypeString;
     private final boolean primitiveParameter;
     private final String nullableAnnotation;
-    private final String copyOf;
+    private final Function<String, String> copyFunction;
 
     PropertySetter(
-        ExecutableElement setter,
-        TypeMirror parameterType,
-        TypeMirror propertyType,
-        Types typeUtils) {
+        ExecutableElement setter, TypeMirror parameterType, Function<String, String> copyFunction) {
+      this.setter = setter;
+      this.copyFunction = copyFunction;
       this.access = SimpleMethod.access(setter);
       this.name = setter.getSimpleName().toString();
       primitiveParameter = parameterType.getKind().isPrimitive();
@@ -324,8 +307,10 @@ class BuilderSpec {
       Optional<String> maybeNullable =
           AutoValueOrOneOfProcessor.nullableAnnotationFor(parameterElement, parameterType);
       this.nullableAnnotation = maybeNullable.orElse("");
-      boolean nullable = maybeNullable.isPresent();
-      this.copyOf = copyOfString(propertyType, parameterType, typeUtils, nullable);
+    }
+
+    ExecutableElement getSetter() {
+      return setter;
     }
 
     private static String parameterTypeString(ExecutableElement setter, TypeMirror parameterType) {
@@ -340,26 +325,6 @@ class BuilderSpec {
       } else {
         return TypeEncoder.encodeWithAnnotations(parameterType);
       }
-    }
-
-    private String copyOfString(
-        TypeMirror propertyType, TypeMirror parameterType, Types typeUtils, boolean nullable) {
-      boolean sameType = typeUtils.isAssignable(parameterType, propertyType);
-      if (sameType) {
-        return null;
-      }
-      TypeMirror erasedPropertyType = typeUtils.erasure(propertyType);
-      String rawTarget = TypeEncoder.encodeRaw(erasedPropertyType);
-      String of;
-      Optionalish optionalish = Optionalish.createIfOptional(propertyType);
-      if (optionalish == null) {
-        of = "copyOf";
-      } else if (nullable) {
-        of = optionalish.ofNullable();
-      } else {
-        of = "of";
-      }
-      return rawTarget + "." + of + "(%s)";
     }
 
     public String getAccess() {
@@ -383,14 +348,10 @@ class BuilderSpec {
     }
 
     public String copy(AutoValueProcessor.Property property) {
-      if (copyOf == null) {
-        return property.toString();
-      }
-
-      String copy = String.format(copyOf, property);
+      String copy = copyFunction.apply(property.toString());
 
       // Add a null guard only in cases where we are using copyOf and the property is @Nullable.
-      if (property.isNullable()) {
+      if (property.isNullable() && !copy.equals(property.toString())) {
         copy = String.format("(%s == null ? null : %s)", property, copy);
       }
 
