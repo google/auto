@@ -2154,8 +2154,9 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Method without arguments should be a build method returning foo.bar.Baz"
-                + " or a getter method with the same name and type as a getter method of foo.bar.Baz")
+            "Method without arguments should be a build method returning foo.bar.Baz, or a getter"
+                + " method with the same name and type as a getter method of foo.bar.Baz, or"
+                + " fooBuilder() where foo() or getFoo() is a getter method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLine(12);
   }
