@@ -186,7 +186,8 @@ class PropertyBuilderClassifier {
   // (1) It must have an instance method called `build()` that returns `Bar`. If the type of
   //     `bar()` is `Bar<String>` then the type of `build()` must be `Bar<String>`.
   // (2) `BarBuilder` must have a public no-arg constructor, or `Bar` must have a static method
-  //     `builder()` or `newBuilder()` that returns `BarBuilder`.
+  //     `naturalOrder(), `builder()`, or `newBuilder()` that returns `BarBuilder`. The
+  //     `naturalOrder()` case is specifically for ImmutableSortedSet and ImmutableSortedMap.
   // (3) `Bar` must have an instance method `BarBuilder toBuilder()`, or `BarBuilder` must be a
   //      Guava immutable builder like `ImmutableSet.Builder`. (See TODO below for relaxing the
   //      requirement on having a `toBuilder()`.
@@ -324,10 +325,10 @@ class PropertyBuilderClassifier {
   }
 
   private static final ImmutableSet<String> BUILDER_METHOD_NAMES =
-      ImmutableSet.of("builder", "newBuilder");
+      ImmutableSet.of("naturalOrder", "builder", "newBuilder");
 
   // (2) `BarBuilder must have a public no-arg constructor, or `Bar` must have a visible static
-  //      method `builder()` or `newBuilder()` that returns `BarBuilder`.
+  //      method `naturalOrder(), `builder()`, or `newBuilder()` that returns `BarBuilder`.
   private Optional<ExecutableElement> builderMaker(
       Map<String, ExecutableElement> barNoArgMethods, TypeElement barBuilderTypeElement) {
     for (String builderMethodName : BUILDER_METHOD_NAMES) {
