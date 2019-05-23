@@ -31,6 +31,8 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
@@ -53,7 +55,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import javax.annotation.Nullable;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -2220,15 +2227,89 @@ public class AutoValueTest {
     BuilderWithCopyingSetters.Builder<Integer> builder = BuilderWithCopyingSetters.builder(23);
 
     BuilderWithCopyingSetters<Integer> a = builder.setThings(ImmutableSet.of(1, 2)).build();
-    assertEquals(ImmutableSet.of(1, 2), a.things());
-    assertEquals(ImmutableList.of(17, 23.0), a.numbers());
-    assertEquals(ImmutableMap.of("foo", 23), a.map());
+    assertThat(a.things()).containsExactly(1, 2);
+    assertThat(a.numbers()).containsExactly(17, 23.0).inOrder();
+    assertThat(a.map()).containsExactly("foo", 23);
 
     BuilderWithCopyingSetters<Integer> b = builder.setThings(Arrays.asList(1, 2)).build();
-    assertEquals(a, b);
+    assertThat(b).isEqualTo(a);
 
     BuilderWithCopyingSetters<Integer> c = builder.setThings(1, 2).build();
-    assertEquals(a, c);
+    assertThat(c).isEqualTo(a);
+  }
+
+  @AutoValue
+  public abstract static class BuilderWithImmutableSorted<T extends Comparable<T>> {
+    public abstract ImmutableSortedSet<T> sortedSet();
+
+    public abstract ImmutableSortedMap<T, Integer> sortedMap();
+
+    public static <T extends Comparable<T>> Builder<T> builder() {
+      return new AutoValue_AutoValueTest_BuilderWithImmutableSorted.Builder<T>()
+          .setSortedSet(new TreeSet<T>())
+          .setSortedMap(new TreeMap<T, Integer>());
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T extends Comparable<T>> {
+      @SuppressWarnings("unchecked")
+      Builder<T> setSortedSet(T... x);
+
+      Builder<T> setSortedSet(NavigableSet<T> x);
+
+      ImmutableSortedSet.Builder<T> sortedSetBuilder();
+
+      Builder<T> setSortedMap(SortedMap<T, Integer> x);
+
+      Builder<T> setSortedMap(NavigableMap<T, Integer> x);
+
+      ImmutableSortedMap.Builder<T, Integer> sortedMapBuilder();
+
+      BuilderWithImmutableSorted<T> build();
+    }
+  }
+
+  @Test
+  public void testBuilderWithImmutableSorted_Varargs() {
+    BuilderWithImmutableSorted<String> x =
+        BuilderWithImmutableSorted.<String>builder().setSortedSet("foo", "bar", "baz").build();
+    assertThat(x.sortedSet()).containsExactly("bar", "baz", "foo").inOrder();
+  }
+
+  @Test
+  public void testBuilderWithImmutableSorted_SetSet() {
+    BuilderWithImmutableSorted<String> x =
+        BuilderWithImmutableSorted.<String>builder()
+            .setSortedSet(new TreeSet<String>(String.CASE_INSENSITIVE_ORDER))
+            .build();
+    assertThat(x.sortedSet().comparator()).isEqualTo(String.CASE_INSENSITIVE_ORDER);
+  }
+
+  @Test
+  public void testBuilderWithImmutableSorted_SetMap() {
+    BuilderWithImmutableSorted<String> x =
+        BuilderWithImmutableSorted.<String>builder()
+            .setSortedMap(new TreeMap<String, Integer>(String.CASE_INSENSITIVE_ORDER))
+            .build();
+    assertThat(x.sortedMap().comparator()).isEqualTo(String.CASE_INSENSITIVE_ORDER);
+  }
+
+  @Test
+  public void testBuilderWithImmutableSorted_SetCollectionBuilder() {
+    BuilderWithImmutableSorted.Builder<String> builder =
+        BuilderWithImmutableSorted.<String>builder();
+    builder.sortedSetBuilder().add("is", "ea", "id");
+    BuilderWithImmutableSorted<String> x = builder.build();
+    assertThat(x.sortedSet()).containsExactly("ea", "id", "is").inOrder();
+  }
+
+  @Test
+  public void testBuilderWithImmutableSorted_MapCollectionBuilder() {
+    BuilderWithImmutableSorted.Builder<String> builder =
+        BuilderWithImmutableSorted.<String>builder();
+    builder.sortedMapBuilder().put("two", 2).put("one", 1);
+    BuilderWithImmutableSorted<String> x = builder.build();
+    assertThat(x.sortedMap()).containsExactly("one", 1, "two", 2).inOrder();
   }
 
   @AutoValue

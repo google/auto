@@ -526,26 +526,28 @@ class BuilderMethodClassifier {
     if (!targetType.getKind().equals(TypeKind.DECLARED)) {
       return ImmutableList.of();
     }
-    String copyOf;
+    ImmutableSet<String> copyOfNames;
     Optionalish optionalish = Optionalish.createIfOptional(targetType);
     if (optionalish == null) {
-      copyOf = "copyOf";
+      copyOfNames = ImmutableSet.of("copyOfSorted", "copyOf");
     } else {
       VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
       boolean nullable =
           AutoValueOrOneOfProcessor.nullableAnnotationFor(
                   parameterElement, parameterElement.asType())
               .isPresent();
-      copyOf = nullable ? optionalish.ofNullable() : "of";
+      copyOfNames = ImmutableSet.of(nullable ? optionalish.ofNullable() : "of");
     }
     TypeElement targetTypeElement = MoreElements.asType(typeUtils.asElement(targetType));
     ImmutableList.Builder<ExecutableElement> copyOfMethods = ImmutableList.builder();
-    for (ExecutableElement method :
-        ElementFilter.methodsIn(targetTypeElement.getEnclosedElements())) {
-      if (method.getSimpleName().contentEquals(copyOf)
-          && method.getParameters().size() == 1
-          && method.getModifiers().contains(Modifier.STATIC)) {
-        copyOfMethods.add(method);
+    for (String copyOfName : copyOfNames) {
+      for (ExecutableElement method :
+          ElementFilter.methodsIn(targetTypeElement.getEnclosedElements())) {
+        if (method.getSimpleName().contentEquals(copyOfName)
+            && method.getParameters().size() == 1
+            && method.getModifiers().contains(Modifier.STATIC)) {
+          copyOfMethods.add(method);
+        }
       }
     }
     return copyOfMethods.build();
