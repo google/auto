@@ -307,18 +307,10 @@ public class BasicAnnotationProcessorTest {
 
   private static <K, V>
       Correspondence<SetMultimap<K, V>, SetMultimap<K, String>> setMultimapValuesByString() {
-    return new Correspondence<SetMultimap<K, V>, SetMultimap<K, String>>() {
-      @Override
-      public boolean compare(SetMultimap<K, V> actual, SetMultimap<K, String> expected) {
-        return ImmutableSetMultimap.copyOf(transformValues(actual, Object::toString))
-            .equals(expected);
-      }
-
-      @Override
-      public String toString() {
-        return "is equivalent comparing multimap values by `toString()` to";
-      }
-    };
+    return Correspondence.from(
+        (actual, expected) ->
+            ImmutableSetMultimap.copyOf(transformValues(actual, Object::toString)).equals(expected),
+        "is equivalent comparing multimap values by `toString()` to");
   }
 
   @Test public void reportsMissingType() {
