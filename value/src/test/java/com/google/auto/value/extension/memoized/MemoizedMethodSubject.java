@@ -27,7 +27,7 @@ import com.google.common.truth.Subject;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
 
-final class MemoizedMethodSubject extends Subject<MemoizedMethodSubject, String> {
+final class MemoizedMethodSubject extends Subject {
   private final String actual;
 
   MemoizedMethodSubject(FailureMetadata failureMetadata, String actual) {
