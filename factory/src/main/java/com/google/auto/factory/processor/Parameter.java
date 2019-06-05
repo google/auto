@@ -21,9 +21,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -45,18 +45,19 @@ import javax.lang.model.util.Types;
 @AutoValue
 abstract class Parameter {
 
-  static final Function<Parameter, TypeMirror> TYPE = new Function<Parameter, TypeMirror>() {
-      @Override
-      public TypeMirror apply(Parameter parameter) {
-        return parameter.type();
-      }
-    };
-
   /**
    * The original type of the parameter, while {@code key().type()} erases the wrapped {@link
    * Provider}, if any.
    */
-  abstract TypeMirror type();
+  abstract Equivalence.Wrapper<TypeMirror> type();
+
+  boolean isProvider() {
+    return Mirrors.isProvider(type().get());
+  }
+
+  boolean isPrimitive() {
+    return type().get().getKind().isPrimitive();
+  }
 
   /** The name of the parameter. */
   abstract String name();
@@ -82,7 +83,7 @@ abstract class Parameter {
 
     Key key = Key.create(type, annotations, types);
     return new AutoValue_Parameter(
-        type,
+        MoreTypes.equivalence().wrap(type),
         variable.getSimpleName().toString(),
         key,
         wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), nullable));

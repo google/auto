@@ -15,7 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
@@ -222,8 +221,8 @@ abstract class FactoryDescriptor {
     }
 
     // Descriptors are identical if they have the same passed types in the same order.
-    return MoreTypes.equivalence().pairwise().equivalent(
-        Iterables.transform(factory.passedParameters(), Parameter.TYPE),
-        Iterables.transform(implementation.passedParameters(), Parameter.TYPE));
+    return Iterables.elementsEqual(
+        Iterables.transform(factory.passedParameters(), Parameter::type),
+        Iterables.transform(implementation.passedParameters(), Parameter::type));
   }
 }
