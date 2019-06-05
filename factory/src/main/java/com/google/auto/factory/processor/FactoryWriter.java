@@ -16,7 +16,6 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
-import static com.google.auto.factory.processor.Mirrors.isProvider;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -143,13 +142,13 @@ final class FactoryWriter {
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
           argument = CodeBlock.of(parameter.name());
-          if (parameter.type().getKind().isPrimitive()) {
+          if (parameter.isPrimitive()) {
             checkNotNull = false;
           }
         } else {
           ProviderField provider = descriptor.providers().get(parameter.key());
           argument = CodeBlock.of(provider.name());
-          if (isProvider(parameter.type())) {
+          if (parameter.isProvider()) {
             // Providers are checked for nullness in the Factory's constructor.
             checkNotNull = false;
           } else {
@@ -204,7 +203,7 @@ final class FactoryWriter {
     ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {
       ParameterSpec.Builder parameterBuilder =
-          ParameterSpec.builder(TypeName.get(parameter.type()), parameter.name());
+          ParameterSpec.builder(TypeName.get(parameter.type().get()), parameter.name());
       for (AnnotationMirror annotation :
           Iterables.concat(parameter.nullable().asSet(), parameter.key().qualifier().asSet())) {
         parameterBuilder.addAnnotation(AnnotationSpec.get(annotation));
@@ -243,7 +242,7 @@ final class FactoryWriter {
     }
     for (FactoryMethodDescriptor method : descriptor.methodDescriptors()) {
       for (Parameter parameter : method.creationParameters()) {
-        if (!parameter.nullable().isPresent() && !parameter.type().getKind().isPrimitive()) {
+        if (!parameter.nullable().isPresent() && !parameter.type().get().getKind().isPrimitive()) {
           return true;
         }
       }
