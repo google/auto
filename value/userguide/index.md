@@ -56,7 +56,6 @@ import com.google.auto.value.AutoValue;
 @AutoValue
 abstract class Animal {
   static Animal create(String name, int numberOfLegs) {
-    // See "How do I...?" below for nested classes.
     return new AutoValue_Animal(name, numberOfLegs);
   }
 
@@ -68,9 +67,12 @@ abstract class Animal {
 The constructor parameters correspond, in order, to the abstract accessor
 methods.
 
+**For a nested class**, see ["How do I use AutoValue with a nested class"](howto.md#nested).
+
 Note that in real life, some classes and methods would presumably be public and
 have Javadoc. We're leaving these off in the User Guide only to keep the
 examples short and simple.
+
 
 ### In `pom.xml`
 
