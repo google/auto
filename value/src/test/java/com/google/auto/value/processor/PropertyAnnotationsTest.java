@@ -291,7 +291,7 @@ public class PropertyAnnotationsTest {
     assertGeneratedMatches(
         ImmutableList.of(),
         ImmutableList.of("@SuppressWarnings(\"a\")"),
-        ImmutableList.of("@SuppressWarnings(value={\"a\"})"));
+        ImmutableList.of("@SuppressWarnings(\"a\")"));
   }
 
   @Test
@@ -299,7 +299,7 @@ public class PropertyAnnotationsTest {
     assertGeneratedMatches(
         ImmutableList.of(),
         ImmutableList.of("@SuppressWarnings({\"a\", \"b\"})"),
-        ImmutableList.of("@SuppressWarnings(value={\"a\", \"b\"})"));
+        ImmutableList.of("@SuppressWarnings({\"a\", \"b\"})"));
   }
 
   @Test
@@ -445,9 +445,11 @@ public class PropertyAnnotationsTest {
     assertGeneratedMatches(
         getImports(PropertyAnnotationsTest.class),
         ImmutableList.of(
-            TEST_ARRAY_ANNOTATION + "(testEnums = {PropertyAnnotationsTest.TestEnum.A})"),
+            TEST_ARRAY_ANNOTATION + "(testEnums = {PropertyAnnotationsTest.TestEnum.A,"
+                + " PropertyAnnotationsTest.TestEnum.B})"),
         ImmutableList.of(
-            TEST_ARRAY_ANNOTATION + "(testEnums = {PropertyAnnotationsTest.TestEnum.A})"));
+            TEST_ARRAY_ANNOTATION + "(testEnums = {PropertyAnnotationsTest.TestEnum.A,"
+                + " PropertyAnnotationsTest.TestEnum.B})"));
   }
 
   @Test
@@ -459,7 +461,17 @@ public class PropertyAnnotationsTest {
                 + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation})"),
         ImmutableList.of(
             TEST_ARRAY_ANNOTATION
-                + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation})"));
+                + "(testAnnotations = @PropertyAnnotationsTest.OtherAnnotation)"));
+    assertGeneratedMatches(
+        getImports(PropertyAnnotationsTest.class),
+        ImmutableList.of(
+            TEST_ARRAY_ANNOTATION
+                + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation,"
+                + " @PropertyAnnotationsTest.OtherAnnotation})"),
+        ImmutableList.of(
+            TEST_ARRAY_ANNOTATION
+                + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation,"
+                + " @PropertyAnnotationsTest.OtherAnnotation})"));
   }
 
   @Test
@@ -471,7 +483,7 @@ public class PropertyAnnotationsTest {
                 + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation(foo = 999)})"),
         ImmutableList.of(
             TEST_ARRAY_ANNOTATION
-                + "(testAnnotations = {@PropertyAnnotationsTest.OtherAnnotation(foo = 999)})"));
+                + "(testAnnotations = @PropertyAnnotationsTest.OtherAnnotation(foo = 999))"));
   }
 
   /**

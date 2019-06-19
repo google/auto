@@ -16,8 +16,10 @@
 package com.google.auto.value.processor;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -154,21 +156,48 @@ final class AnnotationOutput {
 
   private static class AnnotationSourceFormVisitor extends SourceFormVisitor {
     @Override
+    public Void visitArray(List<? extends AnnotationValue> values, StringBuilder sb) {
+      if (values.size() == 1) {
+        // We can shorten @Foo(a = {23}) to @Foo(a = 23). For the specific case where `a` is
+        // actually `value`, we'll already have shortened that in visitAnnotation, so effectively we
+        // go from @Foo(value = {23}) to @Foo({23}) to @Foo(23).
+        visit(values.get(0), sb);
+        return null;
+      }
+      return super.visitArray(values, sb);
+    }
+
+    @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
       sb.append('@').append(TypeEncoder.encode(a.getAnnotationType()));
-      Map<ExecutableElement, AnnotationValue> map =
-          ImmutableMap.<ExecutableElement, AnnotationValue>copyOf(a.getElementValues());
+      ImmutableMap<ExecutableElement, AnnotationValue> map =
+          ImmutableMap.copyOf(a.getElementValues());
       if (!map.isEmpty()) {
         sb.append('(');
-        String sep = "";
-        for (Map.Entry<ExecutableElement, AnnotationValue> entry : map.entrySet()) {
-          sb.append(sep).append(entry.getKey().getSimpleName()).append(" = ");
-          sep = ", ";
-          this.visit(entry.getValue(), sb);
+        Optional<AnnotationValue> shortForm = shortForm(map);
+        if (shortForm.isPresent()) {
+          this.visit(shortForm.get(), sb);
+        } else {
+          String sep = "";
+          for (Map.Entry<ExecutableElement, AnnotationValue> entry : map.entrySet()) {
+            sb.append(sep).append(entry.getKey().getSimpleName()).append(" = ");
+            sep = ", ";
+            this.visit(entry.getValue(), sb);
+          }
         }
         sb.append(')');
       }
       return null;
+    }
+
+    // We can shorten @Annot(value = 23) to @Annot(23).
+    private static Optional<AnnotationValue> shortForm(
+        Map<ExecutableElement, AnnotationValue> values) {
+      if (values.size() == 1
+          && Iterables.getOnlyElement(values.keySet()).getSimpleName().contentEquals("value")) {
+        return Optional.of(Iterables.getOnlyElement(values.values()));
+      }
+      return Optional.empty();
     }
   }
 
