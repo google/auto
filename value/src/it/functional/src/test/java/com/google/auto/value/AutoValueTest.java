@@ -45,6 +45,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -3204,5 +3205,54 @@ public class AutoValueTest {
     ChildOfAbstractGenericParentWithBuilder<String> child =
         ChildOfAbstractGenericParentWithBuilder.<String>builder().foo("foo").build();
     assertThat(child.foo()).isEqualTo("foo");
+  }
+
+  @SuppressWarnings("ClassCanBeStatic")
+  static class OuterWithTypeParam<T extends Number> {
+    class InnerWithTypeParam<U> {}
+    class InnerWithoutTypeParam {}
+    static class Nested {}
+  }
+
+  @AutoValue
+  abstract static class Nesty {
+    abstract OuterWithTypeParam<Double>.InnerWithTypeParam<String> innerWithTypeParam();
+    abstract OuterWithTypeParam<Double>.InnerWithoutTypeParam innerWithoutTypeParam();
+    abstract OuterWithTypeParam.Nested nested();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_Nesty.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setInnerWithTypeParam(
+          OuterWithTypeParam<Double>.InnerWithTypeParam<String> x);
+      abstract Builder setInnerWithoutTypeParam(OuterWithTypeParam<Double>.InnerWithoutTypeParam x);
+      abstract Builder setNested(OuterWithTypeParam.Nested x);
+      abstract Nesty build();
+    }
+  }
+
+  @Test
+  public void outerWithTypeParam() throws ReflectiveOperationException {
+    @SuppressWarnings("UseDiamond") // Currently we compile this with -source 6 in the Eclipse test.
+    OuterWithTypeParam<Double> outer = new OuterWithTypeParam<Double>();
+    Nesty nesty = Nesty.builder()
+        .setInnerWithTypeParam(outer.new InnerWithTypeParam<String>())
+        .setInnerWithoutTypeParam(outer.new InnerWithoutTypeParam())
+        .setNested(new OuterWithTypeParam.Nested())
+        .build();
+    Type originalReturnType =
+        Nesty.class.getDeclaredMethod("innerWithTypeParam").getGenericReturnType();
+    Type generatedReturnType =
+        nesty.getClass().getDeclaredMethod("innerWithTypeParam").getGenericReturnType();
+    assertThat(generatedReturnType).isEqualTo(originalReturnType);
+    Type generatedBuilderParamType =
+        Nesty.builder()
+            .getClass()
+            .getDeclaredMethod("setInnerWithTypeParam", OuterWithTypeParam.InnerWithTypeParam.class)
+            .getGenericParameterTypes()[0];
+    assertThat(generatedBuilderParamType).isEqualTo(originalReturnType);
   }
 }
