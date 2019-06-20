@@ -241,6 +241,117 @@ public class AutoValueCompilationTest {
     assertThat(compilation).succeededWithoutWarnings();
   }
 
+  @Test
+  public void testNestedParameterizedTypesWithTypeAnnotations() throws Exception {
+    JavaFileObject annotFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Annot",
+            "package foo.bar;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface Annot {",
+            "  int value();",
+            "}");
+    JavaFileObject outerFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.baz.OuterWithTypeParam",
+            "package foo.baz;",
+            "",
+            "public class OuterWithTypeParam<T extends Number> {",
+            "  public class InnerWithTypeParam<U> {}",
+            "}");
+    JavaFileObject nestyFileObject =
+        JavaFileObjects.forSourceLines(
+            "com.example.Nesty",
+            "package com.example;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import foo.bar.Annot;",
+            "import foo.baz.OuterWithTypeParam;",
+            "",
+            "@AutoValue",
+            "abstract class Nesty {",
+            "  abstract @Annot(1) OuterWithTypeParam<@Annot(2) Double>",
+            "      .@Annot(3) InnerWithTypeParam<@Annot(4) String> inner();",
+            "",
+            "  static Nesty of(",
+            "      @Annot(1) OuterWithTypeParam<@Annot(2) Double>",
+            "          .@Annot(3) InnerWithTypeParam<@Annot(4) String> inner) {",
+            "    return new AutoValue_Nesty(inner);",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "com.example.AutoValue_Nesty",
+            "package com.example;",
+            "",
+            "import foo.bar.Annot;",
+            "import foo.baz.OuterWithTypeParam;",
+            GeneratedImport.importGeneratedAnnotationType(),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+            "final class AutoValue_Nesty extends Nesty {",
+            "  private final @Annot(1) OuterWithTypeParam<@Annot(2) Double>"
+                + ".@Annot(3) InnerWithTypeParam<@Annot(4) String> inner;",
+            "",
+            "  AutoValue_Nesty(",
+            "      @Annot(1) OuterWithTypeParam<@Annot(2) Double>"
+                + ".@Annot(3) InnerWithTypeParam<@Annot(4) String> inner) {",
+            "    if (inner == null) {",
+            "      throw new NullPointerException(\"Null inner\");",
+            "    }",
+            "    this.inner = inner;",
+            "  }",
+            "",
+            "  @Override",
+            "  @Annot(1) OuterWithTypeParam<@Annot(2) Double>"
+                + ".@Annot(3) InnerWithTypeParam<@Annot(4) String> inner() {",
+            "    return inner;",
+            "  }",
+            "",
+            "  @Override",
+            "  public String toString() {",
+            "    return \"Nesty{\"",
+            "        + \"inner=\" + inner",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override",
+            "  public boolean equals(Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Nesty) {",
+            "      Nesty that = (Nesty) o;",
+            "      return this.inner.equals(that.inner());",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+
+            "  @Override",
+            "  public int hashCode() {",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= inner.hashCode();",
+            "    return h$;",
+            "  }",
+            "}");
+
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(annotFileObject, outerFileObject, nestyFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("com.example.AutoValue_Nesty")
+        .hasSourceEquivalentTo(expectedOutput);
+  }
+
   // In the following few tests, see AutoValueProcessor.validateMethods for why unrecognized
   // abstract methods provoke only a warning rather than an error. Compilation will fail anyway
   // because the generated class is not abstract and does not implement the unrecognized methods.
