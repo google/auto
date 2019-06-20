@@ -20,6 +20,7 @@ import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
 import static java.util.stream.Collectors.joining;
 
+import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.testing.compile.Compilation;
@@ -32,6 +33,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -300,6 +302,53 @@ public class TypeEncoderTest {
     assertThat(decoded).isEqualTo(expected);
   }
 
+  @SuppressWarnings("ClassCanBeStatic")
+  static class Outer<T extends Number> {
+    class InnerWithoutTypeParam {}
+    class Middle<U> {
+      class InnerWithTypeParam<V> {}
+    }
+  }
+
+  @Test
+  public void testOuterParameterizedInnerNot() {
+    TypeElement outerElement = typeElementOf(Outer.class);
+    DeclaredType doubleMirror = typeMirrorOf(Double.class);
+    DeclaredType outerOfDoubleMirror = typeUtils.getDeclaredType(outerElement, doubleMirror);
+    TypeElement innerWithoutTypeParamElement = typeElementOf(Outer.InnerWithoutTypeParam.class);
+    DeclaredType parameterizedInnerWithoutTypeParam =
+        typeUtils.getDeclaredType(outerOfDoubleMirror, innerWithoutTypeParamElement);
+    String encoded = TypeEncoder.encode(parameterizedInnerWithoutTypeParam);
+    String myPackage = getClass().getPackage().getName();
+    String decoded =
+        TypeEncoder.decode(
+            encoded, elementUtils, typeUtils, myPackage, baseWithoutContainedTypes());
+    String expected = "TypeEncoderTest.Outer<Double>.InnerWithoutTypeParam";
+    assertThat(decoded).isEqualTo(expected);
+  }
+
+  @Test
+  public void testOuterParameterizedInnerAlso() {
+    TypeElement outerElement = typeElementOf(Outer.class);
+    DeclaredType doubleMirror = typeMirrorOf(Double.class);
+    DeclaredType outerOfDoubleMirror = typeUtils.getDeclaredType(outerElement, doubleMirror);
+    TypeElement middleElement = typeElementOf(Outer.Middle.class);
+    DeclaredType stringMirror = typeMirrorOf(String.class);
+    DeclaredType middleOfStringMirror =
+        typeUtils.getDeclaredType(outerOfDoubleMirror, middleElement, stringMirror);
+    TypeElement innerWithTypeParamElement = typeElementOf(Outer.Middle.InnerWithTypeParam.class);
+    DeclaredType integerMirror = typeMirrorOf(Integer.class);
+    DeclaredType parameterizedInnerWithTypeParam =
+        typeUtils.getDeclaredType(middleOfStringMirror, innerWithTypeParamElement, integerMirror);
+    String encoded = TypeEncoder.encode(parameterizedInnerWithTypeParam);
+    String myPackage = getClass().getPackage().getName();
+    String decoded =
+        TypeEncoder.decode(
+            encoded, elementUtils, typeUtils, myPackage, baseWithoutContainedTypes());
+    String expected = "TypeEncoderTest.Outer<Double>.Middle<String>.InnerWithTypeParam<Integer>";
+    assertThat(decoded).isEqualTo(expected);
+  }
+
   private static Set<TypeMirror> typeMirrorSet(TypeMirror... typeMirrors) {
     Set<TypeMirror> set = new TypeMirrorSet();
     for (TypeMirror typeMirror : typeMirrors) {
@@ -312,8 +361,8 @@ public class TypeEncoderTest {
     return elementUtils.getTypeElement(c.getCanonicalName());
   }
 
-  private TypeMirror typeMirrorOf(Class<?> c) {
-    return typeElementOf(c).asType();
+  private DeclaredType typeMirrorOf(Class<?> c) {
+    return MoreTypes.asDeclared(typeElementOf(c).asType());
   }
 
   /**
