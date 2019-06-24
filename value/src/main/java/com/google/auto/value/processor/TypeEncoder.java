@@ -182,12 +182,19 @@ final class TypeEncoder {
     sb.append(typeParameter.getSimpleName());
     String sep = " extends ";
     for (TypeMirror bound : typeParameter.getBounds()) {
-      if (!bound.toString().equals("java.lang.Object")) {
+      if (!isUnannotatedJavaLangObject(bound)) {
         sb.append(sep);
         sep = " & ";
-        sb.append(encode(bound));
+        sb.append(encodeWithAnnotations(bound));
       }
     }
+  }
+
+  // We can omit "extends Object" from a type bound, but not "extends @NullableType Object".
+  private static boolean isUnannotatedJavaLangObject(TypeMirror type) {
+    return type.getKind().equals(TypeKind.DECLARED)
+        && type.getAnnotationMirrors().isEmpty()
+        && MoreTypes.asTypeElement(type).getQualifiedName().contentEquals("java.lang.Object");
   }
 
   private static void appendAnnotations(
