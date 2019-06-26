@@ -50,8 +50,7 @@ public class ReformatterTest {
             + "\n"
             + "  Eodem ( Eadem eodem ) { }\n";
     String output =
-        "\n"
-            + "package com.latin.declension;\n"
+            "package com.latin.declension;\n"
             + "\n"
             + "public class Idem {\n"
             + "\n"
@@ -80,8 +79,7 @@ public class ReformatterTest {
             + "  static final char QUOTE2 = '\\\"'  ;\n"
             + "}\n";
     String output =
-        "\n"
-            + "package com.example.whatever;\n"
+            "package com.example.whatever;\n"
             + "\n"
             + "public class SomeClass {\n"
             + "  static final String STRING = \"  hello  world  \\n\";\n"
@@ -90,6 +88,13 @@ public class ReformatterTest {
             + "  static final char QUOTE = '\"';\n"
             + "  static final char QUOTE2 = '\\\"';\n"
             + "}\n";
+    assertEquals(output, Reformatter.fixup(input));
+  }
+
+  @Test
+  public void noTrailingNewline() {
+    String input = "package com.example.whatever;\n\npublic class SomeClass {}";
+    String output = input + "\n";
     assertEquals(output, Reformatter.fixup(input));
   }
 }
