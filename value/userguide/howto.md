@@ -258,7 +258,16 @@ it simply doesn't exist.
 AutoValue will recognize every abstract accessor method whether it is defined
 directly in your own hand-written class or in a supertype.
 
-<!-- TODO(kevinb): what about the order? -->
+These abstract methods can come from more than one place, for example from an
+interface and from the superclass. It may not then be obvious what order they
+are in, even though you need to know this order if you want to call the
+generated `AutoValue_Foo` constructor. You might find it clearer to use a
+[builder](builders.md) instead. But the order is deterministic: within a class
+or interface, methods are in the order they appear in the source code; methods
+in ancestors come before methods in descendants; methods in interfaces come
+before methods in classes; and in a class or interface that has more than one
+superinterface, the interfaces are in the order of their appearance in
+`implements` or `extends`.
 
 ## <a name="generic"></a>... use AutoValue with a generic class?
 
