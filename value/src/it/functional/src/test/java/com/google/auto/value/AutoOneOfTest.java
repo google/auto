@@ -470,6 +470,40 @@ public class AutoOneOfTest {
     assertThat(pkg.toString()).isEqualTo("LetterOrPackage{package=pacquet}");
   }
 
+  @AutoOneOf(ArrayValue.Kind.class)
+  public abstract static class ArrayValue {
+    public enum Kind {
+      STRING,
+      INTS
+    }
+
+    public abstract Kind getKind();
+
+    public abstract String string();
+
+    @SuppressWarnings("mutable")
+    public abstract int[] ints();
+
+    public static ArrayValue ofString(String string) {
+      return AutoOneOf_AutoOneOfTest_ArrayValue.string(string);
+    }
+
+    public static ArrayValue ofInts(int[] ints) {
+      return AutoOneOf_AutoOneOfTest_ArrayValue.ints(ints);
+    }
+  }
+
+  @Test
+  public void arrayValues() {
+    ArrayValue string = ArrayValue.ofString("foo");
+    ArrayValue ints1 = ArrayValue.ofInts(new int[] {17, 23});
+    ArrayValue ints2 = ArrayValue.ofInts(new int[] {17, 23});
+    new EqualsTester()
+        .addEqualityGroup(string)
+        .addEqualityGroup(ints1, ints2)
+        .testEquals();
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   public @interface CopyTest {
     int value();
