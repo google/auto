@@ -61,7 +61,7 @@
     <dependency>
       <groupId>com.google.escapevelocity</groupId>
       <artifactId>escapevelocity</artifactId>
-      <version>0.9</version>
+      <version>0.9.1</version>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
