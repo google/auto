@@ -106,6 +106,7 @@ public class TypeSimplifierTest {
   }
 
   @Test
+  @SuppressWarnings("TypeEquals") // We want to test the equals method invocation on TypeMirror.
   public void testTypeMirrorSet() {
     // Test the TypeMirrorSet methods. Resist the temptation to rewrite these in terms of
     // Truth operations! For example, don't change assertThat(set.size()).isEqualTo(0) into
