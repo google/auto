@@ -208,6 +208,7 @@ public final class MoreTypes {
     }
 
     @Override
+    @SuppressWarnings("TypeEquals")
     public Boolean visitError(ErrorType a, EqualVisitorParam p) {
       return a.equals(p.type);
     }
@@ -295,6 +296,7 @@ public final class MoreTypes {
     }
   }
 
+  @SuppressWarnings("TypeEquals")
   private static boolean equal(TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
     // TypeMirror.equals is not guaranteed to return true for types that are equal, but we can
     // assume that if it does return true then the types are equal. This check also avoids getting
