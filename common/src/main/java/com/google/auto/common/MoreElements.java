@@ -17,6 +17,7 @@
 package com.google.auto.common;
 
 import static javax.lang.model.element.ElementKind.PACKAGE;
+import static javax.lang.model.element.Modifier.STATIC;
 
 import com.google.auto.common.Overrides.ExplicitOverrides;
 import com.google.common.annotations.Beta;
@@ -277,9 +278,9 @@ public final class MoreElements {
   }
 
   /**
-   * Returns the set of all non-private methods from {@code type}, including methods that it
-   * inherits from its ancestors. Inherited methods that are overridden are not included in the
-   * result. So if {@code type} defines {@code public String toString()}, the returned set will
+   * Returns the set of all non-private, non-static methods from {@code type}, including methods
+   * that it inherits from its ancestors. Inherited methods that are overridden are not included in
+   * the result. So if {@code type} defines {@code public String toString()}, the returned set will
    * contain that method, but not the {@code toString()} method defined by {@code Object}.
    *
    * <p>The returned set may contain more than one method with the same signature, if
@@ -287,6 +288,12 @@ public final class MoreElements {
    * inherits from unrelated interfaces {@code One} and {@code Two} which each define
    * {@code void foo();}, and if it does not itself override the {@code foo()} method,
    * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   *
+   * <p>The order of the returned set is deterministic: within a class or interface, methods are in
+   * the order they appear in the source code; methods in ancestors come before methods in
+   * descendants; methods in interfaces come before methods in classes; and in a class or interface
+   * that has more than one superinterface, the interfaces are in the order of their appearance in
+   * {@code implements} or {@code extends}.
    *
    * @param type the type whose own and inherited methods are to be returned
    * @param elementUtils an {@link Elements} object, typically returned by
@@ -305,9 +312,9 @@ public final class MoreElements {
   }
 
   /**
-   * Returns the set of all non-private methods from {@code type}, including methods that it
-   * inherits from its ancestors. Inherited methods that are overridden are not included in the
-   * result. So if {@code type} defines {@code public String toString()}, the returned set will
+   * Returns the set of all non-private, non-static methods from {@code type}, including methods
+   * that it inherits from its ancestors. Inherited methods that are overridden are not included in
+   * the result. So if {@code type} defines {@code public String toString()}, the returned set will
    * contain that method, but not the {@code toString()} method defined by {@code Object}.
    *
    * <p>The returned set may contain more than one method with the same signature, if
@@ -315,6 +322,12 @@ public final class MoreElements {
    * inherits from unrelated interfaces {@code One} and {@code Two} which each define
    * {@code void foo();}, and if it does not itself override the {@code foo()} method,
    * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   *
+   * <p>The order of the returned set is deterministic: within a class or interface, methods are in
+   * the order they appear in the source code; methods in ancestors come before methods in
+   * descendants; methods in interfaces come before methods in classes; and in a class or interface
+   * that has more than one superinterface, the interfaces are in the order of their appearance in
+   * {@code implements} or {@code extends}.
    *
    * @param type the type whose own and inherited methods are to be returned
    * @param typeUtils a {@link Types} object, typically returned by
@@ -329,6 +342,20 @@ public final class MoreElements {
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
       TypeElement type, Types typeUtils, Elements elementUtils) {
     return getLocalAndInheritedMethods(type, new ExplicitOverrides(typeUtils));
+  }
+
+  private static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
+      TypeElement type, Overrides overrides) {
+    PackageElement pkg = getPackage(type);
+
+    ImmutableSet.Builder<ExecutableElement> methods = ImmutableSet.builder();
+    for (ExecutableElement method : getAllMethods(type, overrides)) {
+      // Filter out all static and non-visible methods.
+      if (!method.getModifiers().contains(STATIC) && methodVisibleFromPackage(method, pkg)) {
+        methods.add(method);
+      }
+    }
+    return methods.build();
   }
 
   /**
@@ -351,10 +378,43 @@ public final class MoreElements {
     return new ExplicitOverrides(typeUtils).overrides(overrider, overridden, type);
   }
 
-  private static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
+  /**
+   * Returns the set of all methods from {@code type}, including methods that it inherits
+   * from its ancestors. Inherited methods that are overridden are not included in the
+   * result. So if {@code type} defines {@code public String toString()}, the returned set
+   * will contain that method, but not the {@code toString()} method defined by {@code Object}.
+   *
+   * <p>The returned set may contain more than one method with the same signature, if
+   * {@code type} inherits those methods from different ancestors. For example, if it
+   * inherits from unrelated interfaces {@code One} and {@code Two} which each define
+   * {@code void foo();}, and if it does not itself override the {@code foo()} method,
+   * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   *
+   * <p>The order of the returned set is deterministic: within a class or interface, methods are in
+   * the order they appear in the source code; methods in ancestors come before methods in
+   * descendants; methods in interfaces come before methods in classes; and in a class or interface
+   * that has more than one superinterface, the interfaces are in the order of their appearance in
+   * {@code implements} or {@code extends}.
+   *
+   * @param type the type whose own and inherited methods are to be returned
+   * @param typeUtils a {@link Types} object, typically returned by
+   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getTypeUtils
+   *     getTypeUtils()}
+   * @param elementUtils an {@link Elements} object, typically returned by
+   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
+   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getElementUtils
+   *     getElementUtils()}
+   */
+  public static ImmutableSet<ExecutableElement> getAllMethods(
+      TypeElement type, Types typeUtils, Elements elementUtils) {
+    return getAllMethods(type, new ExplicitOverrides(typeUtils));
+  }
+
+  private static ImmutableSet<ExecutableElement> getAllMethods(
       TypeElement type, Overrides overrides) {
     SetMultimap<String, ExecutableElement> methodMap = LinkedHashMultimap.create();
-    getLocalAndInheritedMethods(getPackage(type), type, methodMap);
+    getAllMethods(type, methodMap);
     // Find methods that are overridden. We do this using `Elements.overrides`, which means
     // that it is inherently a quadratic operation, since we have to compare every method against
     // every other method. We reduce the performance impact by (a) grouping methods by name, since
@@ -370,6 +430,7 @@ public final class MoreElements {
           ExecutableElement methodJ = methodList.get(j);
           if (overrides.overrides(methodJ, methodI, type)) {
             overridden.add(methodI);
+            break;
           }
         }
       }
@@ -379,29 +440,24 @@ public final class MoreElements {
     return ImmutableSet.copyOf(methods);
   }
 
-  // Add to `methods` the instance methods from `type` that are visible to code in the
-  // package `pkg`. This means all the instance methods from `type` itself and all instance methods
-  // it inherits from its ancestors, except private methods and package-private methods in other
-  // packages. This method does not take overriding into account, so it will add both an ancestor
-  // method and a descendant method that overrides it.
-  // `methods` is a multimap from a method name to all of the methods with that name, including
-  // methods that override or overload one another. Within those methods, those in ancestor types
-  // always precede those in descendant types.
-  private static void getLocalAndInheritedMethods(
-      PackageElement pkg, TypeElement type, SetMultimap<String, ExecutableElement> methods) {
+  // Add to `methods` the static and instance methods from `type`. This means all methods from
+  // `type` itself and all methods it inherits from its ancestors. This method does not take
+  // overriding into account, so it will add both an ancestor method and a descendant method that
+  // overrides it. `methods` is a multimap from a method name to all of the methods with that name,
+  // including methods that override or overload one another. Within those methods, those in
+  // ancestor types always precede those in descendant types.
+  private static void getAllMethods(
+      TypeElement type, SetMultimap<String, ExecutableElement> methods) {
     for (TypeMirror superInterface : type.getInterfaces()) {
-      getLocalAndInheritedMethods(pkg, MoreTypes.asTypeElement(superInterface), methods);
+      getAllMethods(MoreTypes.asTypeElement(superInterface), methods);
     }
     if (type.getSuperclass().getKind() != TypeKind.NONE) {
       // Visit the superclass after superinterfaces so we will always see the implementation of a
       // method after any interfaces that declared it.
-      getLocalAndInheritedMethods(pkg, MoreTypes.asTypeElement(type.getSuperclass()), methods);
+      getAllMethods(MoreTypes.asTypeElement(type.getSuperclass()), methods);
     }
     for (ExecutableElement method : ElementFilter.methodsIn(type.getEnclosedElements())) {
-      if (!method.getModifiers().contains(Modifier.STATIC)
-          && methodVisibleFromPackage(method, pkg)) {
-        methods.put(method.getSimpleName().toString(), method);
-      }
+      methods.put(method.getSimpleName().toString(), method);
     }
   }
 
