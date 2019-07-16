@@ -26,7 +26,7 @@
 
   <groupId>com.google.auto.service</groupId>
   <artifactId>auto-service-aggregator</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.0-rc6</version>
   <name>AutoService Aggregator</name>
   <description>
     Aggregator POM for @AutoService
