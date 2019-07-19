@@ -89,6 +89,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>net.ltgt.gradle.incap</groupId>
+      <artifactId>incap-processor</artifactId>
+      <version>0.2</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.googlejavaformat</groupId>
       <artifactId>google-java-format</artifactId>
       <version>1.5</version>
