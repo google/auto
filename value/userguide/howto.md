@@ -367,11 +367,13 @@ constructors by *Effective Java*, Item 1.
 
 ## <a name="interface"></a>... use AutoValue on an interface, not abstract class?
 
-Interfaces are not allowed. The only advantage of interfaces we're aware of is
-that you can omit `public abstract` from the methods. That's not much. On the
-other hand, you would lose the immutability guarantee, and you'd also invite
-more of the kind of bad behavior described in [this best-practices
-item](practices.md#simple). On balance, we don't think it's worth it.
+AutoValue classes can certainly implement an interface, however an interface may
+not be used in lieu of an abstract class. The only advantage of interfaces we're
+aware of is that you can omit `public abstract` from the methods. That's not
+much. On the other hand, you would lose the immutability guarantee, and you'd
+also invite more of the kind of bad behavior described in
+[this best-practices item](practices.md#simple). On balance, we don't think it's
+worth it.
 
 ## <a name="memoize"></a>... memoize ("cache") derived properties?
 
