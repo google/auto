@@ -257,7 +257,7 @@ final class FactoryWriter {
 
   private static String getPackage(CharSequence fullyQualifiedName) {
     int lastDot = lastIndexOf(fullyQualifiedName, '.');
-    return fullyQualifiedName.subSequence(0, lastDot).toString();
+    return lastDot == -1 ? "" : fullyQualifiedName.subSequence(0, lastDot).toString();
   }
 
   private static int lastIndexOf(CharSequence charSequence, char c) {
