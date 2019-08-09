@@ -5,18 +5,18 @@ If you would like to contribute code to Auto you can do so through GitHub
 by forking the repository and sending a pull request.
 
 When submitting code, please make every effort to follow existing conventions
-and style in order to keep the code as readable as possible.  
+and style in order to keep the code as readable as possible.
 
 Where appropriate, please provide unit tests or integration tests. Unit tests
 should be JUnit based tests and can use either standard JUnit assertions or
-Truth assertions and be added to `<project>/src/test/java`.  Changes to 
-code generation or other build-time behaviour should go into small maven 
+Truth assertions and be added to `<project>/src/test/java`.  Changes to
+code generation or other build-time behaviour should go into small maven
 projects using the `maven-invoker-plugin`.  Examples of this are in
 `generator/src/it` and can include bean-shell verification scripts and other
 facilities provided by `maven-invoker-plugin`.
 
 Please make sure your code compiles by running `mvn clean verify` which will
-execute both unit and integration test phases.  Additionally, consider using 
+execute both unit and integration test phases.  Additionally, consider using
 http://travis-ci.org to validate your branches before you even put them into
 pull requests.  All pull requests will be validated by Travis-ci in any case
 and must pass before being merged.
@@ -26,12 +26,6 @@ please ensure that the form is consistent with the existing files, and please
 note that a Google, Inc. copyright line must appear in every copyright notice.
 All files are released with the Apache 2.0 license and any new files may only
 be accepted under the terms of that license.
-
-Checkstyle failures during compilation indicate errors in your style and will
-be displayed in the console output of the build (including in Travis-CI output),
-or can be viewed in the `checkstyle-result.xml` file.  To save yourself some
-hassle, consider executing checkstyle first per: 'mvn checkstyle:checkstyle'.
-It's fast, and will catch style errors early.
 
 Before your code can be accepted into the project you must sign the
 [Individual Contributor License Agreement (CLA)][1].

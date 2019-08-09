@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright 2013 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +20,20 @@ import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalenc
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.auto.common.AnnotationMirrors;
+import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Set;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
@@ -42,18 +45,19 @@ import javax.lang.model.util.Types;
 @AutoValue
 abstract class Parameter {
 
-  static final Function<Parameter, TypeMirror> TYPE = new Function<Parameter, TypeMirror>() {
-      @Override
-      public TypeMirror apply(Parameter parameter) {
-        return parameter.type();
-      }
-    };
-
   /**
    * The original type of the parameter, while {@code key().type()} erases the wrapped {@link
    * Provider}, if any.
    */
-  abstract TypeMirror type();
+  abstract Equivalence.Wrapper<TypeMirror> type();
+
+  boolean isProvider() {
+    return Mirrors.isProvider(type().get());
+  }
+
+  boolean isPrimitive() {
+    return type().get().getKind().isPrimitive();
+  }
 
   /** The name of the parameter. */
   abstract String name();
@@ -65,11 +69,13 @@ abstract class Parameter {
     return unwrapOptionalEquivalence(nullableWrapper());
   }
 
-  static Parameter forVariableElement(VariableElement variable, TypeMirror type, Types types) {
+  private static Parameter forVariableElement(
+      VariableElement variable, TypeMirror type, Types types) {
     Optional<AnnotationMirror> nullable = Optional.absent();
-    Iterable<? extends AnnotationMirror> annotations = variable.getAnnotationMirrors();
+    Iterable<? extends AnnotationMirror> annotations =
+        Iterables.concat(variable.getAnnotationMirrors(), type.getAnnotationMirrors());
     for (AnnotationMirror annotation : annotations) {
-      if (annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable")) {
+      if (isNullable(annotation)) {
         nullable = Optional.of(annotation);
         break;
       }
@@ -77,10 +83,20 @@ abstract class Parameter {
 
     Key key = Key.create(type, annotations, types);
     return new AutoValue_Parameter(
-        type,
+        MoreTypes.equivalence().wrap(type),
         variable.getSimpleName().toString(),
         key,
         wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), nullable));
+  }
+
+  private static boolean isNullable(AnnotationMirror annotation) {
+    TypeElement annotationType = MoreElements.asType(annotation.getAnnotationType().asElement());
+    return annotationType.getSimpleName().contentEquals("Nullable")
+        || annotationType
+            .getQualifiedName()
+            .toString()
+            // For NullableDecl and NullableType compatibility annotations
+            .startsWith("org.checkerframework.checker.nullness.compatqual.Nullable");
   }
 
   static ImmutableSet<Parameter> forParameterList(

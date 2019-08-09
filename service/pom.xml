@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright (C) 2013 Google, Inc.
+  Copyright 2013 Google LLC
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,18 +19,27 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.google.auto</groupId>
-    <artifactId>auto-parent</artifactId>
-    <version>3</version>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
   </parent>
 
   <groupId>com.google.auto.service</groupId>
-  <artifactId>auto-service</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <name>AutoService</name>
+  <artifactId>auto-service-aggregator</artifactId>
+  <version>HEAD-SNAPSHOT</version>
+  <name>AutoService Aggregator</name>
   <description>
-    Provider-configuration files for ServiceLoader.
+    Aggregator POM for @AutoService
   </description>
+  <packaging>pom</packaging>
+  <url>https://github.com/google/auto/tree/master/service</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.8</java.version>
+    <guava.version>27.0.1-jre</guava.version>
+    <truth.version>0.44</truth.version>
+  </properties>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -39,52 +48,91 @@
     <tag>HEAD</tag>
   </scm>
 
-  <dependencies>
-    <dependency>
-      <groupId>com.google.auto</groupId>
-      <artifactId>auto-common</artifactId>
-      <version>0.3</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>19.0</version>
-    </dependency>
-    <!-- test dependencies -->
-    <dependency>
-      <groupId>com.google.testing.compile</groupId>
-      <artifactId>compile-testing</artifactId>
-      <version>0.6</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.truth</groupId>
-      <artifactId>truth</artifactId>
-      <version>0.24</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>http://github.com/google/auto/issues</url>
+  </issueManagement>
+
+  <licenses>
+    <license>
+      <name>Apache 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Google LLC</name>
+    <url>http://www.google.com</url>
+  </organization>
+
+  <modules>
+    <module>annotations</module>
+    <module>processor</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- main dependencies -->
+
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava-gwt</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+
+      <!-- test dependencies -->
+
+      <dependency>
+        <groupId>com.google.testing.compile</groupId>
+        <artifactId>compile-testing</artifactId>
+        <version>0.16</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.truth</groupId>
+        <artifactId>truth</artifactId>
+        <version>${truth.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>2.6</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <!-- disable processing because the definition in META-INF/services breaks javac -->
-          <compilerArgument>-proc:none</compilerArgument>
-        </configuration>
-      </plugin>
-    </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.7.0</version>
+          <configuration>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
+            <compilerArgument>-Xlint:all</compilerArgument>
+            <showWarnings>true</showWarnings>
+            <showDeprecation>true</showDeprecation>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.plexus</groupId>
+              <artifactId>plexus-java</artifactId>
+              <version>0.9.4</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 </project>

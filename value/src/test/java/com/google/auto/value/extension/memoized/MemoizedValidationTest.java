@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
+ * Copyright 2016 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import static com.google.auto.value.extension.memoized.MemoizedMethodSubjectFact
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
 
+import com.google.auto.value.extension.memoized.processor.MemoizedValidator;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
@@ -64,7 +65,7 @@ public class MemoizedValidationTest {
     assertThatMemoizeMethod("@Memoized String method(Object param) { return \"\"; }")
         .hasError("@Memoized methods cannot have parameters");
   }
-  
+
   @Test
   public void notInAutoValueClass() {
     JavaFileObject source =

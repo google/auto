@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright 2013 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.factory.processor.Mirrors.isProvider;
+import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -37,23 +37,28 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
 import java.util.Iterator;
-import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
 import javax.inject.Provider;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
 
 final class FactoryWriter {
 
   private final Filer filer;
+  private final Elements elements;
+  private final SourceVersion sourceVersion;
 
-  FactoryWriter(Filer filer) {
+  FactoryWriter(Filer filer, Elements elements, SourceVersion sourceVersion) {
     this.filer = filer;
+    this.elements = elements;
+    this.sourceVersion = sourceVersion;
   }
 
   private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
@@ -61,13 +66,15 @@ final class FactoryWriter {
   void writeFactory(final FactoryDescriptor descriptor)
       throws IOException {
     String factoryName = getSimpleName(descriptor.name()).toString();
-    TypeSpec.Builder factory = classBuilder(factoryName);
-    factory.addAnnotation(
-        AnnotationSpec.builder(Generated.class)
-            .addMember("value", "$S", AutoFactoryProcessor.class.getName())
-            .addMember(
-                "comments", "$S", "https://github.com/google/auto/tree/master/factory")
-            .build());
+    TypeSpec.Builder factory =
+        classBuilder(factoryName)
+            .addOriginatingElement(descriptor.declaration().targetType());
+    generatedAnnotationSpec(
+            elements,
+            sourceVersion,
+            AutoFactoryProcessor.class,
+            "https://github.com/google/auto/tree/master/factory")
+        .ifPresent(factory::addAnnotation);
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }
@@ -100,7 +107,7 @@ final class FactoryWriter {
     Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
     for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
       ProviderField provider = providerFields.next();
-      TypeName typeName = TypeName.get(provider.key().type()).box();
+      TypeName typeName = TypeName.get(provider.key().type().get()).box();
       TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
@@ -135,13 +142,13 @@ final class FactoryWriter {
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
           argument = CodeBlock.of(parameter.name());
-          if (parameter.type().getKind().isPrimitive()) {
+          if (parameter.isPrimitive()) {
             checkNotNull = false;
           }
         } else {
           ProviderField provider = descriptor.providers().get(parameter.key());
           argument = CodeBlock.of(provider.name());
-          if (isProvider(parameter.type())) {
+          if (parameter.isProvider()) {
             // Providers are checked for nullness in the Factory's constructor.
             checkNotNull = false;
           } else {
@@ -196,7 +203,7 @@ final class FactoryWriter {
     ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {
       ParameterSpec.Builder parameterBuilder =
-          ParameterSpec.builder(TypeName.get(parameter.type()), parameter.name());
+          ParameterSpec.builder(TypeName.get(parameter.type().get()), parameter.name());
       for (AnnotationMirror annotation :
           Iterables.concat(parameter.nullable().asSet(), parameter.key().qualifier().asSet())) {
         parameterBuilder.addAnnotation(AnnotationSpec.get(annotation));
@@ -235,7 +242,7 @@ final class FactoryWriter {
     }
     for (FactoryMethodDescriptor method : descriptor.methodDescriptors()) {
       for (Parameter parameter : method.creationParameters()) {
-        if (!parameter.nullable().isPresent() && !parameter.type().getKind().isPrimitive()) {
+        if (!parameter.nullable().isPresent() && !parameter.type().get().getKind().isPrimitive()) {
           return true;
         }
       }

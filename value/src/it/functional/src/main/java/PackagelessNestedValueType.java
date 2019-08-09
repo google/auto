@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc.
+ * Copyright 2012 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@
 import com.google.auto.value.AutoValue;
 import java.util.Map;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 public class PackagelessNestedValueType {
   @AutoValue
   public abstract static class Nested {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Google Inc.
+ * Copyright 2015 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,29 +19,61 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.Reflection;
 import com.google.testing.compile.JavaFileObjects;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.concurrent.atomic.AtomicBoolean;
-import javax.annotation.Generated;
+import java.util.Collection;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Tests that {@link AutoValueProcessor} works even if run in a context where the
- * {@code @Generated} annotation does not exist.
+ * Tests that {@link AutoValueProcessor} works even if run in a context where the {@code @Generated}
+ * annotation does not exist.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-@RunWith(JUnit4.class)
+@RunWith(Parameterized.class)
 public class GeneratedDoesNotExistTest {
+
+  @Parameters(name = "{0}")
+  public static Collection<Object[]> data() {
+    ImmutableList.Builder<Object[]> params = ImmutableList.builder();
+    if (SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0) {
+      // use default options when running on JDK > 8
+      // TODO(b/72513371): use --release 8 once compile-testing supports that
+      params.add(
+          new Object[] {
+            ImmutableList.of(), "javax.annotation.processing.Generated",
+          });
+    }
+    params.add(
+        new Object[] {
+          ImmutableList.of("-source", "8", "-target", "8"), "javax.annotation.Generated",
+        });
+    return params.build();
+  }
+
+  private final ImmutableList<String> javacOptions;
+  private final String expectedAnnotation;
+
+  public GeneratedDoesNotExistTest(ImmutableList<String> javacOptions, String expectedAnnotation) {
+    this.javacOptions = javacOptions;
+    this.expectedAnnotation = expectedAnnotation;
+  }
+
   // The classes here are basically just rigmarole to ensure that
   // Types.getTypeElement("javax.annotation.Generated") returns null, and to check that something
   // called that. We want a Processor that forwards everything to AutoValueProcessor, except that
@@ -49,16 +81,19 @@ public class GeneratedDoesNotExistTest {
   // out the Generated class. So that ProcessingEnvironment forwards everything to the real
   // ProcessingEnvironment, except the ProcessingEnvironment.getElementUtils() method. That method
   // returns an Elements object that forwards everything to the real Elements except
-  // getTypeElement("javax.annotation.Generated").
+  // getTypeElement("javax.annotation.Generated") and
+  // getTypeElement("javax.annotation.processing.Generated").
+
+  private static final ImmutableSet<String> GENERATED_ANNOTATIONS =
+      ImmutableSet.of("javax.annotation.Generated", "javax.annotation.processing.Generated");
 
   /**
-   * InvocationHandler that forwards every method to an original object, except methods where
-   * there is an implementation in this class with the same signature. So for example in the
-   * subclass {@link ElementsHandler} there is a method
-   * {@link ElementsHandler#getTypeElement(CharSequence)}, which means that a call of
-   * {@link Elements#getTypeElement(CharSequence)} on the proxy with this invocation handler will
-   * end up calling that method, but a call of any of the other methods of {@code Elements} will
-   * end up calling the method on the original object.
+   * InvocationHandler that forwards every method to an original object, except methods where there
+   * is an implementation in this class with the same signature. So for example in the subclass
+   * {@link ElementsHandler} there is a method {@link ElementsHandler#getTypeElement(CharSequence)},
+   * which means that a call of {@link Elements#getTypeElement(CharSequence)} on the proxy with this
+   * invocation handler will end up calling that method, but a call of any of the other methods of
+   * {@code Elements} will end up calling the method on the original object.
    */
   private abstract static class OverridableInvocationHandler<T> implements InvocationHandler {
     final T original;
@@ -86,16 +121,17 @@ public class GeneratedDoesNotExistTest {
   }
 
   private static class ElementsHandler extends OverridableInvocationHandler<Elements> {
-    private final AtomicBoolean ignoredGenerated;
 
-    ElementsHandler(Elements original, AtomicBoolean ignoredGenerated) {
+    private final Set<String> ignoredGenerated;
+
+    ElementsHandler(Elements original, Set<String> ignoredGenerated) {
       super(original);
       this.ignoredGenerated = ignoredGenerated;
     }
 
     public TypeElement getTypeElement(CharSequence name) {
-      if (name.toString().equals(Generated.class.getName())) {
-        ignoredGenerated.set(true);
+      if (GENERATED_ANNOTATIONS.contains(name.toString())) {
+        ignoredGenerated.add(name.toString());
         return null;
       } else {
         return original.getTypeElement(name);
@@ -107,8 +143,7 @@ public class GeneratedDoesNotExistTest {
       extends OverridableInvocationHandler<ProcessingEnvironment> {
     private final Elements noGeneratedElements;
 
-    ProcessingEnvironmentHandler(
-        ProcessingEnvironment original, AtomicBoolean ignoredGenerated) {
+    ProcessingEnvironmentHandler(ProcessingEnvironment original, Set<String> ignoredGenerated) {
       super(original);
       ElementsHandler elementsHandler =
           new ElementsHandler(original.getElementUtils(), ignoredGenerated);
@@ -121,9 +156,9 @@ public class GeneratedDoesNotExistTest {
   }
 
   private static class ProcessorHandler extends OverridableInvocationHandler<Processor> {
-    private final AtomicBoolean ignoredGenerated;
+    private final Set<String> ignoredGenerated;
 
-    ProcessorHandler(Processor original, AtomicBoolean ignoredGenerated) {
+    ProcessorHandler(Processor original, Set<String> ignoredGenerated) {
       super(original);
       this.ignoredGenerated = ignoredGenerated;
     }
@@ -139,57 +174,59 @@ public class GeneratedDoesNotExistTest {
 
   @Test
   public void test() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  public static Baz create() {",
-        "    return new AutoValue_Baz();",
-        "  }",
-        "}");
-    JavaFileObject expectedOutput = JavaFileObjects.forSourceLines(
-        "foo.bar.AutoValue_Baz",
-        "package foo.bar;",
-        "",
-        "final class AutoValue_Baz extends Baz {",
-        "  AutoValue_Baz() {",
-        "  }",
-        "",
-        "  @Override public String toString() {",
-        "    return \"Baz{\"",
-        "        + \"}\";",
-        "  }",
-        "",
-        "  @Override public boolean equals(Object o) {",
-        "    if (o == this) {",
-        "      return true;",
-        "    }",
-        "    if (o instanceof Baz) {",
-        "      return true;",
-        "    }",
-        "    return false;",
-        "  }",
-        "",
-        "  @Override public int hashCode() {",
-        "    int h = 1;",
-        "    return h;",
-        "  }",
-        "}"
-    );
-    AtomicBoolean ignoredGenerated = new AtomicBoolean();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  public static Baz create() {",
+            "    return new AutoValue_Baz();",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            "final class AutoValue_Baz extends Baz {",
+            "  AutoValue_Baz() {",
+            "  }",
+            "",
+            "  @Override public String toString() {",
+            "    return \"Baz{\"",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override public boolean equals(Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Baz) {",
+            "      return true;",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+            "  @Override public int hashCode() {",
+            "    int h$ = 1;",
+            "    return h$;",
+            "  }",
+            "}");
+    Set<String> ignoredGenerated = ConcurrentHashMap.newKeySet();
     Processor autoValueProcessor = new AutoValueProcessor();
     ProcessorHandler handler = new ProcessorHandler(autoValueProcessor, ignoredGenerated);
     Processor noGeneratedProcessor = partialProxy(Processor.class, handler);
     assertAbout(javaSource())
         .that(javaFileObject)
+        .withCompilerOptions(javacOptions)
         .processedWith(noGeneratedProcessor)
         .compilesWithoutError()
         .and()
         .generatesSources(expectedOutput);
-    assertThat(ignoredGenerated.get()).isTrue();
+    assertThat(ignoredGenerated).containsExactly(expectedAnnotation);
   }
 }

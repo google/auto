@@ -18,14 +18,14 @@ How do I...
 *   ... [perform other **validation**?](#validate)
 *   ... [use a property of a **mutable** type?](#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](#custom)
-*   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
-*   ... [have multiple **create** methods, or name it/them
+*   ... [have AutoValue implement a concrete or default method?](#concrete)
+*   ... [have multiple **`create`** methods, or name it/them
     differently?](#create)
+*   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
 *   ... [have AutoValue also implement abstract methods from my
     **supertypes**?](#supertypes)
 *   ... [use AutoValue with a **generic** class?](#generic)
-*   ... [make my class Java- or GWT- **serializable**?](#serialize)
-*   ... [apply an **annotation** to a generated **field**?](#annotate_field)
+*   ... [make my class Java- or GWT\-**serializable**?](#serialize)
 *   ... [use AutoValue to **implement** an **annotation** type?](#annotation)
 *   ... [also include **setter** (mutator) methods?](#setters)
 *   ... [also generate **`compareTo`**?](#compareTo)
@@ -39,6 +39,9 @@ How do I...
 *   ... [**memoize** ("cache") derived properties?](#memoize)
 *   ... [memoize the result of `hashCode` or
     `toString`?](#memoize_hash_tostring)
+*   ... [make a class where only one of its properties is ever set?](#oneof)
+*   ... [copy annotations from a class/method to the implemented
+    class/method/field?](#copy_annotations)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -114,6 +117,9 @@ static MyType create(String first, String second) {
 
 ## <a name="mutable_property"></a>... use a property of a mutable type?
 
+AutoValue classes are meant and expected to be immutable. But sometimes you
+would want to take a mutable type and use it as a property. In these cases:
+
 First, check if the mutable type has a corresponding immutable cousin. For
 example, the types `List<String>` and `String[]` have the immutable counterpart
 `ImmutableList<String>` in [Guava](http://github.com/google/guava). If so, use
@@ -154,7 +160,10 @@ public abstract class MutableExample {
 }
 ```
 
-Note: this is a perfectly ugly workaround, not a sensible practice!
+Warning: this is an ugly workaround, not a perfectly sensible practice! Callers
+can trivially break the invariants of the immutable class by mutating the
+accessor's return value. An example where something can go wrong: AutoValue
+objects can be used as keys in Maps.
 
 ## <a name="custom"></a>... use a custom implementation of `equals`, etc.?
 
@@ -172,9 +181,13 @@ from [guava-testlib](http://github.com/google/guava).
 Best practice: mark your underriding methods `final` to make it clear to future
 readers that these methods aren't overridden by AutoValue.
 
-Note that this also works if the underriding method was defined in one of your
-abstract class's supertypes. If this is the case and you *want* AutoValue to
-override it, you can "re-abstract" the method in your own class:
+## <a name="concrete"></a>... have AutoValue implement a concrete or default method?
+
+If a parent class defines a concrete (non-abstract) method that you would like
+AutoValue to implement, you can *redeclare* it as abstract. This applies to
+`Object` methods like `toString()`, but also to property methods that you would
+like to have AutoValue implement. It also applies to default methods in
+interfaces.
 
 ```java
 @AutoValue
@@ -186,7 +199,16 @@ class PleaseOverrideExample extends SuperclassThatDefinesToString {
 }
 ```
 
-<!-- TODO(kevinb): should the latter part have been split out? -->
+```java
+@AutoValue
+class PleaseReimplementDefaultMethod implements InterfaceWithDefaultMethod {
+  ...
+
+  // cause AutoValue to implement this even though the interface has a default
+  // implementation
+  @Override public abstract int numberOfLegs();
+}
+```
 
 ## <a name="create"></a>... have multiple `create` methods, or name it/them differently?
 
@@ -243,18 +265,12 @@ directly in your own hand-written class or in a supertype.
 There's nothing to it: just add type parameters to your class and to your call
 to the generated constructor.
 
-## <a name="serialize"></a>... make my class Java- or GWT-serializable?
+## <a name="serialize"></a>... make my class Java- or GWT\-serializable?
 
 Just add `implements Serializable` or the `@GwtCompatible(serializable = true)`
 annotation (respectively) to your hand-written class; it (as well as any
 `serialVersionUID`) will be duplicated on the generated class, and you'll be
 good to go.
-
-## <a name="annotate_field"></a>... apply an annotation to a generated field?
-
-This is not currently supported; however any annotations on your
-hand-written abstract accessor methods will also appear on the generated
-implementations of these methods.
 
 ## <a name="annotation"></a>... use AutoValue to implement an annotation type?
 
@@ -385,6 +401,9 @@ abstract class Foo {
 }
 ```
 
+Then your method will be called at most once, even if multiple threads attempt
+to access the property concurrently.
+
 The annotated method must have the usual form of an accessor method, and may not
 be `abstract`, `final`, or `private`.
 
@@ -416,4 +435,225 @@ abstract class Foo {
   public abstract String toString();
 }
 ```
+
+## <a name="oneof"></a>... make a class where only one of its properties is ever set?
+
+Often, the best way to do this is using inheritance. Although one
+`@AutoValue` class can't inherit from another, two `@AutoValue` classes can
+inherit from a common parent.
+
+```java
+public abstract class StringOrInteger {
+  public abstract String representation();
+
+  public static StringOrInteger ofString(String s) {
+    return new AutoValue_StringOrInteger_StringValue(s);
+  }
+
+  public static StringOrInteger ofInteger(int i) {
+    return new AutoValue_StringOrInteger_IntegerValue(i);
+  }
+
+  @AutoValue
+  abstract class StringValue extends StringOrInteger {
+    abstract String string();
+
+    @Override
+    public String representation() {
+      return '"' + string() + '"';
+    }
+  }
+
+  @AutoValue
+  abstract class IntegerValue extends StringOrInteger {
+    abstract int integer();
+
+    @Override
+    public String representation() {
+      return Integer.toString(integer());
+    }
+  }
+}
+```
+
+So any `StringOrInteger` instance is actually either a `StringValue` or an
+`IntegerValue`. Clients only care about the `representation()` method, so they
+don't need to know which it is.
+
+But if clients of your class may want to take different actions depending on
+which property is set, there is an alternative to `@AutoValue` called
+`@AutoOneOf`. This effectively creates a
+[*tagged union*](https://en.wikipedia.org/wiki/Tagged_union).
+Here is `StringOrInteger` written using `@AutoOneOf`, with the
+`representation()` method moved to a separate client class:
+
+```java
+@AutoOneOf(StringOrInteger.Kind.class)
+public abstract class StringOrInteger {
+  public enum Kind {STRING, INTEGER}
+  public abstract Kind getKind();
+
+  public abstract String string();
+
+  public abstract int integer();
+
+  public static StringOrInteger ofString(String s) {
+    return AutoOneOf_StringOrInteger.string(s);
+  }
+
+  public static StringOrInteger ofInteger(int i) {
+    return AutoOneOf_StringOrInteger.integer(i);
+  }
+}
+
+public class Client {
+  public String representation(StringOrInteger stringOrInteger) {
+    switch (stringOrInteger.getKind()) {
+      case STRING:
+        return '"' + stringOrInteger.string() + '"';
+      case INTEGER:
+        return Integer.toString(stringOrInteger.integer());
+    }
+    throw new AssertionError(stringOrInteger.getKind());
+  }
+}
+```
+
+Switching on an enum like this can lead to more robust code than using
+`instanceof` checks, especially if a tool like [Error
+Prone](https://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can alert you
+if you add a new variant without updating all your switches. (On the other hand,
+if nothing outside your class references `getKind()`, you should consider if a
+solution using inheritance might be better.)
+
+There must be an enum such as `Kind`, though it doesn't have to be called `Kind`
+and it doesn't have to be nested inside the `@AutoOneOf` class. There must be an
+abstract method returning the enum, though it doesn't have to be called
+`getKind()`. For every value of the enum, there must be an abstract method with
+the same name (ignoring case and underscores). An `@AutoOneOf` class called
+`Foo` will then get a generated class called `AutoOneOf_Foo` that has a static
+factory method for each property, with the same name. In the example, the
+`STRING` value in the enum corresponds to the `string()` property and to the
+`AutoOneOf_StringOrInteger.string` factory method.
+
+Properties in an `@AutoOneOf` class can be `void` to indicate that the
+corresponding variant has no data. In that case, the factory method for that
+variant has no parameters:
+
+```java
+@AutoOneOf(Transform.Kind.class)
+public abstract class Transform {
+  public enum Kind {NONE, CIRCLE_CROP, BLUR}
+  public abstract Kind getKind();
+
+  abstract void none();
+
+  abstract void circleCrop();
+
+  public abstract BlurTransformParameters blur();
+
+  public static Transform ofNone() {
+    return AutoOneOf_Transform.none();
+  }
+  
+  public static Transform ofCircleCrop() {
+    return AutoOneOf_Transform.circleCrop();
+  }
+
+  public static Transform ofBlur(BlurTransformParmeters params) {}
+    return AutoOneOf_Transform.blur(params);
+  }
+}
+```
+
+Here, the `NONE` and `CIRCLE_CROP` variants have no associated data but are
+distinct from each other. The `BLUR` variant does have data. The `none()`
+and `circleCrop()` methods are package-private; they must exist to configure
+`@AutoOneOf`, but calling them is not very useful. (It does nothing if the
+instance is of the correct variant, or throws an exception otherwise.)
+
+The `AutoOneOf_Transform.none()` and `AutoOneOf_Transform.circleCrop()` methods
+return the same instance every time they are called.
+
+If one of the `void` variants means "none", consider using an `Optional<Transform>` or
+a `@Nullable Transform` instead of that variant.
+
+Properties in an `@AutoOneOf` class cannot be null. Instead of a
+`StringOrInteger` with a `@Nullable String`, you probably want a
+`@Nullable StringOrInteger` or an `Optional<StringOrInteger>`, or an empty
+variant as just described.
+
+## <a name="copy_annotations"></a>... copy annotations from a class/method to the implemented class/method/field?
+
+### Copying to the generated class
+
+If you want to copy annotations from your `@AutoValue`-annotated class to the
+generated `AutoValue_...` implemention, annotate your class with
+[`@AutoValue.CopyAnnotations`].
+
+For example, if `Example.java` is:
+
+```java
+@AutoValue
+@AutoValue.CopyAnnotations
+@SuppressWarnings("Immutable") // justification ...
+abstract class Example {
+  // details ...
+}
+```
+
+Then `@AutoValue` will generate `AutoValue_Example.java`:
+
+```java
+@SuppressWarnings("Immutable")
+final class AutoValue_Example extends Example {
+  // implementation ...
+}
+```
+
+### Copying to the generated method
+
+For historical reasons, annotations on methods of an `@AutoValue`-annotated
+class are copied to the generated implementation class's methods. However, if
+you want to exclude some annotations from being copied, you can use
+[`@AutoValue.CopyAnnotations`]'s `exclude` method to stop this behavior.
+
+### Copying to the generated field
+
+If you want to copy annotations from your `@AutoValue`-annotated class's methods
+to the generated fields in the `AutoValue_...` implementation, annotate your
+method with [`@AutoValue.CopyAnnotations`].
+
+For example, if `Example.java` is:
+
+```java
+@Immutable
+@AutoValue
+abstract class Example {
+  @CopyAnnotations
+  @SuppressWarnings("Immutable") // justification ...
+  abstract Object getObject();
+
+  // other details ...
+}
+```
+
+Then `@AutoValue` will generate `AutoValue_Example.java`:
+
+```java
+final class AutoValue_Example extends Example {
+  @SuppressWarnings("Immutable")
+  private final Object object;
+
+  @SuppressWarnings("Immutable")
+  @Override
+  Object getObject() {
+    return object;
+  }
+
+  // other details ...
+}
+```
+
+[`@AutoValue.CopyAnnotations`]: http://static.javadoc.io/com.google.auto.value/auto-value/1.6/com/google/auto/value/AutoValue.CopyAnnotations.html
 

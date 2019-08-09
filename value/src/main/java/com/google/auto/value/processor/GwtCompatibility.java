@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,9 +61,12 @@ class GwtCompatibility {
       if (annotation.getElementValues().isEmpty()) {
         annotationArguments = "";
       } else {
-        annotationArguments = getElementValues(annotation).entrySet().stream()
-            .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
-            .collect(joining(", ", "(", ")"));
+        annotationArguments =
+            getElementValues(annotation)
+                .entrySet()
+                .stream()
+                .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
+                .collect(joining(", ", "(", ")"));
       }
       return "@" + annotationElement.getQualifiedName() + annotationArguments;
     } else {

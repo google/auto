@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,29 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_CLASS_PATH;
+import static com.google.common.base.StandardSystemProperty.PATH_SEPARATOR;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.logging.Level.WARNING;
 import static org.junit.Assert.fail;
 
-import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.Reflection;
+import com.google.escapevelocity.Template;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -47,7 +55,8 @@ public class TemplateVarsTest {
     List<Integer> list;
     private static final String IGNORED_STATIC_FINAL = "hatstand";
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       return parsedTemplateForString("integer=$integer string=$string list=$list");
     }
   }
@@ -67,7 +76,7 @@ public class TemplateVarsTest {
     happy.integer = 23;
     happy.string = "wibble";
     happy.list = ImmutableList.of(5, 17, 23);
-    assertThat(HappyVars.IGNORED_STATIC_FINAL).isEqualTo("hatstand");  // avoids unused warning
+    assertThat(HappyVars.IGNORED_STATIC_FINAL).isEqualTo("hatstand"); // avoids unused warning
     String expectedText = "integer=23 string=wibble list=[5, 17, 23]";
     String actualText = happy.toText();
     assertThat(actualText).isEqualTo(expectedText);
@@ -85,22 +94,34 @@ public class TemplateVarsTest {
     }
   }
 
-  static class SubSub extends HappyVars {}
+  static class SubHappyVars extends HappyVars {
+    Character character;
+
+    @Override
+    Template parsedTemplate() {
+      return parsedTemplateForString(
+          "integer=$integer string=$string list=$list character=$character");
+    }
+  }
 
   @Test
   public void testSubSub() {
-    try {
-      new SubSub();
-      fail("Did not get expected exception");
-    } catch (IllegalArgumentException expected) {
-    }
+    SubHappyVars vars = new SubHappyVars();
+    vars.integer = 23;
+    vars.string = "wibble";
+    vars.list = ImmutableList.of(5, 17, 23);
+    vars.character = 'ß';
+    String expectedText = "integer=23 string=wibble list=[5, 17, 23] character=ß";
+    String actualText = vars.toText();
+    assertThat(actualText).isEqualTo(expectedText);
   }
 
   static class Private extends TemplateVars {
     Integer integer;
     private String unusedString;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -118,7 +139,8 @@ public class TemplateVarsTest {
     Integer integer;
     static String string;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -132,11 +154,12 @@ public class TemplateVarsTest {
     }
   }
 
-  static class Primitive extends TemplateVars{
+  static class Primitive extends TemplateVars {
     int integer;
     String string;
 
-    @Override Template parsedTemplate() {
+    @Override
+    Template parsedTemplate() {
       throw new UnsupportedOperationException();
     }
   }
@@ -160,32 +183,68 @@ public class TemplateVarsTest {
     doTestBrokenInputStream(new NullPointerException("BrokenInputStream"));
   }
 
+  @Test
+  public void testBrokenInputStream_IllegalStateException() throws Exception {
+    doTestBrokenInputStream(new IllegalStateException("BrokenInputStream"));
+  }
+
   // This is a complicated test that tries to simulates the failures that are worked around in
   // Template.parsedTemplateForResource. Those failures means that the InputStream returned by
-  // ClassLoader.getResourceAsStream sometimes throws IOException or NullPointerException while it
-  // is being read. To simulate that, we make a second ClassLoader with the same configuration as
-  // the one that runs this test, and we override getResourceAsStream so that it wraps the returned
-  // InputStream in a BrokenInputStream, which throws an exception after a certain number of
-  // characters.  We check that that exception was indeed seen, and that we did indeed try to read
-  // the resource we're interested in, and that we succeeded in loading a Template nevertheless.
+  // ClassLoader.getResourceAsStream sometimes throws IOException or NullPointerException or
+  // IllegalStateException while it is being read. To simulate that, we make a second ClassLoader
+  // with the same configuration as the one that runs this test, and we override getResourceAsStream
+  // so that it wraps the returned InputStream in a BrokenInputStream, which throws an exception
+  // after a certain number of characters. We check that that exception was indeed seen, and that
+  // we did indeed try to read the resource we're interested in, and that we succeeded in loading a
+  // Template nevertheless.
   private void doTestBrokenInputStream(Exception exception) throws Exception {
-    URLClassLoader myLoader = (URLClassLoader) getClass().getClassLoader();
-    URLClassLoader shadowLoader = new ShadowLoader(myLoader, exception);
+    URLClassLoader shadowLoader = new ShadowLoader(getClass().getClassLoader(), exception);
     Runnable brokenInputStreamTest =
-        (Runnable) shadowLoader
-            .loadClass(BrokenInputStreamTest.class.getName())
-            .getConstructor()
-            .newInstance();
+        (Runnable)
+            shadowLoader
+                .loadClass(BrokenInputStreamTest.class.getName())
+                .getConstructor()
+                .newInstance();
     brokenInputStreamTest.run();
   }
 
   private static class ShadowLoader extends URLClassLoader implements Callable<Set<String>> {
+
+    private static final Logger logger = Logger.getLogger(ShadowLoader.class.getName());
+
     private final Exception exception;
     private final Set<String> result = new TreeSet<String>();
 
-    ShadowLoader(URLClassLoader original, Exception exception) {
-      super(original.getURLs(), original.getParent());
+    ShadowLoader(ClassLoader original, Exception exception) {
+      super(getClassPathUrls(original), original.getParent());
       this.exception = exception;
+    }
+
+    private static URL[] getClassPathUrls(ClassLoader original) {
+      return original instanceof URLClassLoader
+          ? ((URLClassLoader) original).getURLs()
+          : parseJavaClassPath();
+    }
+
+    /**
+     * Returns the URLs in the class path specified by the {@code java.class.path} {@linkplain
+     * System#getProperty system property}.
+     */
+    // TODO(b/65488446): Use a new public API.
+    private static URL[] parseJavaClassPath() {
+      ImmutableList.Builder<URL> urls = ImmutableList.builder();
+      for (String entry : Splitter.on(PATH_SEPARATOR.value()).split(JAVA_CLASS_PATH.value())) {
+        try {
+          try {
+            urls.add(new File(entry).toURI().toURL());
+          } catch (SecurityException e) { // File.toURI checks to see if the file is a directory
+            urls.add(new URL("file", null, new File(entry).getAbsolutePath()));
+          }
+        } catch (MalformedURLException e) {
+          logger.log(WARNING, "malformed classpath entry: " + entry, e);
+        }
+      }
+      return urls.build().toArray(new URL[0]);
     }
 
     @Override
@@ -195,8 +254,14 @@ public class TemplateVarsTest {
 
     @Override
     public InputStream getResourceAsStream(String resource) {
-      result.add(resource);
-      return new BrokenInputStream(super.getResourceAsStream(resource));
+      // Make sure this is actually the resource we are expecting. If we're using JaCoCo or the
+      // like, we might end up reading some other resource, and we don't want to break that.
+      if (resource.startsWith("com/google/auto")) {
+        result.add(resource);
+        return new BrokenInputStream(super.getResourceAsStream(resource));
+      } else {
+        return super.getResourceAsStream(resource);
+      }
     }
 
     private class BrokenInputStream extends InputStream {

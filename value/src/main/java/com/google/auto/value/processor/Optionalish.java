@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Google Inc.
+ * Copyright 2016 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package com.google.auto.value.processor;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -35,34 +34,31 @@ import javax.lang.model.util.Types;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 public class Optionalish {
-  private static final ImmutableSet<String> OPTIONAL_CLASS_NAMES = ImmutableSet.of(
-      "com.".concat("google.common.base.Optional"),  // subterfuge to foil shading
-      "java.util.Optional",
-      "java.util.OptionalDouble",
-      "java.util.OptionalInt",
-      "java.util.OptionalLong");
+  private static final ImmutableSet<String> OPTIONAL_CLASS_NAMES =
+      ImmutableSet.of(
+          "com.".concat("google.common.base.Optional"), // subterfuge to foil shading
+          "java.util.Optional",
+          "java.util.OptionalDouble",
+          "java.util.OptionalInt",
+          "java.util.OptionalLong");
 
   private final DeclaredType optionalType;
-  private final String rawTypeSpelling;
+  private final String className;
 
-  private Optionalish(DeclaredType optionalType, String rawTypeSpelling) {
+  private Optionalish(DeclaredType optionalType) {
     this.optionalType = optionalType;
-    this.rawTypeSpelling = rawTypeSpelling;
+    this.className = MoreElements.asType(optionalType.asElement()).getQualifiedName().toString();
   }
 
   /**
    * Returns an instance wrapping the given TypeMirror, or null if it is not any kind of Optional.
    *
-   * @param type the TypeMirror for the original optional type, for example
-   *     {@code Optional<String>}.
-   * @param rawTypeSpelling the representation of the base Optional type in source code, given
-   *     the imports that will be present. Usually this will be {@code Optional},
-   *     {@code OptionalInt}, etc. In cases of ambiguity it might be {@code java.util.Optional} etc.
+   * @param type the TypeMirror for the original optional type, for example {@code
+   *     Optional<String>}.
    */
-  static Optionalish createIfOptional(TypeMirror type, String rawTypeSpelling) {
+  static Optionalish createIfOptional(TypeMirror type) {
     if (isOptional(type)) {
-      return new Optionalish(
-          MoreTypes.asDeclared(type), Preconditions.checkNotNull(rawTypeSpelling));
+      return new Optionalish(MoreTypes.asDeclared(type));
     } else {
       return null;
     }
@@ -79,28 +75,24 @@ public class Optionalish {
   }
 
   /**
-   * Returns a string representing the raw type of this Optional. This will typically be just
-   * {@code "Optional"}, but it might be {@code "OptionalInt"} or {@code "java.util.Optional"}
-   * for example.
+   * Returns a string representing the raw type of this Optional. This will typically be just {@code
+   * "Optional"}, but it might be {@code "OptionalInt"} or {@code "java.util.Optional"} for example.
    */
   public String getRawType() {
-    return rawTypeSpelling;
+    return TypeEncoder.encodeRaw(optionalType);
   }
 
   /**
    * Returns a string representing the method call to obtain the empty version of this Optional.
-   * This will be something like {@code "Optional.empty()"} or possibly
-   * {@code "java.util.Optional.empty()"}. It does not have a final semicolon.
+   * This will be something like {@code "Optional.empty()"} or possibly {@code
+   * "java.util.Optional.empty()"}. It does not have a final semicolon.
    *
    * <p>This method is public so that it can be referenced as {@code p.optional.empty} from
    * templates.
    */
   public String getEmpty() {
-    TypeElement typeElement = MoreElements.asType(optionalType.asElement());
-    String empty = typeElement.getQualifiedName().toString().startsWith("java.util.")
-        ? ".empty()"
-        : ".absent()";
-    return rawTypeSpelling + empty;
+    String empty = className.startsWith("java.util.") ? ".empty()" : ".absent()";
+    return TypeEncoder.encodeRaw(optionalType) + empty;
   }
 
   TypeMirror getContainedType(Types typeUtils) {
@@ -115,10 +107,15 @@ public class Optionalish {
     }
   }
 
-  private static final ImmutableMap<String, TypeKind> PRIMITIVE_TYPE_KINDS = ImmutableMap.of(
-      "OptionalDouble", TypeKind.DOUBLE,
-      "OptionalInt", TypeKind.INT,
-      "OptionalLong", TypeKind.LONG);
+  String ofNullable() {
+    return className.equals("java.util.Optional") ? "ofNullable" : "fromNullable";
+  }
+
+  private static final ImmutableMap<String, TypeKind> PRIMITIVE_TYPE_KINDS =
+      ImmutableMap.of(
+          "OptionalDouble", TypeKind.DOUBLE,
+          "OptionalInt", TypeKind.INT,
+          "OptionalLong", TypeKind.LONG);
 
   private TypeMirror getContainedPrimitiveType(Types typeUtils) {
     String simpleName = optionalType.asElement().getSimpleName().toString();

@@ -1,5 +1,44 @@
 # AutoValue Changes
 
+**This document is obsolete.** For details of changes in releases since 1.5,
+see the [releases page](https://github.com/google/auto/releases) for the Auto
+project.
+
+## 1.4 → 1.5
+
+### Functional changes
+
+* A workaround for older Eclipse versions has been removed. If you need to use
+  an Eclipse version older than 4.5, you will need to stay on AutoValue 1.4.
+
+* The [retention](https://docs.oracle.com/javase/8/docs/api/java/lang/annotation/Retention.html)
+  of the `@AutoValue` annotation has changed from `SOURCE` to `CLASS`. This
+  means that it is possible for code-analysis tools to tell whether a class is
+  an `@AutoValue`. AutoValue itself uses this to enforce the check that one
+  `@AutoValue` class cannot extend another, even if the classes are compiled
+  separately.
+
+* It is now an error if `@Memoized` is applied to a method not inside an
+  `@AutoValue` class.
+
+* Type annotations are now handled more consistently. If `@Nullable` is a type
+  annotation, a property of type `@Nullable Integer` will have that type used
+  everywhere in the generated code. Associated bugs with nested type
+  annotations, like `Outer.@Inner`, have been fixed.
+
+### Bugs fixed since 1.4.1
+
+* `@Memoized` methods can now throw checked exceptions. Previously this failed
+  because the exceptions were not copied into the `throws` clause of the
+  generated override, so the call to `super.foo()` did not compile.
+
+* The generated `hashCode()` method uses `h = (int) (h ^ longProperty)` rather
+  than `h ^= longProperty` to avoid warnings about loss of precision.
+
+* Annotations are not copied from an abstract method to its implementation if
+  they are not visible from the latter. This can happen if the `@AutoValue`
+  inherits the abstract method from a class or interface in a different package.
+
 ## 1.3 → 1.4
 
 *This is the last AutoValue version that compiles and runs on Java 6.* Future
@@ -214,4 +253,3 @@ later.
 
 
 [AutoValueExtension]: src/main/java/com/google/auto/value/extension/AutoValueExtension.java
-

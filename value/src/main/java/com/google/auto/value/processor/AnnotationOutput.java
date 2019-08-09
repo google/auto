@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,23 +33,19 @@ import javax.tools.Diagnostic;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-class AnnotationOutput {
-  private final TypeSimplifier typeSimplifier;
-
-  AnnotationOutput(TypeSimplifier typeSimplifier) {
-    this.typeSimplifier = typeSimplifier;
-  }
+final class AnnotationOutput {
+  private AnnotationOutput() {} // There are no instances of this class.
 
   /**
-   * Visitor that produces a string representation of an annotation value, suitable for inclusion
-   * in a Java source file as an annotation member or as the initializer of a variable of the
+   * Visitor that produces a string representation of an annotation value, suitable for inclusion in
+   * a Java source file as an annotation member or as the initializer of a variable of the
    * appropriate type. The syntax for the two is the same except for annotation members that are
    * themselves annotations. Within an annotation, an annotation member can be written as
-   * {@code @NestedAnnotation(...)}, while in an initializer it must be written as an object,
-   * for example the construction of an {@code @AutoAnnotation} class. That's why we have this
-   * abstract class and two concrete subclasses.
+   * {@code @NestedAnnotation(...)}, while in an initializer it must be written as an object, for
+   * example the construction of an {@code @AutoAnnotation} class. That's why we have this abstract
+   * class and two concrete subclasses.
    */
-  private abstract class SourceFormVisitor
+  private abstract static class SourceFormVisitor
       extends SimpleAnnotationValueVisitor8<Void, StringBuilder> {
     @Override
     protected Void defaultAction(Object value, StringBuilder sb) {
@@ -112,7 +108,7 @@ class AnnotationOutput {
 
     @Override
     public Void visitEnumConstant(VariableElement c, StringBuilder sb) {
-      sb.append(typeSimplifier.simplify(c.asType())).append('.').append(c.getSimpleName());
+      sb.append(TypeEncoder.encode(c.asType())).append('.').append(c.getSimpleName());
       return null;
     }
 
@@ -124,12 +120,12 @@ class AnnotationOutput {
 
     @Override
     public Void visitType(TypeMirror classConstant, StringBuilder sb) {
-      sb.append(typeSimplifier.simplify(classConstant)).append(".class");
+      sb.append(TypeEncoder.encode(classConstant)).append(".class");
       return null;
     }
   }
 
-  private class InitializerSourceFormVisitor extends SourceFormVisitor {
+  private static class InitializerSourceFormVisitor extends SourceFormVisitor {
     private final ProcessingEnvironment processingEnv;
     private final String memberName;
     private final Element context;
@@ -143,20 +139,23 @@ class AnnotationOutput {
 
     @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
-      processingEnv.getMessager().printMessage(
-          Diagnostic.Kind.ERROR,
-          "@AutoAnnotation cannot yet supply a default value for annotation-valued member '"
-              + memberName + "'",
-          context);
+      processingEnv
+          .getMessager()
+          .printMessage(
+              Diagnostic.Kind.ERROR,
+              "@AutoAnnotation cannot yet supply a default value for annotation-valued member '"
+                  + memberName
+                  + "'",
+              context);
       sb.append("null");
       return null;
     }
   }
 
-  private class AnnotationSourceFormVisitor extends SourceFormVisitor {
+  private static class AnnotationSourceFormVisitor extends SourceFormVisitor {
     @Override
     public Void visitAnnotation(AnnotationMirror a, StringBuilder sb) {
-      sb.append('@').append(typeSimplifier.simplify(a.getAnnotationType()));
+      sb.append('@').append(TypeEncoder.encode(a.getAnnotationType()));
       Map<ExecutableElement, AnnotationValue> map =
           ImmutableMap.<ExecutableElement, AnnotationValue>copyOf(a.getElementValues());
       if (!map.isEmpty()) {
@@ -177,7 +176,7 @@ class AnnotationOutput {
    * Returns a string representation of the given annotation value, suitable for inclusion in a Java
    * source file as the initializer of a variable of the appropriate type.
    */
-  String sourceFormForInitializer(
+  static String sourceFormForInitializer(
       AnnotationValue annotationValue,
       ProcessingEnvironment processingEnv,
       String memberName,
@@ -193,7 +192,7 @@ class AnnotationOutput {
    * Returns a string representation of the given annotation mirror, suitable for inclusion in a
    * Java source file to reproduce the annotation in source form.
    */
-  String sourceFormForAnnotation(AnnotationMirror annotationMirror) {
+  static String sourceFormForAnnotation(AnnotationMirror annotationMirror) {
     StringBuilder sb = new StringBuilder();
     new AnnotationSourceFormVisitor().visitAnnotation(annotationMirror, sb);
     return sb.toString();
@@ -215,29 +214,29 @@ class AnnotationOutput {
 
   private static void appendEscaped(StringBuilder sb, char c) {
     switch (c) {
-    case '\\':
-    case '"':
-    case '\'':
-      sb.append('\\').append(c);
-      break;
-    case '\n':
-      sb.append("\\n");
-      break;
-    case '\r':
-      sb.append("\\r");
-      break;
-    case '\t':
-      sb.append("\\t");
-      break;
-    default:
-      if (c < 0x20) {
-        sb.append(String.format("\\%03o", (int) c));
-      } else if (c < 0x7f || Character.isLetter(c)) {
-        sb.append(c);
-      } else {
-        sb.append(String.format("\\u%04x", (int) c));
-      }
-      break;
+      case '\\':
+      case '"':
+      case '\'':
+        sb.append('\\').append(c);
+        break;
+      case '\n':
+        sb.append("\\n");
+        break;
+      case '\r':
+        sb.append("\\r");
+        break;
+      case '\t':
+        sb.append("\\t");
+        break;
+      default:
+        if (c < 0x20) {
+          sb.append(String.format("\\%03o", (int) c));
+        } else if (c < 0x7f || Character.isLetter(c)) {
+          sb.append(c);
+        } else {
+          sb.append(String.format("\\u%04x", (int) c));
+        }
+        break;
     }
   }
 }

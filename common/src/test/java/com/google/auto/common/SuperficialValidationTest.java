@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 
 import com.google.common.collect.ImmutableSet;
@@ -246,8 +247,6 @@ public class SuperficialValidationTest {
         .failsToCompile();
   }
 
-  // TODO(gak): Enable when b/17584340 is resolved.
-  /*
   @Test
   public void invalidAnnotationValue() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines("test.Outer",
@@ -263,16 +262,19 @@ public class SuperficialValidationTest {
         "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement))
-                .named("testClassElement is valid").isFalse();
-          }
-        }).failsToCompile();
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
+                assertWithMessage("testClassElement is valid")
+                    .that(SuperficialValidation.validateElement(testClassElement))
+                    .isFalse();
+              }
+            })
+        .failsToCompile();
   }
-  */
 
   private abstract static class AssertingProcessor extends AbstractProcessor {
     @Override

@@ -56,7 +56,6 @@ import com.google.auto.value.AutoValue;
 @AutoValue
 abstract class Animal {
   static Animal create(String name, int numberOfLegs) {
-    // See "How do I...?" below for nested classes.
     return new AutoValue_Animal(name, numberOfLegs);
   }
 
@@ -65,9 +64,15 @@ abstract class Animal {
 }
 ```
 
+The constructor parameters correspond, in order, to the abstract accessor
+methods.
+
+**For a nested class**, see ["How do I use AutoValue with a nested class"](howto.md#nested).
+
 Note that in real life, some classes and methods would presumably be public and
 have Javadoc. We're leaving these off in the User Guide only to keep the
 examples short and simple.
+
 
 ### In `pom.xml`
 
@@ -76,21 +81,34 @@ Maven users should add the following to the project's `pom.xml` file:
 ```xml
 <dependency>
   <groupId>com.google.auto.value</groupId>
+  <artifactId>auto-value-annotations</artifactId>
+  <version>1.6.2</version>
+</dependency>
+<dependency>
+  <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.2</version>
+  <version>1.6.2</version>
   <scope>provided</scope>
 </dependency>
 ```
 
-Gradle users should install the annotation processing plugin [as described in
-these instructions][tbroyer-apt] and then use it in the `build.gradle` script:
+Alternatively, instead of using the `provided` scope, you can add the second
+dependency to the
+[`annotationProcessorPaths`](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#annotationProcessorPaths)
+section.
+
+Gradle users can declare the dependencies in their `build.gradle` script:
 
 ```groovy
 dependencies {
-  compileOnly "com.google.auto.value:auto-value:1.2"
-  apt         "com.google.auto.value:auto-value:1.2"
+  // Use 'api' rather than 'compile' for Android or java-library projects.
+  compile             "com.google.auto.value:auto-value-annotations:1.6.2"
+  annotationProcessor "com.google.auto.value:auto-value:1.6.2"
 }
 ```
+
+Note: If you are using a version of Gradle prior to 4.6, you must apply an
+annotation processing plugin [as described in these instructions][tbroyer-apt].
 
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
 
@@ -174,15 +192,15 @@ How do I...
 *   ... [perform other **validation**?](howto.md#validate)
 *   ... [use a property of a **mutable** type?](howto.md#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](howto.md#custom)
-*   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)
-*   ... [have multiple **create** methods, or name it/them
+*   ... [have AutoValue implement a concrete or default
+    method?](howto.md#concrete)
+*   ... [have multiple **`create`** methods, or name it/them
     differently?](howto.md#create)
+*   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)
 *   ... [have AutoValue also implement abstract methods from my
     **supertypes**?](howto.md#supertypes)
 *   ... [use AutoValue with a **generic** class?](howto.md#generic)
-*   ... [make my class Java- or GWT- **serializable**?](howto.md#serialize)
-*   ... [apply an **annotation** to a generated
-    **field**?](howto.md#annotate_field)
+*   ... [make my class Java- or GWT\-**serializable**?](howto.md#serialize)
 *   ... [use AutoValue to **implement** an **annotation**
     type?](howto.md#annotation)
 *   ... [also include **setter** (mutator) methods?](howto.md#setters)
@@ -196,7 +214,13 @@ How do I...
     API?](howto.md#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract
     class?](howto.md#interface)
-*   ... [**memoize** derived properties?](howto.md#memoize)
+*   ... [**memoize** ("cache") derived properties?](howto.md#memoize)
+*   ... [memoize the result of `hashCode` or
+    `toString`?](howto.md#memoize_hash_tostring)
+*   ... [make a class where only one of its properties is ever
+    set?](howto.md#oneof)
+*   ... [copy annotations from a class/method to the implemented
+    class/method/field?](howto.md#copy_annotations)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
 

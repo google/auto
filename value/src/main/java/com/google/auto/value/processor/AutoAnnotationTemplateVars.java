@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,18 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.escapevelocity.Template;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 
 /**
  * The variables to substitute into the autoannotation.vm template.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-@SuppressWarnings("unused")  // the fields in this class are only read via reflection
+@SuppressWarnings("unused") // the fields in this class are only read via reflection
 class AutoAnnotationTemplateVars extends TemplateVars {
-  /**
-   * The members of the annotation being implemented.
-   */
+  /** The members of the annotation being implemented. */
   Map<String, AutoAnnotationProcessor.Member> members;
 
   /**
@@ -38,18 +35,8 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   Map<String, AutoAnnotationProcessor.Parameter> params;
 
-  /**
-   * The fully-qualified names of the classes to be imported in the generated class.
-   */
-  SortedSet<String> imports;
-
-  /**
-   * The spelling of the javax.annotation.Generated class: Generated or javax.annotation.Generated.
-   */
+  /** The encoded form of the {@code Generated} class, or empty if it is not available. */
   String generated;
-
-  /** The spelling of the java.util.Arrays class: Arrays or java.util.Arrays. */
-  String arrays;
 
   /**
    * The package of the class containing the {@code @AutoAnnotation} annotation, which is also the
@@ -57,19 +44,13 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   String pkg;
 
-  /**
-   * The simple name of the generated class, like {@code AutoAnnotation_Foo_bar}.
-   */
+  /** The simple name of the generated class, like {@code AutoAnnotation_Foo_bar}. */
   String className;
 
-  /**
-   * The name of the annotation interface as it can be referenced in the generated code.
-   */
+  /** The name of the annotation interface as it can be referenced in the generated code. */
   String annotationName;
 
-  /**
-   * The fully-qualified name of the annotation interface.
-   */
+  /** The fully-qualified name of the annotation interface. */
   String annotationFullName;
 
   /**
@@ -79,20 +60,18 @@ class AutoAnnotationTemplateVars extends TemplateVars {
   Set<Class<?>> wrapperTypesUsedInCollections;
 
   /**
-   * True if this annotation is marked {@code @GwtCompatible}. That means that we can't use
-   * {@code clone()} to make a copy of an array.
+   * True if this annotation is marked {@code @GwtCompatible}. That means that we can't use {@code
+   * clone()} to make a copy of an array.
    */
   Boolean gwtCompatible;
 
   /**
-   * The names of members that are defaulted (not mentioned) in this {@code @AutoAnnotation},
-   * and whose hash codes are invariable.
+   * The names of members that are defaulted (not mentioned) in this {@code @AutoAnnotation}, and
+   * whose hash codes are invariable.
    */
   Set<String> invariableHashes;
 
-  /**
-   * The sum of the hash code contributions from the members in {@link #invariableHashes}.
-   */
+  /** The sum of the hash code contributions from the members in {@link #invariableHashes}. */
   Integer invariableHashSum;
 
   private static final Template TEMPLATE = parsedTemplateForResource("autoannotation.vm");

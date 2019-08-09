@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc.
+ * Copyright 2012 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 /**
  * Simple package-less value type for tests.
  *
- * @see PackagelessValueTypeTest
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @AutoValue
@@ -29,19 +28,14 @@ public abstract class PackagelessValueType {
   // The getters here are formatted as an illustration of what getters typically look in real
   // classes. In particular they have doc comments.
 
-  /**
-   * @return A string that is a nullable string.
-   */
-  @Nullable public abstract String string();
+  /** @return A string that is a nullable string. */
+  @Nullable
+  public abstract String string();
 
-  /**
-   * @return An integer that is an integer.
-   */
+  /** @return An integer that is an integer. */
   public abstract int integer();
 
-  /**
-   * @return A non-null map where the keys are strings and the values are longs.
-   */
+  /** @return A non-null map where the keys are strings and the values are longs. */
   public abstract Map<String, Long> map();
 
   public static PackagelessValueType create(

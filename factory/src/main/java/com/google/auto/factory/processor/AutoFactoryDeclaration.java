@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright 2013 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -67,12 +68,12 @@ abstract class AutoFactoryDeclaration {
     if (packageName.length() > 0) {
       builder.append('.');
     }
-    for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
-      builder.append(enclosingSimpleName).append('_');
-    }
     if (className().isPresent()) {
       builder.append(className().get());
     } else {
+      for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
+        builder.append(enclosingSimpleName).append('_');
+      }
       builder.append(targetType().getSimpleName()).append("Factory");
     }
     return builder.toString();
@@ -81,7 +82,7 @@ abstract class AutoFactoryDeclaration {
   private ImmutableList<String> targetEnclosingSimpleNames() {
     ImmutableList.Builder<String> simpleNames = ImmutableList.builder();
     for (Element element = targetType().getEnclosingElement();
-        element.getEnclosingElement() != null;
+        !element.getKind().equals(PACKAGE);
         element = element.getEnclosingElement()) {
       simpleNames.add(element.getSimpleName().toString());
     }

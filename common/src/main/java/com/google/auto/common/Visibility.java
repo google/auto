@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,12 @@ package com.google.auto.common;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 
+import com.google.common.base.Enums;
 import com.google.common.collect.Ordering;
 import java.util.Set;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.PackageElement;
 
 /**
  * Represents the visibility of a given {@link Element}: {@code public}, {@code protected},
@@ -38,15 +39,20 @@ public enum Visibility {
   PROTECTED,
   PUBLIC;
 
+  // TODO(ronshapiro): remove this and reference ElementKind.MODULE directly once we start building
+  // with -source 9
+  private static final ElementKind MODULE =
+      Enums.getIfPresent(ElementKind.class, "MODULE").orNull();
+
   /**
-   * Returns the visibility of the given {@link Element}. While package elements don't technically
-   * have a visibility associated with them, this method returns {@link #PUBLIC} for
-   * {@link PackageElement} instances.
+   * Returns the visibility of the given {@link Element}. While package and module elements don't
+   * technically have a visibility associated with them, this method returns {@link #PUBLIC} for
+   * them.
    */
-  public static  Visibility ofElement(Element element) {
+  public static Visibility ofElement(Element element) {
     checkNotNull(element);
-    // packages don't have modifiers, but they're obviously "public"
-    if (element.getKind().equals(PACKAGE)) {
+    // packages and module don't have modifiers, but they're obviously "public"
+    if (element.getKind().equals(PACKAGE) || element.getKind().equals(MODULE)) {
       return PUBLIC;
     }
     Set<Modifier> modifiers = element.getModifiers();

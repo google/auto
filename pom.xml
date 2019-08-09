@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright (C) 2013 Google, Inc.
+  Copyright 2013 Google LLC
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -27,15 +27,10 @@
   <groupId>com.google.auto</groupId>
   <artifactId>auto-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4-SNAPSHOT</version>
+  <version>HEAD-SNAPSHOT</version>
   <name>Auto (Parent)</name>
-  <description>A collection of code generators for Java.</description>
+  <description>NO LONGER USED parent pom for a collection of code generators for Java.</description>
   <url>https://github.com/google/auto</url>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.version>1.6</java.version>
-  </properties>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -57,73 +52,7 @@
   </licenses>
 
   <organization>
-    <name>Google, Inc.</name>
+    <name>Google LLC</name>
     <url>http://www.google.com</url>
   </organization>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-          <compilerArgument>-Xlint:all</compilerArgument>
-          <showWarnings>true</showWarnings>
-          <showDeprecation>true</showDeprecation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.11</version>
-        <configuration>
-          <consoleOutput>true</consoleOutput>
-          <configLocation>checkstyle.xml</configLocation>
-          <failOnViolation>false</failOnViolation>
-        </configuration>
-      </plugin>
-    </plugins>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>2.6</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-invoker-plugin</artifactId>
-          <version>1.8</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
-
-  <profiles>
-    <profile>
-      <id>default-profile</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-        <file>
-          <exists>${java.home}/../lib/tools.jar</exists>
-        </file>
-      </activation>
-      <properties>
-        <toolsjar>${java.home}/../lib/tools.jar</toolsjar>
-      </properties>
-    </profile>
-    <profile>
-      <id>mac-profile</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <file>
-          <exists>${java.home}/../Classes/classes.jar</exists>
-        </file>
-      </activation>
-      <properties>
-        <toolsjar>${java.home}/../Classes/classes.jar</toolsjar>
-      </properties>
-    </profile>
-  </profiles>
 </project>

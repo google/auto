@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package com.google.auto.value.enums;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 public enum MyEnum {
-  ONE, TWO, BUCKLE_MY_SHOE
+  ONE,
+  TWO,
+  BUCKLE_MY_SHOE
 }
