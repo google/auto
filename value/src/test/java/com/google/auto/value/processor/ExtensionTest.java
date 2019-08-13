@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Google Inc.
+ * Copyright 2015 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreTypes.equivalence;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -51,6 +52,7 @@ import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -67,128 +69,134 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class ExtensionTest {
+
   @Test
   public void testExtensionCompilation() throws Exception {
 
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "}");
-    JavaFileObject expectedExtensionOutput = JavaFileObjects.forSourceLines(
-        "foo.bar.AutoValue_Baz",
-        "package foo.bar;",
-        "",
-        "final class AutoValue_Baz extends $AutoValue_Baz {",
-        "  public AutoValue_Baz(String foo) {",
-        "    super(foo);",
-        "  }",
-        "  @Override public String foo() {",
-        "    return \"foo\";",
-        "  }",
-        "  public String dizzle() {\n",
-        "    return \"dizzle\";\n",
-        "  }",
-        "}"
-    );
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "}");
+    JavaFileObject expectedExtensionOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            "final class AutoValue_Baz extends $AutoValue_Baz {",
+            "  public AutoValue_Baz(String foo) {",
+            "    super(foo);",
+            "  }",
+            "  @Override public String foo() {",
+            "    return \"foo\";",
+            "  }",
+            "  public String dizzle() {\n",
+            "    return \"dizzle\";\n",
+            "  }",
+            "}");
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
-        .and().generatesSources(expectedExtensionOutput);
+        .and()
+        .generatesSources(expectedExtensionOutput);
   }
 
   @Test
   public void testExtensionConsumesProperties() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract String dizzle();",
-        "}");
-    JavaFileObject expectedExtensionOutput = JavaFileObjects.forSourceLines(
-        "foo.bar.$AutoValue_Baz",
-        "package foo.bar;\n"
-        + "\n"
-        + "import javax.annotation.Generated;\n"
-        + "\n"
-        + "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")\n"
-        + " abstract class $AutoValue_Baz extends Baz {\n"
-        + "\n"
-        + "  private final String foo;\n"
-        + "\n"
-        + "  $AutoValue_Baz(\n"
-        + "      String foo) {\n"
-        + "    if (foo == null) {\n"
-        + "      throw new NullPointerException(\"Null foo\");\n"
-        + "    }\n"
-        + "    this.foo = foo;\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  String foo() {\n"
-        + "    return foo;\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  public String toString() {\n"
-        + "    return \"Baz{\"\n"
-        + "        + \"foo=\" + foo\n"
-        + "        + \"}\";\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  public boolean equals(Object o) {\n"
-        + "    if (o == this) {\n"
-        + "      return true;\n"
-        + "    }\n"
-        + "    if (o instanceof Baz) {\n"
-        + "      Baz that = (Baz) o;\n"
-        + "      return (this.foo.equals(that.foo()));\n"
-        + "    }\n"
-        + "    return false;\n"
-        + "  }\n"
-        + "\n"
-        + "  @Override\n"
-        + "  public int hashCode() {\n"
-        + "    int h = 1;\n"
-        + "    h *= 1000003;\n"
-        + "    h ^= this.foo.hashCode();\n"
-        + "    return h;\n"
-        + "  }\n"
-        + "\n"
-        + "}"
-    );
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract String dizzle();",
+            "}");
+    JavaFileObject expectedExtensionOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.$AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            GeneratedImport.importGeneratedAnnotationType(),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+            " abstract class $AutoValue_Baz extends Baz {",
+            "",
+            "  private final String foo;",
+            "",
+            "  $AutoValue_Baz(",
+            "      String foo) {",
+            "    if (foo == null) {",
+            "      throw new NullPointerException(\"Null foo\");",
+            "    }",
+            "    this.foo = foo;",
+            "  }",
+            "",
+            "  @Override",
+            "  String foo() {",
+            "    return foo;",
+            "  }",
+            "",
+            "  @Override",
+            "  public String toString() {",
+            "    return \"Baz{\"",
+            "        + \"foo=\" + foo",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override",
+            "  public boolean equals(Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Baz) {",
+            "      Baz that = (Baz) o;",
+            "      return this.foo.equals(that.foo());",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+            "  @Override",
+            "  public int hashCode() {",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= foo.hashCode();",
+            "    return h$;",
+            "  }",
+            "}");
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
-        .and().generatesSources(expectedExtensionOutput);
+        .and()
+        .generatesSources(expectedExtensionOutput);
   }
 
   @Test
   public void testDoesntRaiseWarningForConsumedProperties() {
-    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
-        "package foo.bar;",
-        "import com.google.auto.value.AutoValue;",
-        "@AutoValue public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract String dizzle();",
-        "",
-        "  @AutoValue.Builder",
-        "  public abstract static class Builder {",
-        "    public abstract Builder foo(String s);",
-        "    public abstract Baz build();",
-        "  }",
-        "}");
+    JavaFileObject impl =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "import com.google.auto.value.AutoValue;",
+            "@AutoValue public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract String dizzle();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder foo(String s);",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
     assertThat(impl)
         .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
@@ -197,20 +205,22 @@ public class ExtensionTest {
 
   @Test
   public void testDoesntRaiseWarningForToBuilder() {
-    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
-        "package foo.bar;",
-        "import com.google.auto.value.AutoValue;",
-        "@AutoValue public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract String dizzle();",
-        "  abstract Builder toBuilder();",
-        "",
-        "  @AutoValue.Builder",
-        "  public abstract static class Builder {",
-        "    public abstract Builder foo(String s);",
-        "    public abstract Baz build();",
-        "  }",
-        "}");
+    JavaFileObject impl =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "import com.google.auto.value.AutoValue;",
+            "@AutoValue public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract String dizzle();",
+            "  abstract Builder toBuilder();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder foo(String s);",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
     assertThat(impl)
         .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
@@ -220,7 +230,8 @@ public class ExtensionTest {
   @Test
   public void testCantConsumeTwice() throws Exception {
     class ConsumeDizzle extends NonFinalExtension {
-      @Override public Set<String> consumeProperties(Context context) {
+      @Override
+      public Set<String> consumeProperties(Context context) {
         return ImmutableSet.of("dizzle");
       }
     }
@@ -228,44 +239,52 @@ public class ExtensionTest {
     AutoValueExtension ext1 = new ConsumeDizzle();
     AutoValueExtension ext2 = new AlsoConsumeDizzle();
     Truth.assertThat(ext1).isNotEqualTo(ext2);
-    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
-        "package foo.bar;",
-        "import com.google.auto.value.AutoValue;",
-        "@AutoValue public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract String dizzle();",
-        "}");
+    JavaFileObject impl =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "import com.google.auto.value.AutoValue;",
+            "@AutoValue public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract String dizzle();",
+            "}");
     assertThat(impl)
         .processedWith(new AutoValueProcessor(ImmutableList.of(ext1, ext2)))
         .failsToCompile()
         .withErrorContaining("wants to consume a method that was already consumed")
-        .in(impl).onLine(5);
+        .in(impl)
+        .onLine(5);
   }
 
   @Test
   public void testCantConsumeNonExistentProperty() throws Exception {
     class ConsumeDizzle extends NonFinalExtension {
-      @Override public Set<String> consumeProperties(Context context) {
+      @Override
+      public Set<String> consumeProperties(Context context) {
         return ImmutableSet.of("dizzle");
       }
     }
-    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
-        "package foo.bar;",
-        "import com.google.auto.value.AutoValue;",
-        "@AutoValue public abstract class Baz {",
-        "  abstract String foo();",
-        "}");
+    JavaFileObject impl =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "import com.google.auto.value.AutoValue;",
+            "@AutoValue public abstract class Baz {",
+            "  abstract String foo();",
+            "}");
     assertThat(impl)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new ConsumeDizzle())))
         .failsToCompile()
         .withErrorContaining("wants to consume a property that does not exist: dizzle")
-        .in(impl).onLine(3);
+        .in(impl)
+        .onLine(3);
   }
 
   @Test
   public void testCantConsumeConcreteMethod() throws Exception {
     class ConsumeConcreteMethod extends NonFinalExtension {
-      @Override public Set<ExecutableElement> consumeMethods(Context context) {
+      @Override
+      public Set<ExecutableElement> consumeMethods(Context context) {
         TypeElement autoValueClass = context.autoValueClass();
         for (ExecutableElement method :
             ElementFilter.methodsIn(autoValueClass.getEnclosedElements())) {
@@ -276,28 +295,33 @@ public class ExtensionTest {
         throw new AssertionError("Could not find frob method");
       }
     }
-    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
-        "package foo.bar;",
-        "import com.google.auto.value.AutoValue;",
-        "@AutoValue public abstract class Baz {",
-        "  abstract String foo();",
-        "  void frob(int x) {}",
-        "}");
+    JavaFileObject impl =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "import com.google.auto.value.AutoValue;",
+            "@AutoValue public abstract class Baz {",
+            "  abstract String foo();",
+            "  void frob(int x) {}",
+            "}");
     assertThat(impl)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new ConsumeConcreteMethod())))
         .failsToCompile()
         .withErrorContaining(
             "wants to consume a method that is not one of the abstract methods in this class")
-        .in(impl).onLine(3)
+        .in(impl)
+        .onLine(3)
         .and()
         .withErrorContaining("frob")
-        .in(impl).onLine(3);
+        .in(impl)
+        .onLine(3);
   }
 
   @Test
   public void testCantConsumeNonExistentMethod() throws Exception {
     class ConsumeBogusMethod extends NonFinalExtension {
-      @Override public Set<ExecutableElement> consumeMethods(Context context) {
+      @Override
+      public Set<ExecutableElement> consumeMethods(Context context) {
         // Find Integer.intValue() and try to consume that.
         Elements elementUtils = context.processingEnvironment().getElementUtils();
         TypeElement javaLangInteger = elementUtils.getTypeElement(Integer.class.getName());
@@ -310,103 +334,111 @@ public class ExtensionTest {
         throw new AssertionError("Could not find Integer.intValue()");
       }
     }
-    JavaFileObject impl = JavaFileObjects.forSourceLines("foo.bar.Baz",
-        "package foo.bar;",
-        "import com.google.auto.value.AutoValue;",
-        "@AutoValue public abstract class Baz {",
-        "  abstract String foo();",
-        "}");
+    JavaFileObject impl =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "import com.google.auto.value.AutoValue;",
+            "@AutoValue public abstract class Baz {",
+            "  abstract String foo();",
+            "}");
     assertThat(impl)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new ConsumeBogusMethod())))
         .failsToCompile()
         .withErrorContaining(
             "wants to consume a method that is not one of the abstract methods in this class")
-        .in(impl).onLine(3)
+        .in(impl)
+        .onLine(3)
         .and()
         .withErrorContaining("intValue")
-        .in(impl).onLine(3);
+        .in(impl)
+        .onLine(3);
   }
 
   @Test
   public void testExtensionWithoutConsumedPropertiesFails() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract String dizzle();",
-        "  abstract Double[] bad();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract String dizzle();",
+            "  abstract Double[] bad();",
+            "}");
     assertThat(javaFileObject)
-        .processedWith(
-            new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .failsToCompile()
-        .withErrorContaining("An @AutoValue class cannot define an array-valued property unless "
-            + "it is a primitive array");
+        .withErrorContaining(
+            "An @AutoValue class cannot define an array-valued property unless "
+                + "it is a primitive array");
   }
 
   @Test
   public void testConsumeMethodWithArguments() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract void writeToParcel(Object parcel, int flags);",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract void writeToParcel(Object parcel, int flags);",
+            "}");
     assertThat(javaFileObject)
         .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-        .processedWith(
-            new AutoValueProcessor(ImmutableList.of(new FakeWriteToParcelExtension())))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(new FakeWriteToParcelExtension())))
         .compilesWithoutWarnings();
   }
 
   @Test
   public void testExtensionWithBuilderCompilation() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract String bar();",
-        "",
-        "  @AutoValue.Builder public static abstract class Builder {",
-        "    public abstract Builder foo(String foo);",
-        "    public abstract Builder bar(String bar);",
-        "    public abstract Baz build();",
-        "  }",
-        "}");
-    JavaFileObject expectedExtensionOutput = JavaFileObjects.forSourceLines(
-        "foo.bar.AutoValue_Baz",
-        "package foo.bar;",
-        "",
-        "final class AutoValue_Baz extends $AutoValue_Baz {",
-        "  public AutoValue_Baz(String foo, String bar) {",
-        "    super(foo, bar);",
-        "  }",
-        "  @Override public String foo() {",
-        "    return \"foo\";",
-        "  }",
-        "  public String dizzle() {\n",
-        "    return \"dizzle\";\n",
-        "  }",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract String bar();",
+            "",
+            "  @AutoValue.Builder public static abstract class Builder {",
+            "    public abstract Builder foo(String foo);",
+            "    public abstract Builder bar(String bar);",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
+    JavaFileObject expectedExtensionOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            "final class AutoValue_Baz extends $AutoValue_Baz {",
+            "  public AutoValue_Baz(String foo, String bar) {",
+            "    super(foo, bar);",
+            "  }",
+            "  @Override public String foo() {",
+            "    return \"foo\";",
+            "  }",
+            "  public String dizzle() {\n",
+            "    return \"dizzle\";\n",
+            "  }",
+            "}");
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .compilesWithoutError()
-        .and().generatesSources(expectedExtensionOutput);
+        .and()
+        .generatesSources(expectedExtensionOutput);
   }
 
   @Test
@@ -532,20 +564,21 @@ public class ExtensionTest {
   }
 
   private void doTestNoCode(AutoValueExtension... extensions) {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  public abstract String foo();",
-        "",
-        "  public static Baz create(String foo) {",
-        "    return new AutoValue_Baz(foo);",
-        "  }",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  public abstract String foo();",
+            "",
+            "  public static Baz create(String foo) {",
+            "    return new AutoValue_Baz(foo);",
+            "  }",
+            "}");
     assertThat(javaFileObject)
         .withCompilerOptions("-Xlint:-processing", "-implicit:class")
         .processedWith(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
@@ -556,44 +589,49 @@ public class ExtensionTest {
 
   @Test
   public void testTwoExtensionsBothWantToBeFinal() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "}");
     assertThat(javaFileObject)
         .processedWith(
             new AutoValueProcessor(ImmutableList.of(new FooExtension(), new FinalExtension())))
         .failsToCompile()
-        .withErrorContaining("More than one extension wants to generate the final class: "
-            + FooExtension.class.getName() + ", " + FinalExtension.class.getName())
-        .in(javaFileObject).onLine(6);
+        .withErrorContaining(
+            "More than one extension wants to generate the final class: "
+                + FooExtension.class.getName()
+                + ", "
+                + FinalExtension.class.getName())
+        .in(javaFileObject)
+        .onLine(6);
   }
 
   @Test
   public void testNonFinalThenFinal() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "}");
     FinalExtension finalExtension = new FinalExtension();
     NonFinalExtension nonFinalExtension = new NonFinalExtension();
     assertFalse(finalExtension.generated);
     assertFalse(nonFinalExtension.generated);
     assertThat(javaFileObject)
-        .processedWith(
-            new AutoValueProcessor(ImmutableList.of(finalExtension, nonFinalExtension)))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(finalExtension, nonFinalExtension)))
         .compilesWithoutError();
     assertTrue(finalExtension.generated);
     assertTrue(nonFinalExtension.generated);
@@ -601,23 +639,23 @@ public class ExtensionTest {
 
   @Test
   public void testFinalThenNonFinal() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "}");
     FinalExtension finalExtension = new FinalExtension();
     NonFinalExtension nonFinalExtension = new NonFinalExtension();
     assertFalse(finalExtension.generated);
     assertFalse(nonFinalExtension.generated);
     assertThat(javaFileObject)
-        .processedWith(
-            new AutoValueProcessor(ImmutableList.of(nonFinalExtension, finalExtension)))
+        .processedWith(new AutoValueProcessor(ImmutableList.of(nonFinalExtension, finalExtension)))
         .compilesWithoutError();
     assertTrue(finalExtension.generated);
     assertTrue(nonFinalExtension.generated);
@@ -625,17 +663,18 @@ public class ExtensionTest {
 
   @Test
   public void testUnconsumedMethod() throws Exception {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "  abstract String foo();",
-        "  abstract void writeToParcel(Object parcel, int flags);",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  abstract void writeToParcel(Object parcel, int flags);",
+            "}");
     assertThat(javaFileObject)
         .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
         .failsToCompile()
@@ -644,15 +683,16 @@ public class ExtensionTest {
         .withWarningContaining(
             "Abstract method is neither a property getter nor a Builder converter, "
                 + "and no extension consumed it")
-        .in(javaFileObject).onLine(8);
+        .in(javaFileObject)
+        .onLine(8);
     // The error here comes from the Java compiler rather than AutoValue, so we don't assume
     // much about what it looks like. On the other hand, the warning does come from AutoValue
     // so we know what to expect.
   }
 
   /**
-   * Tests that the search for extensions doesn't completely blow AutoValue up if there is a
-   * corrupt jar in the {@code processorpath}. If we're not careful, that can lead to a
+   * Tests that the search for extensions doesn't completely blow AutoValue up if there is a corrupt
+   * jar in the {@code processorpath}. If we're not careful, that can lead to a
    * ServiceConfigurationError.
    */
   @Test
@@ -675,23 +715,26 @@ public class ExtensionTest {
     jarOutputStream.write(bogusLine);
     jarOutputStream.close();
     ClassLoader badJarLoader = new URLClassLoader(new URL[] {badJar.toURI().toURL()});
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "public abstract class Baz {",
-        "}");
-    SuccessfulCompilationClause success = assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-        .processedWith(new AutoValueProcessor(badJarLoader))
-        .compilesWithoutError();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "}");
+    SuccessfulCompilationClause success =
+        assertThat(javaFileObject)
+            .withCompilerOptions("-Xlint:-processing", "-implicit:class")
+            .processedWith(new AutoValueProcessor(badJarLoader))
+            .compilesWithoutError();
     success.withWarningContaining(
-        "This may be due to a corrupt jar file in the compiler's classpath. Exception: "
+        "This may be due to a corrupt jar file in the compiler's classpath.\n  "
             + ServiceConfigurationError.class.getName());
-    success.and()
+    success
+        .and()
         .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
   }
 
@@ -707,6 +750,59 @@ public class ExtensionTest {
       builder.putAll(entry.getKey(), entry.getValue());
     }
     return builder.build();
+  }
+
+  private static final String CUSTOM_OPTION = "customAnnotation.customOption";
+
+  /**
+   * Tests that extensions providing their own (annotated) annotation types or options get picked
+   * up.
+   */
+  @Test
+  public void extensionsWithAnnotatedOptions() {
+    ExtensionWithAnnotatedOptions extension = new ExtensionWithAnnotatedOptions();
+
+    // Ensure default annotation support works
+    assertThat(extension.getSupportedOptions()).contains(CUSTOM_OPTION);
+
+    // Ensure it's carried over to the AutoValue processor
+    assertThat(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions())
+        .contains(CUSTOM_OPTION);
+  }
+
+  /**
+   * Tests that extensions providing their own implemented annotation types or options get picked
+   * up.
+   */
+  @Test
+  public void extensionsWithImplementedOptions() {
+    ExtensionWithImplementedOptions extension = new ExtensionWithImplementedOptions();
+
+    // Ensure it's carried over to the AutoValue processor
+    assertThat(new AutoValueProcessor(ImmutableList.of(extension)).getSupportedOptions())
+        .contains(CUSTOM_OPTION);
+  }
+
+  @SupportedOptions(CUSTOM_OPTION)
+  static class ExtensionWithAnnotatedOptions extends AutoValueExtension {
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      return null;
+    }
+  }
+
+  static class ExtensionWithImplementedOptions extends AutoValueExtension {
+    @Override
+    public Set<String> getSupportedOptions() {
+      return ImmutableSet.of(CUSTOM_OPTION);
+    }
+
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      return null;
+    }
   }
 
   private static class FooExtension extends AutoValueExtension {
@@ -762,23 +858,28 @@ public class ExtensionTest {
       constructor.append(");\n");
       constructor.append("  }\n");
 
-      return String.format("package %s;\n" +
-          "\n" +
-          "%s class %s extends %s {\n" +
-          constructor +
-          "  @Override public String foo() {\n" +
-          "    return \"foo\";\n" +
-          "  }\n" +
-          "  public String dizzle() {\n" +
-          "    return \"dizzle\";\n" +
-          "  }\n" +
-          "}", context.packageName(), isFinal ? "final" : "abstract", className, classToExtend);
+      return String.format(
+          "package %s;\n"
+              + "\n"
+              + "%s class %s extends %s {\n"
+              + constructor
+              + "  @Override public String foo() {\n"
+              + "    return \"foo\";\n"
+              + "  }\n"
+              + "  public String dizzle() {\n"
+              + "    return \"dizzle\";\n"
+              + "  }\n"
+              + "}",
+          context.packageName(),
+          isFinal ? "final" : "abstract",
+          className,
+          classToExtend);
     }
   }
 
   // Extension that generates a class that just forwards to the parent constructor.
   // We will make subclasses that are respectively final and non-final.
-  private static abstract class EmptyExtension extends AutoValueExtension {
+  private abstract static class EmptyExtension extends AutoValueExtension {
     @Override
     public boolean applicable(Context context) {
       return true;
@@ -802,14 +903,15 @@ public class ExtensionTest {
         typesAndNamesBuilder.add(entry.getValue().getReturnType() + " " + entry.getKey());
       }
       String typesAndNames = Joiner.on(", ").join(typesAndNamesBuilder.build());
-      String template = "package {pkg};\n"
-          + "\n"
-          + "{finalOrAbstract} class {className} extends {classToExtend} {\n"
-          + "  {className}({propertyTypesAndNames}) {\n"
-          + "    super({propertyNames});\n"
-          + "  }\n"
-          + "  {extraText}\n"
-          + "}\n";
+      String template =
+          "package {pkg};\n"
+              + "\n"
+              + "{finalOrAbstract} class {className} extends {classToExtend} {\n"
+              + "  {className}({propertyTypesAndNames}) {\n"
+              + "    super({propertyNames});\n"
+              + "  }\n"
+              + "  {extraText}\n"
+              + "}\n";
       return template
           .replace("{pkg}", context.packageName())
           .replace("{finalOrAbstract}", isFinal ? "final" : "abstract")
@@ -850,20 +952,23 @@ public class ExtensionTest {
     public String generateClass(Context context, String className, String classToExtend, boolean isFinal) {
       String sideClassName = "Side_" + context.autoValueClass().getSimpleName().toString();
       String sideClass =
-          "package " + context.packageName() + ";\n"
+          "" //
+          + "package " + context.packageName() + ";\n"
           + "class " + sideClassName + " {}\n";
       Filer filer = context.processingEnvironment().getFiler();
       try {
         String sideClassFqName = context.packageName() + "." + sideClassName;
-        JavaFileObject sourceFile = filer.createSourceFile(
-            sideClassFqName, context.autoValueClass());
+        JavaFileObject sourceFile =
+            filer.createSourceFile(sideClassFqName, context.autoValueClass());
         // TODO(emcmanus): use try-with-resources when we dump Java 6 source compatibility.
         // (We will still *generate* code that is Java 6 compatible.)
         Writer sourceWriter = sourceFile.openWriter();
         sourceWriter.write(sideClass);
         sourceWriter.close();
       } catch (IOException e) {
-        context.processingEnvironment().getMessager()
+        context
+            .processingEnvironment()
+            .getMessager()
             .printMessage(Diagnostic.Kind.ERROR, e.toString());
       }
       return null;
@@ -890,14 +995,16 @@ public class ExtensionTest {
       // This is perhaps overgeneral. It is simply going to generate this:
       // @Override void writeToParcel(Object parcel, int flags) {}
       ExecutableElement methodToImplement = writeToParcelMethod(context);
-      assertEquals(TypeKind.VOID, methodToImplement.getReturnType().getKind());
+      assertThat(methodToImplement.getReturnType().getKind()).isEqualTo(TypeKind.VOID);
       ImmutableList.Builder<String> typesAndNamesBuilder = ImmutableList.builder();
       for (VariableElement p : methodToImplement.getParameters()) {
         typesAndNamesBuilder.add(p.asType() + " " + p.getSimpleName());
       }
       return "@Override void "
           + methodToImplement.getSimpleName()
-          + "(" + Joiner.on(", ").join(typesAndNamesBuilder.build()) + ") {}";
+          + "("
+          + Joiner.on(", ").join(typesAndNamesBuilder.build())
+          + ") {}";
     }
   }
 

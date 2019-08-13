@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
@@ -70,15 +70,19 @@ public final class AnnotationMirrors {
   }
 
   /**
-   * Returns the {@link AnnotationMirror}'s map of {@link AnnotationValue} indexed by
-   * {@link ExecutableElement}, supplying default values from the annotation if the
-   * annotation property has not been set.  This is equivalent to
-   * {@link Elements#getElementValuesWithDefaults(AnnotationMirror)} but can be called
-   * statically without an {@link Elements} instance.
+   * Returns the {@link AnnotationMirror}'s map of {@link AnnotationValue} indexed by {@link
+   * ExecutableElement}, supplying default values from the annotation if the annotation property has
+   * not been set. This is equivalent to {@link
+   * Elements#getElementValuesWithDefaults(AnnotationMirror)} but can be called statically without
+   * an {@link Elements} instance.
+   *
+   * <p>The iteration order of elements of the returned map will be the order in which the {@link
+   * ExecutableElement}s are defined in {@code annotation}'s {@linkplain
+   * AnnotationMirror#getAnnotationType() type}.
    */
-  public static Map<ExecutableElement, AnnotationValue> getAnnotationValuesWithDefaults(
+  public static ImmutableMap<ExecutableElement, AnnotationValue> getAnnotationValuesWithDefaults(
       AnnotationMirror annotation) {
-    Map<ExecutableElement, AnnotationValue> values = Maps.newLinkedHashMap();
+    ImmutableMap.Builder<ExecutableElement, AnnotationValue> values = ImmutableMap.builder();
     Map<? extends ExecutableElement, ? extends AnnotationValue> declaredValues =
         annotation.getElementValues();
     for (ExecutableElement method :
@@ -95,7 +99,7 @@ public final class AnnotationMirrors {
             + '.' + method.getSimpleName() + "()");
       }
     }
-    return values;
+    return values.build();
   }
 
   /**

@@ -15,9 +15,6 @@ final class AutoValue_Animal extends Animal {
   private AutoValue_Animal(
       String name,
       int numberOfLegs) {
-    if (name == null) {
-      throw new NullPointerException("Null name");
-    }
     this.name = name;
     this.numberOfLegs = numberOfLegs;
   }
@@ -70,30 +67,28 @@ final class AutoValue_Animal extends Animal {
     Builder() {
     }
 
-    Builder(Animal source) {
-      this.name = source.name();
-      this.numberOfLegs = source.numberOfLegs();
-    }
-
     @Override
-    public Animal.Builder setName(String name) {
+    Animal.Builder setName(String name) {
+      if (name == null) {
+        throw new NullPointerException("Null name");
+      }
       this.name = name;
       return this;
     }
 
     @Override
-    public Animal.Builder setNumberOfLegs(int numberOfLegs) {
+    Animal.Builder setNumberOfLegs(int numberOfLegs) {
       this.numberOfLegs = numberOfLegs;
       return this;
     }
 
     @Override
-    public Animal build() {
+    Animal build() {
       String missing = "";
-      if (name == null) {
+      if (this.name == null) {
         missing += " name";
       }
-      if (numberOfLegs == null) {
+      if (this.numberOfLegs == null) {
         missing += " numberOfLegs";
       }
       if (!missing.isEmpty()) {

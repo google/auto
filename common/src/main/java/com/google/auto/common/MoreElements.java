@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright 2013 Google LLC
  * Copyright (C) 2013 Square, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package com.google.auto.common;
 
 import static javax.lang.model.element.ElementKind.PACKAGE;
 
+import com.google.auto.common.Overrides.ExplicitOverrides;
 import com.google.common.annotations.Beta;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -36,6 +37,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -128,6 +130,33 @@ public final class MoreElements {
     return element.accept(TypeElementVisitor.INSTANCE, null);
   }
 
+  /**
+   * Returns the given {@link Element} instance as {@link TypeParameterElement}.
+   *
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
+   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   *
+   * @throws NullPointerException if {@code element} is {@code null}
+   * @throws IllegalArgumentException if {@code element} isn't a {@link TypeParameterElement}.
+   */
+  public static TypeParameterElement asTypeParameter(Element element) {
+    return element.accept(TypeParameterElementVisitor.INSTANCE, null);
+  }
+
+  private static final class TypeParameterElementVisitor
+      extends CastingElementVisitor<TypeParameterElement> {
+    private static final TypeParameterElementVisitor INSTANCE = new TypeParameterElementVisitor();
+
+    TypeParameterElementVisitor() {
+      super("type parameter element");
+    }
+
+    @Override
+    public TypeParameterElement visitTypeParameter(TypeParameterElement e, Void ignore) {
+      return e;
+    }
+  }
+
   private static final class VariableElementVisitor extends CastingElementVisitor<VariableElement> {
     private static final VariableElementVisitor INSTANCE = new VariableElementVisitor();
 
@@ -186,14 +215,6 @@ public final class MoreElements {
    * {@linkplain AnnotationMirror#getAnnotationType() annotation type} has the same canonical name
    * as that of {@code annotationClass}. This method is a safer alternative to calling
    * {@link Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
-
-   . This() {
-   super();
-   }
-
-   . This() {
-   super();
-   }
    * annotation proxies.
    */
   public static boolean isAnnotationPresent(Element element,
@@ -230,7 +251,7 @@ public final class MoreElements {
    *     .filter(MoreElements.hasModifiers(Modifier.STATIC).toList();
    * }</pre>
    */
-  public static Predicate<Element> hasModifiers(Modifier... modifiers) {
+  public static <T extends Element> Predicate<T> hasModifiers(Modifier... modifiers) {
     return hasModifiers(ImmutableSet.copyOf(modifiers));
   }
 
@@ -246,10 +267,10 @@ public final class MoreElements {
    *     .filter(MoreElements.hasModifiers(modifiers).toList();}
    * </pre>
    */
-  public static Predicate<Element> hasModifiers(final Set<Modifier> modifiers) {
-    return new Predicate<Element>() {
+  public static <T extends Element> Predicate<T> hasModifiers(final Set<Modifier> modifiers) {
+    return new Predicate<T>() {
       @Override
-      public boolean apply(Element input) {
+      public boolean apply(T input) {
         return input.getModifiers().containsAll(modifiers);
       }
     };
@@ -307,11 +328,27 @@ public final class MoreElements {
    */
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
       TypeElement type, Types typeUtils, Elements elementUtils) {
-    // TODO(emcmanus): detect if the Types and Elements are the javac ones, and use
-    //   NativeOverrides if so. We may need to adjust the logic further to avoid the bug
-    //   tested for by MoreElementsTest.getLocalAndInheritedMethods_DaggerBug.
-    Overrides overrides = new Overrides.ExplicitOverrides(typeUtils);
-    return getLocalAndInheritedMethods(type, overrides);
+    return getLocalAndInheritedMethods(type, new ExplicitOverrides(typeUtils));
+  }
+
+  /**
+   * Tests whether one method, as a member of a given type, overrides another method.
+   *
+   * <p>This method does the same thing as {@link Elements#overrides(ExecutableElement,
+   * ExecutableElement, TypeElement)}, but in a way that is more consistent between compilers, in
+   * particular between javac and ecj (the Eclipse compiler).
+   *
+   * @param overrider the first method, possible overrider
+   * @param overridden the second method, possibly being overridden
+   * @param type the type of which the first method is a member
+   * @return {@code true} if and only if the first method overrides the second
+   */
+  public static boolean overrides(
+      ExecutableElement overrider,
+      ExecutableElement overridden,
+      TypeElement type,
+      Types typeUtils) {
+    return new ExplicitOverrides(typeUtils).overrides(overrider, overridden, type);
   }
 
   private static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(

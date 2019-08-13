@@ -28,7 +28,7 @@ How do I...
     *   ... [let my builder **accumulate** values for a collection-valued
         property (not require them all at once)?](#accumulate)
     *   ... [accumulate values for a collection-valued property, without
-        **breaking the chain**?](#add)
+        **"breaking the chain"**?](#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
 *   ... [access nested builders while building?](#nested_builders)
@@ -315,6 +315,25 @@ introduced related classes in `java.util` called [`OptionalInt`],
 example a property of type `OptionalInt` will default to `OptionalInt.empty()`
 and you can set it with either `setFoo(OptionalInt)` or `setFoo(int)`.
 
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract Optional<String> name();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    // You can have either or both of these two methods:
+    public abstract Builder setName(Optional<String> value);
+    public abstract Builder setName(String value);
+    public abstract Animal build();
+  }
+}
+```
+
 [`java.util.Optional`]: https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html
 [`com.google.common.base.Optional`]: http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html
 [`OptionalDouble`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalDouble.html
@@ -394,6 +413,11 @@ public abstract class Animal {
   }
 }
 ```
+
+The name of this method must be exactly the property name (`countries` here)
+followed by the string `Builder`. Even if the properties follow the
+`getCountries()` convention, the builder method must be `countriesBuilder()`
+and not `getCountriesBuilder()`.
 
 You may notice a small problem with this example: the caller can no longer
 create their instance in a single chained statement:

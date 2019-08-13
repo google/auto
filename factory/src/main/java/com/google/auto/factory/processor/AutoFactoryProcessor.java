@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright 2013 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimaps;
 import com.google.googlejavaformat.java.filer.FormattingFiler;
 import java.io.IOException;
 import java.util.Arrays;
@@ -52,12 +51,15 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
+import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
  *
  * @author Gregory Kick
  */
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
   private FactoryDescriptorGenerator factoryDescriptorGenerator;
@@ -74,7 +76,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
-    factoryWriter = new FactoryWriter(new FormattingFiler(processingEnv.getFiler()));
+    factoryWriter =
+        new FactoryWriter(
+            new FormattingFiler(processingEnv.getFiler()),
+            elements,
+            processingEnv.getSourceVersion());
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =

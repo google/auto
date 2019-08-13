@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,11 @@ import javax.tools.Diagnostic;
 /**
  * Handle error reporting for an annotation processor.
  *
- * @see AutoValue
  * @author Éamonn McManus
  */
 class ErrorReporter {
   private final Messager messager;
+  private int errorCount;
 
   ErrorReporter(ProcessingEnvironment processingEnv) {
     this.messager = processingEnv.getMessager();
@@ -64,6 +64,7 @@ class ErrorReporter {
    */
   void reportError(String msg, Element e) {
     messager.printMessage(Diagnostic.Kind.ERROR, msg, e);
+    errorCount++;
   }
 
   /**
@@ -76,5 +77,17 @@ class ErrorReporter {
   void abortWithError(String msg, Element e) {
     reportError(msg, e);
     throw new AbortProcessingException();
+  }
+
+  /** The number of errors that have been output by calls to {@link #reportError}. */
+  int errorCount() {
+    return errorCount;
+  }
+
+  /** Abandon the processing of this class if any errors have been output. */
+  void abortIfAnyError() {
+    if (errorCount > 0) {
+      throw new AbortProcessingException();
+    }
   }
 }

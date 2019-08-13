@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.auto.value.processor.escapevelocity.Template;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import java.io.BufferedReader;
+import com.google.escapevelocity.Template;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -32,7 +32,9 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -43,10 +45,11 @@ import java.util.jar.JarFile;
  * of the fields have been assigned, the {@link #toText()} method returns the result of substituting
  * them into the template.
  *
- * <p>The subclass must be a direct subclass of this class. Fields cannot be static unless they are
- * also final. They cannot be private, though they can be package-private if the class is in the
- * same package as this class. They cannot be primitive or null, so that there is a clear indication
- * when a field has not been set.
+ * <p>The subclass may be a direct subclass of this class or a more distant descendant. Every field
+ * in the starting class and its ancestors up to this class will be included. Fields cannot be
+ * static unless they are also final. They cannot be private, though they can be package-private if
+ * the class is in the same package as this class. They cannot be primitive or null, so that there
+ * is a clear indication when a field has not been set.
  *
  * @author Éamonn McManus
  */
@@ -56,11 +59,20 @@ abstract class TemplateVars {
   private final ImmutableList<Field> fields;
 
   TemplateVars() {
-    if (getClass().getSuperclass() != TemplateVars.class) {
-      throw new IllegalArgumentException("Class must extend TemplateVars directly");
+    this.fields = getFields(getClass());
+  }
+
+  private static ImmutableList<Field> getFields(Class<?> c) {
+    ImmutableList.Builder<Field> fieldsBuilder = ImmutableList.builder();
+    while (c != TemplateVars.class) {
+      addFields(fieldsBuilder, c.getDeclaredFields());
+      c = c.getSuperclass();
     }
-    ImmutableList.Builder<Field> fields = ImmutableList.builder();
-    Field[] declaredFields = getClass().getDeclaredFields();
+    return fieldsBuilder.build();
+  }
+
+  private static void addFields(
+      ImmutableList.Builder<Field> fieldsBuilder, Field[] declaredFields) {
     for (Field field : declaredFields) {
       if (field.isSynthetic() || isStaticFinal(field)) {
         continue;
@@ -74,14 +86,13 @@ abstract class TemplateVars {
       if (field.getType().isPrimitive()) {
         throw new IllegalArgumentException("Field cannot be primitive: " + field);
       }
-      fields.add(field);
+      fieldsBuilder.add(field);
     }
-    this.fields = fields.build();
   }
 
   /**
-   * Returns the result of substituting the variables defined by the fields of this class
-   * (a concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
+   * Returns the result of substituting the variables defined by the fields of this class (a
+   * concrete subclass of TemplateVars) into the template returned by {@link #parsedTemplate()}.
    */
   String toText() {
     Map<String, Object> vars = toVars();
@@ -89,7 +100,7 @@ abstract class TemplateVars {
   }
 
   private Map<String, Object> toVars() {
-    Map<String, Object> vars = Maps.newTreeMap();
+    Map<String, Object> vars = new TreeMap<>();
     for (Field field : fields) {
       Object value = fieldValue(field, this);
       if (value == null) {
@@ -104,43 +115,33 @@ abstract class TemplateVars {
   }
 
   static Template parsedTemplateForResource(String resourceName) {
-    InputStream in = TemplateVars.class.getResourceAsStream(resourceName);
-    if (in == null) {
-      throw new IllegalArgumentException("Could not find resource: " + resourceName);
-    }
     try {
-      return templateFromInputStream(in);
+      return Template.parseFrom(resourceName, TemplateVars::readerFromResource);
     } catch (UnsupportedEncodingException e) {
       throw new AssertionError(e);
-    } catch (IOException | NullPointerException e) {
-      // https://github.com/google/auto/pull/439 says that we can also get NullPointerException.
+    } catch (IOException | NullPointerException | IllegalStateException e) {
+      // https://github.com/google/auto/pull/439 says that we can get NullPointerException.
+      // https://github.com/google/auto/issues/715 says that we can get IllegalStateException
       return retryParseAfterException(resourceName, e);
-    } finally {
-      try {
-        in.close();
-      } catch (IOException ignored) {
-        // We probably already got an IOException which we're propagating.
-      }
     }
   }
 
   private static Template retryParseAfterException(String resourceName, Exception exception) {
     try {
-      return parsedTemplateFromUrl(resourceName);
-    } catch (Throwable t) {
+      return Template.parseFrom(resourceName, TemplateVars::readerFromUrl);
+    } catch (IOException t) {
       // Chain the original exception so we can see both problems.
-      Throwable cause;
-      for (cause = exception; cause.getCause() != null; cause = cause.getCause()) {
-      }
-      cause.initCause(t);
+      Throwables.getRootCause(exception).initCause(t);
       throw new AssertionError(exception);
     }
   }
 
-  private static Template templateFromInputStream(InputStream in)
-      throws UnsupportedEncodingException, IOException {
-    Reader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-    return Template.parseFrom(reader);
+  private static Reader readerFromResource(String resourceName) {
+    InputStream in = TemplateVars.class.getResourceAsStream(resourceName);
+    if (in == null) {
+      throw new IllegalArgumentException("Could not find resource: " + resourceName);
+    }
+    return new InputStreamReader(in, StandardCharsets.UTF_8);
   }
 
   // This is an ugly workaround for https://bugs.openjdk.java.net/browse/JDK-6947916, as
@@ -152,19 +153,24 @@ abstract class TemplateVars {
   // susceptible to the same bug. We only use this as fallback logic rather than doing it always,
   // because jars are memory-mapped by URLClassLoader, so loading a resource in the usual way
   // through the getResourceAsStream should be a lot more efficient than reopening the jar.
-  private static Template parsedTemplateFromUrl(String resourceName)
-      throws URISyntaxException, IOException {
+  private static Reader readerFromUrl(String resourceName) throws IOException {
     URL resourceUrl = TemplateVars.class.getResource(resourceName);
-    if (resourceUrl.getProtocol().equalsIgnoreCase("file")) {
-      return parsedTemplateFromFile(resourceUrl);
-    } else if (resourceUrl.getProtocol().equalsIgnoreCase("jar")) {
-      return parsedTemplateFromJar(resourceUrl);
-    } else {
-      throw new AssertionError("Template fallback logic fails for: " + resourceUrl);
+    InputStream in;
+    try {
+      if (resourceUrl.getProtocol().equalsIgnoreCase("file")) {
+        in = inputStreamFromFile(resourceUrl);
+      } else if (resourceUrl.getProtocol().equalsIgnoreCase("jar")) {
+        in = inputStreamFromJar(resourceUrl);
+      } else {
+        throw new AssertionError("Template fallback logic fails for: " + resourceUrl);
+      }
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
     }
+    return new InputStreamReader(in, StandardCharsets.UTF_8);
   }
 
-  private static Template parsedTemplateFromJar(URL resourceUrl)
+  private static InputStream inputStreamFromJar(URL resourceUrl)
       throws URISyntaxException, IOException {
     // Jar URLs look like this: jar:file:/path/to/file.jar!/entry/within/jar
     // So take apart the URL to open the jar /path/to/file.jar and read the entry
@@ -176,23 +182,28 @@ abstract class TemplateVars {
       entryName = entryName.substring(1);
     }
     URI jarUri = new URI(resourceUrlString.substring(0, bang));
-    try (JarFile jar = new JarFile(new File(jarUri))) {
-      JarEntry entry = jar.getJarEntry(entryName);
-      InputStream in = jar.getInputStream(entry);
-      return templateFromInputStream(in);
-    }
+    JarFile jar = new JarFile(new File(jarUri));
+    JarEntry entry = jar.getJarEntry(entryName);
+    InputStream in = jar.getInputStream(entry);
+    // We have to be careful not to close the JarFile before the stream has been read, because
+    // that would also close the stream. So we defer closing the JarFile until the stream is closed.
+    return new FilterInputStream(in) {
+      @Override
+      public void close() throws IOException {
+        super.close();
+        jar.close();
+      }
+    };
   }
 
   // We don't really expect this case to arise, since the bug we're working around concerns jars
   // not individual files. However, when running the test for this workaround from Maven, we do
   // have files. That does mean the test is basically useless there, but Google's internal build
   // system does run it using a jar, so we do have coverage.
-  private static Template parsedTemplateFromFile(URL resourceUrl)
+  private static InputStream inputStreamFromFile(URL resourceUrl)
       throws IOException, URISyntaxException {
     File resourceFile = new File(resourceUrl.toURI());
-    try (InputStream in = new FileInputStream(resourceFile)) {
-      return templateFromInputStream(in);
-    }
+    return new FileInputStream(resourceFile);
   }
 
   private static Object fieldValue(Field field, Object container) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -24,11 +24,12 @@ import java.lang.reflect.AnnotatedElement;
  * Annotation that causes an implementation of an annotation interface to be generated. The
  * annotation is applied to a method whose return type is an annotation interface. The method can
  * then create and return an instance of the generated class that conforms to the specification of
- * {@link Annotation}, in particular as regards {@link Annotation#equals equals} and
- * {@link Annotation#hashCode hashCode}. These instances behave essentially the same as instances
- * returned by {@link AnnotatedElement#getAnnotation}.
+ * {@link Annotation}, in particular as regards {@link Annotation#equals equals} and {@link
+ * Annotation#hashCode hashCode}. These instances behave essentially the same as instances returned
+ * by {@link AnnotatedElement#getAnnotation}.
  *
  * <p>For example, suppose you have an annotation like this:
+ *
  * <pre>
  * package com.google.inject.name;
  *
@@ -37,6 +38,7 @@ import java.lang.reflect.AnnotatedElement;
  * }</pre>
  *
  * <p>You could write a method like this to construct implementations of the interface:
+ *
  * <pre>
  * package com.example;
  *
@@ -48,9 +50,9 @@ import java.lang.reflect.AnnotatedElement;
  *
  * <p>Because the annotated method is called {@code Names.named}, the generated class is called
  * {@code AutoAnnotation_Names_named} in the same package. If the annotated method were in a nested
- * class, for example {@code Outer.Names.named}, then the generated class would be called
- * {@code AutoAnnotation_Outer_Names_named}. The generated class is package-private and it is not
- * expected that it will be referenced outside the {@code @AutoAnnotation} method.
+ * class, for example {@code Outer.Names.named}, then the generated class would be called {@code
+ * AutoAnnotation_Outer_Names_named}. The generated class is package-private and it is not expected
+ * that it will be referenced outside the {@code @AutoAnnotation} method.
  *
  * <p>The names and types of the parameters in the annotated method must be the same as the names
  * and types of the annotation elements, except that elements which have default values can be
@@ -73,5 +75,4 @@ import java.lang.reflect.AnnotatedElement;
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.SOURCE)
-public @interface AutoAnnotation {
-}
+public @interface AutoAnnotation {}

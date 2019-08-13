@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   private final Set<ElementName> deferredElementNames = new LinkedHashSet<ElementName>();
   private final SetMultimap<ProcessingStep, ElementName> elementsDeferredBySteps =
       LinkedHashMultimap.create();
-  private final String processorName = getClass().getCanonicalName();
 
   private Elements elements;
   private Messager messager;
@@ -233,9 +232,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   private String processingErrorMessage(String target) {
     return String.format(
-        "%s was unable to process %s because not all of its dependencies could be resolved. Check "
-            + "for compilation errors or a circular dependency with generated code.",
-        processorName,
+        "[%s:MiscError] %s was unable to process %s because not all of its dependencies could be "
+            + "resolved. Check for compilation errors or a circular dependency with generated "
+            + "code.",
+        getClass().getSimpleName(),
+        getClass().getCanonicalName(),
         target);
   }
 
@@ -320,7 +321,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     for (ProcessingStep step : steps) {
       ImmutableSetMultimap<Class<? extends Annotation>, Element> stepElements =
           new ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element>()
-              .putAll(indexByAnnotation(elementsDeferredBySteps.get(step)))
+              .putAll(indexByAnnotation(elementsDeferredBySteps.get(step), step.annotations()))
               .putAll(filterKeys(validElements, Predicates.<Object>in(step.annotations())))
               .build();
       if (stepElements.isEmpty()) {
@@ -342,15 +343,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   private ImmutableSetMultimap<Class<? extends Annotation>, Element> indexByAnnotation(
-      Set<ElementName> annotatedElements) {
-    ImmutableSet<? extends Class<? extends Annotation>> supportedAnnotationClasses =
-        getSupportedAnnotationClasses();
+      Set<ElementName> annotatedElements,
+      Set<? extends Class<? extends Annotation>> annotationClasses) {
     ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> deferredElements =
         ImmutableSetMultimap.builder();
     for (ElementName elementName : annotatedElements) {
       Optional<? extends Element> element = elementName.getElement(elements);
       if (element.isPresent()) {
-        findAnnotatedElements(element.get(), supportedAnnotationClasses, deferredElements);
+        findAnnotatedElements(element.get(), annotationClasses, deferredElements);
       }
     }
     return deferredElements.build();
@@ -376,7 +376,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    */
   private static void findAnnotatedElements(
       Element element,
-      ImmutableSet<? extends Class<? extends Annotation>> annotationClasses,
+      Set<? extends Class<? extends Annotation>> annotationClasses,
       ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element> annotatedElements) {
     for (Element enclosedElement : element.getEnclosedElements()) {
       if (!enclosedElement.getKind().isClass() && !enclosedElement.getKind().isInterface()) {

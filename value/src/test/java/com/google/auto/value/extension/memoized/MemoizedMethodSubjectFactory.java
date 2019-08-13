@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
+ * Copyright 2016 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,10 @@ package com.google.auto.value.extension.memoized;
 
 import static com.google.common.truth.Truth.assertAbout;
 
-import com.google.common.truth.FailureStrategy;
-import com.google.common.truth.SubjectFactory;
+import com.google.common.truth.FailureMetadata;
+import com.google.common.truth.Subject;
 
-final class MemoizedMethodSubjectFactory
-    extends SubjectFactory<MemoizedMethodSubject, String> {
+final class MemoizedMethodSubjectFactory implements Subject.Factory<MemoizedMethodSubject, String> {
 
   static MemoizedMethodSubjectFactory memoizeMethod() {
     return new MemoizedMethodSubjectFactory();
@@ -33,7 +32,7 @@ final class MemoizedMethodSubjectFactory
   }
 
   @Override
-  public MemoizedMethodSubject getSubject(FailureStrategy fs, String that) {
-    return new MemoizedMethodSubject(fs, that);
+  public MemoizedMethodSubject createSubject(FailureMetadata failureMetadata, String that) {
+    return new MemoizedMethodSubject(failureMetadata, that);
   }
 }

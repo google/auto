@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
+ * Copyright 2016 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,22 +28,23 @@ import java.lang.annotation.Target;
  * returned value.
  *
  * <p>Methods annotated with {@code @Memoized} cannot:
+ *
  * <ul>
- * <li>be {@code abstract} (except for {@link #hashCode()} and {@link #toString()}), {@code
- *     private}, {@code final}, or {@code static}
- * <li>return {@code void}
- * <li>have any parameters
+ *   <li>be {@code abstract} (except for {@link #hashCode()} and {@link #toString()}), {@code
+ *       private}, {@code final}, or {@code static}
+ *   <li>return {@code void}
+ *   <li>have any parameters
  * </ul>
- * 
+ *
  * <p>If you want to memoize {@link #hashCode()} or {@link #toString()}, you can redeclare them,
  * keeping them {@code abstract}, and annotate them with {@code @Memoize}.
  *
- * <p>If a {@code @Memoized} method is annotated with an annotation whose simple name is
- * {@code Nullable}, then {@code null} values will also be memoized. Otherwise, if the method
- * returns {@code null}, the overriding method will throw a {@link NullPointerException}.
+ * <p>If a {@code @Memoized} method is annotated with an annotation whose simple name is {@code
+ * Nullable}, then {@code null} values will also be memoized. Otherwise, if the method returns
+ * {@code null}, the overriding method will throw a {@link NullPointerException}.
  *
- * <p>The overriding method uses
- * <a href="http://errorprone.info/bugpattern/DoubleCheckedLocking">double-checked locking</a> to
+ * <p>The overriding method uses <a
+ * href="https://errorprone.info/bugpattern/DoubleCheckedLocking">double-checked locking</a> to
  * ensure that the annotated method is called at most once.
  *
  * <h3>Example</h3>

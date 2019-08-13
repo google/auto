@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
+ * Copyright 2016 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
 import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
@@ -74,9 +75,19 @@ import org.junit.runners.model.Statement;
  */
 @RunWith(Parameterized.class)
 public class OverridesTest {
+  private static final ImmutableSet<String> TOO_NEW_FOR_ECJ = ImmutableSet.of("9", "10", "11");
+
   @Parameterized.Parameters(name = "{0}")
   public static List<Object[]> data() {
-    return ImmutableList.copyOf(new Object[][] {{CompilerType.JAVAC}, {CompilerType.ECJ}});
+    List<Object[]> compilerTypes = new ArrayList<Object[]>();
+    compilerTypes.add(new Object[] {CompilerType.JAVAC});
+    if (!TOO_NEW_FOR_ECJ.contains(JAVA_SPECIFICATION_VERSION.value())) {
+      // TODO(emcmanus): make this test pass with ECJ on Java > 8.
+      // Currently it complains because it can't find java.lang.Object. Probably we need a newer
+      // version of ECJ.
+      compilerTypes.add(new Object[] {CompilerType.ECJ});
+    }
+    return compilerTypes;
   }
 
   @Rule public CompilationRule compilation = new CompilationRule();
@@ -533,7 +544,7 @@ public class OverridesTest {
       tmpDir.mkdir();
       File dummySourceFile = new File(tmpDir, "Dummy.java");
       try {
-        Files.write("class Dummy {}", dummySourceFile, Charsets.UTF_8);
+        Files.asCharSink(dummySourceFile, Charsets.UTF_8).write("class Dummy {}");
         evaluate(dummySourceFile);
       } finally {
         dummySourceFile.delete();

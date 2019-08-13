@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,10 @@ import static com.google.auto.common.Visibility.PUBLIC;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.testing.compile.CompilationRule;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import javax.lang.model.element.Element;
+import javax.lang.model.util.Elements;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,6 +42,20 @@ public class VisibilityTest {
     assertThat(Visibility.ofElement(
         compilation.getElements().getPackageElement("com.google.auto.common")))
             .isEqualTo(PUBLIC);
+  }
+
+  @Test
+  public void moduleVisibility() throws IllegalAccessException, InvocationTargetException {
+    Method getModuleElement;
+    try {
+      getModuleElement = Elements.class.getMethod("getModuleElement", CharSequence.class);
+    } catch (NoSuchMethodException e) {
+      // TODO(ronshapiro): rewrite this test without reflection once we're on Java 9
+      return;
+    }
+    Element moduleElement =
+        (Element) getModuleElement.invoke(compilation.getElements(), "java.base");
+    assertThat(Visibility.ofElement(moduleElement)).isEqualTo(PUBLIC);
   }
 
   @SuppressWarnings("unused")

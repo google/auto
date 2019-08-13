@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google, Inc.
+ * Copyright 2013 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
@@ -55,6 +54,10 @@ abstract class FactoryDescriptor {
   abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
   abstract boolean allowSubclasses();
   abstract ImmutableMap<Key, ProviderField> providers();
+
+  final AutoFactoryDeclaration declaration() {
+    return Iterables.getFirst(methodDescriptors(), null).declaration();
+  }
 
   private static class UniqueNameSet {
     private final Set<String> uniqueNames = new HashSet<String>();
@@ -218,8 +221,8 @@ abstract class FactoryDescriptor {
     }
 
     // Descriptors are identical if they have the same passed types in the same order.
-    return MoreTypes.equivalence().pairwise().equivalent(
-        Iterables.transform(factory.passedParameters(), Parameter.TYPE),
-        Iterables.transform(implementation.passedParameters(), Parameter.TYPE));
+    return Iterables.elementsEqual(
+        Iterables.transform(factory.passedParameters(), Parameter::type),
+        Iterables.transform(implementation.passedParameters(), Parameter::type));
   }
 }

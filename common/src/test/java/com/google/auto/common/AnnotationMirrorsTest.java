@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Google, Inc.
+ * Copyright 2014 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,8 +199,10 @@ public class AnnotationMirrorsTest {
     try {
       AnnotationMirrors.getAnnotationValue(annotationOn(TestClassBlah.class), "a");
     } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessage(
-          "@com.google.auto.common.AnnotationMirrorsTest.Outer does not define an element a()");
+      assertThat(e)
+          .hasMessageThat()
+          .isEqualTo(
+              "@com.google.auto.common.AnnotationMirrorsTest.Outer does not define an element a()");
       return;
     }
     fail("Should have thrown.");

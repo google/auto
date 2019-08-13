@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc.
+ * Copyright 2012 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * @author emcmanus@google.com (Éamonn McManus)
- */
+/** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
 public class SimpleValueTypeTest {
   @Test
@@ -39,8 +37,7 @@ public class SimpleValueTypeTest {
     assertSame(happy, simple.string());
     assertEquals(testInt, simple.integer());
     assertSame(testMap, simple.map());
-    assertEquals("SimpleValueType{string=happy, integer=23, map={happy=23}}",
-        simple.toString());
+    assertEquals("SimpleValueType{string=happy, integer=23, map={happy=23}}", simple.toString());
     int expectedHashCode = 1;
     expectedHashCode = (expectedHashCode * 1000003) ^ happy.hashCode();
     expectedHashCode = (expectedHashCode * 1000003) ^ ((Object) testInt).hashCode();

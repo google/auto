@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
+ * Copyright 2016 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,12 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValue.CopyAnnotations;
+import com.google.auto.value.extension.memoized.MemoizedTest.HashCodeEqualsOptimization.EqualsCounter;
 import com.google.common.collect.ImmutableList;
-import javax.annotation.Nullable;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,6 +39,7 @@ public class MemoizedTest {
   @AutoValue
   abstract static class ValueWithKeywordName {
     abstract boolean getNative();
+
     abstract boolean getNative0();
 
     @Memoized
@@ -49,14 +54,43 @@ public class MemoizedTest {
   }
 
   @AutoValue
+  @CopyAnnotations
+  @javax.annotation.Nullable
+  abstract static class ValueWithCopyAnnotations {
+    abstract boolean getNative();
+
+    @Memoized
+    boolean getMemoizedNative() {
+      return getNative();
+    }
+  }
+
+  @AutoValue
+  @javax.annotation.Nullable
+  abstract static class ValueWithoutCopyAnnotations {
+    abstract boolean getNative();
+
+    @Memoized
+    boolean getMemoizedNative() {
+      return getNative();
+    }
+  }
+
+  @AutoValue
   abstract static class Value {
     private int primitiveCount;
     private int notNullableCount;
     private int nullableCount;
     private int returnsNullCount;
+    private int nullableWithTypeAnnotationCount;
+    private int returnsNullWithTypeAnnotationCount;
     private int notNullableButReturnsNullCount;
+    private int throwsExceptionCount;
 
+    @javax.annotation.Nullable
     abstract String string();
+
+    abstract @org.checkerframework.checker.nullness.qual.Nullable String stringWithTypeAnnotation();
 
     abstract HashCodeAndToStringCounter counter();
 
@@ -72,16 +106,31 @@ public class MemoizedTest {
     }
 
     @Memoized
-    @Nullable
+    @javax.annotation.Nullable
     String nullable() {
       nullableCount++;
       return "nullable derived " + string() + " " + nullableCount;
     }
 
     @Memoized
-    @Nullable
+    @javax.annotation.Nullable
     String returnsNull() {
       returnsNullCount++;
+      return null;
+    }
+
+    @Memoized
+    @org.checkerframework.checker.nullness.qual.Nullable
+    String nullableWithTypeAnnotation() {
+      nullableWithTypeAnnotationCount++;
+      return "nullable derived " + stringWithTypeAnnotation() + " "
+          + nullableWithTypeAnnotationCount;
+    }
+
+    @Memoized
+    @org.checkerframework.checker.nullness.qual.Nullable
+    String returnsNullWithTypeAnnotation() {
+      returnsNullWithTypeAnnotationCount++;
       return null;
     }
 
@@ -89,6 +138,12 @@ public class MemoizedTest {
     String notNullableButReturnsNull() {
       notNullableButReturnsNullCount++;
       return null;
+    }
+
+    @Memoized
+    String throwsException() throws SomeCheckedException {
+      throwsExceptionCount++;
+      throw new SomeCheckedException();
     }
 
     @Override
@@ -99,6 +154,8 @@ public class MemoizedTest {
     @Memoized
     public abstract String toString();
   }
+
+  static final class SomeCheckedException extends Exception {}
 
   @AutoValue
   abstract static class ListValue<T extends Number, K> {
@@ -128,9 +185,57 @@ public class MemoizedTest {
     }
   }
 
+  @AutoValue
+  abstract static class HashCodeEqualsOptimization {
+    int overrideHashCode;
+    int hashCodeCount;
+
+    abstract EqualsCounter equalsCounter();
+
+    @Memoized
+    @Override
+    public int hashCode() {
+      hashCodeCount++;
+      return overrideHashCode;
+    }
+
+    static class EqualsCounter {
+      int equalsCount;
+
+      @Override
+      public int hashCode() {
+        return 0;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        equalsCount++;
+        return true;
+      }
+    }
+  }
+
+  @AutoValue
+  abstract static class HashCodeEqualsOptimizationOffWhenEqualsIsFinal {
+    int hashCodeCount;
+
+    @Override
+    @Memoized
+    public int hashCode() {
+      hashCodeCount++;
+      return 1;
+    }
+
+    @Override
+    public final boolean equals(Object that) {
+      return that instanceof HashCodeEqualsOptimizationOffWhenEqualsIsFinal;
+    }
+  }
+
   @Before
   public void setUp() {
-    value = new AutoValue_MemoizedTest_Value("string", new HashCodeAndToStringCounter());
+    value = new AutoValue_MemoizedTest_Value(
+        "string", "stringWithTypeAnnotation", new HashCodeAndToStringCounter());
     listValue = new AutoValue_MemoizedTest_ListValue<Integer, String>(0, "hello");
   }
 
@@ -154,15 +259,24 @@ public class MemoizedTest {
   @Test
   public void notNullable() {
     assertThat(value.notNullable()).isEqualTo("derived string 1");
-    assertThat(value.notNullable()).isSameAs(value.notNullable());
+    assertThat(value.notNullable()).isSameInstanceAs(value.notNullable());
     assertThat(value.notNullableCount).isEqualTo(1);
   }
 
   @Test
   public void nullable() {
     assertThat(value.nullable()).isEqualTo("nullable derived string 1");
-    assertThat(value.nullable()).isSameAs(value.nullable());
+    assertThat(value.nullable()).isSameInstanceAs(value.nullable());
     assertThat(value.nullableCount).isEqualTo(1);
+  }
+
+  @Test
+  public void nullableWithTypeAnnotation() {
+    assertThat(value.nullableWithTypeAnnotation())
+        .isEqualTo("nullable derived stringWithTypeAnnotation 1");
+    assertThat(value.nullableWithTypeAnnotation())
+        .isSameInstanceAs(value.nullableWithTypeAnnotation());
+    assertThat(value.nullableWithTypeAnnotationCount).isEqualTo(1);
   }
 
   @Test
@@ -173,14 +287,41 @@ public class MemoizedTest {
   }
 
   @Test
+  public void returnsNullWithTypeAnnotation() {
+    assertThat(value.returnsNullWithTypeAnnotation()).isNull();
+    assertThat(value.returnsNullWithTypeAnnotation()).isNull();
+    assertThat(value.returnsNullWithTypeAnnotationCount).isEqualTo(1);
+  }
+
+  @Test
   public void notNullableButReturnsNull() {
     try {
       value.notNullableButReturnsNull();
       fail();
     } catch (NullPointerException expected) {
-      assertThat(expected).hasMessage("notNullableButReturnsNull() cannot return null");
+      assertThat(expected)
+          .hasMessageThat()
+          .isEqualTo("notNullableButReturnsNull() cannot return null");
     }
     assertThat(value.notNullableButReturnsNullCount).isEqualTo(1);
+  }
+
+  @Test
+  public void methodThrows() {
+    // The exception is thrown.
+    try {
+      value.throwsException();
+      fail();
+    } catch (SomeCheckedException expected1) {
+      // The exception is not memoized.
+      try {
+        value.throwsException();
+        fail();
+      } catch (SomeCheckedException expected2) {
+        assertThat(expected2).isNotSameInstanceAs(expected1);
+      }
+    }
+    assertThat(value.throwsExceptionCount).isEqualTo(2);
   }
 
   @Test
@@ -202,5 +343,113 @@ public class MemoizedTest {
     assertThat(value.getMemoizedNative()).isTrue();
     assertThat(value.getNative0()).isFalse();
     assertThat(value.getMemoizedNative0()).isFalse();
+  }
+
+  @Test
+  public void copyAnnotations() {
+    ValueWithCopyAnnotations valueWithCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithCopyAnnotations(true);
+    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations(true);
+
+    assertThat(
+            valueWithCopyAnnotations
+                .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isTrue();
+    assertThat(
+            valueWithoutCopyAnnotations
+                .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isFalse();
+  }
+
+  @Test
+  public void nullableHasAnnotation() throws ReflectiveOperationException {
+    Method nullable = AutoValue_MemoizedTest_Value.class.getDeclaredMethod("nullable");
+    assertThat(nullable.isAnnotationPresent(javax.annotation.Nullable.class)).isTrue();
+  }
+
+  @Test
+  public void nullableWithTypeAnnotationHasAnnotation() throws ReflectiveOperationException {
+    Method nullable =
+        AutoValue_MemoizedTest_Value.class.getDeclaredMethod("nullableWithTypeAnnotation");
+    AnnotatedType returnType = nullable.getAnnotatedReturnType();
+    assertThat(returnType.isAnnotationPresent(
+                   org.checkerframework.checker.nullness.qual.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void nullableConstructorParameter() throws ReflectiveOperationException {
+    // Constructor parameters are potentially:
+    // [0] @javax.annotation.Nullable String string,
+    // [1] @org.checkerframework.checker.nullness.qual.Nullable String stringWithTypeAnnotation,
+    // [2] HashCodeAndToStringCounter counter
+    // We don't currently copy @javax.annotation.Nullable because it is not a TYPE_USE annotation.
+    Constructor<?> constructor = AutoValue_MemoizedTest_Value.class.getDeclaredConstructor(
+        String.class, String.class, HashCodeAndToStringCounter.class);
+    AnnotatedType paramType = constructor.getAnnotatedParameterTypes()[1];
+    assertThat(paramType.isAnnotationPresent(
+                   org.checkerframework.checker.nullness.qual.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization() {
+    HashCodeEqualsOptimization first =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+    HashCodeEqualsOptimization second =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+
+    first.overrideHashCode = 2;
+    second.overrideHashCode = 2;
+    assertThat(first.equals(second)).isTrue();
+    assertThat(first.equalsCounter().equalsCount).isEqualTo(1);
+
+    HashCodeEqualsOptimization otherwiseEqualsButDifferentHashCode =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+    otherwiseEqualsButDifferentHashCode.overrideHashCode = 4;
+
+    assertThat(otherwiseEqualsButDifferentHashCode.equals(first)).isFalse();
+    assertThat(otherwiseEqualsButDifferentHashCode.equalsCounter().equalsCount).isEqualTo(0);
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization_otherTypes() {
+    HashCodeEqualsOptimization optimizedEquals =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+
+    assertThat(optimizedEquals.equals(new Object())).isFalse();
+    assertThat(optimizedEquals.equals(null)).isFalse();
+
+    assertThat(optimizedEquals.equalsCounter().equalsCount).isEqualTo(0);
+    assertThat(optimizedEquals.hashCodeCount).isEqualTo(0);
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization_hashCodeIgnoredForSameInstance() {
+    HashCodeEqualsOptimization optimizedEquals =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimization(new EqualsCounter());
+
+    assertThat(optimizedEquals.equals(optimizedEquals)).isTrue();
+
+    assertThat(optimizedEquals.equalsCounter().equalsCount).isEqualTo(0);
+    assertThat(optimizedEquals.hashCodeCount).isEqualTo(0);
+  }
+
+  @Test
+  public void hashCodeEqualsOptimization_offWhenEqualsIsFinal() {
+    HashCodeEqualsOptimizationOffWhenEqualsIsFinal memoizedHashCodeAndFinalEqualsMethod =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimizationOffWhenEqualsIsFinal();
+    HashCodeEqualsOptimizationOffWhenEqualsIsFinal second =
+        new AutoValue_MemoizedTest_HashCodeEqualsOptimizationOffWhenEqualsIsFinal();
+
+    assertThat(memoizedHashCodeAndFinalEqualsMethod.equals(second)).isTrue();
+    assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(0);
+
+    memoizedHashCodeAndFinalEqualsMethod.hashCode();
+    memoizedHashCodeAndFinalEqualsMethod.hashCode();
+    assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(1);
   }
 }
