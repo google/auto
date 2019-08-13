@@ -20,5 +20,7 @@ import dagger.Component;
 /** A component to materialize the factory using Dagger 2 */
 @Component(modules = DaggerModule.class)
 interface FactoryComponent {
-  FactoryGeneratedFactory factory();
+  FooFactory factory();
+
+  GenericFooFactory<Number> generatedFactory();
 }

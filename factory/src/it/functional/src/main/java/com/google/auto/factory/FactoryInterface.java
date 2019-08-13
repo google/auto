@@ -16,5 +16,5 @@
 package com.google.auto.factory;
 
 public interface FactoryInterface {
-  FactoryGenerated generate(String name);
+  Foo generate(String name);
 }

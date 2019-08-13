@@ -120,9 +120,6 @@ final class FactoryDescriptorGenerator {
     checkNotNull(constructor);
     checkArgument(constructor.getKind() == ElementKind.CONSTRUCTOR);
     TypeElement classElement = MoreElements.asType(constructor.getEnclosingElement());
-    if (!classElement.getTypeParameters().isEmpty()) {
-      messager.printMessage(ERROR, "AutoFactory does not support generic types", classElement);
-    }
     ImmutableListMultimap<Boolean, ? extends VariableElement> parameterMap =
         Multimaps.index(constructor.getParameters(), Functions.forPredicate(
             new Predicate<VariableElement>() {
