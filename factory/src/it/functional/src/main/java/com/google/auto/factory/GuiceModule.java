@@ -23,5 +23,6 @@ public class GuiceModule extends AbstractModule {
     bind(Dependency.class).annotatedWith(Qualifier.class).to(QualifiedDependencyImpl.class);
     bind(Integer.class).toInstance(1);
     bind(Integer.class).annotatedWith(Qualifier.class).toInstance(2);
+    bind(Number.class).toInstance(3);
   }
 }

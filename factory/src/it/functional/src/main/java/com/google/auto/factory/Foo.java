@@ -18,14 +18,14 @@ package com.google.auto.factory;
 import javax.inject.Provider;
 
 @AutoFactory(implementing = FactoryInterface.class)
-public final class FactoryGenerated {
+public final class Foo {
   private final String name;
   private final Dependency dependency;
   private final Provider<Dependency> dependencyProvider;
   private final int primitive;
   private final int qualifiedPrimitive;
 
-  FactoryGenerated(
+  Foo(
       String name,
       @Provided Dependency dependency,
       @Provided @Qualifier Provider<Dependency> dependencyProvider,
@@ -40,7 +40,7 @@ public final class FactoryGenerated {
 
   // Generates second factory method with a different name for the Dependency dependency.
   // Tests http://b/21632171.
-  FactoryGenerated(
+  Foo(
       Object name,
       @Provided Dependency dependency2,
       @Provided @Qualifier Provider<Dependency> dependencyProvider,
