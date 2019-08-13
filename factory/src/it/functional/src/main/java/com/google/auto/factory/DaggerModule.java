@@ -40,4 +40,9 @@ final class DaggerModule {
   int provideQualifiedPrimitive() {
     return 2;
   }
+
+  @Provides
+  Number provideNumber() {
+    return 3;
+  }
 }
