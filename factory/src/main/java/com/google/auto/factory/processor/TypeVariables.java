@@ -18,6 +18,9 @@ package com.google.auto.factory.processor;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableSet;
+import java.util.HashSet;
+import java.util.Set;
+import javax.lang.model.element.Element;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.IntersectionType;
@@ -32,11 +35,12 @@ final class TypeVariables {
 
   static ImmutableSet<TypeVariable> getReferencedTypeVariables(TypeMirror type) {
     checkNotNull(type);
-    return type.accept(ReferencedTypeVariables.INSTANCE, null);
+    return type.accept(ReferencedTypeVariables.INSTANCE, new HashSet<>());
   }
 
-  private static final class ReferencedTypeVariables
-      extends SimpleTypeVisitor8<ImmutableSet<TypeVariable>, Void> {
+  private static final class ReferencedTypeVariables extends
+      SimpleTypeVisitor8<ImmutableSet<TypeVariable>, Set<Element>> {
+
     private static final ReferencedTypeVariables INSTANCE = new ReferencedTypeVariables();
 
     ReferencedTypeVariables() {
@@ -44,56 +48,67 @@ final class TypeVariables {
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitArray(ArrayType t, Void unused) {
-      return t.getComponentType().accept(this, unused);
+    public ImmutableSet<TypeVariable> visitArray(ArrayType t, Set<Element> visited) {
+      return t.getComponentType().accept(this, visited);
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitDeclared(DeclaredType t, Void unused) {
+    public ImmutableSet<TypeVariable> visitDeclared(
+        DeclaredType t, Set<Element> visited) {
+      if (!visited.add(t.asElement())) {
+        return ImmutableSet.of();
+      }
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       for (TypeMirror typeArgument : t.getTypeArguments()) {
-        typeVariables.addAll(typeArgument.accept(this, unused));
+        typeVariables.addAll(typeArgument.accept(this, visited));
       }
       return typeVariables.build();
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitTypeVariable(TypeVariable t, Void unused) {
+    public ImmutableSet<TypeVariable> visitTypeVariable(
+        TypeVariable t, Set<Element> visited) {
+      if (!visited.add(t.asElement())) {
+        return ImmutableSet.of();
+      }
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       typeVariables.add(t);
-      typeVariables.addAll(t.getLowerBound().accept(this, unused));
-      typeVariables.addAll(t.getUpperBound().accept(this, unused));
+      typeVariables.addAll(t.getLowerBound().accept(this, visited));
+      typeVariables.addAll(t.getUpperBound().accept(this, visited));
       return typeVariables.build();
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitUnion(UnionType t, Void unused) {
+    public ImmutableSet<TypeVariable> visitUnion(
+        UnionType t, Set<Element> visited) {
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       for (TypeMirror unionType : t.getAlternatives()) {
-        typeVariables.addAll(unionType.accept(this, unused));
+        typeVariables.addAll(unionType.accept(this, visited));
       }
       return typeVariables.build();
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitIntersection(IntersectionType t, Void unused) {
+    public ImmutableSet<TypeVariable> visitIntersection(
+        IntersectionType t, Set<Element> visited) {
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       for (TypeMirror intersectionType : t.getBounds()) {
-        typeVariables.addAll(intersectionType.accept(this, unused));
+        typeVariables.addAll(intersectionType.accept(this, visited));
       }
       return typeVariables.build();
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitWildcard(WildcardType t, Void unused) {
+    public ImmutableSet<TypeVariable> visitWildcard(
+        WildcardType t, Set<Element> visited) {
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       TypeMirror extendsBound = t.getExtendsBound();
       if (extendsBound != null) {
-        typeVariables.addAll(extendsBound.accept(this, unused));
+        typeVariables.addAll(extendsBound.accept(this, visited));
       }
       TypeMirror superBound = t.getSuperBound();
       if (superBound != null) {
-        typeVariables.addAll(superBound.accept(this, unused));
+        typeVariables.addAll(superBound.accept(this, visited));
       }
       return typeVariables.build();
     }

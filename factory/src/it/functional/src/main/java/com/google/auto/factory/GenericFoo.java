@@ -19,18 +19,24 @@ import java.util.List;
 import javax.inject.Provider;
 
 @AutoFactory
-public class GenericFoo<A, B extends List<? extends A>, C> {
+public class GenericFoo<A, B extends List<? extends A>, C, E extends Enum<E>> {
 
   private final A depA;
   private final B depB;
   private final IntAccessor depDIntAccessor;
   private final StringAccessor depDStringAccessor;
+  private final E depE;
 
-  <D extends IntAccessor & StringAccessor> GenericFoo(@Provided Provider<A> depA, B depB, D depD) {
+  <D extends IntAccessor & StringAccessor> GenericFoo(
+      @Provided Provider<A> depA,
+      B depB,
+      D depD,
+      E depE) {
     this.depA = depA.get();
     this.depB = depB;
     this.depDIntAccessor = depD;
     this.depDStringAccessor = depD;
+    this.depE = depE;
   }
 
   public A getDepA() {
@@ -53,9 +59,18 @@ public class GenericFoo<A, B extends List<? extends A>, C> {
     return depDStringAccessor;
   }
 
+  public E getDepE() {
+    return depE;
+  }
+
   public interface IntAccessor {}
 
   public interface StringAccessor {}
 
   public interface IntAndStringAccessor extends IntAccessor, StringAccessor {}
+
+  public enum DepE {
+    VALUE_1,
+    VALUE_2
+  }
 }
