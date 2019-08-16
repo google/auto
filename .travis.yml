@@ -10,7 +10,7 @@ script:
 
 jdk:
   - openjdk9
-  - oraclejdk8
+  - openjdk8
 
 env:
   global:
