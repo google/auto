@@ -188,6 +188,10 @@
                   <pattern>net.ltgt.gradle.incap</pattern>
                   <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap$</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.checkerframework</pattern>
+                  <shadedPattern>autovalue.shaded.org.checkerframework$</shadedPattern>
+                </relocation>
               </relocations>
             </configuration>
           </execution>
