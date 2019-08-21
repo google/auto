@@ -19,7 +19,9 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
 import java.util.Set;
@@ -199,6 +201,63 @@ public class SuperficialValidationTest {
         .compilesWithoutError();
   }
 
+    @Test
+    public void handlesInnerSubclass() {
+        JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+                "test.TestClass",
+                "package test;",
+                "",
+                "abstract class TestClass {",
+                "  class InnerTestClass extends TestClass {}",
+                "}");
+        assertAbout(javaSource())
+                .that(javaFileObject)
+                .processedWith(new AssertingProcessor() {
+                    @Override void runAssertions() {
+                        TypeElement testClassElement =
+                                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                        assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
+                    }
+                })
+                .compilesWithoutError();
+    }
+
+  @Test
+  public void handlesRecursiveSuperinterface() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "interface TestClass implements TestClass {}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override
+          void runAssertions() {
+            assertWithMessage("Should not reach annotation processing.").fail();
+          }
+        })
+        .failsToCompile();
+  }
+
+  @Test
+  public void handlesRecursiveSuperclass() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "class TestClass extends TestClass {}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override
+          void runAssertions() {
+            assertWithMessage("Should not reach annotation processing.").fail();
+          }
+        })
+        .failsToCompile();
+  }
+
   @Test
   public void missingWildcardBound() {
     JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
@@ -273,6 +332,96 @@ public class SuperficialValidationTest {
                     .isFalse();
               }
             })
+        .failsToCompile();
+  }
+
+  @Test
+  public void missingSuperclass() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "class TestClass extends Missing {}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override
+          void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+          }
+        })
+        .failsToCompile();
+  }
+
+  @Test
+  public void missingSuperinterface() {
+    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "class TestClass implements Missing {}");
+    assertAbout(javaSource())
+        .that(javaFileObject)
+        .processedWith(new AssertingProcessor() {
+          @Override
+          void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+          }
+        })
+        .failsToCompile();
+  }
+
+  @Test
+  public void missingGrandparentSuperclass() {
+    JavaFileObject parentJavaFileObject = JavaFileObjects.forSourceLines(
+        "test.Parent",
+        "package test;",
+        "",
+        "class Parent extends Missing {}");
+    JavaFileObject testClassJavaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "class TestClass extends Parent {}");
+    assertAbout(javaSources())
+        .that(ImmutableList.of(parentJavaFileObject, testClassJavaFileObject))
+        .processedWith(new AssertingProcessor() {
+          @Override
+          void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+          }
+        })
+        .failsToCompile();
+  }
+
+  @Test
+  public void missingGrandparentSuperinterface() {
+    JavaFileObject parentJavaFileObject = JavaFileObjects.forSourceLines(
+        "test.Parent",
+        "package test;",
+        "",
+        "interface Parent extends Missing {}");
+    JavaFileObject testClassJavaFileObject = JavaFileObjects.forSourceLines(
+        "test.TestClass",
+        "package test;",
+        "",
+        "class TestClass implements Parent {}");
+    assertAbout(javaSources())
+        .that(ImmutableList.of(parentJavaFileObject, testClassJavaFileObject))
+        .processedWith(new AssertingProcessor() {
+          @Override
+          void runAssertions() {
+            TypeElement testClassElement =
+                processingEnv.getElementUtils().getTypeElement("test.TestClass");
+            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+          }
+        })
         .failsToCompile();
   }
 

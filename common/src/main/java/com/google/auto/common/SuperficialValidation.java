@@ -15,8 +15,11 @@
  */
 package com.google.auto.common;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.AnnotationValueVisitor;
@@ -46,16 +49,29 @@ import javax.lang.model.util.SimpleTypeVisitor6;
  * @author Gregory Kick
  */
 public final class SuperficialValidation {
+
+  private final Set<Element> visited = new HashSet<>();
+
+  private SuperficialValidation() {}
+
   public static boolean validateElements(Iterable<? extends Element> elements) {
+    return new SuperficialValidation().validateElementsInternal(elements);
+  }
+
+  public static boolean validateElement(Element element) {
+    return new SuperficialValidation().validateElementInternal(element);
+  }
+
+  private boolean validateElementsInternal(Iterable<? extends Element> elements) {
     for (Element element : elements) {
-      if (!validateElement(element)) {
+      if (!validateElementInternal(element)) {
         return false;
       }
     }
     return true;
   }
 
-  private static final ElementVisitor<Boolean, Void> ELEMENT_VALIDATING_VISITOR =
+  private final ElementVisitor<Boolean, Void> ELEMENT_VALIDATING_VISITOR =
       new AbstractElementVisitor6<Boolean, Void>() {
         @Override public Boolean visitPackage(PackageElement e, Void p) {
           // don't validate enclosed elements because it will return types in the package
@@ -63,10 +79,13 @@ public final class SuperficialValidation {
         }
 
         @Override public Boolean visitType(TypeElement e, Void p) {
+          TypeMirror superclass = e.getSuperclass();
           return isValidBaseElement(e)
-              && validateElements(e.getTypeParameters())
+              && validateElementsInternal(e.getTypeParameters())
               && validateTypes(e.getInterfaces())
-              && validateType(e.getSuperclass());
+              && validateType(superclass)
+              && e.getInterfaces().stream().map(MoreTypes::asElement).allMatch(i -> validateElementInternal(i))
+              && (superclass.getKind() == TypeKind.NONE || validateElementInternal(MoreTypes.asElement(superclass)));
         }
 
         @Override public Boolean visitVariable(VariableElement e, Void p) {
@@ -79,8 +98,8 @@ public final class SuperficialValidation {
               && (defaultValue == null || validateAnnotationValue(defaultValue, e.getReturnType()))
               && validateType(e.getReturnType())
               && validateTypes(e.getThrownTypes())
-              && validateElements(e.getTypeParameters())
-              && validateElements(e.getParameters());
+              && validateElementsInternal(e.getTypeParameters())
+              && validateElementsInternal(e.getParameters());
         }
 
         @Override public Boolean visitTypeParameter(TypeParameterElement e, Void p) {
@@ -94,17 +113,21 @@ public final class SuperficialValidation {
         }
       };
 
-  public static boolean validateElement(Element element) {
-    return element.accept(ELEMENT_VALIDATING_VISITOR, null);
+  private boolean validateElementInternal(Element element) {
+    if (visited.add(element)) {
+      return element.accept(ELEMENT_VALIDATING_VISITOR, null);
+    } else {
+      return true;
+    }
   }
 
-  private static boolean isValidBaseElement(Element e) {
+  private boolean isValidBaseElement(Element e) {
     return validateType(e.asType())
         && validateAnnotations(e.getAnnotationMirrors())
-        && validateElements(e.getEnclosedElements());
+        && validateElementsInternal(e.getEnclosedElements());
   }
 
-  private static boolean validateTypes(Iterable<? extends TypeMirror> types) {
+  private boolean validateTypes(Iterable<? extends TypeMirror> types) {
     for (TypeMirror type : types) {
       if (!validateType(type)) {
         return false;
@@ -118,7 +141,7 @@ public final class SuperficialValidation {
    * an issue.  Javac turns the whole type parameter into an error type if it can't figure out the
    * bounds.
    */
-  private static final TypeVisitor<Boolean, Void> TYPE_VALIDATING_VISITOR =
+  private final TypeVisitor<Boolean, Void> TYPE_VALIDATING_VISITOR =
       new SimpleTypeVisitor6<Boolean, Void>() {
         @Override
         protected Boolean defaultAction(TypeMirror t, Void p) {
@@ -163,11 +186,11 @@ public final class SuperficialValidation {
         }
       };
 
-  private static boolean validateType(TypeMirror type) {
+  private boolean validateType(TypeMirror type) {
     return type.accept(TYPE_VALIDATING_VISITOR, null);
   }
 
-  private static boolean validateAnnotations(
+  private boolean validateAnnotations(
       Iterable<? extends AnnotationMirror> annotationMirrors) {
     for (AnnotationMirror annotationMirror : annotationMirrors) {
       if (!validateAnnotation(annotationMirror)) {
@@ -177,13 +200,13 @@ public final class SuperficialValidation {
     return true;
   }
 
-  private static boolean validateAnnotation(AnnotationMirror annotationMirror) {
+  private boolean validateAnnotation(AnnotationMirror annotationMirror) {
     return validateType(annotationMirror.getAnnotationType())
         && validateAnnotationValues(annotationMirror.getElementValues());
   }
 
   @SuppressWarnings("unused")
-  private static boolean validateAnnotationValues(
+  private boolean validateAnnotationValues(
       Map<? extends ExecutableElement, ? extends AnnotationValue> valueMap) {
     for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> valueEntry :
         valueMap.entrySet()) {
@@ -195,7 +218,7 @@ public final class SuperficialValidation {
     return true;
   }
 
-  private static final AnnotationValueVisitor<Boolean, TypeMirror> VALUE_VALIDATING_VISITOR =
+  private final AnnotationValueVisitor<Boolean, TypeMirror> VALUE_VALIDATING_VISITOR =
       new SimpleAnnotationValueVisitor6<Boolean, TypeMirror>() {
         @Override protected Boolean defaultAction(Object o, TypeMirror expectedType) {
           return MoreTypes.isTypeOf(o.getClass(), expectedType);
@@ -232,7 +255,7 @@ public final class SuperficialValidation {
         @Override
         public Boolean visitEnumConstant(VariableElement enumConstant, TypeMirror expectedType) {
           return MoreTypes.equivalence().equivalent(enumConstant.asType(), expectedType)
-              && validateElement(enumConstant);
+              && validateElementInternal(enumConstant);
         }
 
         @Override public Boolean visitType(TypeMirror type, TypeMirror ignored) {
@@ -276,7 +299,7 @@ public final class SuperficialValidation {
         }
       };
 
-  private static boolean validateAnnotationValue(
+  private boolean validateAnnotationValue(
       AnnotationValue annotationValue, TypeMirror expectedType) {
     return annotationValue.accept(VALUE_VALIDATING_VISITOR, expectedType);
   }
