@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Google LLC
+ * Copyright 2019 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package tests;
 
-import com.google.auto.factory.AutoFactory;
+import javax.annotation.processing.Generated;
+import javax.inject.Inject;
 
-@AutoFactory
-public final class GenericClass<T> {}
+@Generated(
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
+public final class DefaultPackageFactory {
+  @Inject
+  public DefaultPackageFactory() {}
+
+  public DefaultPackage create() {
+    return new DefaultPackage();
+  }
+}

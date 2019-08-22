@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Google LLC
+ * Copyright 2019 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.auto.factory;
 
-import com.google.inject.AbstractModule;
+import com.google.auto.factory.AutoFactory;
 
-public class GuiceModule extends AbstractModule {
-  @Override protected void configure() {
-    bind(Dependency.class).to(DependencyImpl.class);
-    bind(Dependency.class).annotatedWith(Qualifier.class).to(QualifiedDependencyImpl.class);
-    bind(Integer.class).toInstance(1);
-    bind(Integer.class).annotatedWith(Qualifier.class).toInstance(2);
-    bind(Number.class).toInstance(3);
-  }
-}
+@AutoFactory
+public final class DefaultPackage {}

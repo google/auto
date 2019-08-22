@@ -23,43 +23,17 @@ package com.google.auto.value.processor;
  */
 class Reformatter {
   static String fixup(String s) {
-    s = removeTrailingSpace(s);
-    s = compressBlankLines(s);
-    s = compressSpace(s);
-    return s;
-  }
-
-  private static String removeTrailingSpace(String s) {
-    // Remove trailing space from all lines. This is mainly to make it easier to find
-    // blank lines later.
-    if (!s.endsWith("\n")) {
-      s += '\n';
-    }
-    StringBuilder sb = new StringBuilder(s.length());
-    int start = 0;
-    while (start < s.length()) {
-      int nl = s.indexOf('\n', start);
-      int i = nl - 1;
-      while (i >= start && s.charAt(i) == ' ') {
-        i--;
-      }
-      sb.append(s.substring(start, i + 1)).append('\n');
-      start = nl + 1;
-    }
-    return sb.toString();
-  }
-
-  private static String compressBlankLines(String s) {
-    // Remove extra blank lines. An "extra" blank line is either a blank line where the previous
-    // line was also blank; or a blank line that appears inside parentheses or inside more than one
-    // set of braces. This means that we preserve blank lines inside our top-level class, but not
-    // within our generated methods.
-    StringBuilder sb = new StringBuilder(s.length());
-    int braces = 0;
-    int parens = 0;
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      switch (c) {
+    StringBuilder out = new StringBuilder();
+    JavaScanner scanner = new JavaScanner(s);
+    s = scanner.string();
+    int len = s.length();
+    for (int start = 0, previous = 0, braces = 0, parens = 0, end = 0;
+        start < len;
+        previous = start, start = end) {
+      end = scanner.tokenEnd(start);
+      // The tokenized string always ends with \n so we can usually look at s.charAt(end) without
+      // worrying about going past the end of the string.
+      switch (s.charAt(start)) {
         case '(':
           parens++;
           break;
@@ -72,52 +46,40 @@ class Reformatter {
         case '}':
           braces--;
           break;
+        case ' ':
+          // This token is a string of consecutive spaces that is not at the start of a line.
+          // Consecutive spaces at the start of a line are attached to the previous newline, and
+          // we don't expect the first line to start with spaces. So we are going to compress this
+          // into just one space, and we are going to delete it entirely if it follows '(' or
+          // precedes a newline or one of the punctuation characters here.
+          if (s.charAt(previous) != '(' && "\n.,;)".indexOf(s.charAt(end)) < 0) {
+            out.append(' ');
+          }
+          continue;
         case '\n':
-          int j = i + 1;
-          while (j < s.length() && s.charAt(j) == '\n') {
-            j++;
-          }
-          if (j > i + 1) {
-            if (parens == 0 && braces <= 1) {
-              sb.append("\n");
+          // This token is a newline plus any following spaces (the indentation of the next line).
+          // If it is followed by something other than a newline then we will output it. Otherwise,
+          // it is part of a sequence of newlines but it is not the last one. If this is a context
+          // where we delete blank lines, or if this is not the first new line in the sequence, or
+          // if we are at the start of the file, we will delete this one. Otherwise we will output a
+          // single newline with no following indentation. Contexts where we delete blank lines are
+          // inside parentheses or inside more than one set of braces.
+          if (end < len && s.charAt(end) != '\n') {
+            if (out.length() == 0) {
+              // Omit newlines at the very start of the file.
+              start++;
             }
-            i = j - 1;
+            break; // Output the newline and its following indentation.
           }
+          if (parens == 0 && braces < 2 && s.charAt(previous) != '\n' && out.length() > 0) {
+            out.append('\n');
+          }
+          continue;
+        default:
           break;
       }
-      sb.append(c);
+      out.append(s, start, end);
     }
-    return sb.toString();
-  }
-
-  private static String compressSpace(String s) {
-    // Remove extra spaces. An "extra" space is one that is not part of the indentation at the start
-    // of a line, and where the next character is also a space or a right paren or a semicolon
-    // or a dot or a comma, or the preceding character is a left paren.
-    // TODO(emcmanus): consider merging all three passes using this tokenization approach.
-    StringBuilder sb = new StringBuilder(s.length());
-    JavaScanner tokenizer = new JavaScanner(s);
-    int len = s.length();
-    int end;
-    for (int start = 0; start < len; start = end) {
-      end = tokenizer.tokenEnd(start);
-      if (s.charAt(start) == ' ') {
-        // Since we consider a newline plus following indentation to be a single token, we only
-        // see a token starting with ' ' if it is in the middle of a line.
-        if (sb.charAt(sb.length() - 1) == '(') {
-          continue;
-        }
-        // Since we ensure that the tokenized string ends with \n, and a whitespace token stops
-        // at \n, it is safe to look at end.
-        char nextC = s.charAt(end);
-        if (".,;)".indexOf(nextC) >= 0) {
-          continue;
-        }
-        sb.append(' ');
-      } else {
-        sb.append(s.substring(start, end));
-      }
-    }
-    return sb.toString();
+    return out.toString();
   }
 }

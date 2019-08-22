@@ -182,12 +182,19 @@ final class TypeEncoder {
     sb.append(typeParameter.getSimpleName());
     String sep = " extends ";
     for (TypeMirror bound : typeParameter.getBounds()) {
-      if (!bound.toString().equals("java.lang.Object")) {
+      if (!isUnannotatedJavaLangObject(bound)) {
         sb.append(sep);
         sep = " & ";
-        sb.append(encode(bound));
+        sb.append(encodeWithAnnotations(bound));
       }
     }
+  }
+
+  // We can omit "extends Object" from a type bound, but not "extends @NullableType Object".
+  private static boolean isUnannotatedJavaLangObject(TypeMirror type) {
+    return type.getKind().equals(TypeKind.DECLARED)
+        && type.getAnnotationMirrors().isEmpty()
+        && MoreTypes.asTypeElement(type).getQualifiedName().contentEquals("java.lang.Object");
   }
 
   private static void appendAnnotations(
@@ -231,13 +238,25 @@ final class TypeEncoder {
 
     @Override
     public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
-      sb.append(declaredTypeName(type));
+      appendTypeName(type, sb);
       appendTypeArguments(type, sb);
       return sb;
     }
 
-    String declaredTypeName(DeclaredType type) {
-      return "`" + className(type) + "`";
+    void appendTypeName(DeclaredType type, StringBuilder sb) {
+      TypeMirror enclosing = EclipseHack.getEnclosingType(type);
+      if (enclosing.getKind().equals(TypeKind.DECLARED)) {
+        // We might have something like com.example.Outer<Double>.Inner. We need to encode
+        // com.example.Outer<Double> first, producing `com.example.Outer`<`java.lang.Double`>.
+        // Then we can simply add .Inner after that. If Inner has its own type arguments, we'll
+        // add them with appendTypeArguments below. Of course, it's more usual for the outer class
+        // not to have type arguments, but we'll still follow this path if the nested class is an
+        // inner (not static) class.
+        visit2(enclosing, sb);
+        sb.append(".").append(type.asElement().getSimpleName());
+      } else {
+        sb.append('`').append(className(type)).append('`');
+      }
     }
 
     void appendTypeArguments(DeclaredType type, StringBuilder sb) {
@@ -342,15 +361,32 @@ final class TypeEncoder {
     public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
       List<? extends AnnotationMirror> annotationMirrors = type.getAnnotationMirrors();
       if (annotationMirrors.isEmpty()) {
-        sb.append(declaredTypeName(type));
+        super.visitDeclared(type, sb);
       } else {
-        String className = className(type);
-        // See the class doc comment for an explanation of « and » here.
-        sb.append("`«").append(className).append("`");
-        appendAnnotationsWithExclusions(annotationMirrors, sb);
-        sb.append("`»").append(className).append("`");
+        TypeMirror enclosing = EclipseHack.getEnclosingType(type);
+        if (enclosing.getKind().equals(TypeKind.DECLARED)) {
+          // We have something like com.example.Outer<Double>.@Annot Inner.
+          // We'll recursively encode com.example.Outer<Double> first,
+          // which if it is also annotated might result in a mouthful like
+          // `«com.example.Outer`@`org.annots.Nullable``»com.example.Outer`<`java.lang.Double`> .
+          // That annotation will have been added by a recursive call to this method.
+          // Then we'll add the annotation on the .Inner class, which we know is there because
+          // annotationMirrors is not empty. That means we'll append .@`org.annots.Annot` Inner .
+          visit2(enclosing, sb);
+          sb.append(".");
+          appendAnnotationsWithExclusions(annotationMirrors, sb);
+          sb.append(type.asElement().getSimpleName());
+        } else {
+          // This isn't an inner class, so we have the simpler (but still complicated) case of
+          // needing to place the annotation correctly in cases like java.util.@Nullable Map .
+          // See the class doc comment for an explanation of « and » here.
+          String className = className(type);
+          sb.append("`«").append(className).append("`");
+          appendAnnotationsWithExclusions(annotationMirrors, sb);
+          sb.append("`»").append(className).append("`");
+        }
+        appendTypeArguments(type, sb);
       }
-      appendTypeArguments(type, sb);
       return sb;
     }
   }

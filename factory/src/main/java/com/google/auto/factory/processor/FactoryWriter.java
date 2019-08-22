@@ -28,7 +28,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -47,6 +49,7 @@ import javax.inject.Provider;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
 
 final class FactoryWriter {
@@ -87,8 +90,11 @@ final class FactoryWriter {
       factory.addSuperinterface(TypeName.get(implementingType));
     }
 
+    ImmutableSet<TypeVariableName> factoryTypeVariables = getFactoryTypeVariables(descriptor);
+
+    addFactoryTypeParameters(factory, factoryTypeVariables);
     addConstructorAndProviderFields(factory, descriptor);
-    addFactoryMethods(factory, descriptor);
+    addFactoryMethods(factory, descriptor, factoryTypeVariables);
     addImplementationMethods(factory, descriptor);
     addCheckNotNullMethod(factory, descriptor);
 
@@ -98,7 +104,12 @@ final class FactoryWriter {
         .writeTo(filer);
   }
 
-  private void addConstructorAndProviderFields(
+  private static void addFactoryTypeParameters(
+      TypeSpec.Builder factory, ImmutableSet<TypeVariableName> typeVariableNames) {
+    factory.addTypeVariables(typeVariableNames);
+  }
+
+  private static void addConstructorAndProviderFields(
       TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
     if (descriptor.publicType()) {
@@ -121,10 +132,14 @@ final class FactoryWriter {
     factory.addMethod(constructor.build());
   }
 
-  private void addFactoryMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+  private static void addFactoryMethods(
+      TypeSpec.Builder factory,
+      FactoryDescriptor descriptor,
+      ImmutableSet<TypeVariableName> factoryTypeVariables) {
     for (FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
       MethodSpec.Builder method =
           MethodSpec.methodBuilder(methodDescriptor.name())
+              .addTypeVariables(getMethodTypeVariables(methodDescriptor, factoryTypeVariables))
               .returns(TypeName.get(methodDescriptor.returnType()))
               .varargs(methodDescriptor.isVarArgs());
       if (methodDescriptor.overridingMethod()) {
@@ -168,7 +183,8 @@ final class FactoryWriter {
     }
   }
 
-  private void addImplementationMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+  private static void addImplementationMethods(
+      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     for (ImplementationMethodDescriptor methodDescriptor :
         descriptor.implementationMethodDescriptors()) {
       MethodSpec.Builder implementationMethod =
@@ -257,7 +273,7 @@ final class FactoryWriter {
 
   private static String getPackage(CharSequence fullyQualifiedName) {
     int lastDot = lastIndexOf(fullyQualifiedName, '.');
-    return fullyQualifiedName.subSequence(0, lastDot).toString();
+    return lastDot == -1 ? "" : fullyQualifiedName.subSequence(0, lastDot).toString();
   }
 
   private static int lastIndexOf(CharSequence charSequence, char c) {
@@ -267,5 +283,33 @@ final class FactoryWriter {
       }
     }
     return -1;
+  }
+
+  private static ImmutableSet<TypeVariableName> getFactoryTypeVariables(
+      FactoryDescriptor descriptor) {
+    ImmutableSet.Builder<TypeVariableName> typeVariables = ImmutableSet.builder();
+    for (ProviderField provider : descriptor.providers().values()) {
+      typeVariables.addAll(getReferencedTypeParameterNames(provider.key().type().get()));
+    }
+    return typeVariables.build();
+  }
+
+  private static ImmutableSet<TypeVariableName> getMethodTypeVariables(
+      FactoryMethodDescriptor methodDescriptor,
+      ImmutableSet<TypeVariableName> factoryTypeVariables) {
+    ImmutableSet.Builder<TypeVariableName> typeVariables = ImmutableSet.builder();
+    typeVariables.addAll(getReferencedTypeParameterNames(methodDescriptor.returnType()));
+    for (Parameter parameter : methodDescriptor.passedParameters()) {
+      typeVariables.addAll(getReferencedTypeParameterNames(parameter.type().get()));
+    }
+    return Sets.difference(typeVariables.build(), factoryTypeVariables).immutableCopy();
+  }
+
+  private static ImmutableSet<TypeVariableName> getReferencedTypeParameterNames(TypeMirror type) {
+    ImmutableSet.Builder<TypeVariableName> typeVariableNames = ImmutableSet.builder();
+    for (TypeVariable typeVariable : TypeVariables.getReferencedTypeVariables(type)) {
+      typeVariableNames.add(TypeVariableName.get(typeVariable));
+    }
+    return typeVariableNames.build();
   }
 }

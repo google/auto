@@ -15,11 +15,10 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.assertAbout;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.CompilationSubject.compilations;
 import static com.google.testing.compile.Compiler.javac;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableSet;
@@ -34,9 +33,11 @@ import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.JavaFileObject;
 import org.junit.Rule;
@@ -173,7 +174,7 @@ public class AutoValueCompilationTest {
             "    this.arrays = arrays;",
             "  }",
             "",
-            "  @SuppressWarnings(value = {\"mutable\"})",
+            "  @SuppressWarnings(\"mutable\")",
             "  @Override public int[] ints() {",
             "    return ints;",
             "  }",
@@ -239,6 +240,186 @@ public class AutoValueCompilationTest {
             .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  @Test
+  public void testNestedParameterizedTypesWithTypeAnnotations() throws Exception {
+    JavaFileObject annotFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Annot",
+            "package foo.bar;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface Annot {",
+            "  int value();",
+            "}");
+    JavaFileObject outerFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.baz.OuterWithTypeParam",
+            "package foo.baz;",
+            "",
+            "public class OuterWithTypeParam<T extends Number> {",
+            "  public class InnerWithTypeParam<U> {}",
+            "}");
+    JavaFileObject nestyFileObject =
+        JavaFileObjects.forSourceLines(
+            "com.example.Nesty",
+            "package com.example;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import foo.bar.Annot;",
+            "import foo.baz.OuterWithTypeParam;",
+            "",
+            "@AutoValue",
+            "abstract class Nesty {",
+            "  abstract @Annot(1) OuterWithTypeParam<@Annot(2) Double>",
+            "      .@Annot(3) InnerWithTypeParam<@Annot(4) String> inner();",
+            "",
+            "  static Nesty of(",
+            "      @Annot(1) OuterWithTypeParam<@Annot(2) Double>",
+            "          .@Annot(3) InnerWithTypeParam<@Annot(4) String> inner) {",
+            "    return new AutoValue_Nesty(inner);",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "com.example.AutoValue_Nesty",
+            "package com.example;",
+            "",
+            "import foo.bar.Annot;",
+            "import foo.baz.OuterWithTypeParam;",
+            GeneratedImport.importGeneratedAnnotationType(),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+            "final class AutoValue_Nesty extends Nesty {",
+            "  private final @Annot(1) OuterWithTypeParam<@Annot(2) Double>"
+                + ".@Annot(3) InnerWithTypeParam<@Annot(4) String> inner;",
+            "",
+            "  AutoValue_Nesty(",
+            "      @Annot(1) OuterWithTypeParam<@Annot(2) Double>"
+                + ".@Annot(3) InnerWithTypeParam<@Annot(4) String> inner) {",
+            "    if (inner == null) {",
+            "      throw new NullPointerException(\"Null inner\");",
+            "    }",
+            "    this.inner = inner;",
+            "  }",
+            "",
+            "  @Override",
+            "  @Annot(1) OuterWithTypeParam<@Annot(2) Double>"
+                + ".@Annot(3) InnerWithTypeParam<@Annot(4) String> inner() {",
+            "    return inner;",
+            "  }",
+            "",
+            "  @Override",
+            "  public String toString() {",
+            "    return \"Nesty{\"",
+            "        + \"inner=\" + inner",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override",
+            "  public boolean equals(Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Nesty) {",
+            "      Nesty that = (Nesty) o;",
+            "      return this.inner.equals(that.inner());",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+
+            "  @Override",
+            "  public int hashCode() {",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= inner.hashCode();",
+            "    return h$;",
+            "  }",
+            "}");
+
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(annotFileObject, outerFileObject, nestyFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("com.example.AutoValue_Nesty")
+        .hasSourceEquivalentTo(expectedOutput);
+  }
+
+  // Tests that type annotations are correctly copied from the bounds of type parameters in the
+  // @AutoValue class to the bounds of the corresponding parameters in the generated class. For
+  // example, if we have `@AutoValue abstract class Foo<T extends @NullableType Object>`, then the
+  // generated class should be `class AutoValue_Foo<T extends @NullableType Object> extends Foo<T>`.
+  // Some buggy versions of javac do not report type annotations correctly in this context.
+  // AutoValue can't copy them if it can't see them, so we make a special annotation processor to
+  // detect if we are in the presence of this bug and if so we don't fail.
+  @Test
+  public void testTypeParametersWithAnnotationsOnBounds() {
+    @SupportedAnnotationTypes("*")
+    class CompilerBugProcessor extends AbstractProcessor {
+      boolean checkedAnnotationsOnTypeBounds;
+      boolean reportsAnnotationsOnTypeBounds;
+
+      @Override
+      public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+      }
+
+      @Override
+      public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        if (roundEnv.processingOver()) {
+          TypeElement test = processingEnv.getElementUtils().getTypeElement("com.example.Test");
+          TypeParameterElement t = test.getTypeParameters().get(0);
+          this.checkedAnnotationsOnTypeBounds = true;
+          this.reportsAnnotationsOnTypeBounds =
+              !t.getBounds().get(0).getAnnotationMirrors().isEmpty();
+        }
+        return false;
+      }
+    }
+    CompilerBugProcessor compilerBugProcessor = new CompilerBugProcessor();
+    JavaFileObject nullableTypeFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.NullableType",
+            "package foo.bar;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface NullableType {}");
+    JavaFileObject autoValueFileObject =
+        JavaFileObjects.forSourceLines(
+            "com.example.Test",
+            "package com.example;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import foo.bar.NullableType;",
+            "",
+            "@AutoValue",
+            "abstract class Test<T extends @NullableType Object & @NullableType Cloneable> {}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), compilerBugProcessor)
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(nullableTypeFileObject, autoValueFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilerBugProcessor.checkedAnnotationsOnTypeBounds).isTrue();
+    if (compilerBugProcessor.reportsAnnotationsOnTypeBounds) {
+      assertThat(compilation)
+          .generatedSourceFile("com.example.AutoValue_Test")
+          .contentsAsUtf8String()
+          .contains(
+              "class AutoValue_Test<T extends @NullableType Object & @NullableType Cloneable>"
+                  + " extends Test<T> {");
+    }
   }
 
   // In the following few tests, see AutoValueProcessor.validateMethods for why unrecognized
@@ -879,12 +1060,12 @@ public class AutoValueCompilationTest {
             "    return anInt;",
             "  }",
             "",
-            "  @SuppressWarnings(value = {\"mutable\"})",
+            "  @SuppressWarnings(\"mutable\")",
             "  @Override public byte[] aByteArray() {",
             "    return aByteArray;",
             "  }",
             "",
-            "  @SuppressWarnings(value = {\"mutable\"})",
+            "  @SuppressWarnings(\"mutable\")",
             "  @Nullable",
             "  @Override public int[] aNullableIntArray() {",
             "    return aNullableIntArray;",
@@ -2427,12 +2608,13 @@ public class AutoValueCompilationTest {
             "    Baz<K, V> build();",
             "  }",
             "}");
-    assertAbout(javaSource())
-        .that(javaFileObject)
-        .processedWith(new AutoValueProcessor(), new AutoValueBuilderProcessor())
-        .failsToCompile()
-        .withErrorContaining("Builder converter method should return foo.bar.Baz.Builder<K, V>")
-        .in(javaFileObject)
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("Builder converter method should return foo.bar.Baz.Builder<K, V>")
+        .inFile(javaFileObject)
         .onLine(9);
   }
 

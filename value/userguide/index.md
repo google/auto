@@ -82,12 +82,12 @@ Maven users should add the following to the project's `pom.xml` file:
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-annotations</artifactId>
-  <version>1.6.2</version>
+  <version>1.6.6</version>
 </dependency>
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.6.2</version>
+  <version>1.6.6</version>
   <scope>provided</scope>
 </dependency>
 ```
@@ -102,8 +102,8 @@ Gradle users can declare the dependencies in their `build.gradle` script:
 ```groovy
 dependencies {
   // Use 'api' rather than 'compile' for Android or java-library projects.
-  compile             "com.google.auto.value:auto-value-annotations:1.6.2"
-  annotationProcessor "com.google.auto.value:auto-value:1.6.2"
+  compile             "com.google.auto.value:auto-value-annotations:1.6.6"
+  annotationProcessor "com.google.auto.value:auto-value:1.6.6"
 }
 ```
 

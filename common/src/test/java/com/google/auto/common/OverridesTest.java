@@ -330,12 +330,14 @@ public class OverridesTest {
           boolean javacSays = javacOverrides.overrides(javacOverrider, javacOverridden, javacIn);
           boolean weSay = explicitOverrides.overrides(overrider, overridden, in);
           if (javacSays != weSay) {
-            expect.fail(
-                "%s.%s overrides %s.%s in %s: javac says %s, we say %s",
-                overrider.getEnclosingElement(), overrider,
-                overridden.getEnclosingElement(), overridden,
-                in,
-                javacSays, weSay);
+            expect
+                .withMessage(
+                    "%s.%s overrides %s.%s in %s: javac says %s, we say %s",
+                    overrider.getEnclosingElement(), overrider,
+                    overridden.getEnclosingElement(), overridden,
+                    in,
+                    javacSays, weSay)
+                .fail();
           }
         }
       }

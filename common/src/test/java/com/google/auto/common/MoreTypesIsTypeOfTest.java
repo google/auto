@@ -67,7 +67,7 @@ public class MoreTypesIsTypeOfTest {
     assertTrue(MoreTypes.isType(typeElementFor(ArrayType.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(ArrayType.class));
     assertWithMessage("array mirror represents an array Class object")
-        .that(MoreTypes.isTypeOf(new String[] {}.getClass(), type))
+        .that(MoreTypes.isTypeOf(String[].class, type))
         .isTrue();
   }
 

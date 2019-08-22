@@ -40,7 +40,7 @@
 ## The expression should be surrounded by parentheses if otherwise there might be precedence
 ## problems when it is followed by &&.
 ## A reminder that trailing ## here serves to delete the newline, which we don't want in the output.
-#macro (equalsThatExpression $p)
+#macro (equalsThatExpression $p $subclass)
   #if ($p.kind == "FLOAT")
     Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.${p.getter}()) ##
   #elseif ($p.kind == "DOUBLE")

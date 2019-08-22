@@ -200,16 +200,6 @@ public class AutoFactoryProcessorTest {
             .in(file).onLine(27);
   }
 
-  @Test public void failsOnGenericClass() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/GenericClass.java");
-    assertAbout(javaSource())
-        .that(file)
-        .processedWith(new AutoFactoryProcessor())
-        .failsToCompile()
-        .withErrorContaining("AutoFactory does not support generic types")
-            .in(file).onLine(21).atColumn(14);
-  }
-
   @Test public void providedButNoAutoFactory() {
     JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedButNoAutoFactory.java");
     assertAbout(javaSource())
@@ -431,6 +421,17 @@ public class AutoFactoryProcessorTest {
         .compilesWithoutError()
         .and()
         .generatesSources(loadExpectedFile("expected/OnlyPrimitivesFactory.java"));
+  }
+
+  @Test
+  public void defaultPackage() {
+    JavaFileObject file = JavaFileObjects.forResource("good/DefaultPackage.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(loadExpectedFile("expected/DefaultPackageFactory.java"));
   }
 
   private JavaFileObject loadExpectedFile(String resourceName) {
