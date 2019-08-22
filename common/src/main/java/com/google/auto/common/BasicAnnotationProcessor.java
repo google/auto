@@ -53,7 +53,7 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleElementVisitor6;
+import javax.lang.model.util.SimpleElementVisitor8;
 
 /**
  * An abstract {@link Processor} implementation that defers processing of {@link Element}s to later
@@ -404,7 +404,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    */
   // TODO(cgruber) move to MoreElements and make public.
   private static TypeElement getEnclosingType(Element element) {
-    return element.accept(new SimpleElementVisitor6<TypeElement, Void>() {
+    return element.accept(new SimpleElementVisitor8<TypeElement, Void>() {
       @Override protected TypeElement defaultAction(Element e, Void p) {
         return e.getEnclosingElement().accept(this, p);
       }

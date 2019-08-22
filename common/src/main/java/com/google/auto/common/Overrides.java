@@ -36,7 +36,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleTypeVisitor6;
+import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
 
 /**
@@ -232,7 +232,7 @@ abstract class Overrides {
      * {@code class MyList implements List<Set<? extends Number>>} but that doesn't matter
      * because the {@code E} of the {@code List} is going to be erased to raw {@code Set}.
      */
-    private class TypeSubstVisitor extends SimpleTypeVisitor6<TypeMirror, Void> {
+    private class TypeSubstVisitor extends SimpleTypeVisitor8<TypeMirror, Void> {
       /**
        * The bindings of type variables. We can put them all in one map because E in {@code List<E>}
        * is not the same as E in {@code Collection<E>}. As we ascend the type hierarchy we'll add

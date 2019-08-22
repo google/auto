@@ -20,7 +20,7 @@ import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.SimpleAnnotationValueVisitor6;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 
 /**
  * A utility class for working with {@link AnnotationValue} instances.
@@ -31,11 +31,11 @@ public final class AnnotationValues {
   private static final Equivalence<AnnotationValue> ANNOTATION_VALUE_EQUIVALENCE =
       new Equivalence<AnnotationValue>() {
         @Override protected boolean doEquivalent(AnnotationValue left, AnnotationValue right) {
-          return left.accept(new SimpleAnnotationValueVisitor6<Boolean, AnnotationValue>() {
+          return left.accept(new SimpleAnnotationValueVisitor8<Boolean, AnnotationValue>() {
             // LHS is not an annotation or array of annotation values, so just test equality.
             @Override protected Boolean defaultAction(Object left, AnnotationValue right) {
               return left.equals(right.accept(
-                  new SimpleAnnotationValueVisitor6<Object, Void>() {
+                  new SimpleAnnotationValueVisitor8<Object, Void>() {
                     @Override protected Object defaultAction(Object object, Void unused) {
                       return object;
                     }
@@ -46,7 +46,7 @@ public final class AnnotationValues {
             // and false for other types.
             @Override public Boolean visitAnnotation(AnnotationMirror left, AnnotationValue right) {
               return right.accept(
-                  new SimpleAnnotationValueVisitor6<Boolean, AnnotationMirror>() {
+                  new SimpleAnnotationValueVisitor8<Boolean, AnnotationMirror>() {
                     @Override protected Boolean defaultAction(Object right, AnnotationMirror left) {
                       return false; // Not an annotation mirror, so can't be equal to such.
                     }
@@ -62,7 +62,7 @@ public final class AnnotationValues {
             @Override
             public Boolean visitArray(List<? extends AnnotationValue> left, AnnotationValue right) {
               return right.accept(
-                  new SimpleAnnotationValueVisitor6<Boolean, List<? extends AnnotationValue>>() {
+                  new SimpleAnnotationValueVisitor8<Boolean, List<? extends AnnotationValue>>() {
                     @Override protected Boolean defaultAction(
                         Object ignored, List<? extends AnnotationValue> alsoIgnored) {
                       return false; // Not an array, so can't be equal to such.
@@ -81,7 +81,7 @@ public final class AnnotationValues {
             @Override
             public Boolean visitType(TypeMirror left, AnnotationValue right) {
               return right.accept(
-                  new SimpleAnnotationValueVisitor6<Boolean, TypeMirror>() {
+                  new SimpleAnnotationValueVisitor8<Boolean, TypeMirror>() {
                     @Override protected Boolean defaultAction(
                         Object ignored, TypeMirror alsoIgnored) {
                       return false; // Not an annotation mirror, so can't be equal to such.
@@ -96,7 +96,7 @@ public final class AnnotationValues {
         }
 
         @Override protected int doHash(AnnotationValue value) {
-          return value.accept(new SimpleAnnotationValueVisitor6<Integer, Void>() {
+          return value.accept(new SimpleAnnotationValueVisitor8<Integer, Void>() {
             @Override public Integer visitAnnotation(AnnotationMirror value, Void ignore) {
               return AnnotationMirrors.equivalence().hash(value);
             }

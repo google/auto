@@ -56,7 +56,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleTypeVisitor6;
+import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
 
 /**
@@ -165,7 +165,7 @@ public final class MoreTypes {
     }
   }
 
-  private static final class EqualVisitor extends SimpleTypeVisitor6<Boolean, EqualVisitorParam> {
+  private static final class EqualVisitor extends SimpleTypeVisitor8<Boolean, EqualVisitorParam> {
     private static final EqualVisitor INSTANCE = new EqualVisitor();
 
     @Override
@@ -355,7 +355,7 @@ public final class MoreTypes {
   private static final int HASH_SEED = 17;
   private static final int HASH_MULTIPLIER = 31;
 
-  private static final class HashVisitor extends SimpleTypeVisitor6<Integer, Set<Element>> {
+  private static final class HashVisitor extends SimpleTypeVisitor8<Integer, Set<Element>> {
     private static final HashVisitor INSTANCE = new HashVisitor();
 
     int hashKind(int seed, TypeMirror t) {
@@ -463,7 +463,7 @@ public final class MoreTypes {
   }
 
   private static final class ReferencedTypes
-      extends SimpleTypeVisitor6<Void, ImmutableSet.Builder<TypeElement>> {
+      extends SimpleTypeVisitor8<Void, ImmutableSet.Builder<TypeElement>> {
     private static final ReferencedTypes INSTANCE = new ReferencedTypes();
 
     @Override
@@ -515,7 +515,7 @@ public final class MoreTypes {
     return typeMirror.accept(AsElementVisitor.INSTANCE, null);
   }
 
-  private static final class AsElementVisitor extends SimpleTypeVisitor6<Element, Void> {
+  private static final class AsElementVisitor extends SimpleTypeVisitor8<Element, Void> {
     private static final AsElementVisitor INSTANCE = new AsElementVisitor();
 
     @Override
@@ -776,7 +776,7 @@ public final class MoreTypes {
     return type.accept(IsTypeVisitor.INSTANCE, null);
   }
 
-  private static final class IsTypeVisitor extends SimpleTypeVisitor6<Boolean, Void> {
+  private static final class IsTypeVisitor extends SimpleTypeVisitor8<Boolean, Void> {
     private static final IsTypeVisitor INSTANCE = new IsTypeVisitor();
 
     @Override
@@ -815,7 +815,7 @@ public final class MoreTypes {
     return type.accept(new IsTypeOf(clazz), null);
   }
 
-  private static final class IsTypeOf extends SimpleTypeVisitor6<Boolean, Void> {
+  private static final class IsTypeOf extends SimpleTypeVisitor8<Boolean, Void> {
     private final Class<?> clazz;
 
     IsTypeOf(Class<?> clazz) {
@@ -941,7 +941,7 @@ public final class MoreTypes {
     }
   }
 
-  private abstract static class CastingTypeVisitor<T> extends SimpleTypeVisitor6<T, Void> {
+  private abstract static class CastingTypeVisitor<T> extends SimpleTypeVisitor8<T, Void> {
     private final String label;
 
     CastingTypeVisitor(String label) {

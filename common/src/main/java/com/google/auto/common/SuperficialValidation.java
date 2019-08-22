@@ -35,9 +35,9 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
-import javax.lang.model.util.AbstractElementVisitor6;
-import javax.lang.model.util.SimpleAnnotationValueVisitor6;
-import javax.lang.model.util.SimpleTypeVisitor6;
+import javax.lang.model.util.AbstractElementVisitor8;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
+import javax.lang.model.util.SimpleTypeVisitor8;
 
 /**
  * A utility class that traverses {@link Element} instances and ensures that all type information
@@ -56,7 +56,7 @@ public final class SuperficialValidation {
   }
 
   private static final ElementVisitor<Boolean, Void> ELEMENT_VALIDATING_VISITOR =
-      new AbstractElementVisitor6<Boolean, Void>() {
+      new AbstractElementVisitor8<Boolean, Void>() {
         @Override public Boolean visitPackage(PackageElement e, Void p) {
           // don't validate enclosed elements because it will return types in the package
           return validateAnnotations(e.getAnnotationMirrors());
@@ -119,7 +119,7 @@ public final class SuperficialValidation {
    * bounds.
    */
   private static final TypeVisitor<Boolean, Void> TYPE_VALIDATING_VISITOR =
-      new SimpleTypeVisitor6<Boolean, Void>() {
+      new SimpleTypeVisitor8<Boolean, Void>() {
         @Override
         protected Boolean defaultAction(TypeMirror t, Void p) {
           return true;
@@ -196,7 +196,7 @@ public final class SuperficialValidation {
   }
 
   private static final AnnotationValueVisitor<Boolean, TypeMirror> VALUE_VALIDATING_VISITOR =
-      new SimpleAnnotationValueVisitor6<Boolean, TypeMirror>() {
+      new SimpleAnnotationValueVisitor8<Boolean, TypeMirror>() {
         @Override protected Boolean defaultAction(Object o, TypeMirror expectedType) {
           return MoreTypes.isTypeOf(o.getClass(), expectedType);
         }

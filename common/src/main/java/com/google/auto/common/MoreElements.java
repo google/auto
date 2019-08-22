@@ -44,7 +44,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleElementVisitor6;
+import javax.lang.model.util.SimpleElementVisitor8;
 import javax.lang.model.util.Types;
 
 /**
@@ -476,7 +476,7 @@ public final class MoreElements {
     }
   }
 
-  private abstract static class CastingElementVisitor<T> extends SimpleElementVisitor6<T, Void> {
+  private abstract static class CastingElementVisitor<T> extends SimpleElementVisitor8<T, Void> {
     private final String label;
 
     CastingElementVisitor(String label) {
