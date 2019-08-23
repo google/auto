@@ -31,6 +31,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.truth.Truth;
@@ -54,6 +55,7 @@ import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
@@ -488,21 +490,34 @@ public class ExtensionTest {
     TypeElement builderType = builderContext.builderClass();
 
     // check build methods
-    Set<ExecutableElement> expectedBuildMethods = ElementFilter
-        .methodsIn(builderType.getEnclosedElements())
-        .stream()
-        .filter(method -> equivalence()
-            .equivalent(method.getReturnType(), extension.generateClassContext.autoValueClass().asType()))
-        .collect(Collectors.toSet());
-    assertEquals(expectedBuildMethods, builderContext.buildMethods());
+    assertTrue(
+        builderContext.buildMethods()
+            .stream()
+            .allMatch(method -> equivalence()
+                .equivalent(method.getReturnType(),
+                    extension.generateClassContext.autoValueClass().asType()))
+    );
+    assertThat(
+        builderContext.buildMethods().stream()
+            .map(ExecutableElement::getSimpleName)
+            .map(Name::toString)
+            .collect(Collectors.toSet())
+    ).containsExactly("build", "autoBuild");
 
     // check setters
-    Set<ExecutableElement> expectedSetters = filterByReturnType(
-        ElementFilter.methodsIn(builderType.getEnclosedElements()),
-        builderType.asType()
+    assertThat(
+        builderContext.setters()
+            .entrySet()
+            .stream()
+            .collect(ImmutableSetMultimap.flatteningToImmutableSetMultimap(
+                Entry::getKey, e -> e.getValue().stream().map(ExecutableElement::toString))
+            )
+    ).containsExactlyEntriesIn(
+        ImmutableMultimap.builder()
+            .putAll("foo", "foo(java.lang.String)", "foo(java.util.Optional<java.lang.String>)")
+            .put("bar", "bar(java.lang.String)")
+            .build()
     );
-    assertEquals(Sets.newHashSet("foo", "bar"), builderContext.setters().keySet());
-    assertEquals(expectedSetters, Sets.newHashSet(immutableMap(builderContext.setters()).values()));
 
     // check property builder
     assertEquals(Sets.newHashSet("qux"), builderContext.propertyBuilders().keySet());
@@ -742,14 +757,6 @@ public class ExtensionTest {
     return elements.stream()
         .filter(executableElement -> executableElement.getReturnType().equals(returnType))
         .collect(Collectors.toSet());
-  }
-
-  private static <T, U> ImmutableMultimap<T, U> immutableMap(Map<T, Set<U>> map) {
-    ImmutableMultimap.Builder<T, U> builder = ImmutableMultimap.builder();
-    for (Entry<T, Set<U>> entry : map.entrySet()) {
-      builder.putAll(entry.getKey(), entry.getValue());
-    }
-    return builder.build();
   }
 
   private static final String CUSTOM_OPTION = "customAnnotation.customOption";
