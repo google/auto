@@ -115,7 +115,7 @@ annotation processing plugin [as described in these instructions][tbroyer-apt].
 
 ### <a name="usage"></a>Usage
 
-Your choice to use AutoValue is essentially *API-invisible*. That means that to
+Your choice to use AutoValue is essentially *API-invisible*. This means that, to
 the consumer of your class, your class looks and functions like any other. The
 simple test below illustrates that behavior. Note that in real life, you would
 write tests that actually *do something interesting* with the object, instead of
