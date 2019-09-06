@@ -359,46 +359,41 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    *     AutoValue.CopyAnnotations} also do not appear here.
    */
   final ImmutableSet<Property> propertySet(
-      TypeElement type,
-      ImmutableSet<ExecutableElement> propertyMethods,
+      ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods) {
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
-        propertyNameToMethodMap(propertyMethods).inverse();
+        propertyNameToMethodMap(propertyMethodsAndTypes.keySet()).inverse();
     Map<ExecutableElement, String> methodToIdentifier = new LinkedHashMap<>(methodToPropertyName);
     fixReservedIdentifiers(methodToIdentifier);
-    EclipseHack eclipseHack = new EclipseHack(processingEnv);
-    DeclaredType declaredType = MoreTypes.asDeclared(type.asType());
-    ImmutableMap<ExecutableElement, TypeMirror> returnTypes =
-        eclipseHack.methodReturnTypes(propertyMethods, declaredType);
 
     ImmutableSet.Builder<Property> props = ImmutableSet.builder();
-    for (ExecutableElement propertyMethod : propertyMethods) {
-      TypeMirror returnType = returnTypes.get(propertyMethod);
-      String propertyType =
-          TypeEncoder.encodeWithAnnotations(returnType, getExcludedAnnotationTypes(propertyMethod));
-      String propertyName = methodToPropertyName.get(propertyMethod);
-      String identifier = methodToIdentifier.get(propertyMethod);
-      ImmutableList<String> fieldAnnotations =
-          annotationStrings(annotatedPropertyFields.get(propertyMethod));
-      ImmutableList<AnnotationMirror> methodAnnotationMirrors =
-          annotatedPropertyMethods.get(propertyMethod);
-      ImmutableList<String> methodAnnotations = annotationStrings(methodAnnotationMirrors);
-      Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
-      Property p =
-          new Property(
-              propertyName,
-              identifier,
-              propertyMethod,
-              propertyType,
-              fieldAnnotations,
-              methodAnnotations,
-              nullableAnnotation);
-      props.add(p);
-      if (p.isNullable() && returnType.getKind().isPrimitive()) {
-        errorReporter().reportError("Primitive types cannot be @Nullable", propertyMethod);
-      }
-    }
+    propertyMethodsAndTypes.forEach(
+        (propertyMethod, returnType) -> {
+          String propertyType = TypeEncoder.encodeWithAnnotations(
+              returnType, getExcludedAnnotationTypes(propertyMethod));
+          String propertyName = methodToPropertyName.get(propertyMethod);
+          String identifier = methodToIdentifier.get(propertyMethod);
+          ImmutableList<String> fieldAnnotations =
+              annotationStrings(annotatedPropertyFields.get(propertyMethod));
+          ImmutableList<AnnotationMirror> methodAnnotationMirrors =
+              annotatedPropertyMethods.get(propertyMethod);
+          ImmutableList<String> methodAnnotations = annotationStrings(methodAnnotationMirrors);
+          Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
+          Property p =
+              new Property(
+                  propertyName,
+                  identifier,
+                  propertyMethod,
+                  propertyType,
+                  fieldAnnotations,
+                  methodAnnotations,
+                  nullableAnnotation);
+          props.add(p);
+          if (p.isNullable() && returnType.getKind().isPrimitive()) {
+            errorReporter().reportError("Primitive types cannot be @Nullable", propertyMethod);
+          }
+        });
     return props.build();
   }
 
@@ -716,10 +711,14 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   }
 
   /**
-   * Returns the subset of property methods in the given set of abstract methods. A property method
-   * has no arguments, is not void, and is not {@code hashCode()} or {@code toString()}.
+   * Returns the subset of property methods in the given set of abstract methods, with their actual
+   * return types. A property method has no arguments, is not void, and is not {@code hashCode()} or
+   * {@code toString()}.
    */
-  ImmutableSet<ExecutableElement> propertyMethodsIn(Set<ExecutableElement> abstractMethods) {
+  ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsIn(
+      Set<ExecutableElement> abstractMethods,
+      TypeElement autoValueOrOneOfType) {
+    DeclaredType declaredType = MoreTypes.asDeclared(autoValueOrOneOfType.asType());
     ImmutableSet.Builder<ExecutableElement> properties = ImmutableSet.builder();
     for (ExecutableElement method : abstractMethods) {
       if (method.getParameters().isEmpty()
@@ -728,7 +727,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         properties.add(method);
       }
     }
-    return properties.build();
+    return new EclipseHack(processingEnv).methodReturnTypes(properties.build(), declaredType);
   }
 
   /** True if void properties are allowed. */
