@@ -770,9 +770,7 @@ public class ExtensionTest {
       generated = true;
 
       ImmutableList.Builder<String> typesAndNamesBuilder = ImmutableList.builder();
-      for (Map.Entry<String, ExecutableElement> entry : context.properties().entrySet()) {
-        typesAndNamesBuilder.add(entry.getValue().getReturnType() + " " + entry.getKey());
-      }
+      context.propertyTypes().forEach((name, type) -> typesAndNamesBuilder.add(type + " " + name));
       String typesAndNames = Joiner.on(", ").join(typesAndNamesBuilder.build());
       String template =
           "package {pkg};\n"
@@ -832,11 +830,9 @@ public class ExtensionTest {
         String sideClassFqName = context.packageName() + "." + sideClassName;
         JavaFileObject sourceFile =
             filer.createSourceFile(sideClassFqName, context.autoValueClass());
-        // TODO(emcmanus): use try-with-resources when we dump Java 6 source compatibility.
-        // (We will still *generate* code that is Java 6 compatible.)
-        Writer sourceWriter = sourceFile.openWriter();
-        sourceWriter.write(sideClass);
-        sourceWriter.close();
+        try (Writer sourceWriter = sourceFile.openWriter()) {
+          sourceWriter.write(sideClass);
+        }
       } catch (IOException e) {
         context
             .processingEnvironment()
