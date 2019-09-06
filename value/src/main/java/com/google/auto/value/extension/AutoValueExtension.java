@@ -310,7 +310,7 @@ public abstract class AutoValueExtension {
    *     ...
    *   }
    *   ...
-   * }</pre>
+   * }}</pre>
    *
    * <p>Here, {@code <package>} is {@link Context#packageName()}; {@code <finalOrAbstract>} is the
    * keyword {@code final} if {@code isFinal} is true or {@code abstract} otherwise; and {@code
