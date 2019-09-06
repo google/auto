@@ -52,12 +52,12 @@ public class EmptyExtension extends AutoValueExtension {
           "#if ($isFinal) final #end class ${className}${formalTypes}"
               + " extends ${classToExtend}${actualTypes} {\n",
           "  ${className}(",
-          "    #foreach ($property in $properties.keySet())",
-          "    $properties[$property].returnType ${property}$ #if ($foreach.hasNext) , #end",
+          "    #foreach ($property in $propertyTypes.keySet())",
+          "    $propertyTypes[$property] ${property}$ #if ($foreach.hasNext) , #end",
           "    #end",
           "  ) {",
           "    super(",
-          "      #foreach ($property in $properties.keySet())",
+          "      #foreach ($property in $propertyTypes.keySet())",
           "      ${property}$ #if ($foreach.hasNext) , #end",
           "      #end",
           "    );",
@@ -87,7 +87,7 @@ public class EmptyExtension extends AutoValueExtension {
             .put("className", className)
             .put("classToExtend", classToExtend)
             .put("isFinal", isFinal)
-            .put("properties", context.properties())
+            .put("propertyTypes", context.propertyTypes())
             .put("formalTypes", formalTypeParametersString(autoValueClass))
             .put("actualTypes", actualTypeParametersString(autoValueClass))
             .build();
