@@ -452,4 +452,34 @@ public class MemoizedTest {
     memoizedHashCodeAndFinalEqualsMethod.hashCode();
     assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(1);
   }
+
+  interface TypeEdgeIterable<InputT, ResultT> {}
+
+  interface ResourceUri {}
+
+  interface TypePath<InputT, ResultT> {}
+
+  abstract static class AbstractTypePath<InputT, ResultT> {
+    abstract TypeEdgeIterable<InputT, ResultT> edges();
+  }
+
+  @AutoValue
+  abstract static class ResourceUriPath<InputT> extends AbstractTypePath<InputT, ResourceUri> {
+    static <InputT> ResourceUriPath<InputT> create(
+        TypeEdgeIterable<InputT, ResourceUri> edges) {
+      return new AutoValue_MemoizedTest_ResourceUriPath<>(edges);
+    }
+
+    @Memoized
+    TypePath<InputT, String> toServiceName() {
+      return new TypePath<InputT, String>() {};
+    }
+  }
+
+  @Test
+  public void methodTypeFromTypeVariableSubsitution() {
+    ResourceUriPath<String> path =
+        ResourceUriPath.create(new TypeEdgeIterable<String, ResourceUri>() {});
+    assertThat(path.edges()).isNotNull();
+  }
 }

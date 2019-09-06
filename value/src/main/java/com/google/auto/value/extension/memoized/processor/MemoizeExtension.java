@@ -53,6 +53,7 @@ import com.google.common.base.Equivalence.Wrapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.FormatMethod;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -198,8 +199,8 @@ public final class MemoizeExtension extends AutoValueExtension {
 
     private MethodSpec constructor() {
       MethodSpec.Builder constructor = constructorBuilder();
-      for (Map.Entry<String, ExecutableElement> property : context.properties().entrySet()) {
-        constructor.addParameter(annotatedReturnType(property.getValue()), property.getKey() + "$");
+      for (Map.Entry<String, TypeMirror> property : context.propertyTypes().entrySet()) {
+        constructor.addParameter(annotatedType(property.getValue()), property.getKey() + "$");
       }
       List<String> namesWithDollars = new ArrayList<String>();
       for (String property : context.properties().keySet()) {
@@ -399,7 +400,8 @@ public final class MemoizeExtension extends AutoValueExtension {
         this.method = method;
         validate();
         cacheField =
-            buildCacheField(annotatedReturnType(method), method.getSimpleName().toString());
+            buildCacheField(
+                annotatedType(method.getReturnType()), method.getSimpleName().toString());
         fields.add(cacheField);
         override =
             methodBuilder(method.getSimpleName().toString())
@@ -457,10 +459,11 @@ public final class MemoizeExtension extends AutoValueExtension {
 
       private void checkIllegalModifier(Modifier modifier) {
         if (method.getModifiers().contains(modifier)) {
-          printMessage(ERROR, "@Memoized methods cannot be " + modifier.toString());
+          printMessage(ERROR, "@Memoized methods cannot be %s", modifier.toString());
         }
       }
 
+      @FormatMethod
       private void printMessage(Kind kind, String format, Object... args) {
         if (kind.equals(ERROR)) {
           hasErrors = true;
@@ -585,13 +588,12 @@ public final class MemoizeExtension extends AutoValueExtension {
         .anyMatch(n -> n.contentEquals("Nullable"));
   }
 
-  /** The return type of the given method, including type annotations. */
-  private static TypeName annotatedReturnType(ExecutableElement method) {
-    TypeMirror returnType = method.getReturnType();
+  /** Translate a {@link TypeMirror} into a {@link TypeName}, including type annotations. */
+  private static TypeName annotatedType(TypeMirror type) {
     List<AnnotationSpec> annotations =
-        returnType.getAnnotationMirrors().stream()
+        type.getAnnotationMirrors().stream()
             .map(AnnotationSpec::get)
             .collect(toList());
-    return TypeName.get(returnType).annotated(annotations);
+    return TypeName.get(type).annotated(annotations);
   }
 }
