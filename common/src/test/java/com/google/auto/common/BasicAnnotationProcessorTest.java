@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.StandardLocation.SOURCE_OUTPUT;
 
 import com.google.common.collect.ImmutableList;
@@ -161,6 +162,37 @@ public class BasicAnnotationProcessorTest {
             @Override
             public Set<? extends Class<? extends Annotation>> annotations() {
               return ImmutableSet.of(AnAnnotation.class);
+            }
+          });
+    }
+  }
+
+  /** An annotation which causes an annotation processing error. */
+  public @interface CauseError {}
+
+  /** Report an error for any class annotated. */
+  public static class CauseErrorProcessor extends BasicAnnotationProcessor {
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
+
+    @Override
+    protected Iterable<? extends ProcessingStep> initSteps() {
+      return ImmutableSet.of(
+          new ProcessingStep() {
+            @Override
+            public Set<Element> process(
+                SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+              for (Element e : elementsByAnnotation.values()) {
+                processingEnv.getMessager().printMessage(ERROR, "purposeful error", e);
+              }
+              return ImmutableSet.copyOf(elementsByAnnotation.values());
+            }
+
+            @Override
+            public Set<? extends Class<? extends Annotation>> annotations() {
+              return ImmutableSet.of(CauseError.class);
             }
           });
     }
@@ -327,6 +359,23 @@ public class BasicAnnotationProcessorTest {
         .failsToCompile()
         .withErrorContaining(RequiresGeneratedCodeProcessor.class.getCanonicalName())
         .in(classAFileObject).onLine(4);
+  }
+
+  @Test
+  public void reportsMissingTypeSuppressedWhenOtherErrors() {
+    JavaFileObject classAFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassA",
+            "package test;",
+            "",
+            "@" + CauseError.class.getCanonicalName(),
+            "public class ClassA {}");
+    assertAbout(javaSources())
+        .that(ImmutableList.of(classAFileObject))
+        .processedWith(new CauseErrorProcessor())
+        .failsToCompile()
+        .withErrorCount(1)
+        .withErrorContaining("purposeful");
   }
 
   private static void generateClass(Filer filer, String generatedClassName) {
