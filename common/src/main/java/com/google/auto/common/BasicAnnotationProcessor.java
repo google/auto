@@ -171,10 +171,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     deferredElementNames.clear();
 
-    // If this is the last round, report all of the missing elements
+    // If this is the last round, report all of the missing elements if there
+    // were no errors raised in the round; otherwise reporting the missing
+    // elements just adds noise the output.
     if (roundEnv.processingOver()) {
       postRound(roundEnv);
-      reportMissingElements(deferredElements, elementsDeferredBySteps.values());
+      if (!roundEnv.errorRaised()) {
+        reportMissingElements(deferredElements, elementsDeferredBySteps.values());
+      }
       return false;
     }
 
