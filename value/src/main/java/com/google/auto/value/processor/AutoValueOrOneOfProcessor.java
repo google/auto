@@ -633,13 +633,21 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    */
   static void fixReservedIdentifiers(Map<?, String> methodToIdentifier) {
     for (Map.Entry<?, String> entry : methodToIdentifier.entrySet()) {
-      if (SourceVersion.isKeyword(entry.getValue())) {
-        entry.setValue(disambiguate(entry.getValue(), methodToIdentifier.values()));
+      String name = entry.getValue();
+      if (SourceVersion.isKeyword(name) || !Character.isJavaIdentifierStart(name.codePointAt(0))) {
+        entry.setValue(disambiguate(name, methodToIdentifier.values()));
       }
     }
   }
 
   private static String disambiguate(String name, Collection<String> existingNames) {
+    if (!Character.isJavaIdentifierStart(name.codePointAt(0))) {
+      // You've defined a getter called get1st(). What were you thinking?
+      name = "_" + name;
+      if (!existingNames.contains(name)) {
+        return name;
+      }
+    }
     for (int i = 0; ; i++) {
       String candidate = name + i;
       if (!existingNames.contains(candidate)) {

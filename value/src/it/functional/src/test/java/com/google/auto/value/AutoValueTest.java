@@ -178,6 +178,30 @@ public class AutoValueTest {
   }
 
   @AutoValue
+  abstract static class StrangeGetters {
+    abstract int get1st();
+    abstract int get_1st(); // by default we'll use _1st where identifiers are needed, so foil that.
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder set1st(int x);
+      abstract Builder set_1st(int x);
+      abstract StrangeGetters build();
+    }
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_StrangeGetters.Builder();
+    }
+  }
+
+  @Test
+  public void testStrangeGetters() {
+    StrangeGetters instance = StrangeGetters.builder().set1st(17).set_1st(23).build();
+    String expectedString = omitIdentifiers ? "{17, 23}" : "StrangeGetters{1st=17, _1st=23}";
+    assertThat(instance.toString()).isEqualTo(expectedString);
+  }
+
+  @AutoValue
   abstract static class GettersAndConcreteNonGetters {
     abstract int getFoo();
 
