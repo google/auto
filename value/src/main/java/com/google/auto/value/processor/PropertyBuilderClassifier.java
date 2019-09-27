@@ -19,6 +19,7 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +53,7 @@ class PropertyBuilderClassifier {
   private final Elements elementUtils;
   private final BuilderMethodClassifier builderMethodClassifier;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
+  private final ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType;
   private final EclipseHack eclipseHack;
 
   PropertyBuilderClassifier(
@@ -60,12 +62,14 @@ class PropertyBuilderClassifier {
       Elements elementUtils,
       BuilderMethodClassifier builderMethodClassifier,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType,
       EclipseHack eclipseHack) {
     this.errorReporter = errorReporter;
     this.typeUtils = typeUtils;
     this.elementUtils = elementUtils;
     this.builderMethodClassifier = builderMethodClassifier;
     this.getterToPropertyName = getterToPropertyName;
+    this.getterToPropertyType = getterToPropertyType;
     this.eclipseHack = eclipseHack;
   }
 
@@ -207,7 +211,7 @@ class PropertyBuilderClassifier {
     Map<String, ExecutableElement> barBuilderNoArgMethods = noArgMethodsOf(barBuilderTypeElement);
 
     ExecutableElement barGetter = getterToPropertyName.inverse().get(property);
-    TypeMirror barTypeMirror = barGetter.getReturnType();
+    TypeMirror barTypeMirror = getterToPropertyType.get(barGetter);
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           "Method looks like a property builder, but the type of property "

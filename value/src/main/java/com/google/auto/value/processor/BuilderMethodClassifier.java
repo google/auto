@@ -274,7 +274,13 @@ class BuilderMethodClassifier {
       if (getterToPropertyName.containsValue(property)) {
         PropertyBuilderClassifier propertyBuilderClassifier =
             new PropertyBuilderClassifier(
-                errorReporter, typeUtils, elementUtils, this, getterToPropertyName, eclipseHack);
+                errorReporter,
+                typeUtils,
+                elementUtils,
+                this,
+                getterToPropertyName,
+                getterToPropertyType,
+                eclipseHack);
         Optional<PropertyBuilder> propertyBuilder =
             propertyBuilderClassifier.makePropertyBuilder(method, property);
         if (propertyBuilder.isPresent()) {
