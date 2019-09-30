@@ -20,15 +20,22 @@ import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.hasAnnot
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static javax.lang.model.util.ElementFilter.methodsIn;
+import static javax.lang.model.util.ElementFilter.typesIn;
 
 import com.google.auto.common.MoreTypes;
+import com.google.auto.value.extension.AutoValueExtension;
 import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
+import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -43,7 +50,6 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 
 /**
@@ -75,7 +81,7 @@ class BuilderSpec {
    */
   Optional<Builder> getBuilder() {
     Optional<TypeElement> builderTypeElement = Optional.empty();
-    for (TypeElement containedClass : ElementFilter.typesIn(autoValueClass.getEnclosedElements())) {
+    for (TypeElement containedClass : typesIn(autoValueClass.getEnclosedElements())) {
       if (hasAnnotationMirror(containedClass, AUTO_VALUE_BUILDER_NAME)) {
         if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
           errorReporter.reportError(
@@ -101,12 +107,73 @@ class BuilderSpec {
   }
 
   /** Representation of an {@code AutoValue.Builder} class or interface. */
-  class Builder {
+  class Builder implements AutoValueExtension.BuilderContext {
     private final TypeElement builderTypeElement;
     private ImmutableSet<ExecutableElement> toBuilderMethods;
+    private ExecutableElement buildMethod;
+    private BuilderMethodClassifier classifier;
 
     Builder(TypeElement builderTypeElement) {
       this.builderTypeElement = builderTypeElement;
+    }
+
+    @Override
+    public TypeElement builderType() {
+      return builderTypeElement;
+    }
+
+    @Override
+    public Set<ExecutableElement> builderMethods() {
+      return methodsIn(autoValueClass.getEnclosedElements()).stream()
+          .filter(
+              m ->
+                  m.getParameters().isEmpty()
+                      && m.getModifiers().contains(Modifier.STATIC)
+                      && !m.getModifiers().contains(Modifier.PRIVATE)
+                      && erasedTypeIs(m.getReturnType(), builderTypeElement))
+          .collect(toSet());
+    }
+
+    @Override
+    public Optional<ExecutableElement> buildMethod() {
+      return methodsIn(builderTypeElement.getEnclosedElements()).stream()
+          .filter(
+              m ->
+                  m.getSimpleName().contentEquals("build")
+                      && !m.getModifiers().contains(Modifier.PRIVATE)
+                      && !m.getModifiers().contains(Modifier.STATIC)
+                      && m.getParameters().isEmpty()
+                      && erasedTypeIs(m.getReturnType(), autoValueClass))
+          .findFirst();
+    }
+
+    @Override
+    public ExecutableElement autoBuildMethod() {
+      return buildMethod;
+    }
+
+    @Override
+    public Map<String, Set<ExecutableElement>> setters() {
+      return Maps.transformValues(
+          classifier.propertyNameToSetters().asMap(),
+          propertySetters ->
+              propertySetters.stream().map(PropertySetter::getSetter).collect(toSet()));
+    }
+
+    @Override
+    public Map<String, ExecutableElement> propertyBuilders() {
+      return Maps.transformValues(
+          classifier.propertyNameToPropertyBuilder(), PropertyBuilder::getPropertyBuilderMethod);
+    }
+
+    private boolean erasedTypeIs(TypeMirror type, TypeElement baseType) {
+      return type.getKind().equals(TypeKind.DECLARED)
+          && MoreTypes.asDeclared(type).asElement().equals(baseType);
+    }
+
+    @Override
+    public Set<ExecutableElement> toBuilderMethods() {
+      return toBuilderMethods;
     }
 
     /**
@@ -131,9 +198,7 @@ class BuilderSpec {
         Types typeUtils, Set<ExecutableElement> abstractMethods) {
 
       List<String> builderTypeParamNames =
-          builderTypeElement
-              .getTypeParameters()
-              .stream()
+          builderTypeElement.getTypeParameters().stream()
               .map(e -> e.getSimpleName().toString())
               .collect(toList());
 
@@ -143,9 +208,7 @@ class BuilderSpec {
           methods.add(method);
           DeclaredType returnType = MoreTypes.asDeclared(method.getReturnType());
           List<String> typeArguments =
-              returnType
-                  .getTypeArguments()
-                  .stream()
+              returnType.getTypeArguments().stream()
                   .filter(t -> t.getKind().equals(TypeKind.TYPEVAR))
                   .map(t -> typeUtils.asElement(t).getSimpleName().toString())
                   .collect(toList());
@@ -192,7 +255,7 @@ class BuilderSpec {
       if (!optionalClassifier.isPresent()) {
         return;
       }
-      BuilderMethodClassifier classifier = optionalClassifier.get();
+      this.classifier = optionalClassifier.get();
       Set<ExecutableElement> buildMethods = classifier.buildMethods();
       if (buildMethods.size() != 1) {
         Set<? extends Element> errorElements =
@@ -206,7 +269,7 @@ class BuilderSpec {
         }
         return;
       }
-      ExecutableElement buildMethod = Iterables.getOnlyElement(buildMethods);
+      this.buildMethod = Iterables.getOnlyElement(buildMethods);
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
       vars.builderFormalTypes = TypeEncoder.formalTypeParametersString(builderTypeElement);

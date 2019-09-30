@@ -16,14 +16,18 @@
 package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.auto.common.MoreTypes;
 import com.google.auto.value.extension.AutoValueExtension;
+import com.google.auto.value.extension.AutoValueExtension.BuilderContext;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.truth.Truth;
 import com.google.testing.compile.CompileTester.SuccessfulCompilationClause;
 import com.google.testing.compile.JavaFileObjects;
@@ -35,16 +39,20 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
@@ -873,6 +881,208 @@ public class ExtensionTest {
           + "("
           + Joiner.on(", ").join(typesAndNamesBuilder.build())
           + ") {}";
+    }
+  }
+
+  @Test
+  public void propertyTypes() {
+    JavaFileObject parent = JavaFileObjects.forSourceLines(
+        "foo.bar.Parent",
+        "package foo.bar;",
+        "",
+        "import java.util.List;",
+        "",
+        "interface Parent<T> {",
+        "  T thing();",
+        "  List<T> list();",
+        "}");
+    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "abstract class Baz implements Parent<String> {",
+        "}");
+    ContextChecker checker =
+        context -> {
+          assertThat(context.builder()).isEmpty();
+          Map<String, TypeMirror> propertyTypes = context.propertyTypes();
+          assertThat(propertyTypes.keySet()).containsExactly("thing", "list");
+          TypeMirror thingType = propertyTypes.get("thing");
+          assertThat(thingType).isNotNull();
+          assertThat(thingType.getKind()).isEqualTo(TypeKind.DECLARED);
+          assertThat(MoreTypes.asTypeElement(thingType).getQualifiedName().toString())
+              .isEqualTo("java.lang.String");
+          TypeMirror listType = propertyTypes.get("list");
+          assertThat(listType).isNotNull();
+          assertThat(listType.toString()).isEqualTo("java.util.List<java.lang.String>");
+        };
+    ContextCheckingExtension extension = new ContextCheckingExtension(checker);
+    assertThat(autoValueClass, parent)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
+        .compilesWithoutError();
+  }
+
+  @Test
+  public void builderContext() {
+    JavaFileObject parent = JavaFileObjects.forSourceLines(
+        "foo.bar.Parent",
+        "package foo.bar;",
+        "",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "interface Parent<T> {",
+        "  T thing();",
+        "  ImmutableList<T> list();",
+        "}");
+    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "abstract class Baz implements Parent<String> {",
+        "  static Builder builder() {",
+        "    return new AutoValue_Baz.Builder();",
+        "  }",
+        "",
+        "  abstract Builder toBuilder();",
+        "",
+        "  @AutoValue.Builder",
+        "  abstract static class Builder {",
+        "    abstract Builder setThing(String x);",
+        "    abstract Builder setList(Iterable<String> x);",
+        "    abstract Builder setList(ImmutableList<String> x);",
+        "    abstract ImmutableList.Builder<String> listBuilder();",
+        "    abstract Baz autoBuild();",
+        "    Baz build() {",
+        "      return autoBuild();",
+        "    }",
+        "  }",
+        "}");
+    ContextChecker checker =
+        context -> {
+          assertThat(context.builder()).isPresent();
+          BuilderContext builderContext = context.builder().get();
+
+          assertThat(builderContext.builderType().getQualifiedName().toString())
+              .isEqualTo("foo.bar.Baz.Builder");
+
+          Set<ExecutableElement> builderMethods = builderContext.builderMethods();
+          assertThat(builderMethods).hasSize(1);
+          ExecutableElement builderMethod = Iterables.getOnlyElement(builderMethods);
+          assertThat(builderMethod.getSimpleName().toString()).isEqualTo("builder");
+
+          Set<ExecutableElement> toBuilderMethods = builderContext.toBuilderMethods();
+          assertThat(toBuilderMethods).hasSize(1);
+          ExecutableElement toBuilderMethod = Iterables.getOnlyElement(toBuilderMethods);
+          assertThat(toBuilderMethod.getSimpleName().toString()).isEqualTo("toBuilder");
+
+          Optional<ExecutableElement> buildMethod = builderContext.buildMethod();
+          assertThat(buildMethod).isPresent();
+          assertThat(buildMethod.get().getSimpleName().toString()).isEqualTo("build");
+          assertThat(buildMethod.get().getParameters()).isEmpty();
+          assertThat(buildMethod.get().getReturnType().toString()).isEqualTo("foo.bar.Baz");
+
+          ExecutableElement autoBuildMethod = builderContext.autoBuildMethod();
+          assertThat(autoBuildMethod.getSimpleName().toString()).isEqualTo("autoBuild");
+          assertThat(autoBuildMethod.getModifiers()).contains(Modifier.ABSTRACT);
+          assertThat(autoBuildMethod.getParameters()).isEmpty();
+          assertThat(autoBuildMethod.getReturnType().toString()).isEqualTo("foo.bar.Baz");
+
+          Map<String, Set<ExecutableElement>> setters = builderContext.setters();
+          assertThat(setters.keySet()).containsExactly("thing", "list");
+          Set<ExecutableElement> thingSetters = setters.get("thing");
+          assertThat(thingSetters).hasSize(1);
+          ExecutableElement thingSetter = Iterables.getOnlyElement(thingSetters);
+          assertThat(thingSetter.getSimpleName().toString()).isEqualTo("setThing");
+          Set<ExecutableElement> listSetters = setters.get("list");
+          assertThat(listSetters).hasSize(2);
+          for (ExecutableElement listSetter : listSetters) {
+            assertThat(listSetter.getSimpleName().toString()).isEqualTo("setList");
+          }
+
+          Map<String, ExecutableElement> propertyBuilders = builderContext.propertyBuilders();
+          assertThat(propertyBuilders.keySet()).containsExactly("list");
+          assertThat(propertyBuilders.get("list").getSimpleName().toString())
+              .isEqualTo("listBuilder");
+        };
+    ContextCheckingExtension extension = new ContextCheckingExtension(checker);
+    assertThat(autoValueClass, parent)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
+        .compilesWithoutError();
+  }
+
+  @Test
+  public void oddBuilderContext() {
+    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "import com.google.common.collect.ImmutableList;",
+        "",
+        "@AutoValue",
+        "abstract class Baz {",
+        "  abstract String string();",
+        "",
+        "  @AutoValue.Builder",
+        "  abstract static class Builder {",
+        "    abstract Builder setString(String x);",
+        "    abstract Baz oddBuild();",
+        "    Baz build(int butNotReallyBecauseOfThisParameter) {",
+        "      return null;",
+        "    }",
+        "  }",
+        "}");
+    ContextChecker checker =
+        context -> {
+          assertThat(context.builder()).isPresent();
+          BuilderContext builderContext = context.builder().get();
+          assertThat(builderContext.builderMethods()).isEmpty();
+          assertThat(builderContext.toBuilderMethods()).isEmpty();
+          assertThat(builderContext.buildMethod()).isEmpty();
+          assertThat(builderContext.autoBuildMethod().getSimpleName().toString())
+              .isEqualTo("oddBuild");
+
+          Map<String, Set<ExecutableElement>> setters = builderContext.setters();
+          assertThat(setters.keySet()).containsExactly("string");
+          Set<ExecutableElement> thingSetters = setters.get("string");
+          assertThat(thingSetters).hasSize(1);
+          ExecutableElement thingSetter = Iterables.getOnlyElement(thingSetters);
+          assertThat(thingSetter.getSimpleName().toString()).isEqualTo("setString");
+
+          assertThat(builderContext.propertyBuilders()).isEmpty();
+        };
+    ContextCheckingExtension extension = new ContextCheckingExtension(checker);
+    assertThat(autoValueClass)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
+        .compilesWithoutError();
+  }
+
+  private interface ContextChecker extends Consumer<AutoValueExtension.Context> {}
+
+  private static class ContextCheckingExtension extends AutoValueExtension {
+    private final Consumer<Context> checker;
+
+    ContextCheckingExtension(Consumer<Context> checker) {
+      this.checker = checker;
+    }
+
+    @Override
+    public boolean applicable(Context context) {
+      return true;
+    }
+
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      checker.accept(context);
+      return null;
     }
   }
 }
