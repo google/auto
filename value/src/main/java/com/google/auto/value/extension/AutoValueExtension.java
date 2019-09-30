@@ -17,6 +17,7 @@ package com.google.auto.value.extension;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -142,6 +143,129 @@ public abstract class AutoValueExtension {
      * method even if it has been consumed by this or another Extension.
      */
     Set<ExecutableElement> abstractMethods();
+
+    /**
+     * Returns a representation of the {@code Builder} associated with the {@code @AutoValue} class,
+     * if there is one.
+     *
+     * <p>This method returns {@link Optional#empty()} if called from within the {@link #applicable}
+     * method. If an Extension needs {@code Builder} information to decide whether it is applicable,
+     * it should return {@code true} from the {@link #applicable} method and then return {@code
+     * null} from the {@link #generateClass} method if it does not need to generate a class after
+     * all.
+     *
+     * <p>The default implementation of this method returns {@link Optional#empty()} for
+     * compatibility with extensions which may have implemented this interface themselves.
+     */
+    default Optional<BuilderContext> builder() {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Represents a {@code Builder} associated with an {@code @AutoValue} class.
+   */
+  public interface BuilderContext {
+    /**
+     * Returns the {@code @AutoValue.Builder} interface or abstract class that this object
+     * represents.
+     */
+    TypeElement builderType();
+
+    /**
+     * Returns abstract no-argument methods in the {@code @AutoValue} class that return the builder
+     * type.
+     *
+     * <p>Consider a class like this:
+     * <pre>
+     *   {@code @AutoValue} abstract class Foo {
+     *     abstract String bar();
+     *
+     *     abstract Builder toBuilder();
+     *
+     *     ...
+     *     {@code @AutoValue.Builder}
+     *     abstract static class Builder {...}
+     *   }
+     * </pre>
+     *
+     * <p>Here {@code toBuilderMethods()} will return a set containing the method
+     * {@code Foo.toBuilder()}.
+     */
+    Set<ExecutableElement> toBuilderMethods();
+
+    /**
+     * Returns static no-argument methods in the {@code @AutoValue} class that return the builder
+     * type.
+     *
+     * <p>Consider a class like this:
+     * <pre>
+     *   {@code @AutoValue} abstract class Foo {
+     *     abstract String bar();
+     *
+     *     static Builder builder() {
+     *       return new AutoValue_Foo.Builder()
+     *           .setBar("default bar");
+     *     }
+     *
+     *     {@code @AutoValue.Builder}
+     *     abstract class Builder {
+     *       abstract Builder setBar(String x);
+     *       abstract Foo build();
+     *     }
+     *   }
+     * </pre>
+     *
+     * <p>Here {@code builderMethods()} will return a set containing the method
+     * {@code Foo.builder()}. Generated code should usually call this method in preference to
+     * constructing {@code AutoValue_Foo.Builder()} directly, because this method can establish
+     * default values for properties, as it does here.
+     */
+    Set<ExecutableElement> builderMethods();
+
+    /**
+     * Returns the method {@code build()} in the builder class, if it exists and returns the
+     * {@code @AutoValue} type. This is the method that generated code for
+     * {@code @AutoValue class Foo} should call in order to get an instance of {@code Foo} from its
+     * builder. The returned method is called {@code build()}; if the builder uses some other name
+     * then extensions have no good way to guess how they should build.
+     *
+     * <p>A common convention is for {@code build()} to be a concrete method in the
+     * {@code @AutoValue.Builder} class, which calls an abstract method {@code autoBuild()} that is
+     * implemented in the generated subclass. The {@code build()} method can then do validation,
+     * defaulting, and so on.
+     */
+    Optional<ExecutableElement> buildMethod();
+
+    /**
+     * Returns the abstract build method. If the {@code @AutoValue} class is {@code Foo}, this is an
+     * abstract no-argument method in the builder class that returns {@code Foo}. This might be
+     * called {@code build()}, or, following a common convention, it might be called
+     * {@code autoBuild()} and used in the implementation of a {@code build()} method that is
+     * defined in the builder class.
+     *
+     * <p>Extensions should call the {@code build()} method in preference to this one. But they
+     * should override this one if they want to customize build-time behaviour.
+     */
+    ExecutableElement autoBuildMethod();
+
+    /**
+     * Returns a map from property names to the corresponding setters. A property may have more than
+     * one setter. For example, an {@code ImmutableList<String>} might be set by
+     * {@code setFoo(ImmutableList<String>)} and {@code setFoo(String[])}.
+     */
+    Map<String, Set<ExecutableElement>> setters();
+
+    /**
+     * Returns a map from property names to property builders. For example, if there is a property
+     * {@code foo} defined by {@code abstract ImmutableList<String> foo();} or
+     * {@code abstract ImmutableList<String> getFoo();} in the {@code @AutoValue} class,
+     * then there can potentially be a builder defined by
+     * {@code abstract ImmutableList.Builder<String> fooBuilder();} in the
+     * {@code @AutoValue.Builder} class. This map would then map {@code "foo"} to the
+     * {@link ExecutableElement} representing {@code fooBuilder()}.
+     */
+    Map<String, ExecutableElement> propertyBuilders();
   }
 
   /**
@@ -221,11 +345,12 @@ public abstract class AutoValueExtension {
   }
 
   /**
-   * Determines whether this Extension applies to the given context.
+   * Determines whether this Extension applies to the given context. If an Extension returns {@code
+   * false} for a given class, it will not be called again during the processing of that class. An
+   * Extension can return {@code true} and still choose not to generate any code for the class, by
+   * returning {@code null} from {@link #generateClass}. That is often a more flexible approach.
    *
    * @param context The Context of the code generation for this class.
-   * @return true if this Extension should be applied in the given context. If an Extension returns
-   *     false for a given class, it will not be called again during the processing of that class.
    */
   public boolean applicable(Context context) {
     return false;

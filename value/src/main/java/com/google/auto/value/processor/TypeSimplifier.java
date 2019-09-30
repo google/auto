@@ -379,5 +379,5 @@ final class TypeSimplifier {
       TypeElement typeElement = (TypeElement) declaredType.asElement();
       return typeElement.getQualifiedName().contentEquals("java.lang.Object");
     }
-  };
+  }
 }
