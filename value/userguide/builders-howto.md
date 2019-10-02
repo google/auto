@@ -494,8 +494,14 @@ Now the caller can do this:
 
 ### <a name="collection_both"></a>... offer both accumulation and set-at-once methods for the same collection-valued property?
 
-You can have both. If the caller uses `setFoos` after `foosBuilder` has been
-called, an unchecked exception will be thrown.
+Yes, you can provide both methods, letting your caller choose the style they
+prefer.
+
+The same caller can mix the two styles only in limited ways; once `foosBuilder`
+has been called, any subsequent call to `setFoos` will throw an unchecked
+exception. On the other hand, calling `setFoos` first is okay; a later call to
+`foosBuilder` will return a builder already populated with the
+previously-supplied elements.
 
 ## <a name="nested_builders"></a>... access nested builders while building?
 
