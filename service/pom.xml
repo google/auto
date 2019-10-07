@@ -38,7 +38,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
     <guava.version>27.0.1-jre</guava.version>
-    <truth.version>0.44</truth.version>
+    <truth.version>1.0</truth.version>
   </properties>
 
   <scm>
@@ -90,7 +90,7 @@
       <dependency>
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>
-        <version>0.16</version>
+        <version>0.18</version>
       </dependency>
       <dependency>
         <groupId>com.google.truth</groupId>
