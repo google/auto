@@ -926,6 +926,31 @@ public class ExtensionTest {
   }
 
   @Test
+  public void finalAutoValueClassName() {
+    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "abstract class Baz {",
+        "}");
+    ContextChecker checker =
+        context -> {
+          assertThat(context.finalAutoValueClassName()).isEqualTo("foo.bar.AutoValue_Baz");
+        };
+    ContextCheckingExtension extension = new ContextCheckingExtension(checker);
+    assertThat(autoValueClass)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension, new FinalExtension())))
+        .compilesWithoutError()
+        .and()
+        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
+    // ContextCheckingExtension doesn't generate any code, so that name must be the class generated
+    // by FinalExtension.
+  }
+
+  @Test
   public void builderContext() {
     JavaFileObject parent = JavaFileObjects.forSourceLines(
         "foo.bar.Parent",

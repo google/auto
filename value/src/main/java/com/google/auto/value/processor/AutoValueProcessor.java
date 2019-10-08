@@ -151,7 +151,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     throw new AssertionError(incrementalType);
   }
 
-  private static String generatedSubclassName(TypeElement type, int depth) {
+  static String generatedSubclassName(TypeElement type, int depth) {
     return generatedClassName(type, Strings.repeat("$", depth) + "AutoValue_");
   }
 
