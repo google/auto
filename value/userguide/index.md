@@ -76,26 +76,51 @@ examples short and simple.
 
 ### In `pom.xml`
 
-Maven users should add the following to the project's `pom.xml` file:
+Maven users should add a `dependency` on `com.google.auto.value:auto-value-annotations`
+to the project's `dependencies` section:
 
 ```xml
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-annotations</artifactId>
-  <version>1.6.6</version>
+  <version>1.7</version>
 </dependency>
+```
+
+Then they should add a `path` to `com.google.auto.value:auto-value`
+in the `configuration` of the maven-compiler-plugin:
+
+```xml
+<plugin>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <version>3.5.1</version>
+  <configuration>
+    ...
+    <annotationProcessorPaths>
+      <path>
+        <groupId>com.google.auto.value</groupId>
+        <artifactId>auto-value</artifactId>
+        <version>1.7</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+```
+
+Alternatively, the dependency on `com.google.auto.value:auto-value` can be added
+directly to the project's `dependencies` section with `provided` scope:
+
+```xml
 <dependency>
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
-  <version>1.6.6</version>
+  <version>1.7</version>
   <scope>provided</scope>
 </dependency>
 ```
 
-Alternatively, instead of using the `provided` scope, you can add the second
-dependency to the
-[`annotationProcessorPaths`](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#annotationProcessorPaths)
-section.
+However this does load otherwise unneeded classes from `com.google.auto.value:auto-value` into your project's 
+classpath. 
 
 Gradle users can declare the dependencies in their `build.gradle` script:
 
