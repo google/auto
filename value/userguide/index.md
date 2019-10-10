@@ -119,8 +119,8 @@ directly to the project's `dependencies` section with `provided` scope:
 </dependency>
 ```
 
-However this does load otherwise unneeded classes from `com.google.auto.value:auto-value` into your project's 
-classpath. 
+However, this does load otherwise unneeded classes from `com.google.auto.value:auto-value` into your project's 
+classpath.
 
 Gradle users can declare the dependencies in their `build.gradle` script:
 
@@ -255,4 +255,3 @@ See the links in the sidebar at the top left.
 
 <!-- TODO(kevinb): there are some tidbits of information that don't seem to
      belong anywhere yet; such as how it implements floating-point equality -->
-
