@@ -866,12 +866,7 @@ public final class MoreTypes {
 
     @Override
     public Boolean visitDeclared(DeclaredType type, Void ignored) {
-      TypeElement typeElement;
-      try {
-        typeElement = MoreElements.asType(type.asElement());
-      } catch (IllegalArgumentException iae) {
-        throw new IllegalArgumentException(type + " does not represent a class or interface.");
-      }
+      TypeElement typeElement = MoreElements.asType(type.asElement());
       return typeElement.getQualifiedName().contentEquals(clazz.getCanonicalName());
     }
   }
@@ -898,7 +893,7 @@ public final class MoreTypes {
                       @Override
                       public boolean apply(TypeMirror input) {
                         return input.getKind().equals(TypeKind.DECLARED)
-                            && (MoreElements.asType(MoreTypes.asDeclared(input).asElement()))
+                            && MoreElements.asType(MoreTypes.asDeclared(input).asElement())
                                 .getKind()
                                 .equals(ElementKind.CLASS)
                             && !types.isSameType(objectType, input);

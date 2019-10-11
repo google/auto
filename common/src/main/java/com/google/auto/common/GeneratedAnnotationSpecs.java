@@ -54,15 +54,6 @@ public final class GeneratedAnnotationSpecs {
         .map(annotation -> annotation.addMember("comments", "$S", comments).build());
   }
 
-  private static Optional<AnnotationSpec.Builder> generatedAnnotationSpecBuilder(
-      Elements elements, Class<?> processorClass) {
-    return GeneratedAnnotations.generatedAnnotation(elements)
-        .map(
-            generated ->
-                AnnotationSpec.builder(ClassName.get(generated))
-                    .addMember("value", "$S", processorClass.getCanonicalName()));
-  }
-
   /**
    * Returns {@code @Generated("processorClass"} for the target {@code SourceVersion}.
    *
@@ -88,6 +79,15 @@ public final class GeneratedAnnotationSpecs {
       Elements elements, SourceVersion sourceVersion, Class<?> processorClass, String comments) {
     return generatedAnnotationSpecBuilder(elements, sourceVersion, processorClass)
         .map(annotation -> annotation.addMember("comments", "$S", comments).build());
+  }
+
+  private static Optional<AnnotationSpec.Builder> generatedAnnotationSpecBuilder(
+      Elements elements, Class<?> processorClass) {
+    return GeneratedAnnotations.generatedAnnotation(elements)
+        .map(
+            generated ->
+                AnnotationSpec.builder(ClassName.get(generated))
+                    .addMember("value", "$S", processorClass.getCanonicalName()));
   }
 
   private static Optional<AnnotationSpec.Builder> generatedAnnotationSpecBuilder(
