@@ -189,9 +189,33 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     return false;
   }
 
-  /**
-   * Returns the previously deferred elements.
-   */
+  /** Processes the valid elements, including those previously deferred by each step. */
+  private void process(ImmutableSetMultimap<Class<? extends Annotation>, Element> validElements) {
+    for (ProcessingStep step : steps) {
+      ImmutableSetMultimap<Class<? extends Annotation>, Element> stepElements =
+          new ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element>()
+              .putAll(indexByAnnotation(elementsDeferredBySteps.get(step), step.annotations()))
+              .putAll(filterKeys(validElements, Predicates.<Object>in(step.annotations())))
+              .build();
+      if (stepElements.isEmpty()) {
+        elementsDeferredBySteps.removeAll(step);
+      } else {
+        Set<? extends Element> rejectedElements = step.process(stepElements);
+        elementsDeferredBySteps.replaceValues(
+            step,
+            transform(
+                rejectedElements,
+                new Function<Element, ElementName>() {
+                  @Override
+                  public ElementName apply(Element element) {
+                    return ElementName.forAnnotatedElement(element);
+                  }
+                }));
+      }
+    }
+  }
+
+  /** Returns the previously deferred elements. */
   private ImmutableMap<String, Optional<? extends Element>> deferredElements() {
     ImmutableMap.Builder<String, Optional<? extends Element>> deferredElements =
         ImmutableMap.builder();
@@ -318,32 +342,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     return validElements.build();
-  }
-
-  /** Processes the valid elements, including those previously deferred by each step. */
-  private void process(ImmutableSetMultimap<Class<? extends Annotation>, Element> validElements) {
-    for (ProcessingStep step : steps) {
-      ImmutableSetMultimap<Class<? extends Annotation>, Element> stepElements =
-          new ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element>()
-              .putAll(indexByAnnotation(elementsDeferredBySteps.get(step), step.annotations()))
-              .putAll(filterKeys(validElements, Predicates.<Object>in(step.annotations())))
-              .build();
-      if (stepElements.isEmpty()) {
-        elementsDeferredBySteps.removeAll(step);
-      } else {
-        Set<? extends Element> rejectedElements = step.process(stepElements);
-        elementsDeferredBySteps.replaceValues(
-            step,
-            transform(
-                rejectedElements,
-                new Function<Element, ElementName>() {
-                  @Override
-                  public ElementName apply(Element element) {
-                    return ElementName.forAnnotatedElement(element);
-                  }
-                }));
-      }
-    }
   }
 
   private ImmutableSetMultimap<Class<? extends Annotation>, Element> indexByAnnotation(
