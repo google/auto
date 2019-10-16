@@ -74,36 +74,65 @@ have Javadoc. We're leaving these off in the User Guide only to keep the
 examples short and simple.
 
 
-### In `pom.xml`
+### With Maven
 
-Maven users should add the following to the project's `pom.xml` file:
+You will need `auto-value-annotations-${version}.jar` in your compile-time
+classpath, and you will need `auto-value-${version}.jar` in your
+annotation-processor classpath.
+
+In `pom.xml`, you can write:
 
 ```xml
-<dependency>
-  <groupId>com.google.auto.value</groupId>
-  <artifactId>auto-value-annotations</artifactId>
-  <version>1.6.6</version>
-</dependency>
-<dependency>
-  <groupId>com.google.auto.value</groupId>
-  <artifactId>auto-value</artifactId>
-  <version>1.6.6</version>
-  <scope>provided</scope>
-</dependency>
+<dependencies>
+  <dependency>
+    <groupId>com.google.auto.value</groupId>
+    <artifactId>auto-value-annotations</artifactId>
+    <version>${auto-value.version}</version>
+  </dependency>
+</dependencies>
+
+...
+
+<plugins>
+  <plugin>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+      <annotationProcessorPaths>
+        <path>
+          <groupId>com.google.auto.value</groupId>
+          <artifactId>auto-value</artifactId>
+          <version>${auto-value.version}</version>
+        </path>
+      </annotationProcessorPaths>
+    </configuration>
+  </plugin>
+</plugins>
 ```
 
-Alternatively, instead of using the `provided` scope, you can add the second
-dependency to the
-[`annotationProcessorPaths`](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#annotationProcessorPaths)
-section.
+Alternatively, you can include the processor itself (which transitively depends
+on the annotation) in your compile-time classpath. (However, note that doing so
+may pull unnecessary classes into your runtime classpath.)
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.google.auto.value</groupId>
+    <artifactId>auto-value</artifactId>
+    <version>${version}</version>
+    <optional>true</optional>
+  </dependency>
+</dependencies>
+```
+
+### With Gradle
 
 Gradle users can declare the dependencies in their `build.gradle` script:
 
 ```groovy
 dependencies {
   // Use 'api' rather than 'compile' for Android or java-library projects.
-  compile             "com.google.auto.value:auto-value-annotations:1.6.6"
-  annotationProcessor "com.google.auto.value:auto-value:1.6.6"
+  compile             "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
+  annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
 }
 ```
 

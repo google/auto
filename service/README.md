@@ -56,7 +56,6 @@ In Maven, you can write:
     <groupId>com.google.auto.service</groupId>
     <artifactId>auto-service-annotations</artifactId>
     <version>${auto-service.version}</version>
-    <optional>true</optional>
   </dependency>
 </dependencies>
 
@@ -79,7 +78,8 @@ In Maven, you can write:
 ```
 
 Alternatively, you can include the processor itself (which transitively depends
-on the annotation) in your compile-time classpath:
+on the annotation) in your compile-time classpath. (However, note that doing so
+may pull unnecessary classes into your runtime classpath.)
 
 ```xml
 <dependencies>
