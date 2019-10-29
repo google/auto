@@ -175,7 +175,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                   implementationMethodDescriptors.get(entry.getKey()),
                   allowSubclasses));
         } catch (IOException e) {
-          messager.printMessage(Kind.ERROR, "failed");
+          messager.printMessage(Kind.ERROR, "failed: " + e);
         }
       }
     }
