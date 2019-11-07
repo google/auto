@@ -1,7 +1,7 @@
 # AutoValue
 
 
-*Generated immutable value classes for Java 1.6+* <br />
+*Generated immutable value classes for Java 7+* <br />
 ***Éamonn McManus, Kevin Bourrillion*** <br />
 **Google, Inc.**
 
@@ -209,6 +209,12 @@ unordered collections like `HashSet`.
 ## <a name="why"></a>Why should I use AutoValue?
 
 See [Why AutoValue?](why.md).
+
+## <a name="versions"></a>What Java versions does it work with?
+
+AutoValue requires that your compiler be at least Java 8. However, the code that
+it generates is compatible with Java 7. That means that you can use it with
+`-source 7 -target 7` or (for Java 9+) `--release 7`.
 
 ## <a name="more_howto"></a>How do I...
 

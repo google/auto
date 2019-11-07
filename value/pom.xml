@@ -29,7 +29,7 @@
   <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Parent</name>
   <description>
-    Immutable value-type code generation for Java 1.6+.
+    Immutable value-type code generation for Java 7+.
   </description>
   <packaging>pom</packaging>
   <url>https://github.com/google/auto/tree/master/value</url>
