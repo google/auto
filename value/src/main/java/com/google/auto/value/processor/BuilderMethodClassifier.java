@@ -321,7 +321,7 @@ class BuilderMethodClassifier {
       // boxedOriginalType is Integer, and containedType is also Integer.
       // We don't need any special code for OptionalInt because containedType will be int then.
       TypeMirror boxedOriginalType =
-          (originalGetterType.getKind().isPrimitive())
+          originalGetterType.getKind().isPrimitive()
               ? typeUtils.boxedClass(MoreTypes.asPrimitiveType(originalGetterType)).asType()
               : null;
       if (TYPE_EQUIVALENCE.equivalent(containedType, originalGetterType)
