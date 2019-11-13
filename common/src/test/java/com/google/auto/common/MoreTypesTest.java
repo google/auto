@@ -281,6 +281,7 @@ public class MoreTypesTest {
   private static class ChildA extends Parent<Number> {}
   private static class ChildB extends Parent<String> {}
   private static class GenericChild<T> extends Parent<T> {}
+  private interface InterfaceType {}
 
   @Test
   public void asElement_throws() {
@@ -317,7 +318,15 @@ public class MoreTypesTest {
     TypeElement genericChild = elements.getTypeElement(GenericChild.class.getCanonicalName());
     TypeMirror genericChildOfNumber = types.getDeclaredType(genericChild, numberType);
     TypeMirror genericChildOfInteger = types.getDeclaredType(genericChild, integerType);
+    TypeMirror objectType =
+        elements.getTypeElement(Object.class.getCanonicalName()).asType();
+    TypeMirror interfaceType =
+        elements.getTypeElement(InterfaceType.class.getCanonicalName()).asType();
 
+    assertThat(MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) objectType))
+        .isAbsent();
+    assertThat(MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) interfaceType))
+        .isAbsent();
     assertThat(MoreTypes.nonObjectSuperclass(types, elements, (DeclaredType) parent.asType()))
         .isAbsent();
 
