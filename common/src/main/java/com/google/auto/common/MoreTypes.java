@@ -17,7 +17,6 @@ package com.google.auto.common;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static javax.lang.model.type.TypeKind.ARRAY;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.EXECUTABLE;
@@ -28,8 +27,6 @@ import static javax.lang.model.type.TypeKind.WILDCARD;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.HashSet;
@@ -875,34 +872,36 @@ public final class MoreTypes {
    * Returns the non-object superclass of the type with the proper type parameters.
    * An absent Optional is returned if there is no non-Object superclass.
    */
-  public static Optional<DeclaredType> nonObjectSuperclass(final Types types, Elements elements,
+  // TODO(user): Remove unused parameter Elements?
+  public static Optional<DeclaredType> nonObjectSuperclass(Types types, Elements elements,
       DeclaredType type) {
     checkNotNull(types);
-    checkNotNull(elements);
+    checkNotNull(elements);  // This is no longer used, but here to avoid changing the API.
     checkNotNull(type);
 
-    final TypeMirror objectType =
-        elements.getTypeElement(Object.class.getCanonicalName()).asType();
-    // It's guaranteed there's only a single CLASS superclass because java doesn't have multiple
-    // class inheritance.
-    TypeMirror superclass =
-        getOnlyElement(
-            FluentIterable.from(types.directSupertypes(type))
-                .filter(
-                    new Predicate<TypeMirror>() {
-                      @Override
-                      public boolean apply(TypeMirror input) {
-                        return input.getKind().equals(TypeKind.DECLARED)
-                            && MoreElements.asType(MoreTypes.asDeclared(input).asElement())
-                                .getKind()
-                                .equals(ElementKind.CLASS)
-                            && !types.isSameType(objectType, input);
-                      }
-                    }),
-            null);
-    return superclass != null
-        ? Optional.of(MoreTypes.asDeclared(superclass))
-        : Optional.<DeclaredType>absent();
+    TypeMirror superclassType = asTypeElement(type).getSuperclass();
+    if (!isType(superclassType)) { // type is Object or an interface
+      return Optional.absent();
+    }
+
+    DeclaredType superclass =  asDeclared(superclassType);
+    if (isObjectType(superclass)) {
+      return Optional.absent();
+    }
+
+    if (superclass.getTypeArguments().isEmpty()) {
+      return Optional.of(superclass);
+    }
+
+    // In the case where the super class has type parameters, TypeElement#getSuperclass gives
+    // SuperClass<T> rather than SuperClass<Foo>, so use Types#directSupertypes instead. The javadoc
+    // for Types#directSupertypes guarantees that a super class, if it exists, comes before any
+    // interfaces. Thus, we can just get the first element in the list.
+    return Optional.of(asDeclared(types.directSupertypes(type).get(0)));
+  }
+
+  private static boolean isObjectType(DeclaredType type) {
+    return asTypeElement(type).getQualifiedName().contentEquals("java.lang.Object");
   }
 
   /**
