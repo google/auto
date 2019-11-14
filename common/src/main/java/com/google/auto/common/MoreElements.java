@@ -106,19 +106,6 @@ public final class MoreElements {
     }
   }
 
-  private static final class IsTypeVisitor extends SimpleElementVisitor8<Boolean, Void> {
-    private static final IsTypeVisitor INSTANCE = new IsTypeVisitor();
-
-    IsTypeVisitor() {
-      super(false);
-    }
-
-    @Override
-    public Boolean visitType(TypeElement e, Void unused) {
-      return true;
-    }
-  }
-
   /**
    * Returns true if the given {@link Element} instance is a {@link TypeElement}.
    *
@@ -128,9 +115,7 @@ public final class MoreElements {
    * @throws NullPointerException if {@code element} is {@code null}
    */
   public static boolean isType(Element element) {
-    // Use a visitor rather than Element#getKind(). Element#getKind() contains more information
-    // than is needed here. It also requires symbol completion, which can be slow.
-    return element.accept(IsTypeVisitor.INSTANCE, null);
+    return element.getKind().isClass() || element.getKind().isInterface();
   }
 
   /**
