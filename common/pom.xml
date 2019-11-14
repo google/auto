@@ -69,6 +69,12 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>listenablefuture</artifactId>          
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <!-- Used only by GeneratedAnnotationSpecs.
@@ -103,6 +109,12 @@
       <artifactId>truth</artifactId>
       <version>${truth.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.auto.value</groupId>
+          <artifactId>auto-value-annotations</artifactId>          
+        </exclusion>
+      </exclusions>      
     </dependency>
     <dependency>
       <groupId>org.eclipse.jdt.core.compiler</groupId>
