@@ -65,17 +65,10 @@ public class AutoOneOfTest {
 
   @AutoOneOf(Pet.Kind.class)
   public abstract static class Pet {
-
-    public static Pet create(Dog dog) {
-      return AutoOneOf_AutoOneOfTest_Pet.dog(dog);
-    }
-
-    public static Pet create(Cat cat) {
-      return AutoOneOf_AutoOneOfTest_Pet.cat(cat);
-    }
-
-    public static Pet create(TigerShark shark) {
-      return AutoOneOf_AutoOneOfTest_Pet.tigerShark(shark);
+    public enum Kind {
+      DOG,
+      CAT,
+      TIGER_SHARK
     }
 
     public abstract Dog dog();
@@ -84,10 +77,16 @@ public class AutoOneOfTest {
 
     public abstract TigerShark tigerShark();
 
-    public enum Kind {
-      DOG,
-      CAT,
-      TIGER_SHARK
+    public static Pet dog(Dog dog) {
+      return AutoOneOf_AutoOneOfTest_Pet.dog(dog);
+    }
+
+    public static Pet cat(Cat cat) {
+      return AutoOneOf_AutoOneOfTest_Pet.cat(cat);
+    }
+
+    public static Pet tigerShark(TigerShark shark) {
+      return AutoOneOf_AutoOneOfTest_Pet.tigerShark(shark);
     }
 
     public abstract Kind getKind();
@@ -96,11 +95,11 @@ public class AutoOneOfTest {
   @Test
   public void equality() {
     Dog marvin1 = Dog.create("Marvin");
-    Pet petMarvin1 = Pet.create(marvin1);
+    Pet petMarvin1 = Pet.dog(marvin1);
     Dog marvin2 = Dog.create("Marvin");
-    Pet petMarvin2 = Pet.create(marvin2);
+    Pet petMarvin2 = Pet.dog(marvin2);
     Dog isis = Dog.create("Isis");
-    Pet petIsis = Pet.create(isis);
+    Pet petIsis = Pet.dog(isis);
     Cat cat = Cat.create();
     new EqualsTester()
         .addEqualityGroup(marvin1, marvin2)
@@ -114,14 +113,14 @@ public class AutoOneOfTest {
   @Test
   public void getCorrectType() {
     Dog marvin = Dog.create("Marvin");
-    Pet petMarvin = Pet.create(marvin);
+    Pet petMarvin = Pet.dog(marvin);
     assertThat(petMarvin.dog()).isSameInstanceAs(marvin);
   }
 
   @Test
   public void getWrongType() {
     Cat cat = Cat.create();
-    Pet petCat = Pet.create(cat);
+    Pet petCat = Pet.cat(cat);
     try {
       petCat.tigerShark();
       fail();
@@ -133,18 +132,18 @@ public class AutoOneOfTest {
   @Test
   public void string() {
     Dog marvin = Dog.create("Marvin");
-    Pet petMarvin = Pet.create(marvin);
+    Pet petMarvin = Pet.dog(marvin);
     assertThat(petMarvin.toString()).isEqualTo("Pet{dog=Dog{name=Marvin}}");
   }
 
   @Test
   public void getKind() {
     Dog marvin = Dog.create("Marvin");
-    Pet petMarvin = Pet.create(marvin);
+    Pet petMarvin = Pet.dog(marvin);
     Cat cat = Cat.create();
-    Pet petCat = Pet.create(cat);
+    Pet petCat = Pet.cat(cat);
     TigerShark shark = TigerShark.create();
-    Pet petShark = Pet.create(shark);
+    Pet petShark = Pet.tigerShark(shark);
     assertThat(petMarvin.getKind()).isEqualTo(Pet.Kind.DOG);
     assertThat(petCat.getKind()).isEqualTo(Pet.Kind.CAT);
     assertThat(petShark.getKind()).isEqualTo(Pet.Kind.TIGER_SHARK);
@@ -153,7 +152,7 @@ public class AutoOneOfTest {
   @Test
   public void cannotBeNull() {
     try {
-      Pet.create((Dog) null);
+      Pet.dog(null);
       fail();
     } catch (NullPointerException expected) {
     }
@@ -208,15 +207,15 @@ public class AutoOneOfTest {
 
     public abstract TigerShark getTigerShark();
 
-    public static PetWithGet create(Dog dog) {
+    public static PetWithGet dog(Dog dog) {
       return AutoOneOf_AutoOneOfTest_PetWithGet.dog(dog);
     }
 
-    public static PetWithGet create(Cat cat) {
+    public static PetWithGet cat(Cat cat) {
       return AutoOneOf_AutoOneOfTest_PetWithGet.cat(cat);
     }
 
-    public static PetWithGet create(TigerShark shark) {
+    public static PetWithGet tigerShark(TigerShark shark) {
       return AutoOneOf_AutoOneOfTest_PetWithGet.tigerShark(shark);
     }
 
@@ -226,7 +225,7 @@ public class AutoOneOfTest {
   @Test
   public void getPrefix() {
     Dog marvin = Dog.create("Marvin");
-    PetWithGet petMarvin = PetWithGet.create(marvin);
+    PetWithGet petMarvin = PetWithGet.dog(marvin);
     assertThat(petMarvin.toString()).isEqualTo("PetWithGet{dog=Dog{name=Marvin}}");
   }
 
@@ -309,7 +308,7 @@ public class AutoOneOfTest {
 
     public abstract Dog getDog();
 
-    public static OneOfOne create(Dog dog) {
+    public static OneOfOne dog(Dog dog) {
       return AutoOneOf_AutoOneOfTest_OneOfOne.dog(dog);
     }
 
@@ -319,7 +318,7 @@ public class AutoOneOfTest {
   @Test
   public void oneOfOne() {
     Dog marvin = Dog.create("Marvin");
-    OneOfOne oneOfMarvin = OneOfOne.create(marvin);
+    OneOfOne oneOfMarvin = OneOfOne.dog(marvin);
     assertThat(oneOfMarvin.toString()).isEqualTo("OneOfOne{dog=Dog{name=Marvin}}");
     assertThat(oneOfMarvin.getKind()).isEqualTo(OneOfOne.Kind.DOG);
   }
@@ -635,5 +634,27 @@ public class AutoOneOfTest {
     } catch (UnsupportedOperationException e) {
       assertThat(e).hasMessageThat().containsMatch("(?i:string)");
     }
+  }
+
+  @AutoOneOf(OneOfArray.Kind.class)
+  public abstract static class OneOfArray {
+    public enum Kind {
+      INTS
+    }
+
+    public abstract Kind getKind();
+
+    @SuppressWarnings("mutable")
+    public abstract int[] ints();
+
+    public static OneOfArray ofInts(int[] s) {
+      return AutoOneOf_AutoOneOfTest_OneOfArray.ints(s);
+    }
+  }
+
+  @Test
+  public void arrayToString() {
+    OneOfArray oneOfArray = OneOfArray.ofInts(new int[] {1, 2});
+    assertThat(oneOfArray.toString()).isEqualTo("OneOfArray{ints=[1, 2]}");
   }
 }
