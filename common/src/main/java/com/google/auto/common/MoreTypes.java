@@ -869,8 +869,9 @@ public final class MoreTypes {
   }
 
   /**
-   * Returns the non-object superclass of the type with the proper type parameters.
-   * An absent Optional is returned if there is no non-Object superclass.
+   * Returns the superclass of {@code type}, with any type parameters bound by {@code type}, or
+   * {@link Optional#absent()} if {@code type} is an interface or {@link Object} or its superclass
+   * is {@link Object}.
    */
   // TODO(user): Remove unused parameter Elements?
   public static Optional<DeclaredType> nonObjectSuperclass(Types types, Elements elements,
