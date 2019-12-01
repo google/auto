@@ -76,11 +76,11 @@ examples short and simple.
 
 ### With Maven
 
-You will need `auto-value-annotations-${version}.jar` in your compile-time
-classpath, and you will need `auto-value-${version}.jar` in your
-annotation-processor classpath.
+You will need `auto-value-annotations-${auto-value.version}.jar` in your
+compile-time classpath, and you will need `auto-value-${auto-value.version}.jar`
+in your annotation-processor classpath.
 
-In `pom.xml`, you can write:
+For `auto-value-annotations`, you can write this in `pom.xml`:
 
 ```xml
 <dependencies>
@@ -90,35 +90,38 @@ In `pom.xml`, you can write:
     <version>${auto-value.version}</version>
   </dependency>
 </dependencies>
-
-...
-
-<plugins>
-  <plugin>
-    <artifactId>maven-compiler-plugin</artifactId>
-    <configuration>
-      <annotationProcessorPaths>
-        <path>
-          <groupId>com.google.auto.value</groupId>
-          <artifactId>auto-value</artifactId>
-          <version>${auto-value.version}</version>
-        </path>
-      </annotationProcessorPaths>
-    </configuration>
-  </plugin>
-</plugins>
 ```
 
-Alternatively, you can include the processor itself (which transitively depends
-on the annotation) in your compile-time classpath. (However, note that doing so
-may pull unnecessary classes into your runtime classpath.)
+For `auto-value` (the annotation processor), you can write this:
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <configuration>
+        <annotationProcessorPaths>
+          <path>
+            <groupId>com.google.auto.value</groupId>
+            <artifactId>auto-value</artifactId>
+            <version>${auto-value.version}</version>
+          </path>
+        </annotationProcessorPaths>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
+```
+
+Alternatively, you can include the processor itself in your compile-time
+classpath. Doing so may pull unnecessary classes into your runtime classpath.
 
 ```xml
 <dependencies>
   <dependency>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value</artifactId>
-    <version>${version}</version>
+    <version>${auto-value.version}</version>
     <optional>true</optional>
   </dependency>
 </dependencies>
