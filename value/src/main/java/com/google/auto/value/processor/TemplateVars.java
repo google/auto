@@ -155,6 +155,10 @@ abstract class TemplateVars {
   // through the getResourceAsStream should be a lot more efficient than reopening the jar.
   private static Reader readerFromUrl(String resourceName) throws IOException {
     URL resourceUrl = TemplateVars.class.getResource(resourceName);
+    if (resourceUrl == null) {
+      // This is unlikely, since getResourceAsStream has already succeeded for the same resource.
+      throw new IllegalArgumentException("Could not find resource: " + resourceName);
+    }
     InputStream in;
     try {
       if (resourceUrl.getProtocol().equalsIgnoreCase("file")) {
