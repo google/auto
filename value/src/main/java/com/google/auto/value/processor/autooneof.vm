@@ -177,12 +177,9 @@ final class $generatedClass {
 
     @Override
     public String toString() {
-      return "${simpleClassName}{$p.name=" +
-        #if ($p.kind == "ARRAY")
-          `java.util.Arrays`.toString(this.$p)
-        #else
-          this.$p
-        #end + "}";
+      return "${simpleClassName}{$p.name=" ##
+          + #if ($p.kind == "ARRAY") `java.util.Arrays`.toString(this.$p) #else this.$p #end
+          + "}";
     }
 
     #end
