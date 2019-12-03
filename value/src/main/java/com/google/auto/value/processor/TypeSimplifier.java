@@ -36,6 +36,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
+import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
@@ -320,64 +321,55 @@ final class TypeSimplifier {
    * if the type's only generic parameters are simple wildcards, as in {@code Map<?, ?>}.
    */
   static boolean isCastingUnchecked(TypeMirror type) {
-    return new CastingUncheckedVisitor().visit(type, false);
+    return CASTING_UNCHECKED_VISITOR.visit(type, null);
   }
 
-  /**
-   * Visitor that tells whether a type is erased, in the sense of {@link #isCastingUnchecked}. Each
-   * visitX method returns true if its input parameter is true or if the type being visited is
-   * erased.
-   */
-  private static class CastingUncheckedVisitor extends SimpleTypeVisitor8<Boolean, Boolean> {
-    @Override
-    protected Boolean defaultAction(TypeMirror e, Boolean p) {
-      return p;
-    }
-
-    @Override
-    public Boolean visitUnknown(TypeMirror t, Boolean p) {
-      // We don't know whether casting is unchecked for this mysterious type but assume it is,
-      // so we will insert a possible-unnecessary @SuppressWarnings("unchecked").
-      return true;
-    }
-
-    @Override
-    public Boolean visitArray(ArrayType t, Boolean p) {
-      return visit(t.getComponentType(), p);
-    }
-
-    @Override
-    public Boolean visitDeclared(DeclaredType t, Boolean p) {
-      return p || t.getTypeArguments().stream().anyMatch(this::uncheckedTypeArgument);
-    }
-
-    @Override
-    public Boolean visitTypeVariable(TypeVariable t, Boolean p) {
-      return true;
-    }
-
-    // If a type has a type argument, then casting to the type is unchecked, except if the argument
-    // is <?> or <? extends Object>. The same applies to all type arguments, so casting to Map<?, ?>
-    // does not produce an unchecked warning for example.
-    private boolean uncheckedTypeArgument(TypeMirror arg) {
-      if (arg.getKind() == TypeKind.WILDCARD) {
-        WildcardType wildcard = (WildcardType) arg;
-        if (wildcard.getExtendsBound() == null || isJavaLangObject(wildcard.getExtendsBound())) {
-          // This is <?>, unless there's a super bound, in which case it is <? super Foo> and
-          // is erased.
-          return (wildcard.getSuperBound() != null);
+  private static final TypeVisitor<Boolean, Void> CASTING_UNCHECKED_VISITOR =
+      new SimpleTypeVisitor8<Boolean, Void>(false) {
+        @Override
+        public Boolean visitUnknown(TypeMirror t, Void p) {
+          // We don't know whether casting is unchecked for this mysterious type but assume it is,
+          // so we will insert a possibly unnecessary @SuppressWarnings("unchecked").
+          return true;
         }
-      }
-      return true;
-    };
 
-    private static boolean isJavaLangObject(TypeMirror type) {
-      if (type.getKind() != TypeKind.DECLARED) {
-        return false;
+        @Override
+        public Boolean visitArray(ArrayType t, Void p) {
+          return visit(t.getComponentType(), p);
+        }
+
+        @Override
+        public Boolean visitDeclared(DeclaredType t, Void p) {
+          return t.getTypeArguments().stream().anyMatch(TypeSimplifier::uncheckedTypeArgument);
+        }
+
+        @Override
+        public Boolean visitTypeVariable(TypeVariable t, Void p) {
+          return true;
+        }
+      };
+
+  // If a type has a type argument, then casting to the type is unchecked, except if the argument
+  // is <?> or <? extends Object>. The same applies to all type arguments, so casting to Map<?, ?>
+  // does not produce an unchecked warning for example.
+  private static boolean uncheckedTypeArgument(TypeMirror arg) {
+    if (arg.getKind() == TypeKind.WILDCARD) {
+      WildcardType wildcard = (WildcardType) arg;
+      if (wildcard.getExtendsBound() == null || isJavaLangObject(wildcard.getExtendsBound())) {
+        // This is <?>, unless there's a super bound, in which case it is <? super Foo> and
+        // is erased.
+        return (wildcard.getSuperBound() != null);
       }
-      DeclaredType declaredType = (DeclaredType) type;
-      TypeElement typeElement = (TypeElement) declaredType.asElement();
-      return typeElement.getQualifiedName().contentEquals("java.lang.Object");
     }
+    return true;
+  }
+
+  private static boolean isJavaLangObject(TypeMirror type) {
+    if (type.getKind() != TypeKind.DECLARED) {
+      return false;
+    }
+    DeclaredType declaredType = (DeclaredType) type;
+    TypeElement typeElement = (TypeElement) declaredType.asElement();
+    return typeElement.getQualifiedName().contentEquals("java.lang.Object");
   }
 }
