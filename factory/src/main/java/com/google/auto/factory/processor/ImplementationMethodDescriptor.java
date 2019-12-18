@@ -36,14 +36,19 @@ abstract class ImplementationMethodDescriptor {
   @AutoValue.Builder
   static abstract class Builder {
     abstract Builder name(String name);
+    
     abstract Builder returnType(TypeMirror returnTypeElement);
-    abstract Builder publicMethod(boolean publicMethod);
-    abstract Builder passedParameters(Iterable<Parameter> passedParameters);
-    abstract Builder isVarArgs(boolean isVarargs);
-    abstract ImplementationMethodDescriptor build();
 
-    Builder publicMethod() {
+    abstract Builder publicMethod(boolean publicMethod);
+
+    final Builder publicMethod() {
       return publicMethod(true);
     }
+
+    abstract Builder passedParameters(Iterable<Parameter> passedParameters);
+
+    abstract Builder isVarArgs(boolean isVarargs);
+
+    abstract ImplementationMethodDescriptor build();
   }
 }
