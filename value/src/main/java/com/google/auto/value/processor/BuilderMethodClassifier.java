@@ -434,7 +434,7 @@ class BuilderMethodClassifier {
     // Parameter type is not equal to property type, but might be convertible with copyOf.
     ImmutableList<ExecutableElement> copyOfMethods = copyOfMethods(targetType, setter);
     if (!copyOfMethods.isEmpty()) {
-      return getConvertingSetterFunction(copyOfMethods, valueGetter, setter);
+      return getConvertingSetterFunction(copyOfMethods, valueGetter, setter, parameterType);
     }
     String error =
         String.format(
@@ -452,9 +452,9 @@ class BuilderMethodClassifier {
   private Optional<Function<String, String>> getConvertingSetterFunction(
       ImmutableList<ExecutableElement> copyOfMethods,
       ExecutableElement valueGetter,
-      ExecutableElement setter) {
+      ExecutableElement setter,
+      TypeMirror parameterType) {
     DeclaredType targetType = MoreTypes.asDeclared(getterToPropertyType.get(valueGetter));
-    TypeMirror parameterType = setter.getParameters().get(0).asType();
     for (ExecutableElement copyOfMethod : copyOfMethods) {
       Optional<Function<String, String>> function =
           getConvertingSetterFunction(copyOfMethod, targetType, parameterType);
@@ -465,8 +465,9 @@ class BuilderMethodClassifier {
     String targetTypeSimpleName = targetType.asElement().getSimpleName().toString();
     String error =
         String.format(
-            "Parameter type of setter method should be %s to match getter %s.%s, or it should be a "
-                + "type that can be passed to %s.%s to produce %s",
+            "Parameter type %s of setter method should be %s to match getter %s.%s,"
+                + " or it should be a type that can be passed to %s.%s to produce %s",
+            parameterType,
             targetType,
             autoValueClass,
             valueGetter.getSimpleName(),

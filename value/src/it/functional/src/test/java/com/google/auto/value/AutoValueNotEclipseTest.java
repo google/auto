@@ -15,9 +15,10 @@
  */
 package com.google.auto.value;
 
-import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 
-import com.google.common.collect.ImmutableList;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -29,37 +30,36 @@ import org.junit.runners.JUnit4;
  */
 @RunWith(JUnit4.class)
 public class AutoValueNotEclipseTest {
-  interface ImmutableListOf<T> {
-    ImmutableList<T> list();
+  // This produced the following error with JDT 4.6:
+  // Internal compiler error: java.lang.Exception: java.lang.IllegalArgumentException: element
+  // public abstract B setOptional(T)  is not a member of the containing type
+  // com.google.auto.value.AutoValueTest.ConcreteOptional.Builder nor any of its superclasses at
+  // org.eclipse.jdt.internal.compiler.apt.dispatch.RoundDispatcher.handleProcessor(RoundDispatcher.java:169)
+  interface AbstractOptional<T> {
+    Optional<T> optional();
+
+    interface Builder<T, B extends Builder<T, B>> {
+      B setOptional(@Nullable T t);
+    }
   }
 
-  // This provoked the following with the Eclipse compiler:
-  // java.lang.NullPointerException
-  //   at org.eclipse.jdt.internal.compiler.lookup.ParameterizedTypeBinding.readableName(ParameterizedTypeBinding.java:1021)
-  //   at org.eclipse.jdt.internal.compiler.apt.model.DeclaredTypeImpl.toString(DeclaredTypeImpl.java:118)
-  //   at java.lang.String.valueOf(String.java:2996)
-  //   at java.lang.StringBuilder.append(StringBuilder.java:131)
-  //   at org.eclipse.jdt.internal.compiler.apt.model.TypesImpl.asMemberOf(TypesImpl.java:130)
-  //   at com.google.auto.value.processor.EclipseHack.methodReturnType(EclipseHack.java:124)
-  //   at com.google.auto.value.processor.TypeVariables.lambda$rewriteReturnTypes$1(TypeVariables.java:106)
   @AutoValue
-  abstract static class PropertyBuilderInheritsType implements ImmutableListOf<String> {
+  abstract static class ConcreteOptional implements AbstractOptional<String> {
     static Builder builder() {
-      return new AutoValue_AutoValueNotEclipseTest_PropertyBuilderInheritsType.Builder();
+      return new AutoValue_AutoValueNotEclipseTest_ConcreteOptional.Builder();
     }
 
     @AutoValue.Builder
-    abstract static class Builder {
-      abstract ImmutableList.Builder<String> listBuilder();
-      abstract PropertyBuilderInheritsType build();
+    interface Builder extends AbstractOptional.Builder<String, Builder> {
+      ConcreteOptional build();
     }
   }
 
   @Test
-  public void propertyBuilderInheritsType() {
-    PropertyBuilderInheritsType.Builder builder = PropertyBuilderInheritsType.builder();
-    builder.listBuilder().add("foo", "bar");
-    PropertyBuilderInheritsType x = builder.build();
-    assertThat(x.list()).containsExactly("foo", "bar").inOrder();
+  public void genericOptionalOfNullable() {
+    ConcreteOptional empty = ConcreteOptional.builder().build();
+    assertThat(empty.optional()).isEmpty();
+    ConcreteOptional notEmpty = ConcreteOptional.builder().setOptional("foo").build();
+    assertThat(notEmpty.optional()).hasValue("foo");
   }
 }
