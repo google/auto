@@ -1599,7 +1599,7 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Parameter type of setter method should be "
+            "Parameter type java.lang.String of setter method should be "
                 + "com.google.common.collect.ImmutableList<java.lang.String> to match getter "
                 + "foo.bar.Baz.blam, or it should be a type that can be passed to "
                 + "ImmutableList.copyOf")
@@ -1636,7 +1636,7 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Parameter type of setter method should be "
+            "Parameter type java.util.Collection<java.lang.Integer> of setter method should be "
                 + "com.google.common.collect.ImmutableList<java.lang.String> to match getter "
                 + "foo.bar.Baz.blam, or it should be a type that can be passed to "
                 + "ImmutableList.copyOf to produce "

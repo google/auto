@@ -2160,6 +2160,31 @@ public class AutoValueTest {
     }
   }
 
+  interface ImmutableListOf<T> {
+    ImmutableList<T> list();
+  }
+
+  @AutoValue
+  abstract static class PropertyBuilderInheritsType implements ImmutableListOf<String> {
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_PropertyBuilderInheritsType.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract ImmutableList.Builder<String> listBuilder();
+      abstract PropertyBuilderInheritsType build();
+    }
+  }
+
+  @Test
+  public void propertyBuilderInheritsType() {
+    PropertyBuilderInheritsType.Builder builder = PropertyBuilderInheritsType.builder();
+    builder.listBuilder().add("foo", "bar");
+    PropertyBuilderInheritsType x = builder.build();
+    assertThat(x.list()).containsExactly("foo", "bar").inOrder();
+  }
+
   @AutoValue
   public abstract static class BuilderWithExoticPropertyBuilders<
       K extends Number, V extends Comparable<K>> {
