@@ -116,7 +116,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($p in $props)
 
-        #if ($identifiers) + "$p.name=" ##
+        #if ($identifiers)+ "$p.name=" ##
         #end+ #if ($p.kind == "ARRAY") `java.util.Arrays`.toString($p) #else $p #end
         #if ($foreach.hasNext) + ", " #end
 
