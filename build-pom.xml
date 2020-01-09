@@ -6,7 +6,6 @@
   <version>NO_VERSION</version>
   <packaging>pom</packaging>
   <modules>
-    <module>.</module>
     <module>common</module>
     <module>factory</module>
     <module>service</module>
