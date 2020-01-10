@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.hasAnnotationMirror;
+import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
@@ -367,8 +368,7 @@ class BuilderSpec {
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
       VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      Optional<String> maybeNullable =
-          AutoValueOrOneOfProcessor.nullableAnnotationFor(parameterElement, parameterType);
+      Optional<String> maybeNullable = nullableAnnotationFor(parameterElement, parameterType);
       this.nullableAnnotation = maybeNullable.orElse("");
     }
 
