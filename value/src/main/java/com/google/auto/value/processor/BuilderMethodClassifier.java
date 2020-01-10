@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.nullableAnnotationFor;
 import static com.google.common.collect.Sets.difference;
 
 import com.google.auto.common.MoreElements;
@@ -422,17 +423,32 @@ class BuilderMethodClassifier {
    */
   private Optional<Function<String, String>> getSetterFunction(
       ExecutableElement valueGetter, ExecutableElement setter) {
+    VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
+    boolean nullableParameter =
+        nullableAnnotationFor(parameterElement, parameterElement.asType()).isPresent();
     TypeMirror targetType = getterToPropertyType.get(valueGetter);
     ExecutableType finalSetter =
         MoreTypes.asExecutable(
             typeUtils.asMemberOf(MoreTypes.asDeclared(builderType.asType()), setter));
     TypeMirror parameterType = finalSetter.getParameterTypes().get(0);
     if (typeUtils.isSameType(parameterType, targetType)) {
+      if (nullableParameter) {
+        boolean nullableProperty =
+            nullableAnnotationFor(valueGetter, valueGetter.getReturnType()).isPresent();
+        if (!nullableProperty) {
+          String error =
+              String.format(
+                  "Parameter of setter method is @Nullable but property method %s.%s() is not",
+                  autoValueClass, valueGetter.getSimpleName());
+          errorReporter.reportError(error, setter);
+          return Optional.empty();
+        }
+      }
       return Optional.of(s -> s);
     }
 
     // Parameter type is not equal to property type, but might be convertible with copyOf.
-    ImmutableList<ExecutableElement> copyOfMethods = copyOfMethods(targetType, setter);
+    ImmutableList<ExecutableElement> copyOfMethods = copyOfMethods(targetType, nullableParameter);
     if (!copyOfMethods.isEmpty()) {
       return getConvertingSetterFunction(copyOfMethods, valueGetter, setter, parameterType);
     }
@@ -523,13 +539,14 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Returns {@code copyOf} methods from the given type. These are static methods called {@code
-   * copyOf} with a single parameter. All of Guava's concrete immutable collection types have at
-   * least one such method, but we will also accept other classes with an appropriate method, such
-   * as {@link java.util.EnumSet}.
+   * Returns {@code copyOf} methods from the given type. These are static methods with a single
+   * parameter, called {@code copyOf} or {@code copyOfSorted} for Guava collection types, and called
+   * {@code of} or {@code ofNullable} for {@code Optional}. All of Guava's concrete immutable
+   * collection types have at least one such method, but we will also accept other classes with an
+   * appropriate {@code copyOf} method, such as {@link java.util.EnumSet}.
    */
   private ImmutableList<ExecutableElement> copyOfMethods(
-      TypeMirror targetType, ExecutableElement setter) {
+      TypeMirror targetType, boolean nullableParameter) {
     if (!targetType.getKind().equals(TypeKind.DECLARED)) {
       return ImmutableList.of();
     }
@@ -538,12 +555,7 @@ class BuilderMethodClassifier {
     if (optionalish == null) {
       copyOfNames = ImmutableSet.of("copyOfSorted", "copyOf");
     } else {
-      VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      boolean nullable =
-          AutoValueOrOneOfProcessor.nullableAnnotationFor(
-                  parameterElement, parameterElement.asType())
-              .isPresent();
-      copyOfNames = ImmutableSet.of(nullable ? optionalish.ofNullable() : "of");
+      copyOfNames = ImmutableSet.of(nullableParameter ? optionalish.ofNullable() : "of");
     }
     TypeElement targetTypeElement = MoreElements.asType(typeUtils.asElement(targetType));
     ImmutableList.Builder<ExecutableElement> copyOfMethods = ImmutableList.builder();

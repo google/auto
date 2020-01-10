@@ -1678,6 +1678,47 @@ public class AutoValueCompilationTest {
         .onLine(12);
   }
 
+  @Test
+  public void autoValueBuilderNullableSetterForNonNullable() {
+    JavaFileObject nullableFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Nullable",
+            "package foo.bar;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface Nullable {}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String notNull();",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder {",
+            "    Builder setNotNull(@Nullable String x);",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject, nullableFileObject);
+    assertThat(compilation)
+        .hadErrorContaining(
+            "Parameter of setter method is @Nullable but property method"
+                + " foo.bar.Baz.notNull() is not")
+        .inFile(javaFileObject)
+        .onLineContaining("setNotNull");
+  }
+
   // Check that we get a helpful error message if some of your properties look like getters but
   // others don't.
   @Test
