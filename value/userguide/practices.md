@@ -61,8 +61,4 @@ especially helpful if you are *[underriding](howto.md#custom)* `equals`,
 
 ## <a name="constructor"></a>Maybe add an explicit, inaccessible constructor
 
-There are a few small advantages to adding a package-private, parameterless
-constructor to your abstract class. It prevents unwanted subclasses, and
-prevents an undocumented public constructor showing up in your generated API
-documentation. Whether these benefits are worth the extra noise in the file is a
-matter of your judgment.
+There are a few small advantages to adding a package-private, parameterless constructor to your abstract class. It prevents unwanted subclasses, and prevents an undocumented public constructor showing up in your generated API documentation. Whether these benefits are worth the extra noise in the file is a matter of your judgment.
