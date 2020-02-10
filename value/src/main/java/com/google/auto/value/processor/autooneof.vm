@@ -47,10 +47,20 @@ final class $generatedClass {
 #foreach ($p in $props)
 
   #if ($p.type == "void")
+    #if ($wildcardTypes == "")
 
-  static $origClass$wildcardTypes $p() {
+  static $origClass $p() {
     return Impl_${p}.INSTANCE;
   }
+
+    #else
+
+  @SuppressWarnings("unchecked") // type parameters are unused in void instances
+  static $formalTypes $origClass$actualTypes $p() {
+    return ($origClass$actualTypes) Impl_${p}.INSTANCE;
+  }
+
+    #end
 
   #else
 

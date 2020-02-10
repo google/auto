@@ -84,8 +84,9 @@ public class AutoOneOfCompilationTest {
             "    return new Impl_exception<V, T>(exception);",
             "  }",
             "",
-            "  static TaskResult<?, ?> empty() {",
-            "    return Impl_empty.INSTANCE;",
+            "  @SuppressWarnings(\"unchecked\") // type parameters are unused in void instances",
+            "  static <V, T extends Throwable> TaskResult<V, T> empty() {",
+            "    return (TaskResult<V, T>) Impl_empty.INSTANCE;",
             "  }",
             "",
             "  // Parent class that each implementation will inherit from.",
@@ -227,6 +228,90 @@ public class AutoOneOfCompilationTest {
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoOneOf_TaskResult")
+        .hasSourceEquivalentTo(expectedOutput);
+  }
+
+  @Test
+  public void voidInstanceWithoutGenericTypeParameters() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Nothing",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "import java.io.Serializable;",
+            "",
+            "@AutoOneOf(Nothing.Kind.class)",
+            "abstract class Nothing {",
+            "",
+            "  enum Kind {NOTHING}",
+            "",
+            "  abstract Kind kind();",
+            "",
+            "  abstract void nothing();",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Nothing",
+            "package foo.bar;",
+            "",
+            GeneratedImport.importGeneratedAnnotationType(),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoOneOfProcessor\")",
+            "final class AutoOneOf_Nothing {",
+            "  private AutoOneOf_Nothing() {} // There are no instances of this type.",
+            "",
+            "  static Nothing nothing() {",
+            "    return Impl_nothing.INSTANCE;",
+            "  }",
+            "",
+            "  // Parent class that each implementation will inherit from.",
+            "  private abstract static class Parent_ extends Nothing {",
+            "    @Override",
+            "    void nothing() {",
+            "      throw new UnsupportedOperationException(kind().toString());",
+            "    }",
+            "  }",
+            "",
+            "  // Implementation when the contained property is \"nothing\".",
+            "  private static final class Impl_nothing extends Parent_ {",
+            "    // There is only one instance of this class.",
+            "    static final Impl_nothing INSTANCE = new Impl_nothing();",
+            "",
+            "    private Impl_nothing() {}",
+            "",
+            "    @Override",
+            "    public void nothing() {}",
+            "",
+            "    @Override",
+            "    public String toString() {",
+            "      return \"Nothing{nothing}\";",
+            "    }",
+            "",
+            "    @Override",
+            "    public boolean equals(Object x) {",
+            "      return x == this;",
+            "    }",
+            "",
+            "    @Override",
+            "    public int hashCode() {",
+            "      return System.identityHashCode(this);",
+            "    }",
+            "",
+            "    @Override",
+            "    public Nothing.Kind kind() {",
+            "      return Nothing.Kind.NOTHING;",
+            "    }",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoOneOfProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoOneOf_Nothing")
         .hasSourceEquivalentTo(expectedOutput);
   }
 
@@ -388,6 +473,5 @@ public class AutoOneOfCompilationTest {
         .hadErrorContaining("@AutoOneOf properties cannot be @Nullable")
         .inFile(javaFileObject)
         .onLineContaining("@Nullable String dog()");
-
   }
 }
