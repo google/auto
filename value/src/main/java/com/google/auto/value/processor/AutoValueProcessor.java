@@ -247,6 +247,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     defineSharedVarsForType(type, methods, vars);
     defineVarsForType(type, vars, toBuilderMethods, propertyMethodsAndTypes, builder);
 
+    // If we've encountered problems then we might end up invoking extensions with inconsistent
+    // state. Anyway we probably don't want to generate code which is likely to provoke further
+    // compile errors to add to the ones we've already seen.
+    errorReporter().abortIfAnyError();
+
     GwtCompatibility gwtCompatibility = new GwtCompatibility(type);
     vars.gwtCompatibleAnnotation = gwtCompatibility.gwtCompatibleAnnotationString();
 
