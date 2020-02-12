@@ -1089,6 +1089,44 @@ public class ExtensionTest {
         .compilesWithoutError();
   }
 
+  // https://github.com/google/auto/issues/809
+  @Test
+  public void propertyErrorShouldNotCrash() {
+    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
+        "test.Test",
+        "package test;",
+        "import com.google.auto.value.AutoValue;",
+        "import java.util.List;",
+        "",
+        "@AutoValue",
+        "public abstract class Test {",
+        "  abstract Integer property();",
+        "  abstract List<String> listProperty();",
+        "",
+        "  @AutoValue.Builder",
+        "  public interface Builder {",
+        "    Builder property(Integer property);",
+        "    Builder listProperty(List<String> listProperty);",
+        "    Builder listProperty(Integer listPropertyValues);",
+        "    Test build();",
+        "  }",
+        "}");
+    // We don't actually expect the extension to be invoked. Previously it was, and that led to a
+    // NullPointerException when calling .setters() in the checker.
+    ContextChecker checker =
+        context -> {
+          assertThat(context.builder()).isPresent();
+          assertThat(context.builder().get().setters()).isEmpty();
+        };
+    ContextCheckingExtension extension = new ContextCheckingExtension(checker);
+    assertThat(autoValueClass)
+        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
+        .failsToCompile()
+        .withErrorContaining("Parameter type java.lang.Integer of setter method")
+        .in(autoValueClass)
+        .onLine(14);
+  }
+
   private interface ContextChecker extends Consumer<AutoValueExtension.Context> {}
 
   private static class ContextCheckingExtension extends AutoValueExtension {
