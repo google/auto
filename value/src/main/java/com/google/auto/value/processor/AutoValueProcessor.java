@@ -63,7 +63,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_VALUE_NAME)
-@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.DYNAMIC)
+@IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   private static final String OMIT_IDENTIFIERS_OPTION = "com.google.auto.value.OmitIdentifiers";
 
