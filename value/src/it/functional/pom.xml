@@ -95,6 +95,16 @@
       <version>3.1.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jdt</groupId>
+      <artifactId>ecj</artifactId>
+      <version>3.20.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.escapevelocity</groupId>
+      <artifactId>escapevelocity</artifactId>
+      <version>0.9.1</version>
+    </dependency>
   </dependencies>
 
   <build>

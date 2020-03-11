@@ -240,7 +240,9 @@ class GwtSerialization {
       processingEnv
           .getMessager()
           .printMessage(
-              Diagnostic.Kind.ERROR, "Could not write generated class " + className + ": " + e);
+              Diagnostic.Kind.WARNING, "Could not write generated class " + className + ": " + e);
+      // A warning rather than an error for the reason explained in
+      // AutoValueOrOneOfProcessor.writeSourceFile.
     }
   }
 
