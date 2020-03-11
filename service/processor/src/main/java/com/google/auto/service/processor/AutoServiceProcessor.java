@@ -21,17 +21,21 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
+import com.google.auto.service.PluginName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import javax.annotation.processing.AbstractProcessor;
@@ -65,6 +69,18 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
   @VisibleForTesting
   static final String MISSING_SERVICES_ERROR = "No service interfaces provided for element!";
+  @VisibleForTesting
+  static final String MISSING_PLUGIN_NAME_ERROR = "No plugin name provided for element!";
+  @VisibleForTesting
+  static final String CONTAINS_SINGLE_DOT = "Plugin id must contain at least 1 '.' character";
+  @VisibleForTesting
+  static final String STARTS_OR_ENDS_WITH_DOT = "Plugin id cannot start or end with '.' character";
+  @VisibleForTesting
+  static final String CONTAINS_CONSECUTIVE_DOT = "Plugin id cannot contain consecutive '.' characters";
+  @VisibleForTesting
+  static final String UNSPPORTED_CHARACTERS = "Plugin id ay contain any alphanumeric character, '.', and '-'";
+  @VisibleForTesting
+  static final String NOT_ALLOWED_NAMESPACES = "Plugin id cannot use 'org.gradle' or 'com.gradleware' namespaces";
 
   /**
    * Maps the class names of service provider interfaces to the
@@ -75,10 +91,15 @@ public class AutoServiceProcessor extends AbstractProcessor {
    *   "com.google.apphosting.datastore.LocalDatastoreService"}
    */
   private Multimap<String, String> providers = HashMultimap.create();
+  /**
+   * Maps the {@literal @}{@link PluginName} value to the 
+   * fully qualified class name which implement them.
+   */
+  private Map<String, String> plugins = new HashMap<>();
 
   @Override
   public ImmutableSet<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(AutoService.class.getName());
+    return ImmutableSet.of(AutoService.class.getName(), PluginName.class.getName());
   }
 
   @Override
@@ -118,14 +139,15 @@ public class AutoServiceProcessor extends AbstractProcessor {
     if (roundEnv.processingOver()) {
       generateConfigFiles();
     } else {
-      processAnnotations(annotations, roundEnv);
+      processAutoServiceAnnotations(annotations, roundEnv);
+      processPluginNameAnnotations(annotations, roundEnv);
     }
 
     return true;
   }
 
-  private void processAnnotations(Set<? extends TypeElement> annotations,
-      RoundEnvironment roundEnv) {
+  private void processAutoServiceAnnotations(Set<? extends TypeElement> annotations,
+                                             RoundEnvironment roundEnv) {
 
     Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(AutoService.class);
 
@@ -136,6 +158,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = (TypeElement) e;
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
+      PluginName pluginName = e.getAnnotation(PluginName.class);
+
       Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
       if (providerInterfaces.isEmpty()) {
         error(MISSING_SERVICES_ERROR, e, annotationMirror);
@@ -144,16 +168,56 @@ public class AutoServiceProcessor extends AbstractProcessor {
       for (DeclaredType providerInterface : providerInterfaces) {
         TypeElement providerType = MoreTypes.asTypeElement(providerInterface);
 
-        log("provider interface: " + providerType.getQualifiedName());
-        log("provider implementer: " + providerImplementer.getQualifiedName());
+        log("provider interface: " + providerType.getQualifiedName() + "\r\n");
+        log("provider implementer: " + providerImplementer.getQualifiedName() + "\r\n");
 
         if (checkImplementer(providerImplementer, providerType)) {
+          // We do not wish to generate META-INF/services file when PluginName annotation exists
+          if (pluginName != null) continue;
           providers.put(getBinaryName(providerType), getBinaryName(providerImplementer));
         } else {
           String message = "ServiceProviders must implement their service provider interface. "
               + providerImplementer.getQualifiedName() + " does not implement "
               + providerType.getQualifiedName();
           error(message, e, annotationMirror);
+        }
+      }
+    }
+  }
+
+  private void processPluginNameAnnotations(Set<? extends TypeElement> annotations,
+                                             RoundEnvironment roundEnv) {
+
+    Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(PluginName.class);
+    log(annotations.toString());
+    log(elements.toString());
+    for (Element e : elements) {
+      Validator validator = new Validator();
+      TypeElement typeElement = (TypeElement) e;
+      PluginName pluginName = e.getAnnotation(PluginName.class);
+      String pluginId = pluginName.value();
+      if (validator.isValid(pluginId)) {
+        plugins.put(pluginId, typeElement.toString());
+      } else {
+        switch (validator.getError()) {
+          case EMPTY:
+            error(MISSING_PLUGIN_NAME_ERROR, typeElement);
+            break;
+          case SINGLE_DOT:
+            error(CONTAINS_SINGLE_DOT, typeElement);
+            break;
+          case START_END_DOT:
+            error(STARTS_OR_ENDS_WITH_DOT, typeElement);
+            break;
+          case CONSECUTIVE_DOT:
+            error(CONTAINS_CONSECUTIVE_DOT, typeElement);
+            break;
+          case UNSUPPORTED_CHARACTERS:
+            error(UNSPPORTED_CHARACTERS, typeElement);
+            break;
+          case NOT_ALLOWED_NAMESPACE:
+            error(NOT_ALLOWED_NAMESPACES, typeElement);
+            break;
         }
       }
     }
@@ -199,6 +263,22 @@ public class AutoServiceProcessor extends AbstractProcessor {
             resourceFile);
         OutputStream out = fileObject.openOutputStream();
         ServicesFiles.writeServiceFile(allServices, out);
+        out.close();
+        log("Wrote to: " + fileObject.toUri());
+      } catch (IOException e) {
+        fatalError("Unable to create " + resourceFile + ", " + e);
+        return;
+      }
+    }
+
+    for (String plugin : plugins.keySet()) {
+      String resourceFile = "META-INF/gradle-plugins/" + plugin + ".properties";
+      log("Working on resource file: " + resourceFile);
+      try {
+        FileObject fileObject = filer.createResource(StandardLocation.CLASS_OUTPUT, "",
+            resourceFile);
+        OutputStream out = fileObject.openOutputStream();
+        ServicesFiles.writePluginFile(plugins.get(plugin), out);
         out.close();
         log("Wrote to: " + fileObject.toUri());
       } catch (IOException e) {
@@ -286,6 +366,10 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
   private void error(String msg, Element element, AnnotationMirror annotation) {
     processingEnv.getMessager().printMessage(Kind.ERROR, msg, element, annotation);
+  }
+
+  private void error(String msg, Element element) {
+    processingEnv.getMessager().printMessage(Kind.ERROR, msg, element);
   }
 
   private void fatalError(String msg) {

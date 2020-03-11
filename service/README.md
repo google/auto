@@ -42,6 +42,35 @@ automatically load it, and include it in its normal annotation processing
 environment. Other users of java.util.ServiceLoader may use the infrastructure
 to different ends, but this metadata will provide auto-loading appropriately.
 
+When implementing standalone Gradle Plugins you can use `@AutoService` along with `@PluginName` in order
+register implementations of well-known types using META-INF metadata.
+
+## Example
+
+Say you have:
+
+```java
+package foo.bar;
+
+import org.gradle.api.Plugin;
+import org.gradle.api.Project;
+
+@AutoService(Plugin.class)
+@PluginName("com.example")
+final class MyPlugin implements Plugin<Project> {
+  // …
+}
+```
+
+AutoService will generate the file
+`META-INF/gradle-plugins/com.example.properties` in the output classes
+folder. The file will contain:
+
+```
+implementation-class=foo.bar.MyPlugin
+```
+
+
 ## Getting Started
 
 You will need `auto-service-annotations-${version}.jar` in your compile-time

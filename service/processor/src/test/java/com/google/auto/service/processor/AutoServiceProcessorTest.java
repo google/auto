@@ -15,13 +15,23 @@
  */
 package com.google.auto.service.processor;
 
+import static com.google.auto.service.processor.AutoServiceProcessor.CONTAINS_CONSECUTIVE_DOT;
+import static com.google.auto.service.processor.AutoServiceProcessor.CONTAINS_SINGLE_DOT;
+import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_PLUGIN_NAME_ERROR;
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
+import static com.google.auto.service.processor.AutoServiceProcessor.NOT_ALLOWED_NAMESPACES;
+import static com.google.auto.service.processor.AutoServiceProcessor.STARTS_OR_ENDS_WITH_DOT;
+import static com.google.auto.service.processor.AutoServiceProcessor.UNSPPORTED_CHARACTERS;
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 
+import com.google.common.io.ByteSource;
 import com.google.testing.compile.JavaFileObjects;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import javax.tools.StandardLocation;
 
 /**
  * Tests the {@link AutoServiceProcessor}.
@@ -63,5 +73,73 @@ public class AutoServiceProcessorTest {
         .processedWith(new AutoServiceProcessor())
         .failsToCompile()
         .withErrorContaining(MISSING_SERVICES_ERROR);
+  }
+
+  @Test
+  public void pluginName() {
+    String data = "implementation-class=test.AnotherPlugin";
+    ByteSource expected = ByteSource.wrap(data.getBytes());
+    assertThat(JavaFileObjects.forResource("test/AnotherPlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesFileNamed(StandardLocation.CLASS_OUTPUT, "", "META-INF/gradle-plugins/com.example.properties")
+        .withContents(expected);
+  }
+
+  @Test
+  public void noPluginName() {
+    assertThat(JavaFileObjects.forResource("test/NoPluginNamePlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(MISSING_PLUGIN_NAME_ERROR);
+  }
+
+  @Test
+  public void noDotPlugin() {
+    assertThat(JavaFileObjects.forResource("test/NoDotPlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(CONTAINS_SINGLE_DOT);
+  }
+
+  @Test
+  public void startsWithDotPlugin() {
+    assertThat(JavaFileObjects.forResource("test/StartsWithDotPlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(STARTS_OR_ENDS_WITH_DOT);
+  }
+
+  @Test
+  public void endsWithDotPlugin() {
+    assertThat(JavaFileObjects.forResource("test/EndsWithDotPlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(STARTS_OR_ENDS_WITH_DOT);
+  }
+
+  @Test
+  public void consecutiveDotsPlugin() {
+    assertThat(JavaFileObjects.forResource("test/ConsecutiveDotsPlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(CONTAINS_CONSECUTIVE_DOT);
+  }
+
+  @Test
+  public void unSupportedCharactersPlugin() {
+    assertThat(JavaFileObjects.forResource("test/UnSupportedCharactersPlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(UNSPPORTED_CHARACTERS);
+  }
+
+  @Test
+  public void notAllowedNamespacePlugin() {
+    assertThat(JavaFileObjects.forResource("test/NotAllowedNamespacePlugin.java"))
+        .processedWith(new AutoServiceProcessor())
+        .failsToCompile()
+        .withErrorContaining(NOT_ALLOWED_NAMESPACES);
   }
 }

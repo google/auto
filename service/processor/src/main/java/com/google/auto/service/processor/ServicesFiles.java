@@ -96,4 +96,19 @@ final class ServicesFiles {
     }
     writer.flush();
   }
+
+  /**
+   * Writes the plugin implementation-class to a plugin file.
+   *
+   * @param output not {@code null}. Not closed after use.
+   * @param implementationClass a not {@code null String} of fully qualified name of the implementation class.
+   * @throws IOException
+   */
+  static void writePluginFile(String implementationClass, OutputStream output)
+      throws IOException {
+    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
+    String fileOutput = "implementation-class=" + implementationClass;
+    writer.write(fileOutput);
+    writer.flush();
+  }
 }
