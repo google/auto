@@ -168,8 +168,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
       for (DeclaredType providerInterface : providerInterfaces) {
         TypeElement providerType = MoreTypes.asTypeElement(providerInterface);
 
-        log("provider interface: " + providerType.getQualifiedName() + "\r\n");
-        log("provider implementer: " + providerImplementer.getQualifiedName() + "\r\n");
+        log("provider interface: " + providerType.getQualifiedName());
+        log("provider implementer: " + providerImplementer.getQualifiedName());
 
         if (checkImplementer(providerImplementer, providerType)) {
           // We do not wish to generate META-INF/services file when PluginName annotation exists

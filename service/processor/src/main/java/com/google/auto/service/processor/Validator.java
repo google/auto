@@ -20,6 +20,11 @@ import java.util.regex.Pattern;
 class Validator {
     private ValidationError error;
 
+    /**
+     * Validation Rules follow the guide in <a href="https://docs.gradle.org/current/userguide/custom_plugins.html#sec:creating_a_plugin_id">Gradle website</a>
+     * @param id The Plugin id specified in {@literal @}{@link com.google.auto.service.PluginName}
+     * @return whether id complies with rules or not
+     */
     boolean isValid(String id) {
         if (id.isEmpty()) {
             error = ValidationError.EMPTY;

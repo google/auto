@@ -107,8 +107,8 @@ final class ServicesFiles {
   static void writePluginFile(String implementationClass, OutputStream output)
       throws IOException {
     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
-    String fileOutput = "implementation-class=" + implementationClass;
-    writer.write(fileOutput);
+    String fileContent = "implementation-class=" + implementationClass;
+    writer.write(fileContent);
     writer.flush();
   }
 }

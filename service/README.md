@@ -43,7 +43,7 @@ environment. Other users of java.util.ServiceLoader may use the infrastructure
 to different ends, but this metadata will provide auto-loading appropriately.
 
 When implementing standalone Gradle Plugins you can use `@AutoService` along with `@PluginName` in order
-register implementations of well-known types using META-INF metadata.
+to register implementations of well-known types using META-INF metadata.
 
 ## Example
 
