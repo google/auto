@@ -30,16 +30,13 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import java.lang.annotation.Annotation;
-import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
@@ -168,22 +165,22 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     checkState(messager != null);
     checkState(steps != null);
 
-    ImmutableMap<String, Optional<? extends Element>> deferredElements = deferredElements();
-
-    deferredElementNames.clear();
-
     // If this is the last round, report all of the missing elements if there
     // were no errors raised in the round; otherwise reporting the missing
     // elements just adds noise the output.
     if (roundEnv.processingOver()) {
       postRound(roundEnv);
       if (!roundEnv.errorRaised()) {
-        reportMissingElements(deferredElements, elementsDeferredBySteps.values());
+        reportMissingElements(
+            ImmutableSet.<ElementName>builder()
+                .addAll(deferredElementNames)
+                .addAll(elementsDeferredBySteps.values())
+                .build());
       }
       return false;
     }
 
-    process(validElements(deferredElements, roundEnv));
+    process(validElements(roundEnv));
 
     postRound(roundEnv);
 
@@ -208,43 +205,19 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  /** Returns the previously deferred elements. */
-  private ImmutableMap<String, Optional<? extends Element>> deferredElements() {
-    ImmutableMap.Builder<String, Optional<? extends Element>> deferredElements =
-        ImmutableMap.builder();
-    for (ElementName elementName : deferredElementNames) {
-      deferredElements.put(elementName.name(), elementName.getElement(elements));
-    }
-    return deferredElements.build();
-  }
-
-  private void reportMissingElements(
-      Map<String, ? extends Optional<? extends Element>> missingElements,
-      Collection<ElementName> missingElementNames) {
-    if (!missingElementNames.isEmpty()) {
-      ImmutableMap.Builder<String, Optional<? extends Element>> allMissingElements =
-          ImmutableMap.builder();
-      allMissingElements.putAll(missingElements);
-      for (ElementName missingElement : missingElementNames) {
-        if (!missingElements.containsKey(missingElement.name())) {
-          allMissingElements.put(missingElement.name(), missingElement.getElement(elements));
-        }
+  private void reportMissingElements(Set<ElementName> missingElementNames) {
+    for (ElementName missingElementName : missingElementNames) {
+      Optional<? extends Element> missingElement = missingElementName.getElement(elements);
+      if (missingElement.isPresent()) {
+        messager.printMessage(
+            ERROR,
+            processingErrorMessage(
+                "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
+            missingElement.get());
+      } else {
+        messager.printMessage(ERROR, processingErrorMessage(missingElementName.name()));
       }
-      missingElements = allMissingElements.build();
     }
-
-    missingElements.forEach(
-        (missingElementName, missingElement) -> {
-          if (missingElement.isPresent()) {
-            messager.printMessage(
-                ERROR,
-                processingErrorMessage(
-                    "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
-                missingElement.get());
-          } else {
-            messager.printMessage(ERROR, processingErrorMessage(missingElementName));
-          }
-        });
   }
 
   private String processingErrorMessage(String target) {
@@ -260,21 +233,23 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * found for a deferred element, defers it again.
    */
   private ImmutableSetMultimap<Class<? extends Annotation>, Element> validElements(
-      ImmutableMap<String, Optional<? extends Element>> deferredElements,
       RoundEnvironment roundEnv) {
+    ImmutableSet<ElementName> prevDeferredElementNames = ImmutableSet.copyOf(deferredElementNames);
+    deferredElementNames.clear();
+
     ImmutableSetMultimap.Builder<Class<? extends Annotation>, Element>
         deferredElementsByAnnotationBuilder = ImmutableSetMultimap.builder();
-    deferredElements.forEach(
-        (deferredElementName, deferredElement) -> {
-          if (deferredElement.isPresent()) {
-            findAnnotatedElements(
-                deferredElement.get(),
-                getSupportedAnnotationClasses(),
-                deferredElementsByAnnotationBuilder);
-          } else {
-            deferredElementNames.add(ElementName.forTypeName(deferredElementName));
-          }
-        });
+    for (ElementName deferredElementName : prevDeferredElementNames) {
+      Optional<? extends Element> deferredElement = deferredElementName.getElement(elements);
+      if (deferredElement.isPresent()) {
+        findAnnotatedElements(
+            deferredElement.get(),
+            getSupportedAnnotationClasses(),
+            deferredElementsByAnnotationBuilder);
+      } else {
+        deferredElementNames.add(deferredElementName);
+      }
+    }
 
     ImmutableSetMultimap<Class<? extends Annotation>, Element> deferredElementsByAnnotation =
         deferredElementsByAnnotationBuilder.build();
