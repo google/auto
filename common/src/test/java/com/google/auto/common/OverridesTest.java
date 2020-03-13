@@ -15,13 +15,13 @@
  */
 package com.google.auto.common;
 
-import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Converter;
 import com.google.common.base.Optional;
+import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
@@ -55,6 +55,7 @@ import javax.lang.model.util.Types;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
 import org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
 import org.junit.Before;
 import org.junit.Rule;
@@ -75,19 +76,9 @@ import org.junit.runners.model.Statement;
  */
 @RunWith(Parameterized.class)
 public class OverridesTest {
-  private static final ImmutableSet<String> TOO_NEW_FOR_ECJ = ImmutableSet.of("9", "10", "11");
-
   @Parameterized.Parameters(name = "{0}")
-  public static List<Object[]> data() {
-    List<Object[]> compilerTypes = new ArrayList<Object[]>();
-    compilerTypes.add(new Object[] {CompilerType.JAVAC});
-    if (!TOO_NEW_FOR_ECJ.contains(JAVA_SPECIFICATION_VERSION.value())) {
-      // TODO(emcmanus): make this test pass with ECJ on Java > 8.
-      // Currently it complains because it can't find java.lang.Object. Probably we need a newer
-      // version of ECJ.
-      compilerTypes.add(new Object[] {CompilerType.ECJ});
-    }
-    return compilerTypes;
+  public static ImmutableList<CompilerType> data() {
+    return ImmutableList.of(CompilerType.JAVAC, CompilerType.ECJ);
   }
 
   @Rule public CompilationRule compilation = new CompilationRule();
@@ -546,7 +537,7 @@ public class OverridesTest {
       tmpDir.mkdir();
       File dummySourceFile = new File(tmpDir, "Dummy.java");
       try {
-        Files.asCharSink(dummySourceFile, Charsets.UTF_8).write("class Dummy {}");
+        Files.asCharSink(dummySourceFile, UTF_8).write("class Dummy {}");
         evaluate(dummySourceFile);
       } finally {
         dummySourceFile.delete();
@@ -556,11 +547,20 @@ public class OverridesTest {
 
     private void evaluate(File dummySourceFile) throws Throwable {
       JavaCompiler compiler = new EclipseCompiler();
-      StandardJavaFileManager fileManager =
-          compiler.getStandardFileManager(null, null, Charsets.UTF_8);
+      StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, UTF_8);
+      // This hack is only needed in a Google-internal Java 8 environment where symbolic links make
+      // it hard for ecj to find the boot class path. Elsewhere it is unnecessary but harmless.
+      File rtJar = new File(StandardSystemProperty.JAVA_HOME.value() + "/lib/rt.jar");
+      if (rtJar.exists()) {
+        List<File> bootClassPath = ImmutableList.<File>builder()
+            .add(rtJar)
+            .addAll(fileManager.getLocation(StandardLocation.PLATFORM_CLASS_PATH))
+            .build();
+        fileManager.setLocation(StandardLocation.PLATFORM_CLASS_PATH, bootClassPath);
+      }
       Iterable<? extends JavaFileObject> sources = fileManager.getJavaFileObjects(dummySourceFile);
       JavaCompiler.CompilationTask task =
-          compiler.getTask(null, null, null, null, null, sources);
+          compiler.getTask(null, fileManager, null, null, null, sources);
       EcjTestProcessor processor = new EcjTestProcessor(statement);
       task.setProcessors(ImmutableList.of(processor));
       assertThat(task.call()).isTrue();
