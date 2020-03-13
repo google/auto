@@ -15,6 +15,7 @@
  */
 package com.google.auto.value;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_HOME;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -31,6 +32,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import javax.annotation.processing.Processor;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -41,12 +43,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Tests that we can compile our AutoValue tests using the Eclipse batch compiler. Since the tests
  * exercise many AutoValue subtleties, the ability to compile them all is a good indication of
  * Eclipse support.
  */
+@RunWith(JUnit4.class)
 public class CompileWithEclipseTest {
   private static final String SOURCE_ROOT = System.getProperty("basedir");
 
@@ -96,7 +101,7 @@ public class CompileWithEclipseTest {
     // on Java 9+ there is no rt.jar. There, fileManager.getLocation(PLATFORM_CLASS_PATH) returns
     // null, because the relevant classes are in modules inside
     // fileManager.getLocation(SYSTEM_MODULES).
-    File rtJar = new File(System.getProperty("java.home") + "/lib/rt.jar");
+    File rtJar = new File(JAVA_HOME.value() + "/lib/rt.jar");
     if (rtJar.exists()) {
       List<File> bootClassPath = ImmutableList.<File>builder()
           .add(rtJar)
@@ -124,6 +129,8 @@ public class CompileWithEclipseTest {
   private static ImmutableSet<File> filesUnderDirectory(File dir, Predicate<File> predicate)
       throws IOException {
     assertWithMessage(dir.toString()).that(dir.isDirectory()).isTrue();
-    return Files.walk(dir.toPath()).map(Path::toFile).filter(predicate).collect(toImmutableSet());
+    try (Stream<Path> paths = Files.walk(dir.toPath())) {
+      return paths.map(Path::toFile).filter(predicate).collect(toImmutableSet());
+    }
   }
 }
