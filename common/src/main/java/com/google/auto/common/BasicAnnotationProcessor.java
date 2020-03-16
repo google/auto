@@ -46,6 +46,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ErrorType;
@@ -264,40 +265,23 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       // This should just call roundEnv.getElementsAnnotatedWith(Class) directly, but there is a bug
       // in some versions of eclipse that cause that method to crash.
       TypeElement annotationType = elements.getTypeElement(annotationClass.getCanonicalName());
-      Set<? extends Element> elementsAnnotatedWith =
+      Set<? extends Element> roundElements =
           (annotationType == null)
               ? ImmutableSet.<Element>of()
               : roundEnv.getElementsAnnotatedWith(annotationType);
-      for (Element annotatedElement :
-          Sets.union(elementsAnnotatedWith, deferredElementsByAnnotation.get(annotationClass))) {
-        if (annotatedElement.getKind().equals(PACKAGE)) {
-          PackageElement annotatedPackageElement = asPackage(annotatedElement);
-          ElementName annotatedPackageName =
-              ElementName.forPackageName(annotatedPackageElement.getQualifiedName().toString());
-          boolean validPackage =
-              validElementNames.contains(annotatedPackageName)
-                  || (!deferredElementNames.contains(annotatedPackageName)
-                      && validateElement(annotatedPackageElement));
-          if (validPackage) {
-            validElements.put(annotationClass, annotatedPackageElement);
-            validElementNames.add(annotatedPackageName);
-          } else {
-            deferredElementNames.add(annotatedPackageName);
-          }
+      ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationClass);
+      for (Element element : Sets.union(roundElements, prevRoundElements)) {
+        ElementName elementName = ElementName.forAnnotatedElement(element);
+        boolean isValidElement =
+            validElementNames.contains(elementName)
+                || (!deferredElementNames.contains(elementName)
+                    && validateElement(
+                        element.getKind().equals(PACKAGE) ? element : getEnclosingType(element)));
+        if (isValidElement) {
+          validElements.put(annotationClass, element);
+          validElementNames.add(elementName);
         } else {
-          TypeElement enclosingType = getEnclosingType(annotatedElement);
-          ElementName enclosingTypeName =
-              ElementName.forTypeName(enclosingType.getQualifiedName().toString());
-          boolean validEnclosingType =
-              validElementNames.contains(enclosingTypeName)
-                  || (!deferredElementNames.contains(enclosingTypeName)
-                      && validateElement(enclosingType));
-          if (validEnclosingType) {
-            validElements.put(annotationClass, annotatedElement);
-            validElementNames.add(enclosingTypeName);
-          } else {
-            deferredElementNames.add(enclosingTypeName);
-          }
+          deferredElementNames.add(elementName);
         }
       }
     }
@@ -428,19 +412,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     private final Kind kind;
     private final String name;
 
-    private ElementName(Kind kind, String name) {
+    private ElementName(Kind kind, Name name) {
       this.kind = checkNotNull(kind);
-      this.name = checkNotNull(name);
-    }
-
-    /** An {@link ElementName} for a package. */
-    static ElementName forPackageName(String packageName) {
-      return new ElementName(Kind.PACKAGE_NAME, packageName);
-    }
-
-    /** An {@link ElementName} for a type. */
-    static ElementName forTypeName(String typeName) {
-      return new ElementName(Kind.TYPE_NAME, typeName);
+      this.name = name.toString();
     }
 
     /**
@@ -450,8 +424,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
      */
     static ElementName forAnnotatedElement(Element element) {
       return element.getKind() == PACKAGE
-          ? ElementName.forPackageName(asPackage(element).getQualifiedName().toString())
-          : ElementName.forTypeName(getEnclosingType(element).getQualifiedName().toString());
+          ? new ElementName(Kind.PACKAGE_NAME, asPackage(element).getQualifiedName())
+          : new ElementName(Kind.TYPE_NAME, getEnclosingType(element).getQualifiedName());
     }
 
     /** The fully-qualified name of the element. */
