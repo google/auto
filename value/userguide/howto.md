@@ -103,8 +103,8 @@ This example also shows annotating the corresponding `create` parameter with
 `@Nullable`. AutoValue does not actually require this annotation, only the one
 on the accessor, but we recommended it as useful documentation to your caller.
 Conversely, if `@Nullable` is only added to the parameter in `create` (or
-similarly the setter method of [AutoValue.Builder](go/autovalue/builders)), but
-not the corresponding accessor method, it won't have any effect.
+similarly the setter method of [AutoValue.Builder](builders)), but not the
+corresponding accessor method, it won't have any effect.
 
 ## <a name="validate"></a>... perform other validation?
 
