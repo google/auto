@@ -53,6 +53,7 @@
           <includes>
             <include>com/google/auto/value/*</include>
             <include>com/google/auto/value/extension/memoized/*</include>
+            <include>com/google/auto/value/extension/serializable/*</include>
           </includes>
         </configuration>
       </plugin>

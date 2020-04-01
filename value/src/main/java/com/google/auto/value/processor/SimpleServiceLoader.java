@@ -39,10 +39,10 @@ import java.util.ServiceConfigurationError;
  * @see <a href="https://github.com/google/auto/issues/718">Issue #718</a>
  * @see <a href="https://bugs.openjdk.java.net/browse/JDK-8156014">JDK-8156014</a>
  */
-final class SimpleServiceLoader {
+public final class SimpleServiceLoader {
   private SimpleServiceLoader() {}
 
-  static <T> ImmutableList<T> load(Class<? extends T> service, ClassLoader loader) {
+  public static <T> ImmutableList<T> load(Class<? extends T> service, ClassLoader loader) {
     String resourceName = "META-INF/services/" + service.getName();
     List<URL> resourceUrls;
     try {
