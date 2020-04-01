@@ -119,6 +119,12 @@
       <artifactId>compile-testing</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+       <groupId>org.mockito</groupId>
+       <artifactId>mockito-core</artifactId>
+       <version>3.1.0</version>
+       <scope>test</scope>
+     </dependency>
   </dependencies>
 
   <build>
@@ -141,6 +147,8 @@
           <includes>
             <include>com/google/auto/value/processor/**/*.java</include>
             <include>com/google/auto/value/extension/memoized/processor/**/*.java</include>
+            <include>com/google/auto/value/extension/serializable/processor/**/*.java</include>
+            <include>com/google/auto/value/extension/serializable/serializer/**/*.java</include>
           </includes>
         </configuration>
       </plugin>
