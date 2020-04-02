@@ -28,6 +28,7 @@ import com.google.auto.value.extension.AutoValueExtension.Context;
 import com.google.auto.value.extension.serializable.serializer.SerializerFactoryLoader;
 import com.google.auto.value.extension.serializable.serializer.interfaces.Serializer;
 import com.google.auto.value.extension.serializable.serializer.interfaces.SerializerFactory;
+import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
@@ -43,6 +44,7 @@ import com.squareup.javapoet.TypeVariableName;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -172,14 +174,16 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
           .build();
     }
 
-    private ImmutableMap<TypeMirror, Serializer> buildSerializersMap() {
+    private ImmutableMap<Equivalence.Wrapper<TypeMirror>, Serializer> buildSerializersMap() {
       SerializerFactory factory =
           SerializerFactoryLoader.getFactory(context.processingEnvironment());
       return propertyMirrors.stream()
+          .map(PropertyMirror::getType)
+          .map(MoreTypes.equivalence()::wrap)
+          .distinct()
           .collect(
               toImmutableMap(
-                  PropertyMirror::getType,
-                  propertyMirror -> factory.getSerializer(propertyMirror.getType())));
+                  Function.identity(), equivalence -> factory.getSerializer(equivalence.get())));
     }
 
     /** Adds type parameters to the given {@link ClassName}, if available. */
@@ -198,13 +202,13 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
     private final TypeName outerClassTypeName;
     private final ImmutableList<TypeVariableName> typeVariableNames;
     private final ImmutableList<PropertyMirror> propertyMirrors;
-    private final ImmutableMap<TypeMirror, Serializer> serializersMap;
+    private final ImmutableMap<Equivalence.Wrapper<TypeMirror>, Serializer> serializersMap;
 
     ProxyGenerator(
         TypeName outerClassTypeName,
         ImmutableList<TypeVariableName> typeVariableNames,
         ImmutableList<PropertyMirror> propertyMirrors,
-        ImmutableMap<TypeMirror, Serializer> serializersMap) {
+        ImmutableMap<Equivalence.Wrapper<TypeMirror>, Serializer> serializersMap) {
       this.outerClassTypeName = outerClassTypeName;
       this.typeVariableNames = typeVariableNames;
       this.propertyMirrors = propertyMirrors;
@@ -239,7 +243,9 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
               propertyMirror ->
                   FieldSpec.builder(
                           TypeName.get(
-                              serializersMap.get(propertyMirror.getType()).proxyFieldType()),
+                              serializersMap
+                                  .get(MoreTypes.equivalence().wrap(propertyMirror.getType()))
+                                  .proxyFieldType()),
                           propertyMirror.getName(),
                           Modifier.PRIVATE)
                       .build())
@@ -251,7 +257,8 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
       MethodSpec.Builder constructor = MethodSpec.constructorBuilder();
 
       for (PropertyMirror propertyMirror : propertyMirrors) {
-        Serializer serializer = serializersMap.get(propertyMirror.getType());
+        Serializer serializer =
+            serializersMap.get(MoreTypes.equivalence().wrap(propertyMirror.getType()));
         String name = propertyMirror.getName();
 
         constructor.addParameter(TypeName.get(propertyMirror.getType()), name);
@@ -281,7 +288,7 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
     /** Maps a serializable type back to its original AutoValue property. */
     private CodeBlock resolve(PropertyMirror propertyMirror) {
       return serializersMap
-          .get(propertyMirror.getType())
+          .get(MoreTypes.equivalence().wrap(propertyMirror.getType()))
           .fromProxy(CodeBlock.of(propertyMirror.getName()));
     }
   }
