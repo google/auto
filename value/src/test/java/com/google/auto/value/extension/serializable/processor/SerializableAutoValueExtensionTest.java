@@ -384,4 +384,35 @@ public final class SerializableAutoValueExtensionTest {
 
     assertThat(actualAutoValue).isEqualTo(autoValue);
   }
+
+  @SerializableAutoValue
+  @AutoValue
+  abstract static class MultiplePropertiesSameType implements Serializable {
+    abstract String a();
+
+    abstract String b();
+
+    static MultiplePropertiesSameType.Builder builder() {
+      return new AutoValue_SerializableAutoValueExtensionTest_MultiplePropertiesSameType.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract MultiplePropertiesSameType.Builder setA(String value);
+
+      abstract MultiplePropertiesSameType.Builder setB(String value);
+
+      abstract MultiplePropertiesSameType build();
+    }
+  }
+
+  @Test
+  public void multiplePropertiesSameType_allFieldsSerialized() {
+    MultiplePropertiesSameType autoValue =
+        MultiplePropertiesSameType.builder().setA("A").setB("B").build();
+
+    MultiplePropertiesSameType actualAutoValue = SerializableTester.reserialize(autoValue);
+
+    assertThat(actualAutoValue).isEqualTo(autoValue);
+  }
 }
