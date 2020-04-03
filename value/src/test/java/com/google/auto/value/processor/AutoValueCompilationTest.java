@@ -3032,6 +3032,41 @@ public class AutoValueCompilationTest {
         .doesNotContain("java.util.Arrays");
   }
 
+  @Test
+  public void staticBuilderMethodInBuilderClass() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "com.example.Foo",
+            "package com.example;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Foo {",
+            "  public abstract String bar();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public static Builder builder() {",
+            "      return new AutoValue_Foo.Builder();",
+            "    }",
+            "",
+            "    public abstract Builder setBar(String s);",
+            "    public abstract Foo build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .hadWarningContaining("Static builder() method should be in the containing class")
+        .inFile(javaFileObject)
+        .onLineContaining("builder()");
+  }
+
   /**
    * Tests behaviour when the package containing an {@code @AutoValue} class also has classes with
    * the same name as classes in {@code java.lang}. If you call a class {@code Object} you are
