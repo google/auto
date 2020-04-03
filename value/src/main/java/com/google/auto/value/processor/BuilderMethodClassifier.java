@@ -104,7 +104,7 @@ class BuilderMethodClassifier {
   /**
    * Classifies the given methods from a builder type and its ancestors.
    *
-   * @param methods the methods in {@code builderType} and its ancestors.
+   * @param methods the abstract methods in {@code builderType} and its ancestors.
    * @param errorReporter where to report errors.
    * @param processingEnv the ProcessingEnvironment for annotation processing.
    * @param autoValueClass the {@code AutoValue} class containing the builder.

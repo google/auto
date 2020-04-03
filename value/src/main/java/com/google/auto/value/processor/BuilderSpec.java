@@ -51,6 +51,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 
 /**
@@ -255,6 +256,17 @@ class BuilderSpec {
               autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
+      }
+      for (ExecutableElement method :
+               ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
+        if (method.getSimpleName().contentEquals("builder")
+                && method.getModifiers().contains(Modifier.STATIC)
+                && method.getAnnotationMirrors().isEmpty()) {
+          // For now we ignore methods with annotations, because for example we do want to allow
+          // Jackson's @JsonCreator.
+          errorReporter.reportWarning(
+              "Static builder() method should be in the containing class", method);
+        }
       }
       this.classifier = optionalClassifier.get();
       Set<ExecutableElement> buildMethods = classifier.buildMethods();
