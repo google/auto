@@ -574,7 +574,7 @@ public abstract class Transform {
     return AutoOneOf_Transform.circleCrop();
   }
 
-  public static Transform ofBlur(BlurTransformParmeters params) {}
+  public static Transform ofBlur(BlurTransformParmeters params) {
     return AutoOneOf_Transform.blur(params);
   }
 }
