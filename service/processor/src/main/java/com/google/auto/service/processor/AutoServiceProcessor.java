@@ -190,7 +190,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
         Set<String> newServices = new HashSet<String>(providers.get(providerInterface));
         if (allServices.containsAll(newServices)) {
           log("No new service entries being added.");
-          return;
+          continue;
         }
 
         allServices.addAll(newServices);
