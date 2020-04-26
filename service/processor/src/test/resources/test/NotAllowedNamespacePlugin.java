@@ -16,13 +16,13 @@
 package test;
 
 import com.google.auto.service.AutoService;
-import com.google.auto.service.PluginName;
+import com.google.auto.service.AutoGradlePlugin;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
 @AutoService(Plugin.class)
-@PluginName("org.gradle")
+@AutoGradlePlugin("org.gradle")
 public class NotAllowedNamespacePlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {

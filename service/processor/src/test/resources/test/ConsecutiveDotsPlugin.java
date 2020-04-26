@@ -16,13 +16,13 @@
 package test;
 
 import com.google.auto.service.AutoService;
-import com.google.auto.service.PluginName;
+import com.google.auto.service.AutoGradlePlugin;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
 @AutoService(Plugin.class)
-@PluginName("something..asd")
+@AutoGradlePlugin("something..asd")
 public class ConsecutiveDotsPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {

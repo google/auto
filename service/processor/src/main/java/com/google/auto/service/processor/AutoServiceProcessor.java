@@ -21,7 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
-import com.google.auto.service.PluginName;
+import com.google.auto.service.AutoGradlePlugin;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -92,14 +92,14 @@ public class AutoServiceProcessor extends AbstractProcessor {
    */
   private Multimap<String, String> providers = HashMultimap.create();
   /**
-   * Maps the {@literal @}{@link PluginName} value to the 
+   * Maps the {@literal @}{@link AutoGradlePlugin} value to the
    * fully qualified class name which implement them.
    */
   private Map<String, String> plugins = new HashMap<>();
 
   @Override
   public ImmutableSet<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(AutoService.class.getName(), PluginName.class.getName());
+    return ImmutableSet.of(AutoService.class.getName(), AutoGradlePlugin.class.getName());
   }
 
   @Override
@@ -158,7 +158,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = (TypeElement) e;
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
-      PluginName pluginName = e.getAnnotation(PluginName.class);
+      AutoGradlePlugin autoGradlePlugin = e.getAnnotation(AutoGradlePlugin.class);
 
       Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
       if (providerInterfaces.isEmpty()) {
@@ -173,7 +173,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
         if (checkImplementer(providerImplementer, providerType)) {
           // We do not wish to generate META-INF/services file when PluginName annotation exists
-          if (pluginName != null) continue;
+          if (autoGradlePlugin != null) continue;
           providers.put(getBinaryName(providerType), getBinaryName(providerImplementer));
         } else {
           String message = "ServiceProviders must implement their service provider interface. "
@@ -188,14 +188,14 @@ public class AutoServiceProcessor extends AbstractProcessor {
   private void processPluginNameAnnotations(Set<? extends TypeElement> annotations,
                                              RoundEnvironment roundEnv) {
 
-    Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(PluginName.class);
+    Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(AutoGradlePlugin.class);
     log(annotations.toString());
     log(elements.toString());
     for (Element e : elements) {
       Validator validator = new Validator();
       TypeElement typeElement = (TypeElement) e;
-      PluginName pluginName = e.getAnnotation(PluginName.class);
-      String pluginId = pluginName.value();
+      AutoGradlePlugin autoGradlePlugin = e.getAnnotation(AutoGradlePlugin.class);
+      String pluginId = autoGradlePlugin.value();
       if (validator.isValid(pluginId)) {
         plugins.put(pluginId, typeElement.toString());
       } else {

@@ -35,7 +35,7 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
 @Documented
 @Retention(CLASS)
 @Target(TYPE)
-public @interface PluginName {
+public @interface AutoGradlePlugin {
     /**
      * Returns the plugin id implemented by this plugin.
      */
