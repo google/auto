@@ -15,13 +15,14 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.testing.compile.Compiler.javac;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.Reflection;
+import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -220,13 +221,15 @@ public class GeneratedDoesNotExistTest {
     Processor autoValueProcessor = new AutoValueProcessor();
     ProcessorHandler handler = new ProcessorHandler(autoValueProcessor, ignoredGenerated);
     Processor noGeneratedProcessor = partialProxy(Processor.class, handler);
-    assertAbout(javaSource())
-        .that(javaFileObject)
-        .withCompilerOptions(javacOptions)
-        .processedWith(noGeneratedProcessor)
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedOutput);
+    Compilation compilation =
+        javac()
+        .withOptions(javacOptions)
+        .withProcessors(noGeneratedProcessor)
+        .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .hasSourceEquivalentTo(expectedOutput);
     assertThat(ignoredGenerated).containsExactly(expectedAnnotation);
   }
 }

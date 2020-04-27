@@ -29,8 +29,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Arrays;
 import java.util.Set;
-import java.util.stream.Stream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -220,7 +220,7 @@ public class AutoValueCompilationTest {
   }
 
   @Test
-  public void testNoWarningsFromGenerics() throws Exception {
+  public void testNoWarningsFromGenerics() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -243,7 +243,7 @@ public class AutoValueCompilationTest {
   }
 
   @Test
-  public void testNestedParameterizedTypesWithTypeAnnotations() throws Exception {
+  public void testNestedParameterizedTypesWithTypeAnnotations() {
     JavaFileObject annotFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Annot",
@@ -427,7 +427,7 @@ public class AutoValueCompilationTest {
   // because the generated class is not abstract and does not implement the unrecognized methods.
 
   @Test
-  public void testAbstractVoid() throws Exception {
+  public void testAbstractVoid() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -444,11 +444,11 @@ public class AutoValueCompilationTest {
         .hadWarningContaining(
             "Abstract method is neither a property getter nor a Builder converter")
         .inFile(javaFileObject)
-        .onLine(5);
+        .onLineContaining("void foo()");
   }
 
   @Test
-  public void testAbstractWithParams() throws Exception {
+  public void testAbstractWithParams() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -465,11 +465,11 @@ public class AutoValueCompilationTest {
         .hadWarningContaining(
             "Abstract method is neither a property getter nor a Builder converter")
         .inFile(javaFileObject)
-        .onLine(5);
+        .onLineContaining("int foo(int bar)");
   }
 
   @Test
-  public void testPrimitiveArrayWarning() throws Exception {
+  public void testPrimitiveArrayWarning() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -489,11 +489,11 @@ public class AutoValueCompilationTest {
         .hadWarningContaining(
             "An @AutoValue property that is a primitive array returns the original array")
         .inFile(javaFileObject)
-        .onLine(5);
+        .onLineContaining("byte[] bytes()");
   }
 
   @Test
-  public void testPrimitiveArrayWarningFromParent() throws Exception {
+  public void testPrimitiveArrayWarningFromParent() {
     // If the array-valued property is defined by an ancestor then we shouldn't try to attach
     // the warning to the method that defined it, but rather to the @AutoValue class itself.
     JavaFileObject javaFileObject =
@@ -519,11 +519,11 @@ public class AutoValueCompilationTest {
             "An @AutoValue property that is a primitive array returns the original array"
                 + ".*foo\\.bar\\.Baz\\.bytes")
         .inFile(javaFileObject)
-        .onLine(7);
+        .onLineContaining("BazChild extends Baz");
   }
 
   @Test
-  public void testPrimitiveArrayWarningSuppressed() throws Exception {
+  public void testPrimitiveArrayWarningSuppressed() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -568,7 +568,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Nested @AutoValue class must be static")
         .inFile(javaFileObject)
-        .onLine(7);
+        .onLineContaining("abstract class NotStatic");
   }
 
   @Test
@@ -626,7 +626,7 @@ public class AutoValueCompilationTest {
   }
 
   @Test
-  public void noMultidimensionalPrimitiveArrays() throws Exception {
+  public void noMultidimensionalPrimitiveArrays() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -649,11 +649,11 @@ public class AutoValueCompilationTest {
             "@AutoValue class cannot define an array-valued property "
                 + "unless it is a primitive array")
         .inFile(javaFileObject)
-        .onLine(7);
+        .onLineContaining("int[][] ints()");
   }
 
   @Test
-  public void noObjectArrays() throws Exception {
+  public void noObjectArrays() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -676,11 +676,11 @@ public class AutoValueCompilationTest {
             "@AutoValue class cannot define an array-valued property "
                 + "unless it is a primitive array")
         .inFile(javaFileObject)
-        .onLine(7);
+        .onLineContaining("String[] strings()");
   }
 
   @Test
-  public void annotationOnInterface() throws Exception {
+  public void annotationOnInterface() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -695,11 +695,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("AutoValue only applies to classes")
         .inFile(javaFileObject)
-        .onLine(6);
+        .onLineContaining("interface Baz");
   }
 
   @Test
-  public void annotationOnEnum() throws Exception {
+  public void annotationOnEnum() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -714,11 +714,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("AutoValue only applies to classes")
         .inFile(javaFileObject)
-        .onLine(6);
+        .onLineContaining("enum Baz");
   }
 
   @Test
-  public void extendAutoValue() throws Exception {
+  public void extendAutoValue() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Outer",
@@ -747,11 +747,14 @@ public class AutoValueCompilationTest {
             "}");
     Compilation compilation =
         javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
-    assertThat(compilation).hadErrorContaining("may not extend").inFile(javaFileObject).onLine(16);
+    assertThat(compilation)
+        .hadErrorContaining("may not extend")
+        .inFile(javaFileObject)
+        .onLineContaining("Child extends Parent");
   }
 
   @Test
-  public void bogusSerialVersionUID() throws Exception {
+  public void bogusSerialVersionUID() {
     String[] mistakes = {
       "final long serialVersionUID = 1234L", // not static
       "static long serialVersionUID = 1234L", // not final
@@ -779,12 +782,12 @@ public class AutoValueCompilationTest {
           .that(compilation)
           .hadErrorContaining("serialVersionUID must be a static final long compile-time constant")
           .inFile(javaFileObject)
-          .onLine(7);
+          .onLineContaining(mistake);
     }
   }
 
   @Test
-  public void nonExistentSuperclass() throws Exception {
+  public void nonExistentSuperclass() {
     // The main purpose of this test is to check that AutoValueProcessor doesn't crash the
     // compiler in this case.
     JavaFileObject javaFileObject =
@@ -799,11 +802,14 @@ public class AutoValueCompilationTest {
             "}");
     Compilation compilation =
         javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
-    assertThat(compilation).hadErrorContaining("NonExistent").inFile(javaFileObject).onLine(6);
+    assertThat(compilation)
+        .hadErrorContaining("NonExistent")
+        .inFile(javaFileObject)
+        .onLineContaining("NonExistent");
   }
 
   @Test
-  public void cannotImplementAnnotation() throws Exception {
+  public void cannotImplementAnnotation() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.RetentionImpl",
@@ -836,11 +842,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("may not be used to implement an annotation interface")
         .inFile(javaFileObject)
-        .onLine(8);
+        .onLineContaining("RetentionImpl implements Retention");
   }
 
   @Test
-  public void missingPropertyType() throws Exception {
+  public void missingPropertyType() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -854,11 +860,14 @@ public class AutoValueCompilationTest {
             "}");
     Compilation compilation =
         javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
-    assertThat(compilation).hadErrorContaining("MissingType").inFile(javaFileObject).onLine(7);
+    assertThat(compilation)
+        .hadErrorContaining("MissingType")
+        .inFile(javaFileObject)
+        .onLineContaining("MissingType");
   }
 
   @Test
-  public void missingGenericPropertyType() throws Exception {
+  public void missingGenericPropertyType() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -872,11 +881,14 @@ public class AutoValueCompilationTest {
             "}");
     Compilation compilation =
         javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
-    assertThat(compilation).hadErrorContaining("MissingType").inFile(javaFileObject).onLine(7);
+    assertThat(compilation)
+        .hadErrorContaining("MissingType")
+        .inFile(javaFileObject)
+        .onLineContaining("MissingType");
   }
 
   @Test
-  public void missingComplexGenericPropertyType() throws Exception {
+  public void missingComplexGenericPropertyType() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -893,11 +905,14 @@ public class AutoValueCompilationTest {
             "}");
     Compilation compilation =
         javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
-    assertThat(compilation).hadErrorContaining("MissingType").inFile(javaFileObject).onLine(10);
+    assertThat(compilation)
+        .hadErrorContaining("MissingType")
+        .inFile(javaFileObject)
+        .onLineContaining("MissingType");
   }
 
   @Test
-  public void missingSuperclassGenericParameter() throws Exception {
+  public void missingSuperclassGenericParameter() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -911,11 +926,14 @@ public class AutoValueCompilationTest {
             "}");
     Compilation compilation =
         javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
-    assertThat(compilation).hadErrorContaining("MissingType").inFile(javaFileObject).onLine(6);
+    assertThat(compilation)
+        .hadErrorContaining("MissingType")
+        .inFile(javaFileObject)
+        .onLineContaining("MissingType");
   }
 
   @Test
-  public void nullablePrimitive() throws Exception {
+  public void nullablePrimitive() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -933,11 +951,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Primitive types cannot be @Nullable")
         .inFile(javaFileObject)
-        .onLine(8);
+        .onLineContaining("@Nullable int");
   }
 
   @Test
-  public void correctBuilder() throws Exception {
+  public void correctBuilder() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1327,7 +1345,7 @@ public class AutoValueCompilationTest {
   }
 
   @Test
-  public void autoValueBuilderOnTopLevelClass() throws Exception {
+  public void autoValueBuilderOnTopLevelClass() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Builder",
@@ -1347,11 +1365,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("can only be applied to a class or interface inside")
         .inFile(javaFileObject)
-        .onLine(6);
+        .onLineContaining("public interface Builder");
   }
 
   @Test
-  public void autoValueBuilderNotInsideAutoValue() throws Exception {
+  public void autoValueBuilderNotInsideAutoValue() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1379,11 +1397,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("can only be applied to a class or interface inside")
         .inFile(javaFileObject)
-        .onLine(13);
+        .onLineContaining("public interface Builder");
   }
 
   @Test
-  public void autoValueBuilderNotStatic() throws Exception {
+  public void autoValueBuilderNotStatic() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Example",
@@ -1414,11 +1432,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("@AutoValue.Builder cannot be applied to a non-static class")
         .inFile(javaFileObject)
-        .onLine(15);
+        .onLineContaining("abstract class Builder");
   }
 
   @Test
-  public void autoValueBuilderOnEnum() throws Exception {
+  public void autoValueBuilderOnEnum() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1444,7 +1462,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("can only apply to a class or an interface")
         .inFile(javaFileObject)
-        .onLine(14);
+        .onLineContaining("public enum Builder");
   }
 
   @Test
@@ -1475,7 +1493,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("already has a Builder: foo.bar.Baz.Builder1")
         .inFile(javaFileObject)
-        .onLine(13);
+        .onLineContaining("public interface Builder2");
   }
 
   @Test
@@ -1505,7 +1523,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("with this signature: foo.bar.Baz.Builder blim(int)")
         .inFile(javaFileObject)
-        .onLine(11);
+        .onLineContaining("public interface Builder");
   }
 
   @Test
@@ -1535,7 +1553,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("with this signature: foo.bar.Baz.Builder setBlim(int)")
         .inFile(javaFileObject)
-        .onLine(11);
+        .onLineContaining("public interface Builder");
   }
 
   @Test
@@ -1568,7 +1586,7 @@ public class AutoValueCompilationTest {
             "Parameter type java.lang.String of setter method should be int "
                 + "to match getter foo.bar.Baz.blim")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("Builder blim(String x)");
   }
 
   @Test
@@ -1604,7 +1622,7 @@ public class AutoValueCompilationTest {
                 + "foo.bar.Baz.blam, or it should be a type that can be passed to "
                 + "ImmutableList.copyOf")
         .inFile(javaFileObject)
-        .onLine(14);
+        .onLineContaining("Builder blam(String x)");
   }
 
   @Test
@@ -1642,7 +1660,7 @@ public class AutoValueCompilationTest {
                 + "ImmutableList.copyOf to produce "
                 + "com.google.common.collect.ImmutableList<java.lang.String>")
         .inFile(javaFileObject)
-        .onLine(15);
+        .onLineContaining("Builder blam(Collection<Integer> x)");
   }
 
   @Test
@@ -1675,7 +1693,7 @@ public class AutoValueCompilationTest {
             "Parameter type java.lang.String of setter method should be int "
                 + "to match getter foo.bar.Baz.getBlim")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("Builder blim(String x)");
   }
 
   @Test
@@ -1749,8 +1767,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Method does not correspond to a property of foo.bar.Item")
         .inFile(javaFileObject)
-        .onLine(12);
-    assertThat(compilation).hadNoteContaining("hasThumbnail").inFile(javaFileObject).onLine(12);
+        .onLineContaining("Builder setTitle(String title)");
+    assertThat(compilation)
+        .hadNoteContaining("hasThumbnail")
+        .inFile(javaFileObject)
+        .onLineContaining("Builder setTitle(String title)");
   }
 
   @Test
@@ -1780,7 +1801,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Method does not correspond to a property of foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(11);
+        .onLineContaining("Builder blim(int x)");
   }
 
   @Test
@@ -1811,7 +1832,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("If any setter methods use the setFoo convention then all must")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("Builder blim(int x)");
   }
 
   @Test
@@ -1845,7 +1866,7 @@ public class AutoValueCompilationTest {
         .hadErrorContaining(
             "Method matches a property of foo.bar.Baz but has return type T instead of U")
         .inFile(javaFileObject)
-        .onLine(15);
+        .onLineContaining("T blam()");
   }
 
   @Test
@@ -1876,7 +1897,7 @@ public class AutoValueCompilationTest {
             "Method looks like a property builder, but it returns java.lang.StringBuilder which "
                 + "does not have a non-static build() method")
         .inFile(javaFileObject)
-        .onLine(11);
+        .onLineContaining("StringBuilder blimBuilder()");
   }
 
   @Test
@@ -1907,7 +1928,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Property strings has a property builder so it cannot be @Nullable")
         .inFile(javaFileObject)
-        .onLine(9);
+        .onLineContaining("@Nullable ImmutableList<String> strings()");
   }
 
   @Test
@@ -1941,7 +1962,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Property strings has a property builder so it cannot be @Nullable")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("@Nullable ImmutableList<String> strings()");
   }
 
   @Test
@@ -1975,7 +1996,7 @@ public class AutoValueCompilationTest {
                 + "whose build() method returns com.google.common.collect.ImmutableSet<T> "
                 + "instead of com.google.common.collect.ImmutableList<T>")
         .inFile(javaFileObject)
-        .onLine(13);
+        .onLineContaining("ImmutableSet.Builder<T> blimBuilder()");
   }
 
   @Test
@@ -2006,7 +2027,7 @@ public class AutoValueCompilationTest {
         .hadErrorContaining(
             "Method looks like a property builder, but its return type is not a class or interface")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("int blimBuilder()");
   }
 
   @Test
@@ -2038,7 +2059,7 @@ public class AutoValueCompilationTest {
             "Method looks like a property builder, but the type of property blim is not a class "
                 + "or interface")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("Integer blimBuilder()");
   }
 
   @Test
@@ -2070,7 +2091,7 @@ public class AutoValueCompilationTest {
             "Method looks like a property builder, but it returns java.lang.StringBuilder which "
                 + "does not have a non-static build() method")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("StringBuilder blimBuilder()");
   }
 
   @Test
@@ -2108,7 +2129,7 @@ public class AutoValueCompilationTest {
             "Method looks like a property builder, but it returns foo.bar.Baz.StringFactory which "
                 + "does not have a non-static build() method")
         .inFile(javaFileObject)
-        .onLine(18);
+        .onLineContaining("StringFactory blimBuilder()");
   }
 
   @Test
@@ -2147,7 +2168,7 @@ public class AutoValueCompilationTest {
             "Property builder for blim has type foo.bar.Baz.ListFactory whose build() method "
                 + "returns java.util.List<? extends E> instead of java.util.List<E>")
         .inFile(javaFileObject)
-        .onLine(19);
+        .onLineContaining("ListFactory<E> blimBuilder()");
   }
 
   @Test
@@ -2188,7 +2209,7 @@ public class AutoValueCompilationTest {
                 + "does not have a public constructor and java.lang.String does not have a static "
                 + "builder() or newBuilder() method that returns foo.bar.Baz.StringFactory")
         .inFile(javaFileObject)
-        .onLine(20);
+        .onLineContaining("StringFactory blimBuilder()");
   }
 
   @Test
@@ -2318,7 +2339,7 @@ public class AutoValueCompilationTest {
                 + "that type from java.lang.String: java.lang.String does not have a non-static "
                 + "toBuilder() method that returns foo.bar.Baz.StringFactory")
         .inFile(javaFileObject)
-        .onLine(19);
+        .onLineContaining("StringFactory blimBuilder()");
   }
 
   @Test
@@ -2364,7 +2385,7 @@ public class AutoValueCompilationTest {
                 + "that type from foo.bar.Baz.Buh: foo.bar.Baz.Buh does not have a non-static "
                 + "toBuilder() method that returns foo.bar.Baz.BuhBuilder")
         .inFile(javaFileObject)
-        .onLine(25);
+        .onLineContaining("BuhBuilder blimBuilder()");
   }
 
   @Test
@@ -2397,7 +2418,7 @@ public class AutoValueCompilationTest {
                 + "whose build() method returns com.google.common.collect.ImmutableSet<U> "
                 + "instead of com.google.common.collect.ImmutableSet<T>")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("ImmutableSet.Builder<U> blimBuilder()");
   }
 
   @Test
@@ -2430,7 +2451,7 @@ public class AutoValueCompilationTest {
                 + " method with the same name and type as a getter method of foo.bar.Baz, or"
                 + " fooBuilder() where foo() or getFoo() is a getter method of foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("Builder whut()");
   }
 
   @Test
@@ -2459,7 +2480,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Method does not correspond to a property of foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(11);
+        .onLineContaining("void whut(String x)");
   }
 
   @Test
@@ -2488,7 +2509,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Builder methods must have 0 or 1 parameters")
         .inFile(javaFileObject)
-        .onLine(11);
+        .onLineContaining("Builder blam(String x, String y)");
   }
 
   @Test
@@ -2517,7 +2538,7 @@ public class AutoValueCompilationTest {
         .hadErrorContaining(
             "Builder must have a single no-argument method returning foo.bar.Baz<T>")
         .inFile(javaFileObject)
-        .onLine(10);
+        .onLineContaining("public interface Builder<T>");
   }
 
   @Test
@@ -2547,11 +2568,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Builder must have a single no-argument method returning foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("Baz build()");
     assertThat(compilation)
         .hadErrorContaining("Builder must have a single no-argument method returning foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(13);
+        .onLineContaining("Baz create()");
   }
 
   @Test
@@ -2581,7 +2602,7 @@ public class AutoValueCompilationTest {
         .hadErrorContaining(
             "Method without arguments should be a build method returning foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(12);
+        .onLineContaining("String build()");
   }
 
   @Test
@@ -2612,7 +2633,7 @@ public class AutoValueCompilationTest {
             "Type parameters of foo.bar.Baz.Builder must have same names and "
                 + "bounds as type parameters of foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(10);
+        .onLineContaining("public interface Builder");
   }
 
   @Test
@@ -2643,7 +2664,7 @@ public class AutoValueCompilationTest {
             "Type parameters of foo.bar.Baz.Builder must have same names and "
                 + "bounds as type parameters of foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(10);
+        .onLineContaining("public interface Builder<E>");
   }
 
   @Test
@@ -2674,7 +2695,7 @@ public class AutoValueCompilationTest {
             "Type parameters of foo.bar.Baz.Builder must have same names and "
                 + "bounds as type parameters of foo.bar.Baz")
         .inFile(javaFileObject)
-        .onLine(10);
+        .onLineContaining("public interface Builder<T extends Number>");
   }
 
   @Test
@@ -2706,7 +2727,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Builder converter method should return foo.bar.Baz.Builder<K, V>")
         .inFile(javaFileObject)
-        .onLine(9);
+        .onLineContaining("abstract Builder<V, K> toBuilder1()");
   }
 
   @Test
@@ -2739,11 +2760,11 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("There can be at most one builder converter method")
         .inFile(javaFileObject)
-        .onLine(9);
+        .onLineContaining("abstract Builder<K, V> toBuilder1()");
   }
 
   @Test
-  public void getFooIsFoo() throws Exception {
+  public void getFooIsFoo() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -2876,9 +2897,15 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor())
             .compile(bazFileObject);
     assertThat(compilation1).hadErrorCount(1);
-    assertThat(compilation1).hadErrorContaining("UNDEFINED").inFile(bazFileObject).onLine(7);
+    assertThat(compilation1)
+        .hadErrorContaining("UNDEFINED")
+        .inFile(bazFileObject)
+        .onLineContaining("UNDEFINED");
     assertThat(compilation1).hadWarningCount(1);
-    assertThat(compilation1).hadWarningContaining("mutable").inFile(bazFileObject).onLine(8);
+    assertThat(compilation1)
+        .hadWarningContaining("mutable")
+        .inFile(bazFileObject)
+        .onLineContaining("public abstract int[] buh()");
 
     // Same test, except we do successfully suppress the warning despite the UNDEFINED.
     bazFileObject =
@@ -2899,7 +2926,10 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor())
             .compile(bazFileObject);
     assertThat(compilation2).hadErrorCount(1);
-    assertThat(compilation2).hadErrorContaining("UNDEFINED").inFile(bazFileObject).onLine(7);
+    assertThat(compilation2)
+        .hadErrorContaining("UNDEFINED")
+        .inFile(bazFileObject)
+        .onLineContaining("UNDEFINED");
     assertThat(compilation2).hadWarningCount(0);
   }
 
@@ -3187,6 +3217,6 @@ public class AutoValueCompilationTest {
   }
 
   private String sorted(String... imports) {
-    return Stream.of(imports).sorted().collect(joining("\n"));
-  }
+     return Arrays.stream(imports).sorted().collect(joining("\n"));
+ }
 }
