@@ -2199,7 +2199,6 @@ public class AutoValueCompilationTest {
             "package foo.bar;",
             "",
             "import com.google.auto.value.AutoValue;",
-            "import com.google.common.collect.ImmutableSet;",
             "",
             "@AutoValue",
             "public abstract class Baz<E> {",
@@ -2224,11 +2223,62 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Property builder method returns foo.bar.Baz.StringFactory but there is no way to make "
-                + "that type from java.lang.String: java.lang.String does not have a non-static "
-                + "toBuilder() method that returns foo.bar.Baz.StringFactory")
+            "Property builder method returns foo.bar.Baz.StringFactory but there is no way to make"
+                + " that type from java.lang.String: java.lang.String does not have a non-static"
+                + " toBuilder() method that returns foo.bar.Baz.StringFactory, and"
+                + " foo.bar.Baz.StringFactory does not have a method addAll or putAll that accepts"
+                + " an argument of type java.lang.String")
         .inFile(javaFileObject)
-        .onLine(19);
+        .onLineContaining("StringFactory blimBuilder()");
+  }
+
+  @Test
+  public void autoValueBuilderPropertyBuilderWrongTypeAddAll() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import com.google.common.collect.ImmutableSet;",
+            "import java.util.Iterator;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz<T> {",
+            "  abstract ImmutableSet<String> strings();",
+            "  abstract Builder<T> toBuilder();",
+            "",
+            "  public static class ImmutableSetBuilder<E> {",
+            "    public void addAll(Iterator<? extends E> elements) {}",
+            "",
+            "    public ImmutableSet<E> build() {",
+            "      return null;",
+            "    }",
+            "  }",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder<T> {",
+            "    ImmutableSetBuilder<String> stringsBuilder();",
+            "    Baz<T> build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining(
+            "Property builder method returns foo.bar.Baz.ImmutableSetBuilder<java.lang.String> but"
+                + " there is no way to make that type from"
+                + " com.google.common.collect.ImmutableSet<java.lang.String>:"
+                + " com.google.common.collect.ImmutableSet<java.lang.String> does not have a"
+                + " non-static toBuilder() method that returns"
+                + " foo.bar.Baz.ImmutableSetBuilder<java.lang.String>, and"
+                + " foo.bar.Baz.ImmutableSetBuilder<java.lang.String> does not have a method"
+                + " addAll or putAll that accepts an argument of type"
+                + " com.google.common.collect.ImmutableSet<java.lang.String>")
+        .inFile(javaFileObject)
+        .onLineContaining("ImmutableSetBuilder<String> stringsBuilder();");
   }
 
   @Test
