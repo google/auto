@@ -210,8 +210,8 @@ class BuilderMethodClassifier {
             // If property bar of type Bar has a barBuilder() that returns BarBuilder, then it must
             // be possible to make a BarBuilder from a Bar if either (1) the @AutoValue class has a
             // toBuilder() or (2) there is also a setBar(Bar). Making BarBuilder from Bar is
-            // possible if Bar either has a toBuilder() method or is a Guava immutable collection
-            // (in which case we can use addAll or putAll).
+            // possible if Bar either has a toBuilder() method or BarBuilder has an addAll or putAll
+            // method that accepts a Bar argument.
             boolean canMakeBarBuilder =
                 (propertyBuilder.getBuiltToBuilder() != null
                     || propertyBuilder.getCopyAll() != null);
@@ -221,7 +221,8 @@ class BuilderMethodClassifier {
                   String.format(
                       "Property builder method returns %1$s but there is no way to make that type"
                           + " from %2$s: %2$s does not have a non-static toBuilder() method that"
-                          + " returns %1$s",
+                          + " returns %1$s, and %1$s does not have a method addAll or"
+                          + " putAll that accepts an argument of type %2$s",
                       propertyBuilder.getBuilderTypeMirror(), propertyType);
               errorReporter.reportError(error, propertyBuilder.getPropertyBuilderMethod());
             }

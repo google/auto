@@ -29,9 +29,9 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -177,11 +177,6 @@ class PropertyBuilderClassifier {
     }
   }
 
-  // Construct this string so it won't be found by Maven shading and renamed, which is not what
-  // we want.
-  private static final String COM_GOOGLE_COMMON_COLLECT_IMMUTABLE =
-      "com".concat(".google.common.collect.Immutable");
-
   // Our @AutoValue class `Foo` has a property `Bar bar()` or `Bar getBar()` and we've encountered
   // a builder method like `BarBuilder barBuilder()`. Here `BarBuilder` can have any name (its name
   // doesn't have to be the name of `Bar` with `Builder` stuck on the end), but `barBuilder()` does
@@ -192,9 +187,9 @@ class PropertyBuilderClassifier {
   // (2) `BarBuilder` must have a public no-arg constructor, or `Bar` must have a static method
   //     `naturalOrder(), `builder()`, or `newBuilder()` that returns `BarBuilder`. The
   //     `naturalOrder()` case is specifically for ImmutableSortedSet and ImmutableSortedMap.
-  // (3) `Bar` must have an instance method `BarBuilder toBuilder()`, or `BarBuilder` must be a
-  //      Guava immutable builder like `ImmutableSet.Builder`. (See TODO below for relaxing the
-  //      requirement on having a `toBuilder()`.
+  // (3) If `Foo` has a `toBuilder()` method, or if we have both `barBuilder()` and `setBar(Bar)`
+  //     methods, then `Bar` must have an instance method `BarBuilder toBuilder()`, or `BarBuilder`
+  //     must have an `addAll` or `putAll` method that accepts an argument of type `Bar`.
   //
   // This method outputs an error and returns Optional.empty() if the barBuilder() method has a
   // problem.
@@ -287,11 +282,9 @@ class PropertyBuilderClassifier {
             typeUtils.erasure(barBuilderTypeMirror))) {
       builtToBuilder = toBuilder.getSimpleName().toString();
     } else {
-      boolean isGuavaBuilder =
-          barBuilderTypeMirror.toString().startsWith(COM_GOOGLE_COMMON_COLLECT_IMMUTABLE)
-              && barBuilderTypeMirror.toString().contains(".Builder<");
-      Optional<ExecutableElement> maybeCopyAll = addAllPutAll(barBuilderTypeElement);
-      if (maybeCopyAll.isPresent() && isGuavaBuilder) {
+      Optional<ExecutableElement> maybeCopyAll =
+          addAllPutAll(barBuilderTypeElement, barBuilderDeclaredType, barTypeMirror);
+      if (maybeCopyAll.isPresent()) {
         copyAll = maybeCopyAll.get().getSimpleName().toString();
       }
     }
@@ -359,7 +352,7 @@ class PropertyBuilderClassifier {
   private Map<String, ExecutableElement> noArgMethodsOf(TypeElement type) {
     // Can't easily use ImmutableMap here because getAllMembers could return more than one method
     // with the same name.
-    Map<String, ExecutableElement> methods = new LinkedHashMap<String, ExecutableElement>();
+    Map<String, ExecutableElement> methods = new LinkedHashMap<>();
     for (ExecutableElement method : ElementFilter.methodsIn(elementUtils.getAllMembers(type))) {
       if (method.getParameters().isEmpty() && !isStaticInterfaceMethodNotIn(method, type)) {
         methods.put(method.getSimpleName().toString(), method);
@@ -378,15 +371,33 @@ class PropertyBuilderClassifier {
         && method.getEnclosingElement().getKind().equals(ElementKind.INTERFACE);
   }
 
-  private Optional<ExecutableElement> addAllPutAll(TypeElement barBuilderTypeElement) {
-    for (ExecutableElement method :
-        MoreElements.getLocalAndInheritedMethods(barBuilderTypeElement, typeUtils, elementUtils)) {
-      Name name = method.getSimpleName();
-      if (name.contentEquals("addAll") || name.contentEquals("putAll")) {
-        return Optional.of(method);
-      }
-    }
-    return Optional.empty();
+  private static final ImmutableSet<String> ADD_ALL_PUT_ALL = ImmutableSet.of("addAll", "putAll");
+
+  // We have `Bar bar()` and `Foo.Builder toBuilder()` in the @AutoValue type Foo, and we have
+  // `BarBuilder barBuilder()` in Foo.Builder. That means that we need to be able to make a
+  // `BarBuilder` from a `Bar` as part of the implementation of `Foo.toBuilder()`. We can do that
+  // if `Bar` has a method `BarBuilder toBuilder()`, but what if it doesn't? For example, Guava's
+  // `ImmutableList` doesn't have a method `ImmutableList.Builder toBuilder()`. So we also allow it
+  // to work if `BarBuilder` has a method `addAll(T)` or `putAll(T)`, where `Bar` is assignable to
+  // `T`. `ImmutableList.Builder<E>` does have a method `addAll(Iterable<? extends E>)` and
+  // `ImmutableList<E>` is assignable to `Iterable<? extends E>`, so that works.
+  private Optional<ExecutableElement> addAllPutAll(
+      TypeElement barBuilderTypeElement,
+      DeclaredType barBuilderDeclaredType,
+      TypeMirror barTypeMirror) {
+    return MoreElements.getLocalAndInheritedMethods(barBuilderTypeElement, typeUtils, elementUtils)
+        .stream()
+        .filter(
+            method ->
+                ADD_ALL_PUT_ALL.contains(method.getSimpleName().toString())
+                    && method.getParameters().size() == 1)
+        .filter(
+            method -> {
+              ExecutableType methodMirror =
+                  MoreTypes.asExecutable(typeUtils.asMemberOf(barBuilderDeclaredType, method));
+              return typeUtils.isAssignable(barTypeMirror, methodMirror.getParameterTypes().get(0));
+            })
+        .findFirst();
   }
 
   private static boolean isNullable(ExecutableElement getter) {

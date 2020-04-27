@@ -2793,6 +2793,8 @@ public class AutoValueTest {
   abstract static class BuildMyMap<K, V> {
     abstract MyMap<K, V> map();
 
+    abstract Builder<K, V> toBuilder();
+
     static <K, V> Builder<K, V> builder() {
       return new AutoValue_AutoValueTest_BuildMyMap.Builder<K, V>();
     }
@@ -2812,6 +2814,12 @@ public class AutoValueTest {
     mapBuilder.put("23", 23);
     BuildMyMap<String, Integer> built = builder.build();
     assertThat(built.map()).containsExactly("23", 23);
+
+    BuildMyMap.Builder<String, Integer> builder2 = built.toBuilder();
+    MyMapBuilder<String, Integer> mapBuilder2 = builder2.mapBuilder();
+    mapBuilder2.put("17", 17);
+    BuildMyMap<String, Integer> built2 = builder2.build();
+    assertThat(built2.map()).containsExactly("23", 23, "17", 17);
   }
 
   public static class MyStringMap<V> extends MyMap<String, V> {
@@ -2843,6 +2851,8 @@ public class AutoValueTest {
   abstract static class BuildMyStringMap<V> {
     abstract MyStringMap<V> map();
 
+    abstract Builder<V> toBuilder();
+
     static <V> Builder<V> builder() {
       return new AutoValue_AutoValueTest_BuildMyStringMap.Builder<V>();
     }
@@ -2862,6 +2872,12 @@ public class AutoValueTest {
     mapBuilder.put("23", 23);
     BuildMyStringMap<Integer> built = builder.build();
     assertThat(built.map()).containsExactly("23", 23);
+
+    BuildMyStringMap.Builder<Integer> builder2 = built.toBuilder();
+    MyStringMapBuilder<Integer> mapBuilder2 = builder2.mapBuilder();
+    mapBuilder2.put("17", 17);
+    BuildMyStringMap<Integer> built2 = builder2.build();
+    assertThat(built2.map()).containsExactly("17", 17, "23", 23);
   }
 
   @AutoValue

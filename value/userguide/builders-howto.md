@@ -450,8 +450,8 @@ One solution for this problem is just below.
 
 ### <a name="add"></a>... accumulate values for a collection-valued property, without "breaking the chain"?
 
-Another option is to keep `countriesBuilder()` itself non-public, only use it to
-implement a public `addCountry` method:
+Another option is to keep `countriesBuilder()` itself non-public, and only use
+it to implement a public `addCountry` method:
 
 ```java
 @AutoValue
@@ -577,6 +577,19 @@ requirements are:
   method then `Species` must also have a `toBuilder()` method. That also applies
   if there is an abstract `setSpecies` method in addition to the
   `speciesBuilder` method.
+
+  As an alternative to having a method `Species.Builder toBuilder()` in
+  `Species`, `Species.Builder` can have a method called `addAll` or `putAll`
+  that accepts an argument of type `Species`. This is how AutoValue handles
+  `ImmutableSet` for example. `ImmutableSet` does not have a `toBuilder()`
+  method, but `ImmutableSet.Builder` does have an `addAll` method that accepts
+  an `ImmutableSet`. So given `ImmutableSet<String> strings`, we can achieve the
+  effect of `strings.toBuilder()` by doing:
+
+  ```
+  ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+  builder.addAll(strings);
+  ```
 
 There are no requirements on the name of the builder class. Instead of
 `Species.Builder`, it could be `Species.Factory` or `SpeciesBuilder`.
