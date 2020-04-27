@@ -17,9 +17,7 @@ package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
-import static com.google.testing.compile.JavaSourcesSubject.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static com.google.testing.compile.CompilationSubject.assertThat;
 
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.extension.AutoValueExtension;
@@ -29,7 +27,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.truth.Truth;
-import com.google.testing.compile.CompileTester.SuccessfulCompilationClause;
+import com.google.testing.compile.Compilation;
+import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -66,7 +65,7 @@ import org.junit.runners.JUnit4;
 public class ExtensionTest {
 
   @Test
-  public void testExtensionCompilation() throws Exception {
+  public void testExtensionCompilation() {
 
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
@@ -95,15 +94,18 @@ public class ExtensionTest {
             "    return \"dizzle\";\n",
             "  }",
             "}");
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedExtensionOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .hasSourceEquivalentTo(expectedExtensionOutput);
   }
 
   @Test
-  public void testExtensionConsumesProperties() throws Exception {
+  public void testExtensionConsumesProperties() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -168,11 +170,14 @@ public class ExtensionTest {
             "    return h$;",
             "  }",
             "}");
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedExtensionOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.$AutoValue_Baz")
+        .hasSourceEquivalentTo(expectedExtensionOutput);
   }
 
   @Test
@@ -192,10 +197,11 @@ public class ExtensionTest {
             "    public abstract Baz build();",
             "  }",
             "}");
-    assertThat(impl)
-        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .compilesWithoutWarnings();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(impl);
+    assertThat(compilation).succeededWithoutWarnings();
   }
 
   @Test
@@ -216,14 +222,15 @@ public class ExtensionTest {
             "    public abstract Baz build();",
             "  }",
             "}");
-    assertThat(impl)
-        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .compilesWithoutWarnings();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(impl);
+    assertThat(compilation).succeededWithoutWarnings();
   }
 
   @Test
-  public void testCantConsumeTwice() throws Exception {
+  public void testCantConsumeTwice() {
     class ConsumeDizzle extends NonFinalExtension {
       @Override
       public Set<String> consumeProperties(Context context) {
@@ -243,16 +250,18 @@ public class ExtensionTest {
             "  abstract String foo();",
             "  abstract String dizzle();",
             "}");
-    assertThat(impl)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(ext1, ext2)))
-        .failsToCompile()
-        .withErrorContaining("wants to consume a method that was already consumed")
-        .in(impl)
-        .onLine(5);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(ext1, ext2)))
+            .compile(impl);
+    assertThat(compilation)
+        .hadErrorContaining("wants to consume a method that was already consumed")
+        .inFile(impl)
+        .onLineContaining("String dizzle()");
   }
 
   @Test
-  public void testCantConsumeNonExistentProperty() throws Exception {
+  public void testCantConsumeNonExistentProperty() {
     class ConsumeDizzle extends NonFinalExtension {
       @Override
       public Set<String> consumeProperties(Context context) {
@@ -267,16 +276,18 @@ public class ExtensionTest {
             "@AutoValue public abstract class Baz {",
             "  abstract String foo();",
             "}");
-    assertThat(impl)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new ConsumeDizzle())))
-        .failsToCompile()
-        .withErrorContaining("wants to consume a property that does not exist: dizzle")
-        .in(impl)
-        .onLine(3);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new ConsumeDizzle())))
+            .compile(impl);
+    assertThat(compilation)
+        .hadErrorContaining("wants to consume a property that does not exist: dizzle")
+        .inFile(impl)
+        .onLineContaining("@AutoValue public abstract class Baz");
   }
 
   @Test
-  public void testCantConsumeConcreteMethod() throws Exception {
+  public void testCantConsumeConcreteMethod() {
     class ConsumeConcreteMethod extends NonFinalExtension {
       @Override
       public Set<ExecutableElement> consumeMethods(Context context) {
@@ -299,21 +310,20 @@ public class ExtensionTest {
             "  abstract String foo();",
             "  void frob(int x) {}",
             "}");
-    assertThat(impl)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new ConsumeConcreteMethod())))
-        .failsToCompile()
-        .withErrorContaining(
-            "wants to consume a method that is not one of the abstract methods in this class")
-        .in(impl)
-        .onLine(3)
-        .and()
-        .withErrorContaining("frob")
-        .in(impl)
-        .onLine(3);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new ConsumeConcreteMethod())))
+            .compile(impl);
+    assertThat(compilation)
+        .hadErrorContainingMatch(
+            "wants to consume a method that is not one of the abstract methods in this class"
+                + ".*frob\\(int\\)")
+        .inFile(impl)
+        .onLineContaining("@AutoValue public abstract class Baz");
   }
 
   @Test
-  public void testCantConsumeNonExistentMethod() throws Exception {
+  public void testCantConsumeNonExistentMethod() {
     class ConsumeBogusMethod extends NonFinalExtension {
       @Override
       public Set<ExecutableElement> consumeMethods(Context context) {
@@ -337,21 +347,20 @@ public class ExtensionTest {
             "@AutoValue public abstract class Baz {",
             "  abstract String foo();",
             "}");
-    assertThat(impl)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new ConsumeBogusMethod())))
-        .failsToCompile()
-        .withErrorContaining(
-            "wants to consume a method that is not one of the abstract methods in this class")
-        .in(impl)
-        .onLine(3)
-        .and()
-        .withErrorContaining("intValue")
-        .in(impl)
-        .onLine(3);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new ConsumeBogusMethod())))
+            .compile(impl);
+    assertThat(compilation)
+        .hadErrorContainingMatch(
+            "wants to consume a method that is not one of the abstract methods in this class"
+                + ".*intValue\\(\\)")
+        .inFile(impl)
+        .onLineContaining("@AutoValue public abstract class Baz");
   }
 
   @Test
-  public void testExtensionWithoutConsumedPropertiesFails() throws Exception {
+  public void testExtensionWithoutConsumedPropertiesFails() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -365,16 +374,20 @@ public class ExtensionTest {
             "  abstract String dizzle();",
             "  abstract Double[] bad();",
             "}");
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .failsToCompile()
-        .withErrorContaining(
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining(
             "An @AutoValue class cannot define an array-valued property unless "
-                + "it is a primitive array");
+                + "it is a primitive array")
+        .inFile(javaFileObject)
+        .onLineContaining("abstract Double[] bad()");
   }
 
   @Test
-  public void testConsumeMethodWithArguments() throws Exception {
+  public void testConsumeMethodWithArguments() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -387,14 +400,16 @@ public class ExtensionTest {
             "  abstract String foo();",
             "  abstract void writeToParcel(Object parcel, int flags);",
             "}");
-    assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FakeWriteToParcelExtension())))
-        .compilesWithoutWarnings();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(
+                new AutoValueProcessor(ImmutableList.of(new FakeWriteToParcelExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
   }
 
   @Test
-  public void testExtensionWithBuilderCompilation() throws Exception {
+  public void testExtensionWithBuilderCompilation() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -429,11 +444,14 @@ public class ExtensionTest {
             "    return \"dizzle\";\n",
             "  }",
             "}");
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .compilesWithoutError()
-        .and()
-        .generatesSources(expectedExtensionOutput);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .hasSourceEquivalentTo(expectedExtensionOutput);
   }
 
   @Test
@@ -472,16 +490,17 @@ public class ExtensionTest {
             "    return new AutoValue_Baz(foo);",
             "  }",
             "}");
-    assertThat(javaFileObject)
-        .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-        .processedWith(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
-        .compilesWithoutWarnings()
-        .and()
-        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "Side_Baz.java");
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.copyOf(extensions)))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedFile(StandardLocation.SOURCE_OUTPUT, "foo.bar", "Side_Baz.java");
   }
 
   @Test
-  public void testTwoExtensionsBothWantToBeFinal() throws Exception {
+  public void testTwoExtensionsBothWantToBeFinal() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -493,21 +512,23 @@ public class ExtensionTest {
             "public abstract class Baz {",
             "  abstract String foo();",
             "}");
-    assertThat(javaFileObject)
-        .processedWith(
-            new AutoValueProcessor(ImmutableList.of(new FooExtension(), new FinalExtension())))
-        .failsToCompile()
-        .withErrorContaining(
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(
+                new AutoValueProcessor(ImmutableList.of(new FooExtension(), new FinalExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining(
             "More than one extension wants to generate the final class: "
                 + FooExtension.class.getName()
                 + ", "
                 + FinalExtension.class.getName())
-        .in(javaFileObject)
-        .onLine(6);
+        .inFile(javaFileObject)
+        .onLineContaining("public abstract class Baz");
   }
 
   @Test
-  public void testNonFinalThenFinal() throws Exception {
+  public void testNonFinalThenFinal() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -521,17 +542,20 @@ public class ExtensionTest {
             "}");
     FinalExtension finalExtension = new FinalExtension();
     NonFinalExtension nonFinalExtension = new NonFinalExtension();
-    assertFalse(finalExtension.generated);
-    assertFalse(nonFinalExtension.generated);
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(finalExtension, nonFinalExtension)))
-        .compilesWithoutError();
-    assertTrue(finalExtension.generated);
-    assertTrue(nonFinalExtension.generated);
+    assertThat(finalExtension.generated).isFalse();
+    assertThat(nonFinalExtension.generated).isFalse();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(
+                new AutoValueProcessor(ImmutableList.of(finalExtension, nonFinalExtension)))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(finalExtension.generated).isTrue();
+    assertThat(nonFinalExtension.generated).isTrue();
   }
 
   @Test
-  public void testFinalThenNonFinal() throws Exception {
+  public void testFinalThenNonFinal() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -545,17 +569,20 @@ public class ExtensionTest {
             "}");
     FinalExtension finalExtension = new FinalExtension();
     NonFinalExtension nonFinalExtension = new NonFinalExtension();
-    assertFalse(finalExtension.generated);
-    assertFalse(nonFinalExtension.generated);
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(nonFinalExtension, finalExtension)))
-        .compilesWithoutError();
-    assertTrue(finalExtension.generated);
-    assertTrue(nonFinalExtension.generated);
+    assertThat(finalExtension.generated).isFalse();
+    assertThat(nonFinalExtension.generated).isFalse();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(
+                new AutoValueProcessor(ImmutableList.of(nonFinalExtension, finalExtension)))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(finalExtension.generated).isTrue();
+    assertThat(nonFinalExtension.generated).isTrue();
   }
 
   @Test
-  public void testUnconsumedMethod() throws Exception {
+  public void testUnconsumedMethod() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -568,16 +595,18 @@ public class ExtensionTest {
             "  abstract String foo();",
             "  abstract void writeToParcel(Object parcel, int flags);",
             "}");
-    assertThat(javaFileObject)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .failsToCompile()
-        .withErrorContaining("writeToParcel")
-        .and()
-        .withWarningContaining(
+    Compilation compilation =
+        Compiler.javac()
+        .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+        .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("writeToParcel");
+    assertThat(compilation)
+        .hadWarningContaining(
             "Abstract method is neither a property getter nor a Builder converter, "
                 + "and no extension consumed it")
-        .in(javaFileObject)
-        .onLine(8);
+        .inFile(javaFileObject)
+        .onLineContaining("abstract void writeToParcel");
     // The error here comes from the Java compiler rather than AutoValue, so we don't assume
     // much about what it looks like. On the other hand, the warning does come from AutoValue
     // so we know what to expect.
@@ -618,17 +647,15 @@ public class ExtensionTest {
             "@AutoValue",
             "public abstract class Baz {",
             "}");
-    SuccessfulCompilationClause success =
-        assertThat(javaFileObject)
-            .withCompilerOptions("-Xlint:-processing", "-implicit:class")
-            .processedWith(new AutoValueProcessor(badJarLoader))
-            .compilesWithoutError();
-    success.withWarningContaining(
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(badJarLoader))
+            .compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation).hadWarningContaining(
         "This may be due to a corrupt jar file in the compiler's classpath.\n  "
             + ServiceConfigurationError.class.getName());
-    success
-        .and()
-        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
+    assertThat(compilation).generatedSourceFile("foo.bar.AutoValue_Baz");
   }
 
   private static final String CUSTOM_OPTION = "customAnnotation.customOption";
@@ -920,9 +947,11 @@ public class ExtensionTest {
           assertThat(listType.toString()).isEqualTo("java.util.List<java.lang.String>");
         };
     ContextCheckingExtension extension = new ContextCheckingExtension(checker);
-    assertThat(autoValueClass, parent)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
-        .compilesWithoutError();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(extension)))
+            .compile(autoValueClass, parent);
+    assertThat(compilation).succeededWithoutWarnings();
   }
 
   @Test
@@ -941,11 +970,13 @@ public class ExtensionTest {
           assertThat(context.finalAutoValueClassName()).isEqualTo("foo.bar.AutoValue_Baz");
         };
     ContextCheckingExtension extension = new ContextCheckingExtension(checker);
-    assertThat(autoValueClass)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(extension, new FinalExtension())))
-        .compilesWithoutError()
-        .and()
-        .generatesFileNamed(StandardLocation.SOURCE_OUTPUT, "foo.bar", "AutoValue_Baz.java");
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(
+                new AutoValueProcessor(ImmutableList.of(extension, new FinalExtension())))
+            .compile(autoValueClass);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation).generatedSourceFile("foo.bar.AutoValue_Baz");
     // ContextCheckingExtension doesn't generate any code, so that name must be the class generated
     // by FinalExtension.
   }
@@ -1037,9 +1068,11 @@ public class ExtensionTest {
               .isEqualTo("listBuilder");
         };
     ContextCheckingExtension extension = new ContextCheckingExtension(checker);
-    assertThat(autoValueClass, parent)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
-        .compilesWithoutError();
+    Compilation compilation =
+        Compiler.javac()
+        .withProcessors(new AutoValueProcessor(ImmutableList.of(extension)))
+        .compile(autoValueClass, parent);
+    assertThat(compilation).succeededWithoutWarnings();
   }
 
   @Test
@@ -1084,9 +1117,11 @@ public class ExtensionTest {
           assertThat(builderContext.propertyBuilders()).isEmpty();
         };
     ContextCheckingExtension extension = new ContextCheckingExtension(checker);
-    assertThat(autoValueClass)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
-        .compilesWithoutError();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(extension)))
+            .compile(autoValueClass);
+    assertThat(compilation).succeededWithoutWarnings();
   }
 
   // https://github.com/google/auto/issues/809
@@ -1119,12 +1154,14 @@ public class ExtensionTest {
           assertThat(context.builder().get().setters()).isEmpty();
         };
     ContextCheckingExtension extension = new ContextCheckingExtension(checker);
-    assertThat(autoValueClass)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(extension)))
-        .failsToCompile()
-        .withErrorContaining("Parameter type java.lang.Integer of setter method")
-        .in(autoValueClass)
-        .onLine(14);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(extension)))
+            .compile(autoValueClass);
+    assertThat(compilation)
+        .hadErrorContaining("Parameter type java.lang.Integer of setter method")
+        .inFile(autoValueClass)
+        .onLineContaining("Builder listProperty(Integer listPropertyValues)");
   }
 
   private interface ContextChecker extends Consumer<AutoValueExtension.Context> {}

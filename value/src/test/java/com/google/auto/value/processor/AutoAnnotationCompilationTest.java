@@ -17,12 +17,10 @@ package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth8.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
-import static org.junit.Assert.assertTrue;
 
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
-import java.io.File;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -462,22 +460,14 @@ public class AutoAnnotationCompilationTest {
         Compiler.javac()
             .withProcessors(new AutoAnnotationProcessor())
             .compile(erroneousJavaFileObject);
-    assertThat(compilation).hadErrorContaining("NotAutoAnnotation");
+    assertThat(compilation)
+        .hadErrorContaining("NotAutoAnnotation")
+        .inFile(erroneousJavaFileObject)
+        .onLineContaining("@NotAutoAnnotation");
     assertThat(
             compilation.errors().stream()
                 .map(diag -> diag.getMessage(null))
                 .filter(m -> m.contains("static")))
         .isEmpty();
-  }
-
-  private static void removeDirectory(File dir) {
-    for (File file : dir.listFiles()) {
-      if (file.isDirectory()) {
-        removeDirectory(file);
-      } else {
-        assertTrue(file.delete());
-      }
-    }
-    assertTrue(dir.delete());
   }
 }
