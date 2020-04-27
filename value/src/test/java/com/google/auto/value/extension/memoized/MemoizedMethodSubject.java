@@ -16,14 +16,15 @@
 
 package com.google.auto.value.extension.memoized;
 
-import static com.google.common.truth.Truth.assertAbout;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.testing.compile.Compiler.javac;
 
 import com.google.auto.value.extension.memoized.processor.MemoizeExtension;
 import com.google.auto.value.processor.AutoValueProcessor;
 import com.google.common.collect.ImmutableList;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
+import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
 
@@ -46,12 +47,13 @@ final class MemoizedMethodSubject extends Subject {
             "  abstract String string();",
             actual,
             "}");
-    assertAbout(javaSource())
-        .that(file)
-        .processedWith(new AutoValueProcessor(ImmutableList.of(new MemoizeExtension())))
-        .failsToCompile()
-        .withErrorContaining(error)
-        .in(file)
-        .onLine(6);
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new MemoizeExtension())))
+            .compile(file);
+    assertThat(compilation)
+        .hadErrorContaining(error)
+        .inFile(file)
+        .onLineContaining(actual);
   }
 }
