@@ -432,7 +432,11 @@ class BuilderMethodClassifier {
         MoreTypes.asExecutable(
             typeUtils.asMemberOf(MoreTypes.asDeclared(builderType.asType()), setter));
     TypeMirror parameterType = finalSetter.getParameterTypes().get(0);
-    if (typeUtils.isSameType(parameterType, targetType)) {
+    // Two types are assignable to each other if they are the same type, or if one is primitive and
+    // the other is the corresponding boxed type. There might be other cases where this is true, but
+    // we're likely to want to accept those too.
+    if (typeUtils.isAssignable(parameterType, targetType)
+        && typeUtils.isAssignable(targetType, parameterType)) {
       if (nullableParameter) {
         boolean nullableProperty =
             nullableAnnotationFor(valueGetter, valueGetter.getReturnType()).isPresent();

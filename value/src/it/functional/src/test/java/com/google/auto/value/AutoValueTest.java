@@ -1571,6 +1571,51 @@ public class AutoValueTest {
   }
 
   @AutoValue
+  public abstract static class PrimitiveAndBoxed {
+    public abstract int anInt();
+
+    @Nullable
+    public abstract Integer aNullableInteger();
+
+    public abstract Integer aNonNullableInteger();
+
+    public abstract Builder toBuilder();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_PrimitiveAndBoxed.Builder();
+    }
+
+    @AutoValue.Builder
+    public interface Builder {
+      Builder setAnInt(Integer x);
+
+      Builder setANullableInteger(int x);
+
+      Builder setANonNullableInteger(int x);
+
+      PrimitiveAndBoxed build();
+    }
+  }
+
+  @Test
+  public void testPrimitiveAndBoxed() {
+    PrimitiveAndBoxed instance1 =
+        PrimitiveAndBoxed.builder().setAnInt(17).setANonNullableInteger(23).build();
+    assertThat(instance1.anInt()).isEqualTo(17);
+    assertThat(instance1.aNullableInteger()).isNull();
+    assertThat(instance1.aNonNullableInteger()).isEqualTo(23);
+
+    PrimitiveAndBoxed instance2 = instance1.toBuilder().setANullableInteger(5).build();
+    assertThat(instance2.aNullableInteger()).isEqualTo(5);
+
+    try {
+      instance1.toBuilder().setAnInt(null);
+      fail();
+    } catch (NullPointerException expected) {
+    }
+  }
+
+  @AutoValue
   public abstract static class OptionalPropertiesWithBuilder {
     public abstract com.google.common.base.Optional<String> optionalString();
 
