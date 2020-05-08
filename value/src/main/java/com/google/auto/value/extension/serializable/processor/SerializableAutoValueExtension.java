@@ -24,7 +24,6 @@ import com.google.auto.common.GeneratedAnnotationSpecs;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.extension.AutoValueExtension;
-import com.google.auto.value.extension.AutoValueExtension.Context;
 import com.google.auto.value.extension.serializable.serializer.SerializerFactoryLoader;
 import com.google.auto.value.extension.serializable.serializer.interfaces.Serializer;
 import com.google.auto.value.extension.serializable.serializer.interfaces.SerializerFactory;
@@ -45,6 +44,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -66,6 +66,11 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
   @Override
   public boolean applicable(Context context) {
     return hasSerializableInterface(context) && hasSerializableAutoValueAnnotation(context);
+  }
+
+  @Override
+  public IncrementalExtensionType incrementalType(ProcessingEnvironment processingEnvironment) {
+    return IncrementalExtensionType.ISOLATING;
   }
 
   @Override
