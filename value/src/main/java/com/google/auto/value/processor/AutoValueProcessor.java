@@ -88,7 +88,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   @VisibleForTesting
   public AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
     super(AUTO_VALUE_NAME);
-    this.extensions = ImmutableList.<AutoValueExtension>copyOf(extensions);
+    this.extensions = ImmutableList.copyOf(extensions);
     this.loaderForExtensions = null;
   }
 
@@ -98,25 +98,30 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
   private ImmutableList<AutoValueExtension> extensions;
   private final ClassLoader loaderForExtensions;
 
+  @VisibleForTesting
+  static ImmutableList<AutoValueExtension> extensionsFromLoader(ClassLoader loader) {
+    return ImmutableList.copyOf(
+        Iterables.filter(
+            SimpleServiceLoader.load(AutoValueExtension.class, loader),
+            ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION)));
+  }
+
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
 
     if (extensions == null) {
       try {
-        extensions = ImmutableList.copyOf(
-            Iterables.filter(
-                SimpleServiceLoader.load(AutoValueExtension.class, loaderForExtensions),
-                ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION)));
-      } catch (Throwable t) {
+        extensions = extensionsFromLoader(loaderForExtensions);
+      } catch (RuntimeException | Error e) {
         StringBuilder warning = new StringBuilder();
         warning.append(
-            "An exception occurred while looking for AutoValue extensions. "
-                + "No extensions will function.");
-        if (t instanceof ServiceConfigurationError) {
+            "An exception occurred while looking for AutoValue extensions."
+                + " No extensions will function.");
+        if (e instanceof ServiceConfigurationError) {
           warning.append(" This may be due to a corrupt jar file in the compiler's classpath.");
         }
-        warning.append("\n").append(Throwables.getStackTraceAsString(t));
+        warning.append("\n").append(Throwables.getStackTraceAsString(e));
         errorReporter().reportWarning(warning.toString(), null);
         extensions = ImmutableList.of();
       }
