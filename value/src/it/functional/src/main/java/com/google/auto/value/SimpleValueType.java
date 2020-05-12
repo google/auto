@@ -28,14 +28,14 @@ public abstract class SimpleValueType {
   // The getters here are formatted as an illustration of what getters typically look in real
   // classes. In particular they have doc comments.
 
-  /** @return A string that is a nullable string. */
+  /** Returns a string that is a nullable string. */
   @Nullable
   public abstract String string();
 
-  /** @return An integer that is an integer. */
+  /** Returns an integer that is an integer. */
   public abstract int integer();
 
-  /** @return A non-null map where the keys are strings and the values are longs. */
+  /** Returns a non-null map where the keys are strings and the values are longs. */
   public abstract Map<String, Long> map();
 
   public static SimpleValueType create(
