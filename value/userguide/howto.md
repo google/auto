@@ -151,8 +151,8 @@ warning never to mutate the object returned.
 @AutoValue
 public abstract class MutableExample {
   public static MutableExample create(MutablePropertyType ouch) {
-    // Replace `.clone` below with the right copying code for this type
-    return new AutoValue_MutableExample(ouch.clone());
+    // Replace `MutablePropertyType.copyOf()` below with the right copying code for this type
+    return new AutoValue_MutableExample(MutablePropertyType.copyOf(ouch));
   }
 
   /**
