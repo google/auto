@@ -197,11 +197,11 @@ final class $className implements $annotationName {
   #elseif ($m.kind == "ARRAY")
     #if ($params.containsKey($m.toString()))
     `java.util.Arrays`.equals($m,
-        (that instanceof $className)
+        that instanceof $className
             ? (($className) that).$m
             : that.${m}()) ##
     #else ## default value, so if |that| is also a $className then it has the same constant value
-    that instanceof $className || `java.util.Arrays`.equals($m, that.${m}())
+    (that instanceof $className || `java.util.Arrays`.equals($m, that.${m}()))
     #end
   #else
     ${m}.equals(that.${m}()) ##
@@ -224,7 +224,7 @@ final class $className implements $annotationName {
       $annotationName that = ($annotationName) o;
       return ##
            #foreach ($m in $members)
-           (#memberEqualsThatExpression ($m))##
+           #memberEqualsThatExpression ($m)##
              #if ($foreach.hasNext)
 
            && ##
@@ -247,7 +247,7 @@ final class $className implements $annotationName {
   #elseif ($m.kind == "DOUBLE")
     (int) ((Double.doubleToLongBits($m) >>> 32) ^ Double.doubleToLongBits($m)) ##
   #elseif ($m.kind == "BOOLEAN")
-    $m ? 1231 : 1237 ##
+    ($m ? 1231 : 1237) ##
   #elseif ($m.kind.primitive)
     $m ##
   #elseif ($m.kind == "ARRAY")
@@ -278,7 +278,7 @@ final class $className implements $annotationName {
     #foreach ($m in $members)
       #if (!$invariableHashes.contains($m.toString()))
 
-        + ($m.nameHash ^ (#memberHashCodeExpression($m)))
+        + ($m.nameHash ^ #memberHashCodeExpression($m))
             // $m.nameHash is 127 * "${m}".hashCode()
       #end
     #end
