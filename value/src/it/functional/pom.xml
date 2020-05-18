@@ -173,48 +173,6 @@
 
   <profiles>
     <profile>
-      <id>eclipse</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.7.0</version>
-            <dependencies>
-              <dependency>
-                <groupId>org.codehaus.plexus</groupId>
-                <artifactId>plexus-java</artifactId>
-                <version>0.9.4</version>
-              </dependency>
-            </dependencies>
-            <configuration>
-              <source>${java.specification.version}</source>
-              <target>${java.specification.version}</target>
-              <compilerArgs>
-                <arg>-Xlint:all</arg>
-                <arg>-encoding</arg>
-                <arg>utf8</arg>
-              </compilerArgs>
-              <showWarnings>true</showWarnings>
-              <showDeprecation>true</showDeprecation>
-              <testExcludes>
-                <exclude>${exclude.tests}</exclude>
-              </testExcludes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>exclude-java8-tests</id>
-      <activation>
-        <jdk>(,1.7]</jdk>
-      </activation>
-      <properties>
-        <exclude.tests>**/AutoValueJava8Test.java</exclude.tests>
-      </properties>
-    </profile>
-    <profile>
       <id>jdk8</id>
       <activation>
         <jdk>1.8</jdk>
