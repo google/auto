@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.OptionalInt;
@@ -290,7 +291,7 @@ final class TypeEncoder {
 
     @Override
     public StringBuilder visitError(ErrorType t, StringBuilder p) {
-      throw new MissingTypeException();
+      throw new MissingTypeException(t);
     }
   }
 

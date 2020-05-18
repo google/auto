@@ -20,6 +20,8 @@ import static java.util.stream.Collectors.toCollection;
 import static javax.lang.model.element.Modifier.PRIVATE;
 
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.collect.ImmutableSortedSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -298,7 +300,7 @@ final class TypeSimplifier {
     Map<String, Name> simpleNamesToQualifiedNames = new HashMap<>();
     for (TypeMirror type : types) {
       if (type.getKind() == TypeKind.ERROR) {
-        throw new MissingTypeException();
+        throw new MissingTypeException(MoreTypes.asError(type));
       }
       String simpleName = typeUtils.asElement(type).getSimpleName().toString();
       /*
