@@ -24,6 +24,7 @@ import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
+import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -43,7 +44,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
@@ -135,12 +135,18 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     AnnotationValue kindValue =
         AnnotationMirrors.getAnnotationValue(oneOfAnnotation.get(), "value");
     Object value = kindValue.getValue();
-    if (value instanceof TypeMirror && ((TypeMirror) value).getKind().equals(TypeKind.DECLARED)) {
-      return MoreTypes.asDeclared((TypeMirror) value);
-    } else {
-      // This is presumably because the referenced type doesn't exist.
-      throw new MissingTypeException();
+    if (value instanceof TypeMirror) {
+      TypeMirror kindType = (TypeMirror) value;
+      switch (kindType.getKind()) {
+        case DECLARED:
+          return MoreTypes.asDeclared(kindType);
+        case ERROR:
+          throw new MissingTypeException(MoreTypes.asError(kindType));
+        default:
+          break;
+      }
     }
+    throw new MissingTypeException(null);
   }
 
   private ImmutableMap<String, String> propertyToKindMap(

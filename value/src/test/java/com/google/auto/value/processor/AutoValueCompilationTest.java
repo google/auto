@@ -21,12 +21,15 @@ import static com.google.testing.compile.CompilationSubject.compilations;
 import static com.google.testing.compile.Compiler.javac;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Expect;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
@@ -3214,6 +3217,118 @@ public class AutoValueCompilationTest {
             .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(object, string, integer, thread, test);
     assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  // This is a regression test for the problem described in
+  // https://github.com/google/auto/issues/847#issuecomment-629857642.
+  @Test
+  public void generatedParentWithGeneratedGetterButSetterInBuilder() {
+    JavaFileObject test =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Test",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import foo.baz.GeneratedParent;",
+            "import foo.baz.GeneratedPropertyType;",
+            "import java.util.Optional;",
+            "",
+            "@AutoValue",
+            "public abstract class Test extends GeneratedParent {",
+            "  public abstract String string();",
+            "",
+            "  public static Builder builder() {",
+            "    return new AutoValue_Test.Builder();",
+            "  }",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder extends GeneratedParent.Builder<Builder> {",
+            "    public abstract Builder setString(String x);",
+            "    public abstract Builder setGenerated(GeneratedPropertyType x);",
+            "    public abstract Test build();",
+            "  }",
+            "}");
+    AutoValueProcessor autoValueProcessor = new AutoValueProcessor();
+    GeneratedParentProcessor generatedParentProcessor =
+        new GeneratedParentProcessor(autoValueProcessor, expect);
+    Compilation compilation =
+        javac()
+            .withProcessors(autoValueProcessor, generatedParentProcessor)
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(test);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Test")
+        .contentsAsUtf8String()
+        .contains("  public int integer() {");
+  }
+
+  @SupportedAnnotationTypes("*")
+  private static class GeneratedParentProcessor extends AbstractProcessor {
+    private static final String GENERATED_PARENT =
+        String.join(
+            "\n",
+            "package foo.baz;",
+            "",
+            "public abstract class GeneratedParent {",
+            "  public abstract int integer();",
+            "  public abstract GeneratedPropertyType generated();",
+            "",
+            "  public abstract static class Builder<B extends Builder<B>> {",
+            "    public abstract B setInteger(int x);",
+            "  }",
+            "}");
+    private static final String GENERATED_PROPERTY_TYPE =
+        String.join(
+            "\n",
+            "package foo.baz;",
+            "",
+            "public class GeneratedPropertyType {}");
+    private static final ImmutableMap<String, String> GENERATED_TYPES =
+        ImmutableMap.of(
+            "foo.baz.GeneratedParent", GENERATED_PARENT,
+            "foo.baz.GeneratedPropertyType", GENERATED_PROPERTY_TYPE);
+
+    private final AutoValueProcessor autoValueProcessor;
+    private final Expect expect;
+
+    GeneratedParentProcessor(AutoValueProcessor autoValueProcessor, Expect expect) {
+      this.autoValueProcessor = autoValueProcessor;
+      this.expect = expect;
+    }
+
+    private boolean generated;
+
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+      if (!generated) {
+        generated = true;
+        // Check that AutoValueProcessor has already run and deferred the foo.bar.Test type because
+        // we haven't generated its parent yet.
+        expect.that(autoValueProcessor.deferredTypeNames()).contains("foo.bar.Test");
+        GENERATED_TYPES.forEach(
+            (typeName, source) -> {
+              try {
+                JavaFileObject generated =
+                    processingEnv
+                        .getFiler()
+                        .createSourceFile(typeName);
+                try (Writer writer = generated.openWriter()) {
+                  writer.write(source);
+                }
+              } catch (IOException e) {
+                throw new UncheckedIOException(e);
+              }
+            }
+        );
+      }
+      return false;
+    }
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
   }
 
   private String sorted(String... imports) {

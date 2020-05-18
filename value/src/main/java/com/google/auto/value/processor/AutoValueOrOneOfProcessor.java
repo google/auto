@@ -31,6 +31,7 @@ import static java.util.stream.Collectors.toSet;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
+import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
@@ -123,6 +124,15 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   final Elements elementUtils() {
     return processingEnv.getElementUtils();
+  }
+
+  /**
+   * Qualified names of {@code @AutoValue} or {@code AutoOneOf} classes that we attempted to process
+   * but had to abandon because we needed other types that they referenced and those other types
+   * were missing. This is used by tests.
+   */
+  final ImmutableList<String> deferredTypeNames() {
+    return ImmutableList.copyOf(deferredTypeNames);
   }
 
   @Override
@@ -693,14 +703,17 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
   /**
    * Returns the subset of all abstract methods in the given set of methods. A given method
-   * signature is only mentioned once, even if it is inherited on more than one path.
+   * signature is only mentioned once, even if it is inherited on more than one path. If any of the
+   * abstract methods has a return type or parameter type that is not currently defined then this
+   * method will throw an exception that will cause us to defer processing of the current class
+   * until a later annotation-processing round.
    */
-  static ImmutableSet<ExecutableElement> abstractMethodsIn(
-      ImmutableSet<ExecutableElement> methods) {
+  static ImmutableSet<ExecutableElement> abstractMethodsIn(Iterable<ExecutableElement> methods) {
     Set<Name> noArgMethods = new HashSet<>();
     ImmutableSet.Builder<ExecutableElement> abstracts = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)) {
+        MissingTypes.deferIfMissingTypesIn(method);
         boolean hasArgs = !method.getParameters().isEmpty();
         if (hasArgs || noArgMethods.add(method.getSimpleName())) {
           // If an abstract method with the same signature is inherited on more than one path,

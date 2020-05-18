@@ -21,6 +21,7 @@ import static com.google.testing.compile.Compiler.javac;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.testing.compile.Compilation;

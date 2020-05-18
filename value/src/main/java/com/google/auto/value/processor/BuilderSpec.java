@@ -51,7 +51,6 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 
 /**
@@ -257,8 +256,7 @@ class BuilderSpec {
       if (!optionalClassifier.isPresent()) {
         return;
       }
-      for (ExecutableElement method :
-               ElementFilter.methodsIn(builderTypeElement.getEnclosedElements())) {
+      for (ExecutableElement method : methodsIn(builderTypeElement.getEnclosedElements())) {
         if (method.getSimpleName().contentEquals("builder")
                 && method.getModifiers().contains(Modifier.STATIC)
                 && method.getAnnotationMirrors().isEmpty()) {
@@ -480,14 +478,20 @@ class BuilderSpec {
     return true;
   }
 
-  // Return a set of all abstract methods in the given TypeElement or inherited from ancestors.
-  private Set<ExecutableElement> abstractMethods(TypeElement typeElement) {
+  /**
+   * Returns a set of all abstract methods in the given TypeElement or inherited from ancestors. If
+   * any of the abstract methods has a return type or parameter type that is not currently defined
+   * then this method will throw an exception that will cause us to defer processing of the current
+   * class until a later annotation-processing round.
+   */
+  private ImmutableSet<ExecutableElement> abstractMethods(TypeElement typeElement) {
     Set<ExecutableElement> methods =
         getLocalAndInheritedMethods(
             typeElement, processingEnv.getTypeUtils(), processingEnv.getElementUtils());
     ImmutableSet.Builder<ExecutableElement> abstractMethods = ImmutableSet.builder();
     for (ExecutableElement method : methods) {
       if (method.getModifiers().contains(Modifier.ABSTRACT)) {
+        MissingTypes.deferIfMissingTypesIn(method);
         abstractMethods.add(method);
       }
     }
