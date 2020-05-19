@@ -187,13 +187,16 @@ final class $className implements $annotationName {
 
 ## equals
 
+## An expression that compares `this.something` against `that.something()`.
+## It can appear in a chain of && conditions, so if that would cause precedence
+## problems the expression needs to be parenthesized.
 #macro (memberEqualsThatExpression $m)
   #if ($m.kind == "FLOAT")
     Float.floatToIntBits($m) == Float.floatToIntBits(that.${m}()) ##
   #elseif ($m.kind == "DOUBLE")
     Double.doubleToLongBits($m) == Double.doubleToLongBits(that.${m}()) ##
   #elseif ($m.kind.primitive)
-    $m == that.${m}() ##
+    ($m == that.${m}()) ## parens not strictly needed but avoid confusion when comparing booleans
   #elseif ($m.kind == "ARRAY")
     #if ($params.containsKey($m.toString()))
     `java.util.Arrays`.equals($m,
@@ -201,7 +204,7 @@ final class $className implements $annotationName {
             ? (($className) that).$m
             : that.${m}()) ##
     #else ## default value, so if |that| is also a $className then it has the same constant value
-    that instanceof $className || `java.util.Arrays`.equals($m, that.${m}())
+    (that instanceof $className || `java.util.Arrays`.equals($m, that.${m}()))
     #end
   #else
     ${m}.equals(that.${m}()) ##
@@ -224,7 +227,7 @@ final class $className implements $annotationName {
       $annotationName that = ($annotationName) o;
       return ##
            #foreach ($m in $members)
-           (#memberEqualsThatExpression ($m))##
+           #memberEqualsThatExpression ($m)##
              #if ($foreach.hasNext)
 
            && ##
@@ -239,6 +242,9 @@ final class $className implements $annotationName {
 
 ## hashCode
 
+## An expression that returns the hashCode of `this.something`.
+## It appears on the right-hand side of an ^ operator, so if that would cause precedence
+## problems the expression needs to be parenthesized.
 #macro (memberHashCodeExpression $m)
   #if ($m.kind == "LONG")
     (int) (($m >>> 32) ^ $m) ##
@@ -247,7 +253,7 @@ final class $className implements $annotationName {
   #elseif ($m.kind == "DOUBLE")
     (int) ((Double.doubleToLongBits($m) >>> 32) ^ Double.doubleToLongBits($m)) ##
   #elseif ($m.kind == "BOOLEAN")
-    $m ? 1231 : 1237 ##
+    ($m ? 1231 : 1237) ##
   #elseif ($m.kind.primitive)
     $m ##
   #elseif ($m.kind == "ARRAY")
@@ -278,7 +284,7 @@ final class $className implements $annotationName {
     #foreach ($m in $members)
       #if (!$invariableHashes.contains($m.toString()))
 
-        + ($m.nameHash ^ (#memberHashCodeExpression($m)))
+        + ($m.nameHash ^ #memberHashCodeExpression($m))
             // $m.nameHash is 127 * "${m}".hashCode()
       #end
     #end
