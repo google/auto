@@ -72,7 +72,7 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   void processType(TypeElement autoOneOfType) {
     if (autoOneOfType.getKind() != ElementKind.CLASS) {
       errorReporter()
-          .abortWithError("@" + AUTO_ONE_OF_NAME + " only applies to classes", autoOneOfType);
+          .abortWithError(autoOneOfType, "@" + AUTO_ONE_OF_NAME + " only applies to classes");
     }
     checkModifiersIfNested(autoOneOfType);
     DeclaredType kindMirror = mirrorForKindType(autoOneOfType);
@@ -128,9 +128,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       // but it has happened in the past and can crash the compiler.
       errorReporter()
           .abortWithError(
+              autoOneOfType,
               "annotation processor for @AutoOneOf was invoked with a type"
-                  + " that does not have that annotation; this is probably a compiler bug",
-              autoOneOfType);
+                  + " that does not have that annotation; this is probably a compiler bug");
     }
     AnnotationValue kindValue =
         AnnotationMirrors.getAnnotationValue(oneOfAnnotation.get(), "value");
@@ -183,8 +183,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
           if (!transformedEnumConstants.containsKey(transformed)) {
             errorReporter()
                 .reportError(
-                    "Enum has no constant with name corresponding to property '" + property + "'",
-                    kindElement);
+                    kindElement,
+                    "Enum has no constant with name corresponding to property '%s'",
+                    property);
           }
         });
     // Enum constants that have no property
@@ -193,10 +194,9 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
           if (!transformedPropertyNames.containsKey(transformed)) {
             errorReporter()
                 .reportError(
-                    "Name of enum constant '"
-                        + constant.getSimpleName()
-                        + "' does not correspond to any property name",
-                    constant);
+                    constant,
+                    "Name of enum constant '%s' does not correspond to any property name",
+                    constant.getSimpleName());
           }
         });
     throw new AbortProcessingException();
@@ -220,15 +220,17 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       case 0:
         errorReporter()
             .reportError(
-                autoOneOfType + " must have a no-arg abstract method returning " + kindMirror,
-                autoOneOfType);
+                autoOneOfType,
+                "%s must have a no-arg abstract method returning %s",
+                autoOneOfType,
+                kindMirror);
         break;
       case 1:
         return Iterables.getOnlyElement(kindGetters);
       default:
         for (ExecutableElement getter : kindGetters) {
           errorReporter()
-              .reportError("More than one abstract method returns " + kindMirror, getter);
+              .reportError(getter, "More than one abstract method returns %s", kindMirror);
         }
     }
     throw new AbortProcessingException();
@@ -252,8 +254,7 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
         // implement this alien method.
         errorReporter()
             .reportWarning(
-                "Abstract methods in @AutoOneOf classes must have no parameters",
-                method);
+                method, "Abstract methods in @AutoOneOf classes must have no parameters");
       }
     }
     errorReporter().abortIfAnyError();
@@ -277,7 +278,7 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   @Override
   Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
     if (nullableAnnotationFor(propertyMethod, propertyMethod.getReturnType()).isPresent()) {
-      errorReporter().reportError("@AutoOneOf properties cannot be @Nullable", propertyMethod);
+      errorReporter().reportError(propertyMethod, "@AutoOneOf properties cannot be @Nullable");
     }
     return Optional.empty();
   }
