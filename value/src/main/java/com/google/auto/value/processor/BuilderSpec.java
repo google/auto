@@ -447,11 +447,9 @@ class BuilderSpec {
 
     if (!sameTypeParameters(autoValueClass, builderTypeElement)) {
       errorReporter.reportError(
-          "Type parameters of "
-              + builderTypeElement
-              + " must have same names and bounds as "
-              + "type parameters of "
-              + autoValueClass,
+          String.format(
+              "Type parameters of %s must have same names and bounds as type parameters of %s",
+              builderTypeElement, autoValueClass),
           builderTypeElement);
       return Optional.empty();
     }

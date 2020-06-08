@@ -1056,6 +1056,11 @@ public class AutoValueTest {
     String value();
   }
 
+  @AutoAnnotation
+  private static MyAnnotation myAnnotation(String value) {
+    return new AutoAnnotation_AutoValueTest_myAnnotation(value);
+  }
+
   @AutoValue
   abstract static class PrimitiveArrays {
     @SuppressWarnings("mutable")
@@ -3364,5 +3369,52 @@ public class AutoValueTest {
             .getDeclaredMethod("setInnerWithTypeParam", OuterWithTypeParam.InnerWithTypeParam.class)
             .getGenericParameterTypes()[0];
     assertThat(generatedBuilderParamType).isEqualTo(originalReturnType);
+  }
+
+  @AutoValue
+  abstract static class BuilderAnnotationsNotCopied {
+    abstract String foo();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_BuilderAnnotationsNotCopied.Builder();
+    }
+
+    @AutoValue.Builder
+    @MyAnnotation("thing")
+    abstract static class Builder {
+      abstract Builder setFoo(String x);
+      abstract BuilderAnnotationsNotCopied build();
+    }
+  }
+
+  @Test
+  public void builderAnnotationsNotCopiedByDefault() {
+    BuilderAnnotationsNotCopied.Builder builder = BuilderAnnotationsNotCopied.builder();
+    assertThat(builder.getClass().getAnnotations()).isEmpty();
+    assertThat(builder.setFoo("foo").build().foo()).isEqualTo("foo");
+  }
+
+  @AutoValue
+  abstract static class BuilderAnnotationsCopied {
+    abstract String foo();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_BuilderAnnotationsCopied.Builder();
+    }
+
+    @AutoValue.Builder
+    @AutoValue.CopyAnnotations
+    @MyAnnotation("thing")
+    abstract static class Builder {
+      abstract Builder setFoo(String x);
+      abstract BuilderAnnotationsCopied build();
+    }
+  }
+
+  @Test
+  public void builderAnnotationsCopiedIfRequested() {
+    BuilderAnnotationsCopied.Builder builder = BuilderAnnotationsCopied.builder();
+    assertThat(builder.getClass().getAnnotations()).asList().containsExactly(myAnnotation("thing"));
+    assertThat(builder.setFoo("foo").build().foo()).isEqualTo("foo");
   }
 }

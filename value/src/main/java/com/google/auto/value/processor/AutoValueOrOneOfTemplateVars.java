@@ -56,9 +56,10 @@ abstract class AutoValueOrOneOfTemplateVars extends TemplateVars {
   String simpleClassName;
 
   /**
-   * The full spelling of any annotation to add to this class, or an empty list if there are none. A
-   * non-empty value might look something like {@code
-   * "@com.google.common.annotations.GwtCompatible(serializable = true)"}.
+   * The full spelling of any annotations to add to this class, or an empty list if there are none.
+   * A non-empty value might look something like {@code
+   * "@`com.google.common.annotations.GwtCompatible`(serializable = true)"}. The {@code ``} marks
+   * are explained in {@link TypeEncoder}.
    */
   ImmutableList<String> annotations;
 

@@ -625,6 +625,10 @@ final class AutoValue_Example extends Example {
 }
 ```
 
+Applying `@AutoValue.CopyAnnotations` to an `@AutoValue.Builder` class like
+`Foo.Builder` similarly causes annotations on that class to be copied to the
+generated subclass `AutoValue_Foo.Builder`.
+
 ### Copying to the generated method
 
 For historical reasons, annotations on methods of an `@AutoValue`-annotated
