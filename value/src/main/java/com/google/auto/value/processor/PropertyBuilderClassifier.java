@@ -197,8 +197,8 @@ class PropertyBuilderClassifier {
     TypeMirror barBuilderTypeMirror = builderMethodClassifier.builderMethodReturnType(method);
     if (barBuilderTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
-          "Method looks like a property builder, but its return type is not a class or interface",
-          method);
+          method,
+          "Method looks like a property builder, but its return type is not a class or interface");
       return Optional.empty();
     }
     DeclaredType barBuilderDeclaredType = MoreTypes.asDeclared(barBuilderTypeMirror);
@@ -209,16 +209,17 @@ class PropertyBuilderClassifier {
     TypeMirror barTypeMirror = getterToPropertyType.get(barGetter);
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
-          "Method looks like a property builder, but the type of property "
-              + property
-              + " is not a class or interface",
-          method);
+          method,
+          "Method looks like a property builder, but the type of property %s is not a class or"
+              + " interface",
+          property);
       return Optional.empty();
     }
     if (isNullable(barGetter)) {
       errorReporter.reportError(
-          "Property " + property + " has a property builder so it cannot be @Nullable",
-          barGetter);
+          barGetter,
+          "Property %s has a property builder so it cannot be @Nullable",
+          property);
     }
     TypeElement barTypeElement = MoreTypes.asTypeElement(barTypeMirror);
     Map<String, ExecutableElement> barNoArgMethods = noArgMethodsOf(barTypeElement);
@@ -227,10 +228,10 @@ class PropertyBuilderClassifier {
     ExecutableElement build = barBuilderNoArgMethods.get("build");
     if (build == null || build.getModifiers().contains(Modifier.STATIC)) {
       errorReporter.reportError(
-          "Method looks like a property builder, but it returns "
-              + barBuilderTypeElement
-              + " which does not have a non-static build() method",
-          method);
+          method,
+          "Method looks like a property builder, but it returns %s which does not have a"
+              + " non-static build() method",
+          barBuilderTypeElement);
       return Optional.empty();
     }
 
@@ -239,15 +240,12 @@ class PropertyBuilderClassifier {
     TypeMirror buildType = eclipseHack.methodReturnType(build, barBuilderDeclaredType);
     if (!MoreTypes.equivalence().equivalent(barTypeMirror, buildType)) {
       errorReporter.reportError(
-          "Property builder for "
-              + property
-              + " has type "
-              + barBuilderTypeElement
-              + " whose build() method returns "
-              + buildType
-              + " instead of "
-              + barTypeMirror,
-          method);
+          method,
+          "Property builder for %s has type %s whose build() method returns %s instead of %s",
+          property,
+          barBuilderTypeElement,
+          buildType,
+          barTypeMirror);
       return Optional.empty();
     }
 
@@ -255,13 +253,13 @@ class PropertyBuilderClassifier {
         builderMaker(barNoArgMethods, barBuilderTypeElement);
     if (!maybeBuilderMaker.isPresent()) {
       errorReporter.reportError(
-          "Method looks like a property builder, but its type "
-              + barBuilderTypeElement
-              + " does not have a public constructor and "
-              + barTypeElement
-              + " does not have a static builder() or newBuilder() method that returns "
-              + barBuilderTypeElement,
-          method);
+          method,
+          "Method looks like a property builder, but its type %s does not have a public"
+              + " constructor and %s does not have a static builder() or newBuilder() method that"
+              + " returns %s",
+          barBuilderTypeElement,
+          barTypeElement,
+          barBuilderTypeElement);
       return Optional.empty();
     }
     ExecutableElement builderMaker = maybeBuilderMaker.get();

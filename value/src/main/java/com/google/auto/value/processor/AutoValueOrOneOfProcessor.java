@@ -300,12 +300,10 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       // was in deferredTypes.
       for (TypeElement type : deferredTypes) {
         errorReporter.reportError(
-            "Did not generate @"
-                + simpleAnnotationName
-                + " class for "
-                + type.getQualifiedName()
-                + " because it references undefined types",
-            type);
+            type,
+            "Did not generate @%s class for %s because it references undefined types",
+            simpleAnnotationName,
+            type.getQualifiedName());
       }
       return false;
     }
@@ -333,7 +331,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       } catch (RuntimeException e) {
         String trace = Throwables.getStackTraceAsString(e);
         errorReporter.reportError(
-            "@" + simpleAnnotationName + " processor threw an exception: " + trace, type);
+            type, "@%s processor threw an exception: %s", simpleAnnotationName, trace);
         throw e;
       }
     }
@@ -401,7 +399,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
                   nullableAnnotation);
           props.add(p);
           if (p.isNullable() && returnType.getKind().isPrimitive()) {
-            errorReporter().reportError("Primitive types cannot be @Nullable", propertyMethod);
+            errorReporter().reportError(propertyMethod, "Primitive types cannot be @Nullable");
           }
         });
     return props.build();
@@ -511,10 +509,15 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       String name = allPrefixed ? nameWithoutPrefix(methodName) : methodName;
       ExecutableElement old = map.put(name, method);
       if (old != null) {
-        String message = "More than one @" + simpleAnnotationName + " property called " + name;
-        errorReporter.reportError(message, method);
+        List<ExecutableElement> contexts = new ArrayList<>(Arrays.asList(method));
         if (reportedDups.add(name)) {
-          errorReporter.reportError(message, old);
+          contexts.add(old);
+        }
+        // Report the error for both of the methods. If this is a third or further occurrence,
+        // reportedDups prevents us from reporting more than one error for the same method.
+        for (ExecutableElement context : contexts) {
+          errorReporter.reportError(
+              context, "More than one @%s property called %s", simpleAnnotationName, name);
         }
       }
     }
@@ -619,16 +622,16 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     if (enclosingKind.isClass() || enclosingKind.isInterface()) {
       if (type.getModifiers().contains(Modifier.PRIVATE)) {
         errorReporter.abortWithError(
-            "@" + simpleAnnotationName + " class must not be private", type);
+            type, "@%s class must not be private", simpleAnnotationName);
       } else if (Visibility.effectiveVisibilityOfElement(type).equals(Visibility.PRIVATE)) {
         // The previous case, where the class itself is private, is much commoner so it deserves
         // its own error message, even though it would be caught by the test here too.
         errorReporter.abortWithError(
-            "@" + simpleAnnotationName + " class must not be nested in a private class", type);
+            type, "@%s class must not be nested in a private class", simpleAnnotationName);
       }
       if (!type.getModifiers().contains(Modifier.STATIC)) {
         errorReporter.abortWithError(
-            "Nested @" + simpleAnnotationName + " class must be static", type);
+            type, "Nested @%s class must be static", simpleAnnotationName);
       }
     }
     // In principle type.getEnclosingElement() could be an ExecutableElement (for a class
@@ -768,10 +771,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         warnAboutPrimitiveArrays(autoValueClass, getter);
       } else {
         errorReporter.reportError(
-            "An @"
-                + simpleAnnotationName
-                + " class cannot define an array-valued property unless it is a primitive array",
-            getter);
+            getter,
+            "An @%s class cannot define an array-valued property unless it is a primitive array",
+            simpleAnnotationName);
       }
     }
   }
@@ -792,20 +794,17 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       // inherited class is not being recompiled. Instead, in this case we point to the @AutoValue
       // class itself, and we include extra text in the error message that shows the full name of
       // the inherited method.
-      String warning =
-          "An @"
-              + simpleAnnotationName
-              + " property that is a primitive array returns the original array, which can"
+      boolean sameClass = getter.getEnclosingElement().equals(autoValueClass);
+      Element element = sameClass ? getter : autoValueClass;
+      String context = sameClass ? "" : (" Method: " + getter.getEnclosingElement() + "." + getter);
+      errorReporter.reportWarning(
+          element,
+          "An @%s property that is a primitive array returns the original array, which can"
               + " therefore be modified by the caller. If this is OK, you can suppress this warning"
               + " with @SuppressWarnings(\"mutable\"). Otherwise, you should replace the property"
-              + " with an immutable type, perhaps a simple wrapper around the original array.";
-      boolean sameClass = getter.getEnclosingElement().equals(autoValueClass);
-      if (sameClass) {
-        errorReporter.reportWarning(warning, getter);
-      } else {
-        errorReporter.reportWarning(
-            warning + " Method: " + getter.getEnclosingElement() + "." + getter, autoValueClass);
-      }
+              + " with an immutable type, perhaps a simple wrapper around the original array.%s",
+          simpleAnnotationName,
+          context);
     }
   }
 
@@ -837,7 +836,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
             return value + "L";
           } else {
             errorReporter.reportError(
-                "serialVersionUID must be a static final long compile-time constant", field);
+                field, "serialVersionUID must be a static final long compile-time constant");
             break;
           }
         }
@@ -1103,7 +1102,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       // error later because user code will have a reference to the code we were supposed to
       // generate (new AutoValue_Foo() or whatever) and that reference will be undefined.
       errorReporter.reportWarning(
-          "Could not write generated class " + className + ": " + e, originatingType);
+          originatingType, "Could not write generated class %s: %s", className, e);
     }
   }
 }

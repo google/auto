@@ -86,14 +86,16 @@ class BuilderSpec {
       if (hasAnnotationMirror(containedClass, AUTO_VALUE_BUILDER_NAME)) {
         if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
           errorReporter.reportError(
-              "@AutoValue.Builder can only apply to a class or an interface", containedClass);
+              containedClass, "@AutoValue.Builder can only apply to a class or an interface");
         } else if (!containedClass.getModifiers().contains(Modifier.STATIC)) {
           errorReporter.reportError(
-              "@AutoValue.Builder cannot be applied to a non-static class", containedClass);
+              containedClass, "@AutoValue.Builder cannot be applied to a non-static class");
         } else if (builderTypeElement.isPresent()) {
           errorReporter.reportError(
-              autoValueClass + " already has a Builder: " + builderTypeElement.get(),
-              containedClass);
+              containedClass,
+              "%s already has a Builder: %s",
+              autoValueClass,
+              builderTypeElement.get());
         } else {
           builderTypeElement = Optional.of(containedClass);
         }
@@ -215,17 +217,17 @@ class BuilderSpec {
                   .collect(toList());
           if (!builderTypeParamNames.equals(typeArguments)) {
             errorReporter.reportError(
-                "Builder converter method should return "
-                    + builderTypeElement
-                    + TypeSimplifier.actualTypeParametersString(builderTypeElement),
-                method);
+                method,
+                "Builder converter method should return %s%s",
+                builderTypeElement,
+                TypeSimplifier.actualTypeParametersString(builderTypeElement));
           }
         }
       }
       ImmutableSet<ExecutableElement> builderMethods = methods.build();
       if (builderMethods.size() > 1) {
         errorReporter.reportError(
-            "There can be at most one builder converter method", builderMethods.iterator().next());
+            builderMethods.iterator().next(), "There can be at most one builder converter method");
       }
       this.toBuilderMethods = builderMethods;
       return builderMethods;
@@ -263,7 +265,7 @@ class BuilderSpec {
           // For now we ignore methods with annotations, because for example we do want to allow
           // Jackson's @JsonCreator.
           errorReporter.reportWarning(
-              "Static builder() method should be in the containing class", method);
+              method, "Static builder() method should be in the containing class");
         }
       }
       this.classifier = optionalClassifier.get();
@@ -273,10 +275,10 @@ class BuilderSpec {
             buildMethods.isEmpty() ? ImmutableSet.of(builderTypeElement) : buildMethods;
         for (Element buildMethod : errorElements) {
           errorReporter.reportError(
-              "Builder must have a single no-argument method returning "
-                  + autoValueClass
-                  + typeParamsString(),
-              buildMethod);
+              buildMethod,
+              "Builder must have a single no-argument method returning %s%s",
+              autoValueClass,
+              typeParamsString());
         }
         return;
       }
@@ -447,10 +449,10 @@ class BuilderSpec {
 
     if (!sameTypeParameters(autoValueClass, builderTypeElement)) {
       errorReporter.reportError(
-          String.format(
-              "Type parameters of %s must have same names and bounds as type parameters of %s",
-              builderTypeElement, autoValueClass),
-          builderTypeElement);
+          builderTypeElement,
+          "Type parameters of %s must have same names and bounds as type parameters of %s",
+          builderTypeElement,
+          autoValueClass);
       return Optional.empty();
     }
     return Optional.of(new Builder(builderTypeElement));

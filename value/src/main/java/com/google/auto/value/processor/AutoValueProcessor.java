@@ -114,15 +114,17 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       try {
         extensions = extensionsFromLoader(loaderForExtensions);
       } catch (RuntimeException | Error e) {
-        StringBuilder warning = new StringBuilder();
-        warning.append(
-            "An exception occurred while looking for AutoValue extensions."
-                + " No extensions will function.");
-        if (e instanceof ServiceConfigurationError) {
-          warning.append(" This may be due to a corrupt jar file in the compiler's classpath.");
-        }
-        warning.append("\n").append(Throwables.getStackTraceAsString(e));
-        errorReporter().reportWarning(warning.toString(), null);
+        String explain =
+            (e instanceof ServiceConfigurationError)
+                ? " This may be due to a corrupt jar file in the compiler's classpath."
+                : "";
+        errorReporter()
+            .reportWarning(
+                null,
+                "An exception occurred while looking for AutoValue extensions."
+                    + " No extensions will function.%s\n%s",
+                explain,
+                Throwables.getStackTraceAsString(e));
         extensions = ImmutableList.of();
       }
     }
@@ -167,22 +169,21 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       // but it has happened in the past and can crash the compiler.
       errorReporter()
           .abortWithError(
+              type,
               "annotation processor for @AutoValue was invoked with a type"
-                  + " that does not have that annotation; this is probably a compiler bug",
-              type);
+                  + " that does not have that annotation; this is probably a compiler bug");
     }
     if (type.getKind() != ElementKind.CLASS) {
-      errorReporter().abortWithError("@AutoValue only applies to classes", type);
+      errorReporter().abortWithError(type, "@AutoValue only applies to classes");
     }
     if (ancestorIsAutoValue(type)) {
-      errorReporter().abortWithError("One @AutoValue class may not extend another", type);
+      errorReporter().abortWithError(type, "One @AutoValue class may not extend another");
     }
     if (implementsAnnotation(type)) {
       errorReporter()
           .abortWithError(
-              "@AutoValue may not be used to implement an annotation"
-                  + " interface; try using @AutoAnnotation instead",
-              type);
+              type, "@AutoValue may not be used to implement an annotation"
+                  + " interface; try using @AutoAnnotation instead");
     }
     checkModifiersIfNested(type);
 
@@ -331,9 +332,9 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       default:
         errorReporter()
             .reportError(
-                "More than one extension wants to generate the final class: "
-                    + finalExtensions.stream().map(this::extensionName).collect(joining(", ")),
-                type);
+                type,
+                "More than one extension wants to generate the final class: %s",
+                finalExtensions.stream().map(this::extensionName).collect(joining(", ")));
         break;
     }
     return ImmutableList.copyOf(applicableExtensions);
@@ -353,11 +354,10 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         if (propertyMethod == null) {
           errorReporter()
               .reportError(
-                  "Extension "
-                      + extensionName(extension)
-                      + " wants to consume a property that does not exist: "
-                      + consumedProperty,
-                  type);
+                  type,
+                  "Extension %s wants to consume a property that does not exist: %s",
+                  extensionName(extension),
+                  consumedProperty);
         } else {
           consumedHere.add(propertyMethod);
         }
@@ -366,12 +366,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         if (!abstractMethods.contains(consumedMethod)) {
           errorReporter()
               .reportError(
-                  "Extension "
-                      + extensionName(extension)
-                      + " wants to consume a method that is not one of the abstract methods in this"
-                      + " class: "
-                      + consumedMethod,
-                  type);
+                  type,
+                  "Extension %s wants to consume a method that is not one of the abstract methods"
+                      + " in this class: %s",
+                  extensionName(extension),
+                  consumedMethod);
         } else {
           consumedHere.add(consumedMethod);
         }
@@ -379,10 +378,10 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       for (ExecutableElement repeat : intersection(consumed, consumedHere)) {
         errorReporter()
             .reportError(
-                "Extension "
-                    + extensionName(extension)
-                    + " wants to consume a method that was already consumed by another extension",
-                repeat);
+                repeat,
+                "Extension %s wants to consume a method that was already consumed by another"
+                    + " extension",
+                extensionName(extension));
       }
       consumed.addAll(consumedHere);
     }
@@ -404,11 +403,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         // ElementUtils.override that sometimes fails to recognize that one method overrides
         // another, and therefore leaves us with both an abstract method and the subclass method
         // that overrides it. This shows up in AutoValueTest.LukesBase for example.
-        String message = "Abstract method is neither a property getter nor a Builder converter";
-        if (extensionsPresent) {
-          message += ", and no extension consumed it";
-        }
-        errorReporter().reportWarning(message, method);
+        String extensionMessage = extensionsPresent ? ", and no extension consumed it" : "";
+        errorReporter().reportWarning(
+            method,
+            "Abstract method is neither a property getter nor a Builder converter%s",
+            extensionMessage);
       }
     }
     errorReporter().abortIfAnyError();
