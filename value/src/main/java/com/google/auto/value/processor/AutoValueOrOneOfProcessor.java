@@ -873,7 +873,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     return className.startsWith(AUTO_VALUE_PACKAGE_NAME) && !className.contains("Test");
   }
 
-  private ImmutableList<String> copiedClassAnnotations(TypeElement type) {
+  ImmutableList<String> copiedClassAnnotations(TypeElement type) {
     // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.
     if (hasAnnotationMirror(type, COPY_ANNOTATIONS_NAME)) {
       Set<String> excludedAnnotations =

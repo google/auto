@@ -423,7 +423,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       AutoValueTemplateVars vars,
       ImmutableSet<ExecutableElement> toBuilderMethods,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
-      Optional<BuilderSpec.Builder> builder) {
+      Optional<BuilderSpec.Builder> maybeBuilder) {
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
     // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
@@ -436,11 +436,13 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         propertySet(propertyMethodsAndTypes, annotatedPropertyFields, annotatedPropertyMethods);
     vars.serialVersionUID = getSerialVersionUID(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
-    if (builder.isPresent()) {
-      ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
-          propertyNameToMethodMap(propertyMethods).inverse();
-      builder.get().defineVars(vars, methodToPropertyName);
-    }
+    maybeBuilder.ifPresent(
+        builder -> {
+          ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
+              propertyNameToMethodMap(propertyMethods).inverse();
+          builder.defineVars(vars, methodToPropertyName);
+          vars.builderAnnotations = copiedClassAnnotations(builder.builderType());
+        });
   }
 
   @Override

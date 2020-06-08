@@ -192,6 +192,13 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   #end
 
+  ## BUILDER CLASS
+
+  #foreach ($a in $builderAnnotations)
+
+  $a##
+  #end
+
   static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
   #if ($builderIsInterface) implements #else extends #end
       ${builderTypeName}${builderActualTypes} {

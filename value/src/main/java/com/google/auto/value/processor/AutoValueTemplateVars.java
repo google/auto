@@ -36,7 +36,7 @@ class AutoValueTemplateVars extends AutoValueOrOneOfTemplateVars {
    * The properties defined by the parent class's abstract methods. The elements of this set are in
    * the same order as the original abstract method declarations in the AutoValue class.
    */
-  ImmutableSet<AutoValueProcessor.Property> props;
+  ImmutableSet<AutoValueOrOneOfProcessor.Property> props;
 
   /**
    * Whether to include identifiers in strings in the generated code. If false, exception messages
@@ -99,6 +99,14 @@ class AutoValueTemplateVars extends AutoValueOrOneOfTemplateVars {
 
   /** True if the builder being implemented is an interface, false if it is an abstract class. */
   Boolean builderIsInterface = false;
+
+  /**
+   * The full spelling of any annotations to add to the generated builder subclass, or an empty list
+   * if there are none. A non-empty value might look something like {@code
+   * @`java.lang.SuppressWarnings`("Immutable")}. The {@code ``} marks are explained in
+   * {@link TypeEncoder}.
+   */
+  ImmutableList<String> builderAnnotations = ImmutableList.of();
 
   /** The builder's build method, often {@code "build"}. */
   Optional<SimpleMethod> buildMethod = Optional.empty();
