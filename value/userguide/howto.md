@@ -325,8 +325,9 @@ might be mutated and the other not.
 
 AutoValue intentionally does not provide this feature. It is better for you to
 roll your own comparison logic using the new methods added to
-[`Comparator`](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) in Java 8,
-or [`ComparisonChain`](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ComparisonChain.html)
+[`Comparator`](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html)
+in Java 8, or
+[`ComparisonChain`](https://guava.dev/releases/snapshot/api/docs/com/google/common/collect/ComparisonChain.html)
 from [Guava](http://github.com/google/guava).
 
 Since these mechanisms are easy to use, require very little code, and give you

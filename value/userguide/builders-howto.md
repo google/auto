@@ -335,7 +335,7 @@ public abstract class Animal {
 ```
 
 [`java.util.Optional`]: https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html
-[`com.google.common.base.Optional`]: http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html
+[`com.google.common.base.Optional`]: https://guava.dev/releases/snapshot/api/docs/com/google/common/base/Optional.html
 [`OptionalDouble`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalDouble.html
 [`OptionalInt`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalInt.html
 [`OptionalLong`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalLong.html
