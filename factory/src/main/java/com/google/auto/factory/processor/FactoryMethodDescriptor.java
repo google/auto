@@ -41,7 +41,7 @@ abstract class FactoryMethodDescriptor {
   abstract Builder toBuilder();
   abstract boolean isVarArgs();
 
-  final String factoryName() {
+  final PackageAndClass factoryName() {
     return declaration().getFactoryName();
   }
 
@@ -54,7 +54,7 @@ abstract class FactoryMethodDescriptor {
   }
 
   @AutoValue.Builder
-  static abstract class Builder {
+  abstract static class Builder {
     abstract Builder declaration(AutoFactoryDeclaration declaration);
     abstract Builder name(String name);
     abstract Builder returnType(TypeMirror returnType);

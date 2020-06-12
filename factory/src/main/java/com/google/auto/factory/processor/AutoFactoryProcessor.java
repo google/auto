@@ -27,13 +27,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.googlejavaformat.java.filer.FormattingFiler;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
@@ -68,7 +65,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   private Messager messager;
   private Elements elements;
   private Types types;
-  private FactoryWriter factoryWriter;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -76,11 +72,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
-    factoryWriter =
-        new FactoryWriter(
-            new FormattingFiler(processingEnv.getFiler()),
-            elements,
-            processingEnv.getSourceVersion());
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =
@@ -103,14 +94,15 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       providedChecker.checkProvidedParameter(element);
     }
 
-    ImmutableListMultimap.Builder<String, FactoryMethodDescriptor> indexedMethods =
+    ImmutableListMultimap.Builder<PackageAndClass, FactoryMethodDescriptor> indexedMethodsBuilder =
         ImmutableListMultimap.builder();
-    ImmutableSetMultimap.Builder<String, ImplementationMethodDescriptor>
+    ImmutableSetMultimap.Builder<PackageAndClass, ImplementationMethodDescriptor>
         implementationMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
+    // Iterate over the classes and methods that are annotated with @AutoFactory.
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
-        String factoryName = declaration.get().getFactoryName();
+        PackageAndClass factoryName = declaration.get().getFactoryName();
         TypeElement extendingType = declaration.get().extendingType();
         implementationMethodDescriptorsBuilder.putAll(
             factoryName, implementationMethods(extendingType, element));
@@ -123,62 +115,61 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
       for (FactoryMethodDescriptor descriptor : descriptors) {
-        indexedMethods.put(descriptor.factoryName(), descriptor);
+        indexedMethodsBuilder.put(descriptor.factoryName(), descriptor);
       }
     }
 
-    ImmutableSetMultimap<String, ImplementationMethodDescriptor>
+    ImmutableSetMultimap<PackageAndClass, ImplementationMethodDescriptor>
         implementationMethodDescriptors = implementationMethodDescriptorsBuilder.build();
+    ImmutableListMultimap<PackageAndClass, FactoryMethodDescriptor> indexedMethods =
+        indexedMethodsBuilder.build();
+    ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated =
+        simpleNamesToNames(indexedMethods.keySet());
+    FactoryWriter factoryWriter = new FactoryWriter(processingEnv, factoriesBeingCreated);
 
-    for (Entry<String, Collection<FactoryMethodDescriptor>> entry
-        : indexedMethods.build().asMap().entrySet()) {
-      ImmutableSet.Builder<TypeMirror> extending = ImmutableSet.builder();
-      ImmutableSortedSet.Builder<TypeMirror> implementing =
-          ImmutableSortedSet.orderedBy(
-              new Comparator<TypeMirror>() {
-                @Override
-                public int compare(TypeMirror first, TypeMirror second) {
-                  String firstName = MoreTypes.asTypeElement(first).getQualifiedName().toString();
-                  String secondName = MoreTypes.asTypeElement(second).getQualifiedName().toString();
-                  return firstName.compareTo(secondName);
-                }
-              });
-      boolean publicType = false;
-      Boolean allowSubclasses = null;
-      boolean skipCreation = false;
-      for (FactoryMethodDescriptor methodDescriptor : entry.getValue()) {
-        extending.add(methodDescriptor.declaration().extendingType().asType());
-        for (TypeElement implementingType : methodDescriptor.declaration().implementingTypes()) {
-          implementing.add(implementingType.asType());
-        }
-        publicType |= methodDescriptor.publicMethod();
-        if (allowSubclasses == null) {
-          allowSubclasses = methodDescriptor.declaration().allowSubclasses();
-        } else if (!allowSubclasses.equals(methodDescriptor.declaration().allowSubclasses())) {
-          skipCreation = true;
-          messager.printMessage(Kind.ERROR,
-              "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.",
-              methodDescriptor.declaration().target(),
-              methodDescriptor.declaration().mirror(),
-              methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
-        }
-      }
-      if (!skipCreation) {
-        try {
-          factoryWriter.writeFactory(
-              FactoryDescriptor.create(
-                  entry.getKey(),
-                  Iterables.getOnlyElement(extending.build()),
-                  implementing.build(),
-                  publicType,
-                  ImmutableSet.copyOf(entry.getValue()),
-                  implementationMethodDescriptors.get(entry.getKey()),
-                  allowSubclasses));
-        } catch (IOException e) {
-          messager.printMessage(Kind.ERROR, "failed: " + e);
-        }
-      }
-    }
+    indexedMethods.asMap().forEach(
+        (factoryName, methodDescriptors) -> {
+          // The sets of classes that are mentioned in the `extending` and `implementing` elements,
+          // respectively, of the @AutoFactory annotations for this factory.
+          ImmutableSet.Builder<TypeMirror> extending = newTypeSetBuilder();
+          ImmutableSortedSet.Builder<TypeMirror> implementing = newTypeSetBuilder();
+          boolean publicType = false;
+          Boolean allowSubclasses = null;
+          boolean skipCreation = false;
+          for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
+            extending.add(methodDescriptor.declaration().extendingType().asType());
+            for (TypeElement implementingType :
+                methodDescriptor.declaration().implementingTypes()) {
+              implementing.add(implementingType.asType());
+            }
+            publicType |= methodDescriptor.publicMethod();
+            if (allowSubclasses == null) {
+              allowSubclasses = methodDescriptor.declaration().allowSubclasses();
+            } else if (!allowSubclasses.equals(methodDescriptor.declaration().allowSubclasses())) {
+              skipCreation = true;
+              messager.printMessage(Kind.ERROR,
+                  "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.",
+                  methodDescriptor.declaration().target(),
+                  methodDescriptor.declaration().mirror(),
+                  methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
+            }
+          }
+          if (!skipCreation) {
+            try {
+              factoryWriter.writeFactory(
+                  FactoryDescriptor.create(
+                      factoryName,
+                      Iterables.getOnlyElement(extending.build()),
+                      implementing.build(),
+                      publicType,
+                      ImmutableSet.copyOf(methodDescriptors),
+                      implementationMethodDescriptors.get(factoryName),
+                      allowSubclasses));
+            } catch (IOException e) {
+              messager.printMessage(Kind.ERROR, "failed: " + e);
+            }
+          }
+        });
   }
 
   private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
@@ -216,8 +207,24 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     return Iterables.getOnlyElement(types).asType();
   }
 
+  private static ImmutableSetMultimap<String, PackageAndClass> simpleNamesToNames(
+      ImmutableSet<PackageAndClass> names) {
+    // .collect(toImmutableSetMultimap(...)) would make this much simpler but ran into problems in
+    // Google's internal build system because of multiple Guava versions.
+    ImmutableSetMultimap.Builder<String, PackageAndClass> builder = ImmutableSetMultimap.builder();
+    for (PackageAndClass name : names) {
+      builder.put(name.className(), name);
+    }
+    return builder.build();
+  }
+
+  private static ImmutableSortedSet.Builder<TypeMirror> newTypeSetBuilder() {
+    return ImmutableSortedSet.orderedBy(
+        Comparator.comparing(t -> MoreTypes.asTypeElement(t).getQualifiedName().toString()));
+  }
+
   @Override
-  public Set<String> getSupportedAnnotationTypes() {
+  public ImmutableSet<String> getSupportedAnnotationTypes() {
     return ImmutableSet.of(AutoFactory.class.getName(), Provided.class.getName());
   }
 

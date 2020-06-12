@@ -62,21 +62,17 @@ abstract class AutoFactoryDeclaration {
   abstract AnnotationMirror mirror();
   abstract ImmutableMap<String, AnnotationValue> valuesMap();
 
-  String getFactoryName() {
-    CharSequence packageName = getPackage(targetType()).getQualifiedName();
-    StringBuilder builder = new StringBuilder(packageName);
-    if (packageName.length() > 0) {
-      builder.append('.');
-    }
+  PackageAndClass getFactoryName() {
+    String packageName = getPackage(targetType()).getQualifiedName().toString();
     if (className().isPresent()) {
-      builder.append(className().get());
-    } else {
-      for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
-        builder.append(enclosingSimpleName).append('_');
-      }
-      builder.append(targetType().getSimpleName()).append("Factory");
+      return PackageAndClass.of(packageName, className().get());
     }
-    return builder.toString();
+    StringBuilder builder = new StringBuilder();
+    for (String enclosingSimpleName : targetEnclosingSimpleNames()) {
+      builder.append(enclosingSimpleName).append('_');
+    }
+    builder.append(targetType().getSimpleName()).append("Factory");
+    return PackageAndClass.of(packageName, builder.toString());
   }
 
   private ImmutableList<String> targetEnclosingSimpleNames() {
