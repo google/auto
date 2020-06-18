@@ -4,6 +4,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.auto.factory.GenericFoo.DepE;
 import com.google.auto.factory.GenericFoo.IntAndStringAccessor;
+import com.google.auto.factory.otherpackage.OtherPackage;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Key;
@@ -64,6 +65,16 @@ public class DependencyInjectionIntegrationTest {
     assertThat(four.getDepE()).isEqualTo(DepE.VALUE_2);
   }
 
+  @Test
+  public void daggerInjectedPackageSpanningFactory() {
+    FactoryComponent component = DaggerFactoryComponent.create();
+    ReferencePackageFactory referencePackageFactory = component.referencePackageFactory();
+    ReferencePackage referencePackage = referencePackageFactory.create(5);
+    OtherPackage otherPackage = referencePackage.otherPackage();
+    assertThat(otherPackage.referencePackageFactory()).isNotSameInstanceAs(referencePackageFactory);
+    assertThat(otherPackage.random()).isEqualTo(5);
+  }
+
   @Test public void guiceInjectedFactory() {
     FooFactory fooFactory = Guice.createInjector(new GuiceModule()).getInstance(FooFactory.class);
     Foo one = fooFactory.create("A");
@@ -108,5 +119,16 @@ public class DependencyInjectionIntegrationTest {
     assertThat(four.getDepDStringAccessor()).isEqualTo(INT_AND_STRING_ACCESSOR);
     assertThat(four.passThrough(5L)).isEqualTo(5L);
     assertThat(four.getDepE()).isEqualTo(DepE.VALUE_2);
+  }
+
+  @Test
+  public void guiceInjectedPackageSpanningFactory() {
+    ReferencePackageFactory referencePackageFactory =
+        Guice.createInjector(new GuiceModule())
+            .getInstance(ReferencePackageFactory.class);
+    ReferencePackage referencePackage = referencePackageFactory.create(5);
+    OtherPackage otherPackage = referencePackage.otherPackage();
+    assertThat(otherPackage.referencePackageFactory()).isNotSameInstanceAs(referencePackageFactory);
+    assertThat(otherPackage.random()).isEqualTo(5);
   }
 }
