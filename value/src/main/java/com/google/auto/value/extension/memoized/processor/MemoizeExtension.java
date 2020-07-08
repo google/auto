@@ -100,8 +100,11 @@ public final class MemoizeExtension extends AutoValueExtension {
   private static final String AUTO_VALUE_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoValue";
   private static final String COPY_ANNOTATIONS_NAME = AUTO_VALUE_NAME + ".CopyAnnotations";
 
+  // Maven is configured to shade (rewrite) com.google packages to prevent dependency conflicts.
+  // Split up the package here with a call to concat to prevent Maven from finding and rewriting it,
+  // so that this will be able to find the LazyInit annotation if it's on the classpath.
   private static final ClassName LAZY_INIT =
-      ClassName.get("com.google.errorprone.annotations.concurrent", "LazyInit");
+      ClassName.get("com".concat(".google.errorprone.annotations.concurrent"), "LazyInit");
 
   private static final AnnotationSpec SUPPRESS_WARNINGS =
       AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "Immutable").build();
