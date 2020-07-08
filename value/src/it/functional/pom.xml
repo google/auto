@@ -22,14 +22,14 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>HEAD-SNAPSHOT</version>
+    <version>1.7.4</version>
     <relativePath>../../../pom.xml</relativePath>
   </parent>
   <url>https://github.com/google/auto/tree/master/value</url>
 
   <groupId>com.google.auto.value.it.functional</groupId>
   <artifactId>functional</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.7.4</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
     <exclude.tests>this-matches-nothing</exclude.tests>

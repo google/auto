@@ -21,12 +21,12 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>HEAD-SNAPSHOT</version>
+    <version>1.7.4</version>
   </parent>
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-annotations</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.7.4</version>
   <name>AutoValue Annotations</name>
   <description>
     Immutable value-type code generation for Java 1.6+.

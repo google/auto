@@ -26,7 +26,7 @@
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-parent</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.7.4</version>
   <name>AutoValue Parent</name>
   <description>
     Immutable value-type code generation for Java 7+.
