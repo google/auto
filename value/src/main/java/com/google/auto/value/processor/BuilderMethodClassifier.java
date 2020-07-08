@@ -20,6 +20,7 @@ import static com.google.common.collect.Sets.difference;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.BuilderSpec.Copier;
 import com.google.auto.value.processor.BuilderSpec.PropertySetter;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.base.Equivalence;
@@ -376,7 +377,7 @@ class BuilderMethodClassifier {
       checkForFailedJavaBean(method);
       return;
     }
-    Optional<Function<String, String>> function = getSetterFunction(valueGetter, method);
+    Optional<Copier> function = getSetterFunction(valueGetter, method);
     if (function.isPresent()) {
       DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
       ExecutableType methodMirror =
@@ -419,7 +420,7 @@ class BuilderMethodClassifier {
    * using a method like {@code ImmutableList.copyOf} or {@code Optional.of}, when the returned
    * function will be something like {@code s -> "Optional.of(" + s + ")"}.
    */
-  private Optional<Function<String, String>> getSetterFunction(
+  private Optional<Copier> getSetterFunction(
       ExecutableElement valueGetter, ExecutableElement setter) {
     VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
     boolean nullableParameter =
@@ -445,7 +446,7 @@ class BuilderMethodClassifier {
           return Optional.empty();
         }
       }
-      return Optional.of(s -> s);
+      return Optional.of(Copier.IDENTITY);
     }
 
     // Parameter type is not equal to property type, but might be convertible with copyOf.
@@ -465,14 +466,14 @@ class BuilderMethodClassifier {
    * to the getter's return type using one of the given methods, or {@code Optional.empty()} if the
    * conversion isn't possible. An error will have been reported in the latter case.
    */
-  private Optional<Function<String, String>> getConvertingSetterFunction(
+  private Optional<Copier> getConvertingSetterFunction(
       ImmutableList<ExecutableElement> copyOfMethods,
       ExecutableElement valueGetter,
       ExecutableElement setter,
       TypeMirror parameterType) {
     DeclaredType targetType = MoreTypes.asDeclared(getterToPropertyType.get(valueGetter));
     for (ExecutableElement copyOfMethod : copyOfMethods) {
-      Optional<Function<String, String>> function =
+      Optional<Copier> function =
           getConvertingSetterFunction(copyOfMethod, targetType, parameterType);
       if (function.isPresent()) {
         return function;
@@ -516,7 +517,7 @@ class BuilderMethodClassifier {
    * @return a function that maps a string parameter to a method call using that parameter. For
    *     example it might map {@code foo} to {@code ImmutableList.copyOf(foo)}.
    */
-  private Optional<Function<String, String>> getConvertingSetterFunction(
+  private Optional<Copier> getConvertingSetterFunction(
       ExecutableElement copyOfMethod, DeclaredType targetType, TypeMirror parameterType) {
     // We have a parameter type, for example Set<? extends T>, and we want to know if it can be
     // passed to the given copyOf method, which might for example be one of these methods from
@@ -532,7 +533,15 @@ class BuilderMethodClassifier {
     if (TypeVariables.canAssignStaticMethodResult(
         copyOfMethod, parameterType, targetType, typeUtils)) {
       String method = TypeEncoder.encodeRaw(targetType) + "." + copyOfMethod.getSimpleName();
-      return Optional.of(s -> method + "(" + s + ")");
+      Function<String, String> callMethod = s -> method + "(" + s + ")";
+      // This is a big old hack. We guess that the method can accept a null parameter if it has
+      // "Nullable" in the name, which java.util.Optional.ofNullable and
+      // com.google.common.base.Optional.fromNullable do.
+      Copier copier =
+          method.contains("Nullable")
+              ? Copier.acceptingNull(callMethod)
+              : Copier.notAcceptingNull(callMethod);
+      return Optional.of(copier);
     }
     return Optional.empty();
   }
