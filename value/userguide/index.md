@@ -92,6 +92,23 @@ For `auto-value-annotations`, you can write this in `pom.xml`:
 </dependencies>
 ```
 
+Some AutoValue annotations have CLASS retention. This is mostly of use for
+compile-time tools, such as AutoValue itself. If you are creating
+a library, the end user rarely needs to know the original AutoValue annotations.
+In that case, you can set the scope to `provided`, so that the user of your
+library does not have `auto-value-annotations` as a transitive dependency.
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.google.auto.value</groupId>
+    <artifactId>auto-value-annotations</artifactId>
+    <version>${auto-value.version}</version>
+    <scope>provided</scope>
+  </dependency>
+</dependencies>
+```
+
 For `auto-value` (the annotation processor), you can write this:
 
 ```xml
