@@ -198,7 +198,7 @@ class BuilderMethodClassifier {
     } else {
       errorReporter.reportError(
           propertyNameToUnprefixedSetters.values().iterator().next().getSetter(),
-          "If any setter methods use the setFoo convention then all must");
+          "[AutoValueSetNotSet] If any setter methods use the setFoo convention then all must");
       return false;
     }
     getterToPropertyName.forEach(
@@ -220,10 +220,10 @@ class BuilderMethodClassifier {
             if (needToMakeBarBuilder && !canMakeBarBuilder) {
               errorReporter.reportError(
                   propertyBuilder.getPropertyBuilderMethod(),
-                  "Property builder method returns %1$s but there is no way to make that type"
-                      + " from %2$s: %2$s does not have a non-static toBuilder() method that"
-                      + " returns %1$s, and %1$s does not have a method addAll or"
-                      + " putAll that accepts an argument of type %2$s",
+                  "[AutoValueCantMakeBuilder] Property builder method returns %1$s but there is no"
+                      + " way to make that type from %2$s: %2$s does not have a non-static"
+                      + " toBuilder() method that returns %1$s, and %1$s does not have a method"
+                      + " addAll or putAll that accepts an argument of type %2$s",
                   propertyBuilder.getBuilderTypeMirror(),
                   propertyType);
             }
@@ -232,8 +232,13 @@ class BuilderMethodClassifier {
             String setterName = settersPrefixed ? prefixWithSet(property) : property;
             errorReporter.reportError(
                 builderType,
-                "Expected a method with this signature: %s%s %s(%s), or a %sBuilder() method",
-                builderType, typeParamsString(), setterName, propertyType, property);
+                "[AutoValueBuilderMissingMethod] Expected a method with this signature: %s%s"
+                    + " %s(%s), or a %sBuilder() method",
+                builderType,
+                typeParamsString(),
+                setterName,
+                propertyType,
+                property);
           }
         });
     return errorReporter.errorCount() == startErrorCount;
@@ -249,7 +254,8 @@ class BuilderMethodClassifier {
         classifyMethodOneArg(method);
         break;
       default:
-        errorReporter.reportError(method, "Builder methods must have 0 or 1 parameters");
+        errorReporter.reportError(
+            method, "[AutoValueBuilderArgs] Builder methods must have 0 or 1 parameters");
     }
   }
 
@@ -297,10 +303,11 @@ class BuilderMethodClassifier {
     } else {
       errorReporter.reportError(
           method,
-          "Method without arguments should be a build method returning %1$s%2$s,"
-              + " or a getter method with the same name and type as a getter method of %1$s,"
-              + " or fooBuilder() where foo() or getFoo() is a getter method of %1$s",
-          autoValueClass, typeParamsString());
+          "[AutoValueBuilderNoArg] Method without arguments should be a build method returning"
+              + " %1$s%2$s, or a getter method with the same name and type as a getter method of"
+              + " %1$s, or fooBuilder() where foo() or getFoo() is a getter method of %1$s",
+          autoValueClass,
+          typeParamsString());
     }
   }
 
@@ -335,9 +342,11 @@ class BuilderMethodClassifier {
     }
     errorReporter.reportError(
         builderGetter,
-        "Method matches a property of %1$s but has return type %2$s instead of %3$s "
-            + "or an Optional wrapping of %3$s",
-        autoValueClass, builderGetterType, originalGetterType);
+        "[AutoValueBuilderReturnType] Method matches a property of %1$s but has return type %2$s"
+            + " instead of %3$s or an Optional wrapping of %3$s",
+        autoValueClass,
+        builderGetterType,
+        originalGetterType);
   }
 
   /**
@@ -373,7 +382,9 @@ class BuilderMethodClassifier {
       // The second disjunct isn't needed but convinces control-flow checkers that
       // propertyNameToSetters can't be null when we call put on it below.
       errorReporter.reportError(
-          method, "Method does not correspond to a property of %s", autoValueClass);
+          method,
+          "[AutoValueBuilderWhatProp] Method does not correspond to a property of %s",
+          autoValueClass);
       checkForFailedJavaBean(method);
       return;
     }
@@ -441,8 +452,10 @@ class BuilderMethodClassifier {
         if (!nullableProperty) {
           errorReporter.reportError(
               setter,
-              "Parameter of setter method is @Nullable but property method %s.%s() is not",
-              autoValueClass, valueGetter.getSimpleName());
+              "[AutoValueNullNotNull] Parameter of setter method is @Nullable but property method"
+                  + " %s.%s() is not",
+              autoValueClass,
+              valueGetter.getSimpleName());
           return Optional.empty();
         }
       }
@@ -456,7 +469,7 @@ class BuilderMethodClassifier {
     }
     errorReporter.reportError(
         setter,
-        "Parameter type %s of setter method should be %s to match getter %s.%s",
+        "[AutoValueGetVsSet] Parameter type %s of setter method should be %s to match getter %s.%s",
         parameterType, targetType, autoValueClass, valueGetter.getSimpleName());
     return Optional.empty();
   }
@@ -482,8 +495,8 @@ class BuilderMethodClassifier {
     String targetTypeSimpleName = targetType.asElement().getSimpleName().toString();
     errorReporter.reportError(
         setter,
-        "Parameter type %s of setter method should be %s to match getter %s.%s,"
-            + " or it should be a type that can be passed to %s.%s to produce %s",
+        "[AutoValueGetVsSetOrConvert] Parameter type %s of setter method should be %s to match"
+            + " getter %s.%s, or it should be a type that can be passed to %s.%s to produce %s",
         parameterType,
         targetType,
         autoValueClass,

@@ -71,7 +71,6 @@ import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -301,7 +300,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       for (TypeElement type : deferredTypes) {
         errorReporter.reportError(
             type,
-            "Did not generate @%s class for %s because it references undefined types",
+            "[AutoValueUndefined] Did not generate @%s class for %s because it references"
+                + " undefined types",
             simpleAnnotationName,
             type.getQualifiedName());
       }
@@ -331,7 +331,10 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       } catch (RuntimeException e) {
         String trace = Throwables.getStackTraceAsString(e);
         errorReporter.reportError(
-            type, "@%s processor threw an exception: %s", simpleAnnotationName, trace);
+            type,
+            "[AutoValueException] @%s processor threw an exception: %s",
+            simpleAnnotationName,
+            trace);
         throw e;
       }
     }
@@ -378,8 +381,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     ImmutableSet.Builder<Property> props = ImmutableSet.builder();
     propertyMethodsAndTypes.forEach(
         (propertyMethod, returnType) -> {
-          String propertyType = TypeEncoder.encodeWithAnnotations(
-              returnType, getExcludedAnnotationTypes(propertyMethod));
+          String propertyType =
+              TypeEncoder.encodeWithAnnotations(
+                  returnType, getExcludedAnnotationTypes(propertyMethod));
           String propertyName = methodToPropertyName.get(propertyMethod);
           String identifier = methodToIdentifier.get(propertyMethod);
           ImmutableList<String> fieldAnnotations =
@@ -399,7 +403,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
                   nullableAnnotation);
           props.add(p);
           if (p.isNullable() && returnType.getKind().isPrimitive()) {
-            errorReporter().reportError(propertyMethod, "Primitive types cannot be @Nullable");
+            errorReporter()
+                .reportError(
+                    propertyMethod, "[AutoValueNullPrimitive] Primitive types cannot be @Nullable");
           }
         });
     return props.build();
@@ -517,7 +523,10 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         // reportedDups prevents us from reporting more than one error for the same method.
         for (ExecutableElement context : contexts) {
           errorReporter.reportError(
-              context, "More than one @%s property called %s", simpleAnnotationName, name);
+              context,
+              "[AutoValueDupProperty] More than one @%s property called %s",
+              simpleAnnotationName,
+              name);
         }
       }
     }
@@ -622,16 +631,18 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     if (enclosingKind.isClass() || enclosingKind.isInterface()) {
       if (type.getModifiers().contains(Modifier.PRIVATE)) {
         errorReporter.abortWithError(
-            type, "@%s class must not be private", simpleAnnotationName);
+            type, "[AutoValuePrivate] @%s class must not be private", simpleAnnotationName);
       } else if (Visibility.effectiveVisibilityOfElement(type).equals(Visibility.PRIVATE)) {
         // The previous case, where the class itself is private, is much commoner so it deserves
         // its own error message, even though it would be caught by the test here too.
         errorReporter.abortWithError(
-            type, "@%s class must not be nested in a private class", simpleAnnotationName);
+            type,
+            "[AutoValueInPrivate] @%s class must not be nested in a private class",
+            simpleAnnotationName);
       }
       if (!type.getModifiers().contains(Modifier.STATIC)) {
         errorReporter.abortWithError(
-            type, "Nested @%s class must be static", simpleAnnotationName);
+            type, "[AutoValueInner] Nested @%s class must be static", simpleAnnotationName);
       }
     }
     // In principle type.getEnclosingElement() could be an ExecutableElement (for a class
@@ -766,13 +777,14 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   final void checkReturnType(TypeElement autoValueClass, ExecutableElement getter) {
     TypeMirror type = getter.getReturnType();
     if (type.getKind() == TypeKind.ARRAY) {
-      TypeMirror componentType = ((ArrayType) type).getComponentType();
-      if (componentType.getKind().isPrimitive()) {
+      TypeMirror componentType = MoreTypes.asArray(type).getComponentType();
+     if (componentType.getKind().isPrimitive()) {
         warnAboutPrimitiveArrays(autoValueClass, getter);
       } else {
         errorReporter.reportError(
             getter,
-            "An @%s class cannot define an array-valued property unless it is a primitive array",
+            "[AutoValueArray] An @%s class cannot define an array-valued property unless it is a"
+                + " primitive array",
             simpleAnnotationName);
       }
     }
@@ -799,10 +811,11 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       String context = sameClass ? "" : (" Method: " + getter.getEnclosingElement() + "." + getter);
       errorReporter.reportWarning(
           element,
-          "An @%s property that is a primitive array returns the original array, which can"
-              + " therefore be modified by the caller. If this is OK, you can suppress this warning"
-              + " with @SuppressWarnings(\"mutable\"). Otherwise, you should replace the property"
-              + " with an immutable type, perhaps a simple wrapper around the original array.%s",
+          "[AutoValueMutable] An @%s property that is a primitive array returns the original"
+              + " array, which can therefore be modified by the caller. If this is OK, you can"
+              + " suppress this warning with @SuppressWarnings(\"mutable\"). Otherwise, you should"
+              + " replace the property with an immutable type, perhaps a simple wrapper around the"
+              + " original array.%s",
           simpleAnnotationName,
           context);
     }
@@ -815,8 +828,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   private static class ContainsMutableVisitor extends SimpleAnnotationValueVisitor8<Boolean, Void> {
     @Override
     public Boolean visitArray(List<? extends AnnotationValue> list, Void p) {
-      return list.stream().map(av -> av.getValue()).anyMatch("mutable"::equals);
-    }
+      return list.stream().map(AnnotationValue::getValue).anyMatch("mutable"::equals);
+   }
   }
 
   /**
@@ -1102,7 +1115,10 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       // error later because user code will have a reference to the code we were supposed to
       // generate (new AutoValue_Foo() or whatever) and that reference will be undefined.
       errorReporter.reportWarning(
-          originatingType, "Could not write generated class %s: %s", className, e);
+          originatingType,
+          "[AutoValueCouldNotWrite] Could not write generated class %s: %s",
+          className,
+          e);
     }
   }
 }
