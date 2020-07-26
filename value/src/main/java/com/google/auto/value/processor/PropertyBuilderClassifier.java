@@ -198,7 +198,8 @@ class PropertyBuilderClassifier {
     if (barBuilderTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           method,
-          "Method looks like a property builder, but its return type is not a class or interface");
+          "[AutoValueOddBuilderMethod] Method looks like a property builder, but its return type"
+              + " is not a class or interface");
       return Optional.empty();
     }
     DeclaredType barBuilderDeclaredType = MoreTypes.asDeclared(barBuilderTypeMirror);
@@ -210,15 +211,15 @@ class PropertyBuilderClassifier {
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           method,
-          "Method looks like a property builder, but the type of property %s is not a class or"
-              + " interface",
+          "[AutoValueBadBuilderMethod] Method looks like a property builder, but the type of"
+              + " property %s is not a class or interface",
           property);
       return Optional.empty();
     }
     if (isNullable(barGetter)) {
       errorReporter.reportError(
           barGetter,
-          "Property %s has a property builder so it cannot be @Nullable",
+          "[AutoValueNullBuilder] Property %s has a property builder so it cannot be @Nullable",
           property);
     }
     TypeElement barTypeElement = MoreTypes.asTypeElement(barTypeMirror);
@@ -229,8 +230,8 @@ class PropertyBuilderClassifier {
     if (build == null || build.getModifiers().contains(Modifier.STATIC)) {
       errorReporter.reportError(
           method,
-          "Method looks like a property builder, but it returns %s which does not have a"
-              + " non-static build() method",
+          "[AutoValueBuilderNotBuildable] Method looks like a property builder, but it returns %s"
+              + " which does not have a non-static build() method",
           barBuilderTypeElement);
       return Optional.empty();
     }
@@ -241,7 +242,8 @@ class PropertyBuilderClassifier {
     if (!MoreTypes.equivalence().equivalent(barTypeMirror, buildType)) {
       errorReporter.reportError(
           method,
-          "Property builder for %s has type %s whose build() method returns %s instead of %s",
+          "[AutoValueBuilderWrongType] Property builder for %s has type %s whose build() method"
+              + " returns %s instead of %s",
           property,
           barBuilderTypeElement,
           buildType,
@@ -254,9 +256,9 @@ class PropertyBuilderClassifier {
     if (!maybeBuilderMaker.isPresent()) {
       errorReporter.reportError(
           method,
-          "Method looks like a property builder, but its type %s does not have a public"
-              + " constructor and %s does not have a static builder() or newBuilder() method that"
-              + " returns %s",
+          "[AutoValueCantMakePropertyBuilder] Method looks like a property builder, but its type"
+              + " %s does not have a public constructor and %s does not have a static builder() or"
+              + " newBuilder() method that returns %s",
           barBuilderTypeElement,
           barTypeElement,
           barBuilderTypeElement);
