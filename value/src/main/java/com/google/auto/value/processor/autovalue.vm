@@ -101,7 +101,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
   ${a}##
   #end
 
-  @Override
+  @`java.lang.Override`
   ${p.access}${p.type} ${p.getter}() {
     return $p;
   }
@@ -110,7 +110,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
 #if ($toString)
 
-  @Override
+  @`java.lang.Override`
   public `java.lang.String` toString() {
     return "#if ($identifiers)$simpleClassName#end{"
 
@@ -129,7 +129,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
 #if ($equals)
 
-  @Override
+  @`java.lang.Override`
   public boolean equals($equalsParameterType o) {
     if (o == this) {
       return true;
@@ -162,7 +162,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
 #if ($hashCode)
 
-  @Override
+  @`java.lang.Override`
   public int hashCode() {
     int h$ = 1;
 
@@ -185,7 +185,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($m in $toBuilderMethods)
 
-  @Override
+  @`java.lang.Override`
   ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
     return new Builder${builderActualTypes}(this);
   }
@@ -252,7 +252,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
     #foreach ($setter in $builderSetters[$p.name])
 
-    @Override
+    @`java.lang.Override`
     ${setter.access}${builderTypeName}${builderActualTypes} ##
         ${setter.name}(${setter.nullableAnnotation}$setter.parameterType $p) {
 
@@ -290,7 +290,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
     #if ($propertyBuilder)
 
-    @Override
+    @`java.lang.Override`
     ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder() {
       if (${propertyBuilder.name} == null) {
 
@@ -337,7 +337,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
     #if ($builderGetters[$p.name])
 
-    @Override
+    @`java.lang.Override`
     ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
       #if ($builderGetters[$p.name].optional)
 
@@ -377,7 +377,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
     #end
   #end
 
-    @Override
+    @`java.lang.Override`
     ${buildMethod.get().access}${origClass}${actualTypes} ${buildMethod.get().name}() {
 
   #foreach ($p in $props)
