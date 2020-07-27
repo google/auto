@@ -163,7 +163,7 @@ public final class SuperficialValidation {
         }
       };
 
-  private static boolean validateType(TypeMirror type) {
+  public static boolean validateType(TypeMirror type) {
     return type.accept(TYPE_VALIDATING_VISITOR, null);
   }
 
