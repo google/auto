@@ -99,7 +99,7 @@ final class $generatedClass {
 
 #foreach ($p in $props)
 
-    @Override
+    @`java.lang.Override`
     $p.access $p.type ${p.getter}() {
       throw new UnsupportedOperationException(${kindGetter}().toString());
     }
@@ -128,7 +128,7 @@ final class $generatedClass {
 
     private Impl_$p() {}
 
-    @Override
+    @`java.lang.Override`
     public void ${p.getter}() {}
 
     #if ($serializable)
@@ -141,7 +141,7 @@ final class $generatedClass {
 
     #if ($toString)
 
-    @Override
+    @`java.lang.Override`
     public String toString() {
       return "${simpleClassName}{$p.name}";
     }
@@ -154,7 +154,7 @@ final class $generatedClass {
 
     #if ($equals)
 
-    @Override
+    @`java.lang.Override`
     public boolean equals($equalsParameterType x) {
       return x == this;
     }
@@ -163,7 +163,7 @@ final class $generatedClass {
 
     #if ($hashCode)
 
-    @Override
+    @`java.lang.Override`
     public int hashCode() {
       return System.identityHashCode(this);
     }
@@ -178,14 +178,14 @@ final class $generatedClass {
       this.$p = $p;
     }
 
-    @Override
+    @`java.lang.Override`
     public $p.type ${p.getter}() {
       return $p;
     }
 
     #if ($toString)
 
-    @Override
+    @`java.lang.Override`
     public String toString() {
       return "${simpleClassName}{$p.name=" ##
           + #if ($p.kind == "ARRAY") `java.util.Arrays`.toString(this.$p) #else this.$p #end
@@ -196,7 +196,7 @@ final class $generatedClass {
 
     #if ($equals)
 
-    @Override
+    @`java.lang.Override`
     public boolean equals($equalsParameterType x) {
       if (x instanceof $origClass) {
         $origClass$wildcardTypes that = ($origClass$wildcardTypes) x;
@@ -211,7 +211,7 @@ final class $generatedClass {
 
     #if ($hashCode)
 
-    @Override
+    @`java.lang.Override`
     public int hashCode() {
       return #hashCodeExpression($p);
     }
@@ -220,7 +220,7 @@ final class $generatedClass {
 
   #end
 
-    @Override
+    @`java.lang.Override`
     public $kindType ${kindGetter}() {
       return ${kindType}.$propertyToKind[$p.name];
     }

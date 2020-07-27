@@ -108,7 +108,7 @@ final class $className implements $annotationName {
 
 ## annotationType method (defined by the Annotation interface)
 
-  @Override
+  @`java.lang.Override`
   public Class<? extends $annotationName> annotationType() {
     return ${annotationName}.class;
   }
@@ -117,7 +117,7 @@ final class $className implements $annotationName {
 
 #foreach ($m in $members)
 
-  @Override
+  @`java.lang.Override`
   public ${m.type} ${m}() {
 
   #if ($m.kind == "ARRAY")
@@ -162,7 +162,7 @@ final class $className implements $annotationName {
   #end
 #end
 
-  @Override
+  @`java.lang.Override`
   public String toString() {
     StringBuilder sb = new StringBuilder("@$annotationFullName(");
 
@@ -211,7 +211,7 @@ final class $className implements $annotationName {
   #end
 #end
 
-  @Override
+  @`java.lang.Override`
   public boolean equals(Object o) {
     if (o == this) {
       return true;
@@ -269,7 +269,7 @@ final class $className implements $annotationName {
 ## example.) We precompute the invariable part, as an optimization but also in order to avoid
 ## falling afoul of constant-overflow checks in the compiler.
 
-  @Override
+  @`java.lang.Override`
   public int hashCode() {
     return
     ## If the invariable part is 0, we avoid outputting `return 0 + ...` just because it generates
