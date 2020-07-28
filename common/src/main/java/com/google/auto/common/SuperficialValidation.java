@@ -17,6 +17,7 @@ package com.google.auto.common;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.AnnotationValueVisitor;
@@ -46,13 +47,12 @@ import javax.lang.model.util.SimpleTypeVisitor8;
  * @author Gregory Kick
  */
 public final class SuperficialValidation {
+  /**
+   * Returns true if all of the given elements return true from {@link #validateElement(Element)}.
+   */
   public static boolean validateElements(Iterable<? extends Element> elements) {
-    for (Element element : elements) {
-      if (!validateElement(element)) {
-        return false;
-      }
-    }
-    return true;
+    return StreamSupport.stream(elements.spliterator(), false)
+        .allMatch(SuperficialValidation::validateElement);
   }
 
   private static final ElementVisitor<Boolean, Void> ELEMENT_VALIDATING_VISITOR =
@@ -94,6 +94,12 @@ public final class SuperficialValidation {
         }
       };
 
+  /**
+   * Returns true if all types referenced by the given element are defined. The exact meaning of
+   * this depends on the kind of element. For packages, it means that all annotations on the package
+   * are fully defined. For other element kinds, it means that types referenced by the element,
+   * anything it contains, and any of its annotations element are all defined.
+   */
   public static boolean validateElement(Element element) {
     return element.accept(ELEMENT_VALIDATING_VISITOR, null);
   }
@@ -163,6 +169,12 @@ public final class SuperficialValidation {
         }
       };
 
+  /**
+   * Returns true if the given type is fully defined. This means that the type itself is defined, as
+   * are any types it references, such as any type arguments or type bounds. For an {@link
+   * ExecutableType}, the parameter and return types must be fully defined, as must types declared
+   * in a {@code throws} clause or in the bounds of any type parameters.
+   */
   public static boolean validateType(TypeMirror type) {
     return type.accept(TYPE_VALIDATING_VISITOR, null);
   }
@@ -182,17 +194,14 @@ public final class SuperficialValidation {
         && validateAnnotationValues(annotationMirror.getElementValues());
   }
 
-  @SuppressWarnings("unused")
   private static boolean validateAnnotationValues(
       Map<? extends ExecutableElement, ? extends AnnotationValue> valueMap) {
-    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> valueEntry :
-        valueMap.entrySet()) {
-      TypeMirror expectedType = valueEntry.getKey().getReturnType();
-      if (!validateAnnotationValue(valueEntry.getValue(), expectedType)) {
-        return false;
-      }
-    }
-    return true;
+    return valueMap.entrySet().stream()
+        .allMatch(
+            valueEntry -> {
+              TypeMirror expectedType = valueEntry.getKey().getReturnType();
+              return validateAnnotationValue(valueEntry.getValue(), expectedType);
+            });
   }
 
   private static final AnnotationValueVisitor<Boolean, TypeMirror> VALUE_VALIDATING_VISITOR =
@@ -216,17 +225,8 @@ public final class SuperficialValidation {
           if (!expectedType.getKind().equals(TypeKind.ARRAY)) {
             return false;
           }
-          try {
-            expectedType = MoreTypes.asArray(expectedType).getComponentType();
-          } catch (IllegalArgumentException e) {
-            return false; // Not an array expected, ergo invalid.
-          }
-          for (AnnotationValue value : values) {
-            if (!value.accept(this, expectedType)) {
-              return false;
-            }
-          }
-          return true;
+          TypeMirror componentType = MoreTypes.asArray(expectedType).getComponentType();
+          return values.stream().allMatch(value -> value.accept(this, componentType));
         }
 
         @Override
@@ -280,4 +280,6 @@ public final class SuperficialValidation {
       AnnotationValue annotationValue, TypeMirror expectedType) {
     return annotationValue.accept(VALUE_VALIDATING_VISITOR, expectedType);
   }
+
+  private SuperficialValidation() {}
 }
