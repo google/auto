@@ -36,7 +36,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
-    <guava.version>27.0.1-jre</guava.version>
+    <guava.version>29.0-jre</guava.version>
     <truth.version>1.0.1</truth.version>
   </properties>
 
@@ -75,7 +75,7 @@
            If you use JavaPoet, you can use GeneratedAnnotationSpecs. -->
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
-      <version>1.9.0</version>
+      <version>1.13.0</version>
       <optional>true</optional>
     </dependency>
 
@@ -107,7 +107,7 @@
     <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>ecj</artifactId>
-      <version>3.20.0</version>
+      <version>3.22.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
