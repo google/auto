@@ -873,7 +873,7 @@ public final class MoreTypes {
    * {@link Optional#absent()} if {@code type} is an interface or {@link Object} or its superclass
    * is {@link Object}.
    */
-  // TODO(user): Remove unused parameter Elements?
+  // TODO(bcorso): Remove unused parameter Elements?
   public static Optional<DeclaredType> nonObjectSuperclass(Types types, Elements elements,
       DeclaredType type) {
     checkNotNull(types);
@@ -1005,7 +1005,7 @@ public final class MoreTypes {
       }
       return true;
     }
-
+    
     private static boolean isJavaLangObject(TypeMirror type) {
       if (type.getKind() != TypeKind.DECLARED) {
         return false;

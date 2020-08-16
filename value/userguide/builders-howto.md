@@ -598,5 +598,4 @@ If `speciesBuilder()` is never called then the final `species()` property will
 be set as if by `speciesBuilder().build()`. In the example, that would result
 in an exception because the required properties of `Species` have not been set.
 
-
 [protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders

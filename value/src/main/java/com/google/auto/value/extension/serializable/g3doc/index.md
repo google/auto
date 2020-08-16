@@ -4,7 +4,6 @@
 An [`AutoValue`] extension that enables `@AutoValue` classes with
 un-serializable properties to be serializable.
 
-
 ## Usage
 
 To use the [`SerializableAutoValueExtension`] with your `AutoValue` class, the
@@ -100,4 +99,3 @@ un-serializable types with [SerializerExtensions].
 [`SerializableAutoValue`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/SerializableAutoValue.java
 [`SerializableAutoValueExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/extension/SerializableAutoValueExtension.java
 [SerializerExtensions]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/userguide/serializer-extension.md
-

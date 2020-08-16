@@ -9,7 +9,6 @@ AutoValue can be extended to implement new features for classes annotated with
 Each extension is a class. If that class is on the `processorpath` when you
 compile your `@AutoValue` class, the extension can run.
 
-
 Some extensions are triggered by their own annotations, which you add to your
 class; others may be triggered in other ways. Consult the extension's
 documentation for usage instructions.
@@ -40,4 +39,3 @@ behavior by overriding or implementing new methods.
 [AutoService]: https://github.com/google/auto/tree/master/service
 [`AutoValueExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/AutoValueExtension.java
 [`ServiceLoader`]: http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html
-

@@ -28,7 +28,7 @@ final class FactoryImplementingCreateMethod_ConcreteClassFactory
 
   @Inject
   FactoryImplementingCreateMethod_ConcreteClassFactory() {}
-
+  
   @Override
   public FactoryImplementingCreateMethod.ConcreteClass create() {
     return new FactoryImplementingCreateMethod.ConcreteClass();
@@ -44,7 +44,7 @@ final class FactoryImplementingCreateMethod_ConcreteClassFactory
     return new FactoryImplementingCreateMethod.ConcreteClass(
         checkNotNull(genericWithDifferentArgumentName, 1));
   }
-
+  
   FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {
     return new FactoryImplementingCreateMethod.ConcreteClass(a, b);
   }

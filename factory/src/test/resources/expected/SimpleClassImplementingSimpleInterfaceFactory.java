@@ -25,7 +25,7 @@ import javax.inject.Inject;
 final class SimpleClassImplementingSimpleInterfaceFactory
     implements SimpleClassImplementingSimpleInterface.SimpleInterface {
   @Inject SimpleClassImplementingSimpleInterfaceFactory() {}
-
+  
   SimpleClassImplementingSimpleInterface create() {
     return new SimpleClassImplementingSimpleInterface();
   }

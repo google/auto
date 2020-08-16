@@ -15,5 +15,4 @@ This
 [slide presentation] compares AutoValue to numerous alternatives and explains
 why we think it is better.
 
-
 [slide presentation]: https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ75RE/edit

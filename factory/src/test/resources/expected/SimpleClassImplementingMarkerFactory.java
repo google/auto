@@ -25,7 +25,7 @@ import javax.inject.Inject;
   )
 final class SimpleClassImplementingMarkerFactory implements RandomAccess {
   @Inject SimpleClassImplementingMarkerFactory() {}
-
+  
   SimpleClassImplementingMarker create() {
     return new SimpleClassImplementingMarker();
   }

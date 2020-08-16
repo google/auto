@@ -347,7 +347,6 @@ This is not allowed. Object arrays are very badly-behaved and unlike primitive
 arrays, they can be replaced with a proper `List` implementation for very little
 added cost.
 
-
 If it's important to accept an object array at construction time, refer to the
 *first* example shown [here](#mutable_property).
 
@@ -675,4 +674,3 @@ final class AutoValue_Example extends Example {
 ```
 
 [`@AutoValue.CopyAnnotations`]: http://static.javadoc.io/com.google.auto.value/auto-value/1.6/com/google/auto/value/AutoValue.CopyAnnotations.html
-

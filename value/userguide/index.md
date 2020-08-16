@@ -13,7 +13,6 @@
 >
 > -- *Joshua Bloch, author, Effective Java*
 
-
 ## <a name="background"></a>Background
 
 **Value classes** are extremely common in Java projects. These are classes for
@@ -161,7 +160,6 @@ annotation processing plugin [as described in these instructions][tbroyer-apt].
 
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
 
-
 ### <a name="usage"></a>Usage
 
 Your choice to use AutoValue is essentially *API-invisible*. This means that, to
@@ -285,4 +283,3 @@ See the links in the sidebar at the top left.
 
 <!-- TODO(kevinb): there are some tidbits of information that don't seem to
      belong anywhere yet; such as how it implements floating-point equality -->
-

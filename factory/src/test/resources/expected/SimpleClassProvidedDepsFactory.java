@@ -28,7 +28,7 @@ final class SimpleClassProvidedDepsFactory {
   private final Provider<Integer> providedPrimitiveBProvider;
   private final Provider<String> providedDepAProvider;
   private final Provider<String> providedDepBProvider;
-
+  
   @Inject
   SimpleClassProvidedDepsFactory(
       @AQualifier Provider<Integer> providedPrimitiveAProvider,
@@ -40,7 +40,7 @@ final class SimpleClassProvidedDepsFactory {
     this.providedDepAProvider = checkNotNull(providedDepAProvider, 3);
     this.providedDepBProvider = checkNotNull(providedDepBProvider, 4);
   }
-
+  
   SimpleClassProvidedDeps create() {
     return new SimpleClassProvidedDeps(
         checkNotNull(providedPrimitiveAProvider.get(), 1),

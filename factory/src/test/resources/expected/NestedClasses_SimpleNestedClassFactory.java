@@ -24,7 +24,7 @@ import javax.inject.Inject;
   )
 final class NestedClasses_SimpleNestedClassFactory {
   @Inject NestedClasses_SimpleNestedClassFactory() {}
-
+  
   NestedClasses.SimpleNestedClass create() {
     return new NestedClasses.SimpleNestedClass();
   }

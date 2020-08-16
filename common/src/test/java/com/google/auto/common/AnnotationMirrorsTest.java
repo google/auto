@@ -211,5 +211,4 @@ public class AnnotationMirrorsTest {
   private AnnotationMirror annotationOn(Class<?> clazz) {
     return getOnlyElement(elements.getTypeElement(clazz.getCanonicalName()).getAnnotationMirrors());
   }
-
 }
