@@ -209,7 +209,6 @@ public final class AnnotationValues {
       return value;
     }
   }
-  ;
 
   /**
    * Returns the value as a VariableElement.
