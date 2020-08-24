@@ -225,7 +225,10 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
     Types types = processingEnv.getTypeUtils();
 
-    return types.isSubtype(providerImplementer.asType(), providerType.asType());
+    // Exact-type correctness is verified by the compiler
+    return types.isSubtype(
+        types.erasure(providerImplementer.asType()),
+        types.erasure(providerType.asType()));
   }
 
   /**

@@ -64,4 +64,17 @@ public class AutoServiceProcessorTest {
         .failsToCompile()
         .withErrorContaining(MISSING_SERVICES_ERROR);
   }
+
+  @Test
+  public void generics() {
+    assertThat(
+            JavaFileObjects.forResource("test/ServiceWithGenerics.java"),
+            JavaFileObjects.forResource("test/ServiceWithGenericsProvider.java"))
+        .withCompilerOptions("-Averify=true")
+        .processedWith(new AutoServiceProcessor())
+        .compilesWithoutError()
+        .and().generatesFiles(
+            JavaFileObjects.forResource("META-INF/services/test.ServiceWithGenerics"));
+  }
+
 }
