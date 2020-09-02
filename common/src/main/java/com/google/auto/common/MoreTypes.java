@@ -337,16 +337,14 @@ public final class MoreTypes {
     Iterator<? extends TypeMirror> aIterator = a.iterator();
     Iterator<? extends TypeMirror> bIterator = b.iterator();
     while (aIterator.hasNext()) {
-      if (!bIterator.hasNext()) {
-        return false;
-      }
+      // We checked that the lists have the same size, so we know that bIterator.hasNext() too.
       TypeMirror nextMirrorA = aIterator.next();
       TypeMirror nextMirrorB = bIterator.next();
       if (!equal(nextMirrorA, nextMirrorB, visiting)) {
         return false;
       }
     }
-    return !aIterator.hasNext();
+    return true;
   }
 
   private static final int HASH_SEED = 17;
