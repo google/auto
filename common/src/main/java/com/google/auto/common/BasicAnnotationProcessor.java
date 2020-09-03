@@ -376,7 +376,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * IllegalArgumentException} if the provided {@link Element} is a {@link PackageElement} or is
    * otherwise not enclosed by a type.
    */
-  // TODO(cgruber) move to MoreElements and make public.
+  // TODO(user) move to MoreElements and make public.
   private static TypeElement getEnclosingType(Element element) {
     return element.accept(
         new SimpleElementVisitor8<TypeElement, Void>() {
