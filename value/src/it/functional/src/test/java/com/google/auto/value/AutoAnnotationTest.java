@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
+import com.google.common.testing.SerializableTester;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -404,6 +405,14 @@ public class AutoAnnotationTest {
             EVERYTHING_FROM_REFLECTION, EVERYTHING_FROM_AUTO, EVERYTHING_FROM_AUTO_COLLECTIONS)
         .addEqualityGroup(EVERYTHING_ELSE_FROM_AUTO, EVERYTHING_ELSE_FROM_AUTO_COLLECTIONS)
         .testEquals();
+  }
+
+  @Test
+  public void testSerialization() {
+    Annotation[] instances = {EVERYTHING_FROM_AUTO, EVERYTHING_FROM_AUTO_COLLECTIONS};
+    for (Annotation instance : instances) {
+      SerializableTester.reserializeAndAssert(instance);
+    }
   }
 
   public static class IntList extends ArrayList<Integer> {
