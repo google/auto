@@ -15,7 +15,7 @@
  */
 package com.google.auto.value;
 
-import static org.junit.Assert.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
 import com.google.auto.value.annotations.Empty;
 import com.google.auto.value.annotations.GwtArrays;
@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
 import java.lang.annotation.Annotation;
@@ -71,9 +70,9 @@ public class AutoAnnotationTest {
     String[] array = {"Jekyll"};
     StringValues stringValues = newStringValues(array);
     array[0] = "Hyde";
-    assertEquals("Jekyll", stringValues.value()[0]);
+    assertThat(stringValues.value()).asList().containsExactly("Jekyll");
     stringValues.value()[0] = "Hyde";
-    assertEquals("Jekyll", stringValues.value()[0]);
+    assertThat(stringValues.value()[0]).isEqualTo("Jekyll");
   }
 
   @Test
@@ -81,12 +80,12 @@ public class AutoAnnotationTest {
     String[] strings = {"Jekyll"};
     int[] ints = {2, 3, 5};
     GwtArrays arrays = newGwtArrays(strings, ints);
-    assertEquals(ImmutableList.of("Jekyll"), ImmutableList.copyOf(arrays.strings()));
-    assertEquals(ImmutableList.of(2, 3, 5), Ints.asList(arrays.ints()));
+    assertThat(arrays.strings()).asList().containsExactly("Jekyll");
+    assertThat(arrays.ints()).asList().containsExactly(2, 3, 5).inOrder();
     strings[0] = "Hyde";
     ints[0] = -1;
-    assertEquals(ImmutableList.of("Jekyll"), ImmutableList.copyOf(arrays.strings()));
-    assertEquals(ImmutableList.of(2, 3, 5), Ints.asList(arrays.ints()));
+    assertThat(ImmutableList.copyOf(arrays.strings())).containsExactly("Jekyll");
+    assertThat(arrays.ints()).asList().containsExactly(2, 3, 5).inOrder();
   }
 
   @AutoAnnotation
@@ -449,7 +448,7 @@ public class AutoAnnotationTest {
     IntList intList = new IntList(ImmutableList.of(1, 2, 3));
     IntArray actual = newIntArray(intList);
     IntArray expected = AnnotatedWithIntArray.class.getAnnotation(IntArray.class);
-    assertEquals(expected, actual);
+    assertThat(actual).isEqualTo(expected);
   }
 
   @Test
@@ -470,8 +469,8 @@ public class AutoAnnotationTest {
             + "@com.google.auto.value.annotations.StringValues([\"foo\", \"bar\"])"
             + "]"
             + ")";
-    assertEquals(expected, EVERYTHING_FROM_AUTO.toString());
-    assertEquals(expected, EVERYTHING_FROM_AUTO_COLLECTIONS.toString());
+    assertThat(EVERYTHING_FROM_AUTO.toString()).isEqualTo(expected);
+    assertThat(EVERYTHING_FROM_AUTO_COLLECTIONS.toString()).isEqualTo(expected);
   }
 
   @Test
@@ -484,7 +483,7 @@ public class AutoAnnotationTest {
     String expected =
         "@com.google.auto.value.annotations.StringValues("
             + "[\"\", \"\\r\\n\", \"hello, world\", \"Éamonn\", \"\\007\\uffef\"])";
-    assertEquals(expected, instance.toString());
+    assertThat(instance.toString()).isEqualTo(expected);
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -507,7 +506,7 @@ public class AutoAnnotationTest {
             ImmutableList.<Class<? extends Annotation>>of(AnnotationsAnnotation.class));
     AnnotationsAnnotation fromReflect =
         AnnotatedWithAnnotationsAnnotation.class.getAnnotation(AnnotationsAnnotation.class);
-    assertEquals(fromReflect, generated);
+    assertThat(generated).isEqualTo(fromReflect);
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -529,7 +528,7 @@ public class AutoAnnotationTest {
         newClassesAnnotation(Arrays.<Class<?>>asList(AnnotationsAnnotation.class));
     ClassesAnnotation fromReflect =
         AnnotatedWithClassesAnnotation.class.getAnnotation(ClassesAnnotation.class);
-    assertEquals(fromReflect, generated);
+    assertThat(generated).isEqualTo(fromReflect);
   }
 
   @Retention(RetentionPolicy.RUNTIME)
