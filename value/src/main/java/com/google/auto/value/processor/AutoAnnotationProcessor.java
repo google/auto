@@ -17,6 +17,9 @@ package com.google.auto.value.processor;
 
 import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
+import static com.google.common.collect.Maps.immutableEntry;
+import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.joining;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.SuperficialValidation;
@@ -25,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.hash.Hashing;
 import com.google.common.primitives.Primitives;
 import com.google.errorprone.annotations.FormatMethod;
 import java.io.IOException;
@@ -172,6 +176,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.pkg = pkg;
     vars.wrapperTypesUsedInCollections = wrapperTypesUsedInCollections;
     vars.gwtCompatible = isGwtCompatible(annotationElement);
+    vars.serialVersionUID = computeSerialVersionUid(members, parameters);
     ImmutableMap<String, Integer> invariableHashes = invariableHashes(members, parameters.keySet());
     vars.invariableHashSum = 0;
     for (int h : invariableHashes.values()) {
@@ -446,6 +451,43 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
   private static String fullyQualifiedName(String pkg, String cls) {
     return pkg.isEmpty() ? cls : pkg + "." + cls;
+  }
+
+  /**
+   * We compute a {@code serialVersionUID} for the generated class based on the names and types of
+   * the annotation members that the {@code @AutoAnnotation} method defines. These are exactly the
+   * names and types of the instance fields in the generated class. So in the common case where the
+   * annotation acquires a new member with a default value, if the {@code @AutoAnnotation} method is
+   * not changed then the generated class will acquire an implementation of the new member method
+   * which just returns the default value. The {@code serialVersionUID} will not change, which makes
+   * sense because the instance fields haven't changed, and instances that were serialized before
+   * the new member was added should deserialize fine. On the other hand, if you then add a
+   * parameter to the {@code @AutoAnnotation} method for the new member, the implementation class
+   * will acquire a new instance field, and we will compute a different {@code serialVersionUID}.
+   * That's because an instance serialized before that change would not have a value for the new
+   * instance field, which would end up zero or null. Users don't expect annotation methods to
+   * return null so that would be bad.
+   *
+   * <p>We could instead add a {@code readObject(ObjectInputStream)} method that would check that
+   * all of the instance fields are really present in the deserialized instance, and perhaps
+   * replace them with their default values from the annotation if not. That seems a lot more
+   * complicated than is justified, though, especially since the instance fields are final and
+   * would have to be set in the deserialized object through reflection.
+   */
+  private static long computeSerialVersionUid(
+      ImmutableMap<String, Member> members, ImmutableMap<String, Parameter> parameters) {
+    // TypeMirror.toString() isn't fully specified so it could potentially differ between
+    // implementations. Our member.getType() string comes from TypeEncoder and is predictable, but
+    // it includes `...` markers around fully-qualified type names, which are used to handle
+    // imports. So we remove those markers below.
+    String namesAndTypesString =
+        members.entrySet().stream()
+            .filter(e -> parameters.containsKey(e.getKey()))
+            .map(e -> immutableEntry(e.getKey(), e.getValue().getType().replace("`", "")))
+            .sorted(comparing(Map.Entry::getKey))
+            .map(e -> e.getKey() + ":" + e.getValue())
+            .collect(joining(";"));
+    return Hashing.murmur3_128().hashUnencodedChars(namesAndTypesString).asLong();
   }
 
   private void writeSourceFile(String className, String text, TypeElement originatingType) {

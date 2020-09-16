@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
+import java.io.ObjectStreamClass;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -412,6 +413,28 @@ public class AutoAnnotationTest {
     for (Annotation instance : instances) {
       SerializableTester.reserializeAndAssert(instance);
     }
+  }
+
+  @Test
+  @SuppressWarnings("GetClassOnAnnotation") // yes, we really do want the implementation classes
+  public void testSerialVersionUid() {
+    Class<? extends Everything> everythingImpl = EVERYTHING_FROM_AUTO.getClass();
+    Class<? extends Everything> everythingFromCollectionsImpl =
+        EVERYTHING_FROM_AUTO_COLLECTIONS.getClass();
+    assertThat(everythingImpl).isNotEqualTo(everythingFromCollectionsImpl);
+    long everythingUid = ObjectStreamClass.lookup(everythingImpl).getSerialVersionUID();
+    long everythingFromCollectionsUid =
+        ObjectStreamClass.lookup(everythingFromCollectionsImpl).getSerialVersionUID();
+    // Two different implementations of the same annotation with the same members being provided
+    // (not defaulted) should have the same serialVersionUID. They won't be serial-compatible, of
+    // course, because their classes are different. So we're really just checking that the
+    // serialVersionUID depends only on the names and types of those members.
+    assertThat(everythingFromCollectionsUid).isEqualTo(everythingUid);
+    Class<? extends StringValues> stringValuesImpl = newStringValues(new String[0]).getClass();
+    long stringValuesUid = ObjectStreamClass.lookup(stringValuesImpl).getSerialVersionUID();
+    // The previous assertion would be vacuously true if every implementation had the same
+    // serialVersionUID, so check that that's not true.
+    assertThat(stringValuesUid).isNotEqualTo(everythingUid);
   }
 
   public static class IntList extends ArrayList<Integer> {

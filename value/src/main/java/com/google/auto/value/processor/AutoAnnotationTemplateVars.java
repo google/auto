@@ -74,6 +74,12 @@ class AutoAnnotationTemplateVars extends TemplateVars {
   /** The sum of the hash code contributions from the members in {@link #invariableHashes}. */
   Integer invariableHashSum;
 
+  /**
+   * A computed {@code serialVersionUID} based on the names and types of the {@code @AutoAnnotation}
+   * method parameters.
+   */
+  Long serialVersionUID;
+
   private static final Template TEMPLATE = parsedTemplateForResource("autoannotation.vm");
 
   @Override
