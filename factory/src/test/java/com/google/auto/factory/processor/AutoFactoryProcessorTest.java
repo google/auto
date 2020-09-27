@@ -434,6 +434,18 @@ public class AutoFactoryProcessorTest {
         .generatesSources(loadExpectedFile("expected/DefaultPackageFactory.java"));
   }
 
+  @Test
+  public void nullAnnotationJdt() {
+    JavaFileObject file = JavaFileObjects.forResource("good/NullAnnotationJdt.java");
+    assertAbout(javaSource())
+        .that(file)
+        .withCompilerOptions("-AnullAnnotations=JDT")
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(loadExpectedFile("expected/NullAnnotationJdtFactory.java"));
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     try {
       List<String> sourceLines = Resources.readLines(Resources.getResource(resourceName), UTF_8);

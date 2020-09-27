@@ -59,6 +59,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @AutoService(Processor.class)
 public final class AutoFactoryProcessor extends AbstractProcessor {
+  private static final String NULL_ANNOTATION = "nullAnnotations";
   private FactoryDescriptorGenerator factoryDescriptorGenerator;
   private AutoFactoryDeclaration.Factory declarationFactory;
   private ProvidedChecker providedChecker;
@@ -125,7 +126,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         indexedMethodsBuilder.build();
     ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated =
         simpleNamesToNames(indexedMethods.keySet());
-    FactoryWriter factoryWriter = new FactoryWriter(processingEnv, factoriesBeingCreated);
+    FactoryWriter factoryWriter = new FactoryWriter( getNullAnnotation(), processingEnv, factoriesBeingCreated);
 
     indexedMethods.asMap().forEach(
         (factoryName, methodDescriptors) -> {
@@ -172,6 +173,15 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         });
   }
 
+  private NullAnnotation getNullAnnotation(){
+    String name = processingEnv.getOptions().get(NULL_ANNOTATION);
+    for( NullAnnotation anno : NullAnnotation.values()){
+      if( anno.name().equals(name)) {
+        return anno;
+      }
+    }
+    return NullAnnotation.NONE;
+  }
   private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
       TypeElement supertype, Element autoFactoryElement) {
     ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
@@ -231,5 +241,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   @Override
   public SourceVersion getSupportedSourceVersion() {
     return SourceVersion.latestSupported();
+  }
+
+  @Override
+  public Set<String> getSupportedOptions() {
+    return ImmutableSet.of(NULL_ANNOTATION);
   }
 }

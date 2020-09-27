@@ -61,13 +61,16 @@ final class FactoryWriter {
   private final Elements elements;
   private final SourceVersion sourceVersion;
   private final ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated;
+  private final NullAnnotation nullAnnotation;
 
   FactoryWriter(
+      NullAnnotation nullAnnotation,
       ProcessingEnvironment processingEnv,
       ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated) {
     this.filer = processingEnv.getFiler();
     this.elements = processingEnv.getElementUtils();
     this.sourceVersion = processingEnv.getSourceVersion();
+    this.nullAnnotation = nullAnnotation;
     this.factoriesBeingCreated = factoriesBeingCreated;
   }
 
@@ -85,6 +88,9 @@ final class FactoryWriter {
             AutoFactoryProcessor.class,
             "https://github.com/google/auto/tree/master/factory")
         .ifPresent(factory::addAnnotation);
+    if( nullAnnotation == nullAnnotation.JDT ) {
+      factory.addAnnotation(org.eclipse.jdt.annotation.NonNullByDefault.class);
+    }
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }
