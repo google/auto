@@ -15,21 +15,24 @@
  */
 package com.google.auto.factory.processor;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.type.TypeMirror;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map.Entry;
-import java.util.Set;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.type.TypeMirror;
 
 /**
  * A value object representing a factory to be generated.
@@ -54,6 +57,7 @@ abstract class FactoryDescriptor {
   abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
   abstract boolean allowSubclasses();
   abstract ImmutableMap<Key, ProviderField> providers();
+  abstract ImmutableList<String> factoryAnnotations();
 
   final AutoFactoryDeclaration declaration() {
     return Iterables.getFirst(methodDescriptors(), null).declaration();
@@ -82,7 +86,8 @@ abstract class FactoryDescriptor {
       boolean publicType,
       ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
       ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors,
-      boolean allowSubclasses) {
+      boolean allowSubclasses,
+      ImmutableList<String> factoryAnnotations) {
     ImmutableSetMultimap.Builder<Key, Parameter> parametersForProviders =
         ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
@@ -140,7 +145,8 @@ abstract class FactoryDescriptor {
         deduplicatedMethodDescriptors,
         deduplicatedImplementationMethodDescriptors,
         allowSubclasses,
-        providersBuilder.build());
+        providersBuilder.build(),
+        factoryAnnotations);
   }
 
   /**

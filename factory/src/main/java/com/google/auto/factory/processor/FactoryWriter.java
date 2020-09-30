@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.AnnotationSpec.Builder;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
@@ -85,6 +86,10 @@ final class FactoryWriter {
             AutoFactoryProcessor.class,
             "https://github.com/google/auto/tree/master/factory")
         .ifPresent(factory::addAnnotation);
+    for( String factoryAnnotation : descriptor.declaration().factoryAnnotations()) {
+        Builder builder = AnnotationSpec.builder(ClassName.bestGuess(factoryAnnotation));
+    	factory.addAnnotation(builder.build());
+    }
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }

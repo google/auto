@@ -17,12 +17,15 @@ package com.google.auto.factory.processor;
 
 import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.FactoryAnnotation;
+import com.google.auto.factory.FactoryAnnotations;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
@@ -136,8 +139,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
           boolean publicType = false;
           Boolean allowSubclasses = null;
           boolean skipCreation = false;
+          ImmutableList.Builder<String> factoryAnnotations = ImmutableList.builder();
           for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
             extending.add(methodDescriptor.declaration().extendingType().asType());
+            factoryAnnotations.addAll(methodDescriptor.declaration().factoryAnnotations());
             for (TypeElement implementingType :
                 methodDescriptor.declaration().implementingTypes()) {
               implementing.add(implementingType.asType());
@@ -164,7 +169,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                       publicType,
                       ImmutableSet.copyOf(methodDescriptors),
                       implementationMethodDescriptors.get(factoryName),
-                      allowSubclasses));
+                      allowSubclasses,
+                      factoryAnnotations.build()));
             } catch (IOException e) {
               messager.printMessage(Kind.ERROR, "failed: " + e);
             }

@@ -21,11 +21,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.FactoryAnnotation;
+import com.google.auto.factory.FactoryAnnotations;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -33,6 +36,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +66,7 @@ abstract class AutoFactoryDeclaration {
   abstract boolean allowSubclasses();
   abstract AnnotationMirror mirror();
   abstract ImmutableMap<String, AnnotationValue> valuesMap();
+  abstract List<String> factoryAnnotations();
 
   PackageAndClass getFactoryName() {
     String packageName = getPackage(targetType()).getQualifiedName().toString();
@@ -157,6 +163,8 @@ abstract class AutoFactoryDeclaration {
       AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
       boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
 
+      List<String> factoryAnnotations = getFactoryAnnotations(element);
+
       return Optional.<AutoFactoryDeclaration>of(
           new AutoValue_AutoFactoryDeclaration(
               getAnnotatedType(element),
@@ -166,10 +174,39 @@ abstract class AutoFactoryDeclaration {
               implementingTypes,
               allowSubclasses,
               mirror,
-              ImmutableMap.copyOf(values)));
+              ImmutableMap.copyOf(values),
+              factoryAnnotations));
     }
 
-    private static TypeElement getAnnotatedType(Element element) {
+    private List<String> getFactoryAnnotations(Element element) {
+    	ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
+      Optional<AnnotationMirror> factoryAnnoMirror = Mirrors.getAnnotationMirror(element, FactoryAnnotation.class);
+      if( factoryAnnoMirror.isPresent() ){
+        addFactoryAnnotationName(resultBuilder, factoryAnnoMirror.get());
+      }
+      Optional<AnnotationMirror> factoryAnnosMirror = Mirrors.getAnnotationMirror(element, FactoryAnnotations.class);
+      if( factoryAnnosMirror.isPresent() ){
+        Map<String, AnnotationValue> valuesMap =
+                Mirrors.simplifyAnnotationValueMap(factoryAnnosMirror.get().getElementValues());
+        AnnotationValue value = valuesMap.get("value");
+        List<AnnotationMirror> values = (List<AnnotationMirror>) value.getValue();
+        for( AnnotationMirror am : values ) {
+          addFactoryAnnotationName(resultBuilder, am);
+        }
+      }
+
+      return resultBuilder.build();
+    }
+
+    private void addFactoryAnnotationName(ImmutableList.Builder<String> resultBuilder, AnnotationMirror annotationMirror) {
+      Map<String, AnnotationValue> valuesMap =
+              Mirrors.simplifyAnnotationValueMap(annotationMirror.getElementValues());
+
+      AnnotationValue classNameValue = valuesMap.get("value");
+      resultBuilder.add( classNameValue.getValue().toString() );
+    }
+
+	  private static TypeElement getAnnotatedType(Element element) {
       List<TypeElement> types = ImmutableList.of();
       while (types.isEmpty()) {
         types = typesIn(Arrays.asList(element));
