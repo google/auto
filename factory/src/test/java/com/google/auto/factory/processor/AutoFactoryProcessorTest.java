@@ -434,6 +434,28 @@ public class AutoFactoryProcessorTest {
         .generatesSources(loadExpectedFile("expected/DefaultPackageFactory.java"));
   }
 
+  @Test
+  public void factoryAnnotation() {
+    JavaFileObject file = JavaFileObjects.forResource("good/ClassWithFactoryAnnotation.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(loadExpectedFile("expected/ClassWithFactoryAnnotationFactory.java"));
+  }
+
+  @Test
+  public void factoryAnnotations() {
+    JavaFileObject file = JavaFileObjects.forResource("good/ClassWithFactoryAnnotations.java");
+    assertAbout(javaSource())
+        .that(file)
+        .processedWith(new AutoFactoryProcessor())
+        .compilesWithoutError()
+        .and()
+        .generatesSources(loadExpectedFile("expected/ClassWithFactoryAnnotationsFactory.java"));
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     try {
       List<String> sourceLines = Resources.readLines(Resources.getResource(resourceName), UTF_8);

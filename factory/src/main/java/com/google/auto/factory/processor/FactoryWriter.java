@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.AnnotationSpec.Builder;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
@@ -50,6 +51,8 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -85,6 +88,13 @@ final class FactoryWriter {
             AutoFactoryProcessor.class,
             "https://github.com/google/auto/tree/master/factory")
         .ifPresent(factory::addAnnotation);
+    for( FactoryAnnotationDescriptor factoryAnnotation : descriptor.declaration().factoryAnnotations()) {
+      DeclaredType type = (DeclaredType) factoryAnnotation.annotationType();
+      Element el = type.asElement();
+      ClassName cn = ClassName.bestGuess(el.toString());
+      Builder builder = AnnotationSpec.builder(cn);
+      factory.addAnnotation(builder.build());
+    }
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }

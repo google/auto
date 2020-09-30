@@ -19,6 +19,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
@@ -54,6 +55,7 @@ abstract class FactoryDescriptor {
   abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
   abstract boolean allowSubclasses();
   abstract ImmutableMap<Key, ProviderField> providers();
+  abstract ImmutableList<FactoryAnnotationDescriptor> factoryAnnotations();
 
   final AutoFactoryDeclaration declaration() {
     return Iterables.getFirst(methodDescriptors(), null).declaration();
@@ -82,7 +84,8 @@ abstract class FactoryDescriptor {
       boolean publicType,
       ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
       ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors,
-      boolean allowSubclasses) {
+      boolean allowSubclasses,
+      ImmutableList<FactoryAnnotationDescriptor> factoryAnnotations) {
     ImmutableSetMultimap.Builder<Key, Parameter> parametersForProviders =
         ImmutableSetMultimap.builder();
     for (FactoryMethodDescriptor descriptor : methodDescriptors) {
@@ -140,7 +143,8 @@ abstract class FactoryDescriptor {
         deduplicatedMethodDescriptors,
         deduplicatedImplementationMethodDescriptors,
         allowSubclasses,
-        providersBuilder.build());
+        providersBuilder.build(),
+        factoryAnnotations);
   }
 
   /**

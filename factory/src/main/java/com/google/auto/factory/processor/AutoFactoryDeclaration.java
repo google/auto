@@ -26,6 +26,8 @@ import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.FactoryAnnotation;
+import com.google.auto.factory.FactoryAnnotations;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -43,6 +45,8 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 
@@ -61,6 +65,7 @@ abstract class AutoFactoryDeclaration {
   abstract boolean allowSubclasses();
   abstract AnnotationMirror mirror();
   abstract ImmutableMap<String, AnnotationValue> valuesMap();
+  abstract List<FactoryAnnotationDescriptor> factoryAnnotations();
 
   PackageAndClass getFactoryName() {
     String packageName = getPackage(targetType()).getQualifiedName().toString();
@@ -118,7 +123,7 @@ abstract class AutoFactoryDeclaration {
       if (extendingType == null) {
         messager.printMessage(ERROR, "Unable to find the type: "
             + extendingValue.getValue().toString(),
-                element, mirror, extendingValue);
+            element, mirror, extendingValue);
         return Optional.absent();
       } else if (!isValidSupertypeForClass(extendingType)) {
         messager.printMessage(ERROR,
@@ -135,7 +140,7 @@ abstract class AutoFactoryDeclaration {
                   return constructor.getParameters().isEmpty();
                 }
               })
-              .toList();
+          .toList();
       if (noParameterConstructors.size() == 0) {
         messager.printMessage(ERROR,
             String.format("%s is not a valid supertype for a factory. "
@@ -157,6 +162,8 @@ abstract class AutoFactoryDeclaration {
       AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
       boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
 
+      List<FactoryAnnotationDescriptor> factoryAnnotations = getFactoryAnnotations(element);
+
       return Optional.<AutoFactoryDeclaration>of(
           new AutoValue_AutoFactoryDeclaration(
               getAnnotatedType(element),
@@ -166,7 +173,43 @@ abstract class AutoFactoryDeclaration {
               implementingTypes,
               allowSubclasses,
               mirror,
-              ImmutableMap.copyOf(values)));
+              ImmutableMap.copyOf(values),
+              factoryAnnotations));
+    }
+
+    private List<FactoryAnnotationDescriptor> getFactoryAnnotations(Element element) {
+      
+      if( element instanceof ExecutableElement ) {
+        return getFactoryAnnotations(element.getEnclosingElement());
+      }
+      ImmutableList.Builder<FactoryAnnotationDescriptor> resultBuilder = ImmutableList.builder();
+      
+      FactoryAnnotation fa = element.getAnnotation(FactoryAnnotation.class);
+      if( fa != null ) {
+        addFactoryAnnotationName(resultBuilder, fa);
+      }
+      FactoryAnnotations fas = element.getAnnotation(FactoryAnnotations.class);
+      if( fas != null ) {
+        for( FactoryAnnotation fa2 : fas.value()) {
+          addFactoryAnnotationName(resultBuilder, fa2);
+        }
+      }
+      return resultBuilder.build();
+    }
+
+    private void addFactoryAnnotationName(ImmutableList.Builder<FactoryAnnotationDescriptor> resultBuilder, FactoryAnnotation fa) {
+      resultBuilder.add( FactoryAnnotationDescriptor.create(extractValueOfClassType(fa)));
+    }
+
+    private TypeMirror extractValueOfClassType(FactoryAnnotation fa) {
+      // see https://stackoverflow.com/questions/7687829/java-6-annotation-processing-getting-a-class-from-an-annotation
+      try {
+        fa.value();
+        throw new IllegalStateException("should not come here");
+      }
+      catch( MirroredTypeException e ) {
+        return checkNotNull(e.getTypeMirror());
+      }
     }
 
     private static TypeElement getAnnotatedType(Element element) {

@@ -136,8 +136,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
           boolean publicType = false;
           Boolean allowSubclasses = null;
           boolean skipCreation = false;
+          ImmutableList.Builder<FactoryAnnotationDescriptor> factoryAnnotations = ImmutableList.builder();
           for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
             extending.add(methodDescriptor.declaration().extendingType().asType());
+            factoryAnnotations.addAll(methodDescriptor.declaration().factoryAnnotations());
             for (TypeElement implementingType :
                 methodDescriptor.declaration().implementingTypes()) {
               implementing.add(implementingType.asType());
@@ -164,7 +166,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                       publicType,
                       ImmutableSet.copyOf(methodDescriptors),
                       implementationMethodDescriptors.get(factoryName),
-                      allowSubclasses));
+                      allowSubclasses,
+                      factoryAnnotations.build()));
             } catch (IOException e) {
               messager.printMessage(Kind.ERROR, "failed: " + e);
             }
