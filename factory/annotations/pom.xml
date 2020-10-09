@@ -26,20 +26,17 @@
   </parent>
 
   <groupId>com.google.auto.factory</groupId>
-  <artifactId>auto-factory-aggregator</artifactId>
+  <artifactId>auto-factory-annotations</artifactId>
   <version>HEAD-SNAPSHOT</version>
-  <name>AutoFactory Aggregator</name>
+  <name>AutoFactory Annotations</name>
   <description>
-    Aggregator POM for @AutoFactory.
+    JSR-330-compatible factories annotations.
   </description>
   <url>https://github.com/google/auto/tree/master/factory</url>
-  <packaging>pom</packaging>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
-    <guava.version>28.2-jre</guava.version>
-    <truth.version>1.0.1</truth.version>
   </properties>
 
   <scm>
@@ -66,9 +63,50 @@
     <url>http://www.google.com</url>
   </organization>
 
-  <modules>
-    <module>annotations</module>
-    <module>processor</module>
-  </modules>
+  <dependencies>
+  </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <compilerArgument>-Xlint:all</compilerArgument>
+          <showWarnings>true</showWarnings>
+          <showDeprecation>true</showDeprecation>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-java</artifactId>
+            <version>0.9.4</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.0.2</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-invoker-plugin</artifactId>
+        <version>3.0.1</version>
+        <configuration>
+          <addTestClassPath>true</addTestClassPath>
+          <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+          <pomIncludes>
+            <pomInclude>*/pom.xml</pomInclude>
+          </pomIncludes>
+          <streamLogs>true</streamLogs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.immutables.tools</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>4</version>
+      </plugin>
+    </plugins>
+  </build>
 </project>
