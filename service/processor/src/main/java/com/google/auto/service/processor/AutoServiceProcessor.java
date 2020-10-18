@@ -17,8 +17,10 @@ package com.google.auto.service.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
@@ -28,8 +30,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -74,7 +74,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
    *   {@code "com.google.apphosting.LocalRpcService" ->
    *   "com.google.apphosting.datastore.LocalDatastoreService"}
    */
-  private Multimap<String, String> providers = HashMultimap.create();
+  private final Multimap<String, String> providers = HashMultimap.create();
 
   @Override
   public ImmutableSet<String> getSupportedAnnotationTypes() {
@@ -104,24 +104,20 @@ public class AutoServiceProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     try {
-      return processImpl(annotations, roundEnv);
-    } catch (Exception e) {
+      processImpl(annotations, roundEnv);
+    } catch (RuntimeException e) {
       // We don't allow exceptions of any kind to propagate to the compiler
-      StringWriter writer = new StringWriter();
-      e.printStackTrace(new PrintWriter(writer));
-      fatalError(writer.toString());
-      return true;
+      fatalError(getStackTraceAsString(e));
     }
+    return false;
   }
 
-  private boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  private void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (roundEnv.processingOver()) {
       generateConfigFiles();
     } else {
       processAnnotations(annotations, roundEnv);
     }
-
-    return true;
   }
 
   private void processAnnotations(Set<? extends TypeElement> annotations,
@@ -134,7 +130,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
     for (Element e : elements) {
       // TODO(gak): check for error trees?
-      TypeElement providerImplementer = (TypeElement) e;
+      TypeElement providerImplementer = MoreElements.asType(e);
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
       Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
       if (providerInterfaces.isEmpty()) {
@@ -187,7 +183,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
           log("Resource file did not already exist.");
         }
 
-        Set<String> newServices = new HashSet<String>(providers.get(providerInterface));
+        Set<String> newServices = new HashSet<>(providers.get(providerInterface));
         if (allServices.containsAll(newServices)) {
           log("No new service entries being added.");
           return;
@@ -197,9 +193,9 @@ public class AutoServiceProcessor extends AbstractProcessor {
         log("New service file contents: " + allServices);
         FileObject fileObject = filer.createResource(StandardLocation.CLASS_OUTPUT, "",
             resourceFile);
-        OutputStream out = fileObject.openOutputStream();
-        ServicesFiles.writeServiceFile(allServices, out);
-        out.close();
+        try (OutputStream out = fileObject.openOutputStream()) {
+          ServicesFiles.writeServiceFile(allServices, out);
+        }
         log("Wrote to: " + fileObject.toUri());
       } catch (IOException e) {
         fatalError("Unable to create " + resourceFile + ", " + e);
@@ -216,7 +212,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
   private boolean checkImplementer(TypeElement providerImplementer, TypeElement providerType) {
 
     String verify = processingEnv.getOptions().get("verify");
-    if (verify == null || !Boolean.valueOf(verify)) {
+    if (verify == null || !Boolean.parseBoolean(verify)) {
       return true;
     }
 
@@ -241,19 +237,20 @@ public class AutoServiceProcessor extends AbstractProcessor {
     Element enclosingElement = element.getEnclosingElement();
 
     if (enclosingElement instanceof PackageElement) {
-      PackageElement pkg = (PackageElement) enclosingElement;
+      PackageElement pkg = MoreElements.asPackage(enclosingElement);
       if (pkg.isUnnamed()) {
         return className;
       }
       return pkg.getQualifiedName() + "." + className;
     }
 
-    TypeElement typeElement = (TypeElement) enclosingElement;
+    TypeElement typeElement = MoreElements.asType(enclosingElement);
     return getBinaryNameImpl(typeElement, typeElement.getSimpleName() + "$" + className);
   }
 
   /**
-   * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code annotationMirror}.
+   * Returns the contents of a {@code Class[]}-typed "value" field in a given {@code
+   * annotationMirror}.
    */
   private ImmutableSet<DeclaredType> getValueFieldOfClasses(AnnotationMirror annotationMirror) {
     return getAnnotationValue(annotationMirror, "value")
@@ -261,8 +258,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
             new SimpleAnnotationValueVisitor8<ImmutableSet<DeclaredType>, Void>() {
               @Override
               public ImmutableSet<DeclaredType> visitType(TypeMirror typeMirror, Void v) {
-                // TODO(ronshapiro): class literals may not always be declared types, i.e. int.class,
-                // int[].class
+                // TODO(ronshapiro): class literals may not always be declared types, i.e.
+                // int.class, int[].class
                 return ImmutableSet.of(MoreTypes.asDeclared(typeMirror));
               }
 

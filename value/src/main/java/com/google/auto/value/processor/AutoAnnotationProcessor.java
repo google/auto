@@ -22,6 +22,7 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.common.MoreElements;
+import com.google.auto.common.MoreTypes;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Preconditions;
@@ -110,19 +111,18 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     elementUtils = processingEnv.getElementUtils();
     typeUtils = processingEnv.getTypeUtils();
-    boolean claimed =
+    // This should always be true: we shouldn't be called with any other annotation.
+    boolean ours =
         (annotations.size() == 1
             && annotations
                 .iterator()
                 .next()
                 .getQualifiedName()
                 .contentEquals(AUTO_ANNOTATION_NAME));
-    if (claimed) {
+    if (ours) {
       process(roundEnv);
-      return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   private void process(RoundEnvironment roundEnv) {
@@ -156,7 +156,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     Set<Class<?>> wrapperTypesUsedInCollections = wrapperTypesUsedInCollections(method);
 
     ImmutableMap<String, ExecutableElement> memberMethods = getMemberMethods(annotationElement);
-    TypeElement methodClass = (TypeElement) method.getEnclosingElement();
+    TypeElement methodClass = MoreElements.asType(method.getEnclosingElement());
     String pkg = TypeSimplifier.packageNameOf(methodClass);
 
     ImmutableMap<String, AnnotationValue> defaultValues = getDefaultValues(annotationElement);
@@ -251,7 +251,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
   private boolean methodsAreOverloaded(List<ExecutableElement> methods) {
     boolean overloaded = false;
-    Set<String> classNames = new HashSet<String>();
+    Set<String> classNames = new HashSet<>();
     for (ExecutableElement method : methods) {
       String qualifiedClassName =
           fullyQualifiedName(
@@ -266,10 +266,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private String generatedClassName(ExecutableElement method) {
-    TypeElement type = (TypeElement) method.getEnclosingElement();
+    TypeElement type = MoreElements.asType(method.getEnclosingElement());
     String name = type.getSimpleName().toString();
     while (type.getEnclosingElement() instanceof TypeElement) {
-      type = (TypeElement) type.getEnclosingElement();
+      type = MoreElements.asType(type.getEnclosingElement());
       name = type.getSimpleName() + "_" + name;
     }
     return "AutoAnnotation_" + name + "_" + method.getSimpleName();
@@ -280,7 +280,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     if (returnTypeMirror.getKind() == TypeKind.DECLARED) {
       Element returnTypeElement = typeUtils.asElement(method.getReturnType());
       if (returnTypeElement.getKind() == ElementKind.ANNOTATION_TYPE) {
-        return (TypeElement) returnTypeElement;
+        return MoreElements.asType(returnTypeElement);
       }
     }
     throw abortWithError(
@@ -404,7 +404,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     if (memberType.getKind() != TypeKind.ARRAY) {
       return false;
     }
-    TypeMirror arrayElementType = ((ArrayType) memberType).getComponentType();
+    TypeMirror arrayElementType = MoreTypes.asArray(memberType).getComponentType();
     TypeMirror wrappedArrayElementType =
         arrayElementType.getKind().isPrimitive()
             ? typeUtils.boxedClass((PrimitiveType) arrayElementType).asType()
@@ -421,7 +421,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
    * like {@code List<Integer>}. This is needed because we will emit a helper method for each such
    * type, for example to convert {@code Collection<Integer>} into {@code int[]}.
    */
-  private Set<Class<?>> wrapperTypesUsedInCollections(ExecutableElement method) {
+  private ImmutableSet<Class<?>> wrapperTypesUsedInCollections(ExecutableElement method) {
     TypeElement javaUtilCollection = elementUtils.getTypeElement(Collection.class.getName());
     ImmutableSet.Builder<Class<?>> usedInCollections = ImmutableSet.builder();
     for (Class<?> wrapper : Primitives.allWrapperTypes()) {
@@ -533,7 +533,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
     public String getComponentType() {
       Preconditions.checkState(getTypeMirror().getKind() == TypeKind.ARRAY);
-      ArrayType arrayType = (ArrayType) getTypeMirror();
+      ArrayType arrayType = MoreTypes.asArray(getTypeMirror());
       return TypeEncoder.encode(arrayType.getComponentType());
     }
 
@@ -555,12 +555,12 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       if (getTypeMirror().getKind() != TypeKind.ARRAY) {
         return false;
       }
-      TypeMirror componentType = ((ArrayType) getTypeMirror()).getComponentType();
+      TypeMirror componentType = MoreTypes.asArray(getTypeMirror()).getComponentType();
       if (componentType.getKind() != TypeKind.DECLARED) {
         return false;
       }
-      DeclaredType declared = (DeclaredType) componentType;
-      if (!((TypeElement) processingEnv.getTypeUtils().asElement(componentType))
+      DeclaredType declared = MoreTypes.asDeclared(componentType);
+      if (!MoreElements.asType(processingEnv.getTypeUtils().asElement(componentType))
           .getQualifiedName()
           .contentEquals("java.lang.Class")) {
         return false;
@@ -572,7 +572,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
       if (parameter.getKind() != TypeKind.WILDCARD) {
         return true; // for Class<Foo>
       }
-      WildcardType wildcard = (WildcardType) parameter;
+      WildcardType wildcard = MoreTypes.asWildcard(parameter);
       // In theory, we should check if getExtendsBound() != Object, since '?' is equivalent to
       // '? extends Object', but, experimentally, neither javac or ecj will sets getExtendsBound()
       // to 'Object', so there isn't a point in checking.
