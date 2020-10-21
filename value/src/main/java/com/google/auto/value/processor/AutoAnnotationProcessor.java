@@ -111,17 +111,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     elementUtils = processingEnv.getElementUtils();
     typeUtils = processingEnv.getTypeUtils();
-    // This should always be true: we shouldn't be called with any other annotation.
-    boolean ours =
-        (annotations.size() == 1
-            && annotations
-                .iterator()
-                .next()
-                .getQualifiedName()
-                .contentEquals(AUTO_ANNOTATION_NAME));
-    if (ours) {
-      process(roundEnv);
-    }
+    process(roundEnv);
     return false;
   }
 
