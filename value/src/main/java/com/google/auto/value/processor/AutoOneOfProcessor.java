@@ -123,19 +123,11 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
   }
 
   private DeclaredType mirrorForKindType(TypeElement autoOneOfType) {
-    Optional<AnnotationMirror> oneOfAnnotation =
-        getAnnotationMirror(autoOneOfType, AUTO_ONE_OF_NAME);
-    if (!oneOfAnnotation.isPresent()) {
-      // This shouldn't happen unless the compilation environment is buggy,
-      // but it has happened in the past and can crash the compiler.
-      errorReporter()
-          .abortWithError(
-              autoOneOfType,
-              "[AutoOneOfCompilerBug] annotation processor for @AutoOneOf was invoked with a type"
-                  + " that does not have that annotation; this is probably a compiler bug");
-    }
+    // The annotation is guaranteed to be present by the contract of Processor#process
+    AnnotationMirror oneOfAnnotation =
+        getAnnotationMirror(autoOneOfType, AUTO_ONE_OF_NAME).get();
     AnnotationValue kindValue =
-        AnnotationMirrors.getAnnotationValue(oneOfAnnotation.get(), "value");
+        AnnotationMirrors.getAnnotationValue(oneOfAnnotation, "value");
     Object value = kindValue.getValue();
     if (value instanceof TypeMirror) {
       TypeMirror kindType = (TypeMirror) value;

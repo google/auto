@@ -164,15 +164,6 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
   @Override
   void processType(TypeElement type) {
-    if (!hasAnnotationMirror(type, AUTO_VALUE_NAME)) {
-      // This shouldn't happen unless the compilation environment is buggy,
-      // but it has happened in the past and can crash the compiler.
-      errorReporter()
-          .abortWithError(
-              type,
-              "[AutoValueCompilerBug] annotation processor for @AutoValue was invoked with a type"
-                  + " that does not have that annotation; this is probably a compiler bug");
-    }
     if (type.getKind() != ElementKind.CLASS) {
       errorReporter()
           .abortWithError(type, "[AutoValueNotClass] @AutoValue only applies to classes");
