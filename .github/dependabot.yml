@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/common"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "maven"
+    directory: "/factory"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "maven"
+    directory: "/service"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "maven"
+    directory: "/value"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
