@@ -44,18 +44,19 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>0.10</version>
+      <version>0.11</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
+      <!-- TODO(cpovirk): Update to 1.0-rc7. But doing so breaks function tests, oddly under JDK9 but not JDK8. The error is "not applicable in this type context" on a @Nullable annotation, so perhaps it's a compiler bug? -->
       <version>1.0-rc6</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.errorprone</groupId>
       <artifactId>error_prone_annotations</artifactId>
-      <version>2.3.3</version>
+      <version>2.4.0</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -66,12 +67,12 @@
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap</artifactId>
-      <version>0.2</version>
+      <version>0.3</version>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap-processor</artifactId>
-      <version>0.2</version>
+      <version>0.3</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -122,7 +123,7 @@
     <dependency>
        <groupId>org.mockito</groupId>
        <artifactId>mockito-core</artifactId>
-       <version>3.1.0</version>
+       <version>3.5.15</version>
        <scope>test</scope>
      </dependency>
   </dependencies>

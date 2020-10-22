@@ -37,8 +37,8 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
-    <guava.version>28.2-jre</guava.version>
-    <truth.version>1.0.1</truth.version>
+    <guava.version>30.0-jre</guava.version>
+    <truth.version>1.1</truth.version>
   </properties>
 
   <scm>
@@ -69,40 +69,41 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>0.10</version>
+      <version>0.11</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value-annotations</artifactId>
-      <version>1.7</version>
+      <version>1.7.4</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value</artifactId>
-      <version>1.7</version>
+      <version>1.7.4</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
-      <version>1.0-rc6</version>
+      <version>1.0-rc7</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap</artifactId>
-      <version>0.2</version>
+      <version>0.3</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap-processor</artifactId>
-      <version>0.2</version>
+      <version>0.3</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.googlejavaformat</groupId>
       <artifactId>google-java-format</artifactId>
+      <!-- TODO(cpovirk): Update to 1.9. But 1.8 and higher require Java 11+ build tools. We still run tests with JDK8 and JDK9, and perhaps we intend to support end users who build with those versions? -->
       <version>1.7</version>
     </dependency>
     <dependency>
@@ -113,7 +114,7 @@
     <dependency>
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
-      <version>1.12.1</version>
+      <version>1.13.0</version>
     </dependency>
     <dependency>
       <groupId>javax.inject</groupId>
@@ -124,13 +125,13 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.18</version>
+      <version>0.19</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13</version>
+      <version>4.13.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
