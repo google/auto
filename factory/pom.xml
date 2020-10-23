@@ -101,12 +101,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.googlejavaformat</groupId>
-      <artifactId>google-java-format</artifactId>
-      <!-- TODO(cpovirk): Update to 1.9. But 1.8 and higher require Java 11+ build tools. We still run tests with JDK8 and JDK9, and perhaps we intend to support end users who build with those versions? -->
-      <version>1.7</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
