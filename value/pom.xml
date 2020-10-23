@@ -108,7 +108,7 @@
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>
         <!-- TODO(cpovirk): Why does updating to 0.19 break tests? -->
-        <version>0.18</version>
+        <version>0.19</version>
       </dependency>
       <dependency>
         <groupId>com.google.truth</groupId>
