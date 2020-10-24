@@ -26,6 +26,7 @@ import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.AutoFactory.CopyAnnotations;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.processing.Messager;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
@@ -43,6 +45,8 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 
@@ -61,6 +65,7 @@ abstract class AutoFactoryDeclaration {
   abstract boolean allowSubclasses();
   abstract AnnotationMirror mirror();
   abstract ImmutableMap<String, AnnotationValue> valuesMap();
+  abstract List<CopyAnnotationsDescriptor> factoryAnnotations();
 
   PackageAndClass getFactoryName() {
     String packageName = getPackage(targetType()).getQualifiedName().toString();
@@ -88,8 +93,10 @@ abstract class AutoFactoryDeclaration {
   static final class Factory {
     private final Elements elements;
     private final Messager messager;
+    private Elements elementUtils;
 
-    Factory(Elements elements, Messager messager) {
+    Factory(Elements elementUtils, Elements elements, Messager messager) {
+      this.elementUtils = elementUtils;
       this.elements = elements;
       this.messager = messager;
     }
@@ -118,7 +125,7 @@ abstract class AutoFactoryDeclaration {
       if (extendingType == null) {
         messager.printMessage(ERROR, "Unable to find the type: "
             + extendingValue.getValue().toString(),
-                element, mirror, extendingValue);
+            element, mirror, extendingValue);
         return Optional.absent();
       } else if (!isValidSupertypeForClass(extendingType)) {
         messager.printMessage(ERROR,
@@ -135,7 +142,7 @@ abstract class AutoFactoryDeclaration {
                   return constructor.getParameters().isEmpty();
                 }
               })
-              .toList();
+          .toList();
       if (noParameterConstructors.size() == 0) {
         messager.printMessage(ERROR,
             String.format("%s is not a valid supertype for a factory. "
@@ -157,6 +164,8 @@ abstract class AutoFactoryDeclaration {
       AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
       boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
 
+      List<CopyAnnotationsDescriptor> factoryAnnotations = getFactoryAnnotations(element);
+
       return Optional.<AutoFactoryDeclaration>of(
           new AutoValue_AutoFactoryDeclaration(
               getAnnotatedType(element),
@@ -166,7 +175,54 @@ abstract class AutoFactoryDeclaration {
               implementingTypes,
               allowSubclasses,
               mirror,
-              ImmutableMap.copyOf(values)));
+              ImmutableMap.copyOf(values),
+              factoryAnnotations));
+    }
+
+    private List<CopyAnnotationsDescriptor> getFactoryAnnotations(Element element) {
+      
+      if( element instanceof ExecutableElement ) {
+        return getFactoryAnnotations(element.getEnclosingElement());
+      }
+      ImmutableList.Builder<CopyAnnotationsDescriptor> resultBuilder = ImmutableList.builder();
+
+      CopyAnnotations fa = element.getAnnotation(CopyAnnotations.class);
+      if( fa != null ) {
+        resultBuilder.add( CopyAnnotationsDescriptor.create(
+            getAnnotations(element, fa)));
+      }
+      return resultBuilder.build();
+    }
+
+    private List<? extends AnnotationMirror> getAnnotations(Element element, CopyAnnotations fa) {
+      return getAllAnnotations(element, fa).stream()
+          .filter(unequalTo(AutoFactory.class))
+          .filter(unequalTo(CopyAnnotations.class))
+          .collect(Collectors.toList());
+    }
+
+    private <T> Predicate<? super AnnotationMirror> unequalTo( Class<T> type ){
+      return am -> !type.getCanonicalName().equals(am.getAnnotationType().toString());
+    }
+    private List<? extends AnnotationMirror> getAllAnnotations(Element element, CopyAnnotations fa) {
+      TypeMirror type = extractValueOfClassType(fa);
+      if(!"java.lang.Object".equals(type.toString())) {
+        return elementUtils.getTypeElement(type.toString()).getAnnotationMirrors();
+      }
+      else {
+        return element.getAnnotationMirrors();
+      }
+    }
+
+    private TypeMirror extractValueOfClassType(CopyAnnotations fa) {
+      // see https://stackoverflow.com/questions/7687829/java-6-annotation-processing-getting-a-class-from-an-annotation
+      try {
+        fa.fromClass();
+        throw new IllegalStateException("should not come here");
+      }
+      catch( MirroredTypeException e ) {
+        return checkNotNull(e.getTypeMirror());
+      }
     }
 
     private static TypeElement getAnnotatedType(Element element) {

@@ -18,6 +18,8 @@ package com.google.auto.factory;
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
 import static java.lang.annotation.ElementType.TYPE;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
@@ -62,4 +64,47 @@ public @interface AutoFactory {
    * Defaults to disallowing subclasses (generating the factory as final).
    */
   boolean allowSubclasses() default false;
+
+  /**
+   * Instruction to copy the annotations onto the created factory class.<br/>
+   * The copy procedure implicitly filters out the {@link CopyAnnotations} itself and {@link AutoFactory}.
+   * </p>
+   * E.g. for null annotations, it might be useful to specify to have the
+   * factory to be generated like:
+   * <pre>
+   * {@code @}NonNullByDefault
+   * public class FooFactory { ...
+   * </pre>
+   * 
+   * To achieve this, annotate the <code>Foo</code>:
+   * 
+   * <pre>
+   * {@code @}AutoFactory
+   * {@code @}CopyAnnotations
+   * {@code @}NonNullByDefault
+   * public class Foo { ...
+   * </pre>
+   * 
+   * Optionally it can also be specified to copy the annotations from another class (copy source). 
+   * This can be helpful, if the <code>Foo</code> class shall not have that annotation itself:
+   * 
+   * <pre>
+   * {@code @}AutoFactory
+   * {@code @}CopyAnnotations(
+   *     fromClass = Source.class
+   * )
+   * public class Foo { ...
+   *     {@code @}NonNullByDefault
+   *     public static class Source {}
+   * }
+   * </pre>
+   */
+  @Retention(RetentionPolicy.CLASS)
+  @Target({ TYPE })
+  public @interface CopyAnnotations {
+    /**
+     * The copy source for annotations, if it is not the current annotated class itself
+     */
+    Class<?> fromClass() default Object.class;
+  }
 }

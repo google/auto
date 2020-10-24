@@ -69,11 +69,12 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
+
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
     providedChecker = new ProvidedChecker(messager);
-    declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
+    declarationFactory = new AutoFactoryDeclaration.Factory(processingEnv.getElementUtils(), elements, messager);
     factoryDescriptorGenerator =
         new FactoryDescriptorGenerator(messager, types, declarationFactory);
   }
@@ -136,8 +137,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
           boolean publicType = false;
           Boolean allowSubclasses = null;
           boolean skipCreation = false;
+          ImmutableList.Builder<CopyAnnotationsDescriptor> factoryAnnotations = ImmutableList.builder();
           for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
             extending.add(methodDescriptor.declaration().extendingType().asType());
+            factoryAnnotations.addAll(methodDescriptor.declaration().factoryAnnotations());
             for (TypeElement implementingType :
                 methodDescriptor.declaration().implementingTypes()) {
               implementing.add(implementingType.asType());
@@ -164,7 +167,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                       publicType,
                       ImmutableSet.copyOf(methodDescriptors),
                       implementationMethodDescriptors.get(factoryName),
-                      allowSubclasses));
+                      allowSubclasses,
+                      factoryAnnotations.build()));
             } catch (IOException e) {
               messager.printMessage(Kind.ERROR, "failed: " + e);
             }
