@@ -18,6 +18,7 @@ package com.google.auto.factory.processor;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.partitioningBy;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -26,13 +27,11 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimaps;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -107,8 +106,8 @@ final class FactoryDescriptorGenerator {
       }
 
       @Override
-      public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(ExecutableElement e,
-          Void p) {
+      public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(
+          ExecutableElement e, Void p) {
         // applied to a constructor of a type to be created
         return ImmutableSet.of(generateDescriptorForConstructor(declaration.get(), e));
       }
@@ -120,14 +119,9 @@ final class FactoryDescriptorGenerator {
     checkNotNull(constructor);
     checkArgument(constructor.getKind() == ElementKind.CONSTRUCTOR);
     TypeElement classElement = MoreElements.asType(constructor.getEnclosingElement());
-    ImmutableListMultimap<Boolean, ? extends VariableElement> parameterMap =
-        Multimaps.index(constructor.getParameters(), Functions.forPredicate(
-            new Predicate<VariableElement>() {
-              @Override
-              public boolean apply(VariableElement parameter) {
-                return isAnnotationPresent(parameter, Provided.class);
-              }
-            }));
+    Map<Boolean, List<VariableElement>> parameterMap =
+        constructor.getParameters().stream()
+            .collect(partitioningBy(parameter -> isAnnotationPresent(parameter, Provided.class)));
     ImmutableSet<Parameter> providedParameters =
         Parameter.forParameterList(parameterMap.get(true), types);
     ImmutableSet<Parameter> passedParameters =
@@ -150,9 +144,9 @@ final class FactoryDescriptorGenerator {
             .name("create")
             .returnType(type.asType())
             .publicMethod(type.getModifiers().contains(PUBLIC))
-            .passedParameters(ImmutableSet.<Parameter>of())
-            .creationParameters(ImmutableSet.<Parameter>of())
-            .providedParameters(ImmutableSet.<Parameter>of())
+            .passedParameters(ImmutableSet.of())
+            .creationParameters(ImmutableSet.of())
+            .providedParameters(ImmutableSet.of())
             .build());
   }
 }

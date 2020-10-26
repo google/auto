@@ -18,19 +18,20 @@ package com.google.auto.factory.processor;
 import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
 import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
@@ -71,15 +72,12 @@ abstract class Parameter {
 
   private static Parameter forVariableElement(
       VariableElement variable, TypeMirror type, Types types) {
-    Optional<AnnotationMirror> nullable = Optional.absent();
-    Iterable<? extends AnnotationMirror> annotations =
-        Iterables.concat(variable.getAnnotationMirrors(), type.getAnnotationMirrors());
-    for (AnnotationMirror annotation : annotations) {
-      if (isNullable(annotation)) {
-        nullable = Optional.of(annotation);
-        break;
-      }
-    }
+    List<AnnotationMirror> annotations =
+        Stream.of(variable.getAnnotationMirrors(), type.getAnnotationMirrors())
+            .flatMap(List::stream)
+            .collect(toList());
+    Optional<AnnotationMirror> nullable =
+        annotations.stream().filter(Parameter::isNullable).findFirst();
 
     Key key = Key.create(type, annotations, types);
     return new AutoValue_Parameter(

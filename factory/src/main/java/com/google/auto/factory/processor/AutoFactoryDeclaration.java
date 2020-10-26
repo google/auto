@@ -27,7 +27,6 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +35,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.processing.Messager;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
@@ -110,23 +110,22 @@ abstract class AutoFactoryDeclaration {
         messager.printMessage(ERROR,
             String.format("\"%s\" is not a valid Java identifier", className),
             element, mirror, classNameValue);
-        return Optional.absent();
+        return Optional.empty();
       }
 
       AnnotationValue extendingValue = checkNotNull(values.get("extending"));
       TypeElement extendingType = AnnotationValues.asType(extendingValue);
       if (extendingType == null) {
-        messager.printMessage(ERROR, "Unable to find the type: "
-            + extendingValue.getValue().toString(),
+        messager.printMessage(ERROR, "Unable to find the type: " + extendingValue.getValue(),
                 element, mirror, extendingValue);
-        return Optional.absent();
+        return Optional.empty();
       } else if (!isValidSupertypeForClass(extendingType)) {
         messager.printMessage(ERROR,
             String.format("%s is not a valid supertype for a factory. "
                 + "Supertypes must be non-final classes.",
                     extendingType.getQualifiedName()),
             element, mirror, extendingValue);
-        return Optional.absent();
+        return Optional.empty();
       }
       ImmutableList<ExecutableElement> noParameterConstructors =
           FluentIterable.from(ElementFilter.constructorsIn(extendingType.getEnclosedElements()))
@@ -136,13 +135,13 @@ abstract class AutoFactoryDeclaration {
                 }
               })
               .toList();
-      if (noParameterConstructors.size() == 0) {
+      if (noParameterConstructors.isEmpty()) {
         messager.printMessage(ERROR,
             String.format("%s is not a valid supertype for a factory. "
                 + "Factory supertypes must have a no-arg constructor.",
                     extendingType.getQualifiedName()),
             element, mirror, extendingValue);
-        return Optional.absent();
+        return Optional.empty();
       } else if (noParameterConstructors.size() > 1) {
         throw new IllegalStateException("Multiple constructors with no parameters??");
       }
@@ -161,7 +160,7 @@ abstract class AutoFactoryDeclaration {
           new AutoValue_AutoFactoryDeclaration(
               getAnnotatedType(element),
               element,
-              className.isEmpty() ? Optional.<String>absent() : Optional.of(className),
+              className.isEmpty() ? Optional.empty() : Optional.of(className),
               extendingType,
               implementingTypes,
               allowSubclasses,

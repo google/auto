@@ -22,10 +22,10 @@ import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableSet;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -72,11 +72,11 @@ final class Elements2 {
       throw new IllegalStateException(
           "Expected subTypeElement.asType() to return a class/interface type.");
     }
-    TypeMirror subExecutableTypeMirror = types.asMemberOf(
-        (DeclaredType) subTypeMirror, executableElement);
+    TypeMirror subExecutableTypeMirror =
+        types.asMemberOf(MoreTypes.asDeclared(subTypeMirror), executableElement);
     if (!subExecutableTypeMirror.getKind().equals(TypeKind.EXECUTABLE)) {
       throw new IllegalStateException("Expected subExecutableTypeMirror to be an executable type.");
     }
-    return (ExecutableType) subExecutableTypeMirror;
+    return MoreTypes.asExecutable(subExecutableTypeMirror);
   }
 }

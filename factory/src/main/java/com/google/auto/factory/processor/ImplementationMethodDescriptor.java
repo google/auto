@@ -34,9 +34,9 @@ abstract class ImplementationMethodDescriptor {
   }
 
   @AutoValue.Builder
-  static abstract class Builder {
+  abstract static class Builder {
     abstract Builder name(String name);
-    
+
     abstract Builder returnType(TypeMirror returnTypeElement);
 
     abstract Builder publicMethod(boolean publicMethod);

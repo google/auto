@@ -17,11 +17,11 @@ package com.google.auto.factory.processor;
 
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -76,12 +76,11 @@ final class Mirrors {
   static Optional<AnnotationMirror> getAnnotationMirror(Element element,
       Class<? extends Annotation> annotationType) {
     String annotationName = annotationType.getName();
-    for (AnnotationMirror annotationMirror : element.getAnnotationMirrors()) {
-      if (getQualifiedName(annotationMirror.getAnnotationType()).contentEquals(annotationName)) {
-        return Optional.of(annotationMirror);
-      }
-    }
-    return Optional.absent();
+    return element.getAnnotationMirrors().stream()
+        .filter(
+            a -> getQualifiedName(a.getAnnotationType()).contentEquals(annotationName))
+        .<AnnotationMirror>map(x -> x) // get rid of wildcard <? extends AnnotationMirror>
+        .findFirst();
   }
 
   /**
@@ -91,9 +90,7 @@ final class Mirrors {
   // TODO(ronshapiro): this is used in AutoFactory and Dagger, consider moving it into auto-common.
   static <T> Optional<Equivalence.Wrapper<T>> wrapOptionalInEquivalence(
       Equivalence<T> equivalence, Optional<T> optional) {
-    return optional.isPresent()
-        ? Optional.of(equivalence.wrap(optional.get()))
-        : Optional.<Equivalence.Wrapper<T>>absent();
+    return optional.map(equivalence::wrap);
   }
 
   /**
@@ -102,8 +99,6 @@ final class Mirrors {
    */
   static <T> Optional<T> unwrapOptionalEquivalence(
       Optional<Equivalence.Wrapper<T>> wrappedOptional) {
-    return wrappedOptional.isPresent()
-        ? Optional.of(wrappedOptional.get().get())
-        : Optional.<T>absent();
+    return wrappedOptional.map(Equivalence.Wrapper::get);
   }
 }

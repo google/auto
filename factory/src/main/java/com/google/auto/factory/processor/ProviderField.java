@@ -21,7 +21,7 @@ import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalenc
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
-import com.google.common.base.Optional;
+import java.util.Optional;
 import javax.lang.model.element.AnnotationMirror;
 
 @AutoValue

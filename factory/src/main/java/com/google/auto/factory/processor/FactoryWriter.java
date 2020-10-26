@@ -19,19 +19,18 @@ import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotatio
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
+import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -44,12 +43,12 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.stream.Stream;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -70,8 +69,6 @@ final class FactoryWriter {
     this.sourceVersion = processingEnv.getSourceVersion();
     this.factoriesBeingCreated = factoriesBeingCreated;
   }
-
-  private static final Joiner ARGUMENT_JOINER = Joiner.on(", ");
 
   void writeFactory(FactoryDescriptor descriptor)
       throws IOException {
@@ -205,15 +202,7 @@ final class FactoryWriter {
       implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
       implementationMethod.addStatement(
           "return create($L)",
-          FluentIterable.from(methodDescriptor.passedParameters())
-              .transform(
-                  new Function<Parameter, String>() {
-                    @Override
-                    public String apply(Parameter parameter) {
-                      return parameter.name();
-                    }
-                  })
-              .join(ARGUMENT_JOINER));
+          methodDescriptor.passedParameters().stream().map(Parameter::name).collect(joining(", ")));
       factory.addMethod(implementationMethod.build());
     }
   }
@@ -227,10 +216,10 @@ final class FactoryWriter {
     for (Parameter parameter : parameters) {
       ParameterSpec.Builder parameterBuilder =
           ParameterSpec.builder(resolveTypeName(parameter.type().get()), parameter.name());
-      for (AnnotationMirror annotation :
-          Iterables.concat(parameter.nullable().asSet(), parameter.key().qualifier().asSet())) {
-        parameterBuilder.addAnnotation(AnnotationSpec.get(annotation));
-      }
+      Stream.of(parameter.nullable(), parameter.key().qualifier())
+          .flatMap(Streams::stream)
+          .map(AnnotationSpec::get)
+          .forEach(parameterBuilder::addAnnotation);
       builder.add(parameterBuilder.build());
     }
     return builder.build();
