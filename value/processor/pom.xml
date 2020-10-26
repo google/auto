@@ -50,7 +50,7 @@
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
       <!-- TODO(cpovirk): Update to 1.0-rc7. But doing so breaks function tests, oddly under JDK9 but not JDK8. The error is "not applicable in this type context" on a @Nullable annotation, so perhaps it's a compiler bug? -->
-      <version>1.0-rc6</version>
+      <version>1.0-rc7</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
