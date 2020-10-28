@@ -49,8 +49,7 @@
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
-      <!-- TODO(cpovirk): Update to 1.0-rc7. But doing so breaks function tests, oddly under JDK9 but not JDK8. The error is "not applicable in this type context" on a @Nullable annotation, so perhaps it's a compiler bug? -->
-      <version>1.0-rc6</version>
+      <version>1.0-rc7</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -151,6 +150,14 @@
             <include>com/google/auto/value/extension/serializable/processor/**/*.java</include>
             <include>com/google/auto/value/extension/serializable/serializer/**/*.java</include>
           </includes>
+          <compilerArgs>
+            <!-- This is something of a hack to allow tests to pass. Ideally we would build
+                 TestStringSerializerFactory as a separate artifact, to avoid a problem when it
+                 is built at the same time as @AutoValue classes that might end up finding it.
+                 But by allowing a missing class to be ignored, we avoid crashing if there is a
+                 META-INF/services entry for a class that the compiler has not yet generated. -->
+            <arg>-AallowedMissingSerializableExtensionClasses=.*TestStringSerializerFactory</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>

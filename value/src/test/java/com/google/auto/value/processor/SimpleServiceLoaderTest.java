@@ -28,6 +28,8 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.ServiceConfigurationError;
@@ -49,6 +51,35 @@ public final class SimpleServiceLoaderTest {
 
     // The provider entry for java.lang.String should have caused us to call new String(), which
     // will produce this "" in the providers.
+    assertThat(providers).contains("");
+    List<Class<?>> classes = providers.stream().map(Object::getClass).collect(toList());
+    assertThat(classes).containsExactly(String.class, StringBuilder.class).inOrder();
+  }
+
+  // Sometimes you can have the same jar appear more than once in the classpath, perhaps in
+  // different versions. In that case we don't want to instantiate the same class more than once.
+  // This test checks that we don't.
+  @Test
+  public void loadWithDuplicates() throws Exception {
+    ClassLoader loader1 =
+        loaderForJarWithEntries(
+            CharSequence.class.getName(), String.class.getName(), StringBuilder.class.getName());
+    ClassLoader loader2 =
+        loaderForJarWithEntries(
+            CharSequence.class.getName(), String.class.getName(), StringBuilder.class.getName());
+    ClassLoader combinedLoader =
+        new ClassLoader() {
+          @Override
+          public Enumeration<URL> getResources(String name) throws IOException {
+            List<URL> urls = new ArrayList<>(Collections.list(loader1.getResources(name)));
+            urls.addAll(Collections.list(loader2.getResources(name)));
+            return Collections.enumeration(urls);
+          }
+        };
+
+    ImmutableList<CharSequence> providers =
+        SimpleServiceLoader.load(CharSequence.class, combinedLoader);
+
     assertThat(providers).contains("");
     List<Class<?>> classes = providers.stream().map(Object::getClass).collect(toList());
     assertThat(classes).containsExactly(String.class, StringBuilder.class).inOrder();

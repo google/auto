@@ -21,6 +21,8 @@ import com.google.auto.value.extension.serializable.serializer.interfaces.Serial
 import com.google.auto.value.processor.SimpleServiceLoader;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.tools.Diagnostic;
 
@@ -40,10 +42,18 @@ public final class SerializerFactoryLoader {
 
   private static ImmutableList<SerializerExtension> loadExtensions(
       ProcessingEnvironment processingEnv) {
+    // The below is a workaround for a test-building bug. We don't expect to support it indefinitely
+    // so don't depend on it.
+    String allowedMissingClasses =
+        processingEnv.getOptions().get("allowedMissingSerializableExtensionClasses");
+    Optional<Pattern> allowedMissingClassesPattern =
+        Optional.ofNullable(allowedMissingClasses).map(Pattern::compile);
     try {
       return ImmutableList.copyOf(
           SimpleServiceLoader.load(
-              SerializerExtension.class, SerializerFactoryLoader.class.getClassLoader()));
+              SerializerExtension.class,
+              SerializerFactoryLoader.class.getClassLoader(),
+              allowedMissingClassesPattern));
     } catch (Throwable t) {
       processingEnv
           .getMessager()

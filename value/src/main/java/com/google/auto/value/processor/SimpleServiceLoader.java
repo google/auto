@@ -15,20 +15,23 @@
  */
 package com.google.auto.value.processor;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
+import java.util.regex.Pattern;
 
 /**
  * A replacement for {@link java.util.ServiceLoader} that avoids certain long-standing bugs. This
@@ -43,6 +46,11 @@ public final class SimpleServiceLoader {
   private SimpleServiceLoader() {}
 
   public static <T> ImmutableList<T> load(Class<? extends T> service, ClassLoader loader) {
+    return load(service, loader, Optional.empty());
+  }
+
+  public static <T> ImmutableList<T> load(
+      Class<? extends T> service, ClassLoader loader, Optional<Pattern> allowedMissingClasses) {
     String resourceName = "META-INF/services/" + service.getName();
     List<URL> resourceUrls;
     try {
@@ -50,49 +58,64 @@ public final class SimpleServiceLoader {
     } catch (IOException e) {
       throw new ServiceConfigurationError("Could not look up " + resourceName, e);
     }
-    ImmutableList.Builder<T> providers = ImmutableList.builder();
+    ImmutableSet.Builder<Class<? extends T>> providerClasses = ImmutableSet.builder();
     for (URL resourceUrl : resourceUrls) {
       try {
-        providers.addAll(providersFromUrl(resourceUrl, service, loader));
+        providerClasses.addAll(
+            providerClassesFromUrl(resourceUrl, service, loader, allowedMissingClasses));
       } catch (IOException e) {
         throw new ServiceConfigurationError("Could not read " + resourceUrl, e);
+      }
+    }
+    ImmutableList.Builder<T> providers = ImmutableList.builder();
+    for (Class<? extends T> providerClass : providerClasses.build()) {
+      try {
+        T provider = providerClass.getConstructor().newInstance();
+        providers.add(provider);
+      } catch (ReflectiveOperationException e) {
+        throw new ServiceConfigurationError("Could not construct " + providerClass.getName(), e);
       }
     }
     return providers.build();
   }
 
-  private static <T> ImmutableList<T> providersFromUrl(
-      URL resourceUrl, Class<T> service, ClassLoader loader) throws IOException {
-    ImmutableList.Builder<T> providers = ImmutableList.builder();
+  private static <T> ImmutableSet<Class<? extends T>> providerClassesFromUrl(
+      URL resourceUrl,
+      Class<? extends T> service,
+      ClassLoader loader,
+      Optional<Pattern> allowedMissingClasses)
+      throws IOException {
+    ImmutableSet.Builder<Class<? extends T>> providerClasses = ImmutableSet.builder();
     URLConnection urlConnection = resourceUrl.openConnection();
     urlConnection.setUseCaches(false);
+    List<String> lines;
     try (InputStream in = urlConnection.getInputStream();
-        BufferedReader reader =
-            new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-      for (String line : reader.lines().collect(toList())) {
-        Optional<String> maybeClassName = parseClassName(line);
-        if (maybeClassName.isPresent()) {
-          String className = maybeClassName.get();
-          Class<?> c;
-          try {
-            c = Class.forName(className, false, loader);
-          } catch (ClassNotFoundException e) {
-            throw new ServiceConfigurationError("Could not load " + className, e);
-          }
-          if (!service.isAssignableFrom(c)) {
-            throw new ServiceConfigurationError(
-                "Class " + className + " is not assignable to " + service.getName());
-          }
-          try {
-            Object provider = c.getConstructor().newInstance();
-            providers.add(service.cast(provider));
-          } catch (ReflectiveOperationException e) {
-            throw new ServiceConfigurationError("Could not construct " + className, e);
-          }
-        }
-      }
-      return providers.build();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in, UTF_8))) {
+      lines = reader.lines().collect(toList());
     }
+    List<String> classNames =
+        lines.stream()
+            .map(SimpleServiceLoader::parseClassName)
+            .flatMap(Streams::stream)
+            .collect(toList());
+    for (String className : classNames) {
+      Class<?> c;
+      try {
+        c = Class.forName(className, false, loader);
+      } catch (ClassNotFoundException e) {
+        if (allowedMissingClasses.isPresent()
+            && allowedMissingClasses.get().matcher(className).matches()) {
+          continue;
+        }
+        throw new ServiceConfigurationError("Could not load " + className, e);
+      }
+      if (!service.isAssignableFrom(c)) {
+        throw new ServiceConfigurationError(
+            "Class " + className + " is not assignable to " + service.getName());
+      }
+      providerClasses.add(c.asSubclass(service));
+    }
+    return providerClasses.build();
   }
 
   private static Optional<String> parseClassName(String line) {
