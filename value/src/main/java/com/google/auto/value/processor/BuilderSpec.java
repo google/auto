@@ -25,6 +25,7 @@ import static java.util.stream.Collectors.toSet;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 import static javax.lang.model.util.ElementFilter.typesIn;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
@@ -49,6 +50,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
@@ -142,14 +144,23 @@ class BuilderSpec {
 
     @Override
     public Optional<ExecutableElement> buildMethod() {
-      return methodsIn(builderTypeElement.getEnclosedElements()).stream()
+      Types typeUtils = processingEnv.getTypeUtils();
+      DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderTypeElement.asType());
+      return MoreElements.getLocalAndInheritedMethods(
+              builderTypeElement, typeUtils, processingEnv.getElementUtils())
+          .stream()
           .filter(
               m ->
                   m.getSimpleName().contentEquals("build")
                       && !m.getModifiers().contains(Modifier.PRIVATE)
                       && !m.getModifiers().contains(Modifier.STATIC)
-                      && m.getParameters().isEmpty()
-                      && erasedTypeIs(m.getReturnType(), autoValueClass))
+                      && m.getParameters().isEmpty())
+          .filter(
+              m -> {
+                ExecutableType methodMirror =
+                    MoreTypes.asExecutable(typeUtils.asMemberOf(builderTypeMirror, m));
+                return erasedTypeIs(methodMirror.getReturnType(), autoValueClass);
+              })
           .findFirst();
     }
 
@@ -201,18 +212,27 @@ class BuilderSpec {
      * <p>We currently impose that there cannot be more than one such method.
      */
     ImmutableSet<ExecutableElement> toBuilderMethods(
-        Types typeUtils, Set<ExecutableElement> abstractMethods) {
+        Types typeUtils,
+        TypeElement autoValueType,
+        Set<ExecutableElement> abstractMethods) {
 
       List<String> builderTypeParamNames =
           builderTypeElement.getTypeParameters().stream()
               .map(e -> e.getSimpleName().toString())
               .collect(toList());
 
+      DeclaredType autoValueTypeMirror = MoreTypes.asDeclared(autoValueType.asType());
       ImmutableSet.Builder<ExecutableElement> methods = ImmutableSet.builder();
       for (ExecutableElement method : abstractMethods) {
-        if (builderTypeElement.equals(typeUtils.asElement(method.getReturnType()))) {
+        if (!method.getParameters().isEmpty()) {
+          continue;
+        }
+        ExecutableType methodMirror =
+            MoreTypes.asExecutable(typeUtils.asMemberOf(autoValueTypeMirror, method));
+        TypeMirror returnTypeMirror = methodMirror.getReturnType();
+        if (builderTypeElement.equals(typeUtils.asElement(returnTypeMirror))) {
           methods.add(method);
-          DeclaredType returnType = MoreTypes.asDeclared(method.getReturnType());
+          DeclaredType returnType = MoreTypes.asDeclared(returnTypeMirror);
           List<String> typeArguments =
               returnType.getTypeArguments().stream()
                   .filter(t -> t.getKind().equals(TypeKind.TYPEVAR))
@@ -452,7 +472,7 @@ class BuilderSpec {
       return nullableAnnotation;
     }
 
-    public String copy(AutoValueProcessor.Property property) {
+    public String copy(Property property) {
       String copy = copier.copy.apply(property.toString());
       if (property.isNullable() && !copier.acceptsNull) {
         copy = String.format("(%s == null ? null : %s)", property, copy);

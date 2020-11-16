@@ -1874,6 +1874,37 @@ public class AutoValueTest {
     assertEquals((Integer) 17, instance3.u());
   }
 
+  public interface ToBuilder<BuilderT> {
+    BuilderT toBuilder();
+  }
+
+  @AutoValue
+  public abstract static class InheritedToBuilder<T, U>
+      implements ToBuilder<InheritedToBuilder.Builder<T, U>> {
+
+    public abstract T t();
+    public abstract U u();
+
+    public static <T, U> Builder<T, U> builder() {
+      return new AutoValue_AutoValueTest_InheritedToBuilder.Builder<T, U>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T, U> {
+      public abstract Builder<T, U> setT(T t);
+      public abstract Builder<T, U> setU(U u);
+      public abstract InheritedToBuilder<T, U> build();
+    }
+  }
+
+  @Test
+  public void testInheritedToBuilder() {
+    InheritedToBuilder<Integer, String> x =
+        InheritedToBuilder.<Integer, String>builder().setT(17).setU("wibble").build();
+    InheritedToBuilder<Integer, String> y = x.toBuilder().setT(23).build();
+    assertThat(y.u()).isEqualTo("wibble");
+  }
+
   @AutoValue
   public abstract static class BuilderWithSet<T extends Comparable<T>> {
     public abstract List<T> list();

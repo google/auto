@@ -19,6 +19,7 @@ import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.intersection;
+import static java.util.Comparator.naturalOrder;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -36,7 +37,6 @@ import com.google.common.collect.Iterables;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -136,7 +136,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     AutoValueExtension.IncrementalExtensionType incrementalType =
         extensions.stream()
             .map(e -> e.incrementalType(processingEnv))
-            .min(Comparator.naturalOrder())
+            .min(naturalOrder())
             .orElse(AutoValueExtension.IncrementalExtensionType.ISOLATING);
     builder.add(OMIT_IDENTIFIERS_OPTION).addAll(optionsFor(incrementalType));
     for (AutoValueExtension extension : extensions) {
@@ -207,7 +207,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
     ImmutableSet<ExecutableElement> toBuilderMethods;
     if (builder.isPresent()) {
-      toBuilderMethods = builder.get().toBuilderMethods(typeUtils(), abstractMethods);
+      toBuilderMethods = builder.get().toBuilderMethods(typeUtils(), type, abstractMethods);
     } else {
       toBuilderMethods = ImmutableSet.of();
     }

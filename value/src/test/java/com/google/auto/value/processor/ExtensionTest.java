@@ -1075,6 +1075,78 @@ public class ExtensionTest {
   }
 
   @Test
+  public void builderContextWithInheritance() {
+    JavaFileObject parent = JavaFileObjects.forSourceLines(
+        "foo.bar.Parent",
+        "package foo.bar;",
+        "",
+        "interface Parent<BuilderT> {",
+        "  BuilderT toBuilder();",
+        "  interface Builder<T, BuilderT, BuiltT> {",
+        "    BuilderT setThing(T x);",
+        "    BuiltT build();",
+        "  }",
+        "}");
+    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
+        "foo.bar.Baz",
+        "package foo.bar;",
+        "",
+        "import com.google.auto.value.AutoValue;",
+        "",
+        "@AutoValue",
+        "abstract class Baz<T> implements Parent<Baz.Builder<T>> {",
+        "  abstract T thing();",
+        "  static <T> Builder<T> builder() {",
+        "    return new AutoValue_Baz.Builder<>();",
+        "  }",
+        "",
+        "  @AutoValue.Builder",
+        "  abstract static class Builder<T> implements Parent.Builder<T, Builder<T>, Baz<T>> {",
+        "  }",
+        "}");
+    ContextChecker checker =
+        context -> {
+          assertThat(context.builder()).isPresent();
+          BuilderContext builderContext = context.builder().get();
+
+          assertThat(builderContext.builderType().getQualifiedName().toString())
+              .isEqualTo("foo.bar.Baz.Builder");
+
+          Set<ExecutableElement> builderMethods = builderContext.builderMethods();
+          assertThat(builderMethods).hasSize(1);
+          ExecutableElement builderMethod = Iterables.getOnlyElement(builderMethods);
+          assertThat(builderMethod.getSimpleName().toString()).isEqualTo("builder");
+
+          Set<ExecutableElement> toBuilderMethods = builderContext.toBuilderMethods();
+          assertThat(toBuilderMethods).hasSize(1);
+          ExecutableElement toBuilderMethod = Iterables.getOnlyElement(toBuilderMethods);
+          assertThat(toBuilderMethod.getSimpleName().toString()).isEqualTo("toBuilder");
+
+          Optional<ExecutableElement> buildMethod = builderContext.buildMethod();
+          assertThat(buildMethod).isPresent();
+          assertThat(buildMethod.get().getSimpleName().toString()).isEqualTo("build");
+          assertThat(buildMethod.get().getParameters()).isEmpty();
+          assertThat(buildMethod.get().getReturnType().toString()).isEqualTo("BuiltT");
+
+          ExecutableElement autoBuildMethod = builderContext.autoBuildMethod();
+          assertThat(autoBuildMethod).isEqualTo(buildMethod.get());
+
+          Map<String, Set<ExecutableElement>> setters = builderContext.setters();
+          assertThat(setters.keySet()).containsExactly("thing");
+          Set<ExecutableElement> thingSetters = setters.get("thing");
+          assertThat(thingSetters).hasSize(1);
+          ExecutableElement thingSetter = Iterables.getOnlyElement(thingSetters);
+          assertThat(thingSetter.getSimpleName().toString()).isEqualTo("setThing");
+        };
+    ContextCheckingExtension extension = new ContextCheckingExtension(checker);
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(extension)))
+            .compile(autoValueClass, parent);
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  @Test
   public void oddBuilderContext() {
     JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
         "foo.bar.Baz",
