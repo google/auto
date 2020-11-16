@@ -27,7 +27,7 @@ public final class GeneratedAnnotationSpecs {
   private GeneratedAnnotationSpecs() {}
 
   /**
-   * Returns {@code @Generated("processorClass"} if either {@code
+   * Returns {@code @Generated("processorClass")} if either {@code
    * javax.annotation.processing.Generated} or {@code javax.annotation.Generated} is {@linkplain
    * GeneratedAnnotations#generatedAnnotation(Elements) available at compile time}.
    *
@@ -41,7 +41,7 @@ public final class GeneratedAnnotationSpecs {
   }
 
   /**
-   * Returns {@code @Generated(value = "processorClass", comments = "comments"} if either {@code
+   * Returns {@code @Generated(value = "processorClass", comments = "comments")} if either {@code
    * javax.annotation.processing.Generated} or {@code javax.annotation.Generated} is {@linkplain
    * GeneratedAnnotations#generatedAnnotation(Elements) available at compile time}.
    *
@@ -55,7 +55,7 @@ public final class GeneratedAnnotationSpecs {
   }
 
   /**
-   * Returns {@code @Generated("processorClass"} for the target {@code SourceVersion}.
+   * Returns {@code @Generated("processorClass")} for the target {@code SourceVersion}.
    *
    * <p>Returns {@code javax.annotation.processing.Generated} for JDK 9 and newer, {@code
    * javax.annotation.Generated} for earlier releases, and Optional#empty()} if the annotation is
@@ -68,7 +68,7 @@ public final class GeneratedAnnotationSpecs {
   }
 
   /**
-   * Returns {@code @Generated(value = "processorClass", comments = "comments"} for the target
+   * Returns {@code @Generated(value = "processorClass", comments = "comments")} for the target
    * {@code SourceVersion}.
    *
    * <p>Returns {@code javax.annotation.processing.Generated} for JDK 9 and newer, {@code
