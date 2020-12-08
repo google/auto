@@ -30,6 +30,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -57,7 +58,8 @@ import javax.tools.StandardLocation;
  * configuration files described in {@link java.util.ServiceLoader}.
  * <p>
  * Processor Options:<ul>
- *   <li>debug - turns on debug statements</li>
+ *   <li>{@code -Adebug} - turns on debug statements</li>
+     <li>{@code -Averify=true} - turns on extra verification</li>
  * </ul>
  */
 @SupportedOptions({ "debug", "verify" })
@@ -143,7 +145,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
         log("provider interface: " + providerType.getQualifiedName());
         log("provider implementer: " + providerImplementer.getQualifiedName());
 
-        if (checkImplementer(providerImplementer, providerType)) {
+        if (checkImplementer(providerImplementer, providerType, annotationMirror)) {
           providers.put(getBinaryName(providerType), getBinaryName(providerImplementer));
         } else {
           String message = "ServiceProviders must implement their service provider interface. "
@@ -205,11 +207,14 @@ public class AutoServiceProcessor extends AbstractProcessor {
   }
 
   /**
-   * Verifies {@link ServiceProvider} constraints on the concrete provider class.
-   * Note that these constraints are enforced at runtime via the ServiceLoader,
-   * we're just checking them at compile time to be extra nice to our users.
+   * Verifies {@link ServiceProvider} constraints on the concrete provider class. Note that these
+   * constraints are enforced at runtime via the ServiceLoader, we're just checking them at compile
+   * time to be extra nice to our users.
    */
-  private boolean checkImplementer(TypeElement providerImplementer, TypeElement providerType) {
+  private boolean checkImplementer(
+      TypeElement providerImplementer,
+      TypeElement providerType,
+      AnnotationMirror annotationMirror) {
 
     String verify = processingEnv.getOptions().get("verify");
     if (verify == null || !Boolean.parseBoolean(verify)) {
@@ -221,7 +226,37 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
     Types types = processingEnv.getTypeUtils();
 
-    return types.isSubtype(providerImplementer.asType(), providerType.asType());
+    if (types.isSubtype(providerImplementer.asType(), providerType.asType())) {
+      return true;
+    }
+
+    // Maybe the provider has generic type, but the argument to @AutoService can't be generic.
+    // So we allow that with a warning, which can be suppressed with @SuppressWarnings("rawtypes").
+    // See https://github.com/google/auto/issues/870.
+    if (types.isSubtype(providerImplementer.asType(), types.erasure(providerType.asType()))) {
+      if (!rawTypesSuppressed(providerImplementer)) {
+        warning(
+            "Service provider "
+                + providerType
+                + " is generic, so it can't be named exactly by @AutoService."
+                + " If this is OK, add @SuppressWarnings(\"rawtypes\").",
+            providerImplementer,
+            annotationMirror);
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  private static boolean rawTypesSuppressed(Element element) {
+    for (; element != null; element = element.getEnclosingElement()) {
+      SuppressWarnings suppress = element.getAnnotation(SuppressWarnings.class);
+      if (suppress != null && Arrays.asList(suppress.value()).contains("rawtypes")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -279,6 +314,10 @@ public class AutoServiceProcessor extends AbstractProcessor {
     if (processingEnv.getOptions().containsKey("debug")) {
       processingEnv.getMessager().printMessage(Kind.NOTE, msg);
     }
+  }
+
+  private void warning(String msg, Element element, AnnotationMirror annotation) {
+    processingEnv.getMessager().printMessage(Kind.WARNING, msg, element, annotation);
   }
 
   private void error(String msg, Element element, AnnotationMirror annotation) {

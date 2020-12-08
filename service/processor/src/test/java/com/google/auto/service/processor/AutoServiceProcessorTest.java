@@ -85,4 +85,63 @@ public class AutoServiceProcessorTest {
     assertThat(compilation).failed();
     assertThat(compilation).hadErrorContaining(MISSING_SERVICES_ERROR);
   }
+
+  @Test
+  public void generic() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(
+                JavaFileObjects.forResource("test/GenericService.java"),
+                JavaFileObjects.forResource("test/GenericServiceProvider.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.GenericService")
+        .contentsAsUtf8String()
+        .isEqualTo("test.GenericServiceProvider\n");
+  }
+
+  @Test
+  public void genericWithVerifyOption() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .withOptions("-Averify=true")
+            .compile(
+                JavaFileObjects.forResource("test/GenericService.java"),
+                JavaFileObjects.forResource("test/GenericServiceProvider.java"));
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .hadWarningContaining(
+            "Service provider test.GenericService is generic, so it can't be named exactly by"
+                + " @AutoService. If this is OK, add @SuppressWarnings(\"rawtypes\").");
+  }
+
+  @Test
+  public void genericWithVerifyOptionAndSuppressWarings() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .withOptions("-Averify=true")
+            .compile(
+                JavaFileObjects.forResource("test/GenericService.java"),
+                JavaFileObjects.forResource("test/GenericServiceProviderSuppressWarnings.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  @Test
+  public void nestedGenericWithVerifyOptionAndSuppressWarnings() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .withOptions("-Averify=true")
+            .compile(
+                JavaFileObjects.forResource("test/GenericService.java"),
+                JavaFileObjects.forResource("test/EnclosingGeneric.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.GenericService")
+        .contentsAsUtf8String()
+        .isEqualTo("test.EnclosingGeneric$GenericServiceProvider\n");
+  }
 }
