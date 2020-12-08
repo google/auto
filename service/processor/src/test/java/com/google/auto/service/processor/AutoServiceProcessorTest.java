@@ -16,52 +16,73 @@
 package com.google.auto.service.processor;
 
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
-import static com.google.testing.compile.JavaSourcesSubject.assertThat;
+import static com.google.testing.compile.CompilationSubject.assertThat;
 
+import com.google.common.io.Resources;
+import com.google.testing.compile.Compilation;
+import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import javax.tools.StandardLocation;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * Tests the {@link AutoServiceProcessor}.
- */
+/** Tests the {@link AutoServiceProcessor}. */
 @RunWith(JUnit4.class)
 public class AutoServiceProcessorTest {
   @Test
   public void autoService() {
-      assertThat(
-            JavaFileObjects.forResource("test/SomeService.java"),
-            JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
-            JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
-            JavaFileObjects.forResource("test/Enclosing.java"),
-            JavaFileObjects.forResource("test/AnotherService.java"),
-            JavaFileObjects.forResource("test/AnotherServiceProvider.java"))
-        .processedWith(new AutoServiceProcessor())
-        .compilesWithoutError()
-        .and().generatesFiles(
-            JavaFileObjects.forResource("META-INF/services/test.SomeService"),
-            JavaFileObjects.forResource("META-INF/services/test.AnotherService"));
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(
+                JavaFileObjects.forResource("test/SomeService.java"),
+                JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
+                JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
+                JavaFileObjects.forResource("test/Enclosing.java"),
+                JavaFileObjects.forResource("test/AnotherService.java"),
+                JavaFileObjects.forResource("test/AnotherServiceProvider.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.SomeService")
+        .hasContents(
+            Resources.asByteSource(Resources.getResource("META-INF/services/test.SomeService")));
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.AnotherService")
+        .hasContents(
+            Resources.asByteSource(Resources.getResource("META-INF/services/test.AnotherService")));
   }
 
   @Test
   public void multiService() {
-    assertThat(
-            JavaFileObjects.forResource("test/SomeService.java"),
-            JavaFileObjects.forResource("test/AnotherService.java"),
-            JavaFileObjects.forResource("test/MultiServiceProvider.java"))
-        .processedWith(new AutoServiceProcessor())
-        .compilesWithoutError()
-        .and().generatesFiles(
-            JavaFileObjects.forResource("META-INF/services/test.SomeServiceMulti"),
-            JavaFileObjects.forResource("META-INF/services/test.AnotherServiceMulti"));
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(
+                JavaFileObjects.forResource("test/SomeService.java"),
+                JavaFileObjects.forResource("test/AnotherService.java"),
+                JavaFileObjects.forResource("test/MultiServiceProvider.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    // We have @AutoService({SomeService.class, AnotherService.class}) class MultiServiceProvider.
+    // So we expect META-INF/services/test.SomeService with contents that name MultiServiceProvider
+    // and likewise META-INF/services/test.AnotherService.
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.SomeService")
+        .contentsAsUtf8String()
+        .isEqualTo("test.MultiServiceProvider\n");
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.AnotherService")
+        .contentsAsUtf8String()
+        .isEqualTo("test.MultiServiceProvider\n");
   }
 
   @Test
   public void badMultiService() {
-    assertThat(JavaFileObjects.forResource("test/NoServices.java"))
-        .processedWith(new AutoServiceProcessor())
-        .failsToCompile()
-        .withErrorContaining(MISSING_SERVICES_ERROR);
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(JavaFileObjects.forResource("test/NoServices.java"));
+    assertThat(compilation).failed();
+    assertThat(compilation).hadErrorContaining(MISSING_SERVICES_ERROR);
   }
 }
