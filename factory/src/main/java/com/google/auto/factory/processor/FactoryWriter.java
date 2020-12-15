@@ -20,6 +20,7 @@ import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -152,6 +153,8 @@ final class FactoryWriter {
       if (methodDescriptor.publicMethod()) {
         method.addModifiers(PUBLIC);
       }
+      method.addExceptions(
+          methodDescriptor.exceptions().stream().map(TypeName::get).collect(toList()));
       CodeBlock.Builder args = CodeBlock.builder();
       method.addParameters(parameters(methodDescriptor.passedParameters()));
       Iterator<Parameter> parameters = methodDescriptor.creationParameters().iterator();
@@ -199,6 +202,8 @@ final class FactoryWriter {
       if (methodDescriptor.publicMethod()) {
         implementationMethod.addModifiers(PUBLIC);
       }
+      implementationMethod.addExceptions(
+          methodDescriptor.exceptions().stream().map(TypeName::get).collect(toList()));
       implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
       implementationMethod.addStatement(
           "return create($L)",

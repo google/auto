@@ -194,12 +194,12 @@ abstract class FactoryDescriptor {
           duplicateMethodDescriptors.get(methodDescriptor);
 
       FactoryMethodDescriptor newMethodDescriptor =
-         (duplicateMethodDescriptor != null)
-              ? methodDescriptor
-                  .toBuilder()
+          (duplicateMethodDescriptor != null)
+              ? methodDescriptor.toBuilder()
                   .overridingMethod(true)
                   .publicMethod(duplicateMethodDescriptor.publicMethod())
                   .returnType(duplicateMethodDescriptor.returnType())
+                  .exceptions(duplicateMethodDescriptor.exceptions())
                   .build()
               : methodDescriptor;
       deduplicatedMethodDescriptors.add(newMethodDescriptor);

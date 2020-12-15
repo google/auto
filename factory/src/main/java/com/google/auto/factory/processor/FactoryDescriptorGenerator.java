@@ -134,6 +134,8 @@ final class FactoryDescriptorGenerator {
         .passedParameters(passedParameters)
         .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
         .isVarArgs(constructor.isVarArgs())
+        .exceptions(constructor.getThrownTypes())
+        .overridingMethod(false)
         .build();
   }
 
@@ -144,9 +146,12 @@ final class FactoryDescriptorGenerator {
             .name("create")
             .returnType(type.asType())
             .publicMethod(type.getModifiers().contains(PUBLIC))
+            .providedParameters(ImmutableSet.of())
             .passedParameters(ImmutableSet.of())
             .creationParameters(ImmutableSet.of())
-            .providedParameters(ImmutableSet.of())
+            .isVarArgs(false)
+            .exceptions(ImmutableSet.of())
+            .overridingMethod(false)
             .build());
   }
 }

@@ -49,6 +49,16 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test
+  public void simpleClassWithConstructorThrowsClause() {
+    Compilation compilation =
+        javac.compile(JavaFileObjects.forResource("good/SimpleClassThrows.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.SimpleClassThrowsFactory")
+        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassThrowsFactory.java"));
+  }
+
+  @Test
   public void nestedClasses() {
     Compilation compilation = javac.compile(JavaFileObjects.forResource("good/NestedClasses.java"));
     assertThat(compilation).succeededWithoutWarnings();
@@ -149,6 +159,15 @@ public class AutoFactoryProcessorTest {
         .hasSourceEquivalentTo(loadExpectedFile("expected/ConstructorAnnotatedFactory.java"));
   }
 
+  @Test
+  public void constructorWithThrowsClauseAnnotated() {
+    Compilation compilation =
+        javac.compile(JavaFileObjects.forResource("good/ConstructorAnnotatedThrows.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.ConstructorAnnotatedThrowsFactory")
+        .hasSourceEquivalentTo(loadExpectedFile("expected/ConstructorAnnotatedThrowsFactory.java"));
+  }
   @Test
   public void constructorAnnotatedNonFinal() {
     Compilation compilation =
@@ -254,6 +273,17 @@ public class AutoFactoryProcessorTest {
         .generatedSourceFile("tests.FactoryExtendingAbstractClassFactory")
         .hasSourceEquivalentTo(
             loadExpectedFile("expected/FactoryExtendingAbstractClassFactory.java"));
+  }
+
+  @Test
+  public void factoryWithConstructorThrowsClauseExtendingAbstractClass() {
+    Compilation compilation =
+        javac.compile(JavaFileObjects.forResource("good/FactoryExtendingAbstractClassThrows.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.FactoryExtendingAbstractClassThrowsFactory")
+        .hasSourceEquivalentTo(
+            loadExpectedFile("expected/FactoryExtendingAbstractClassThrowsFactory.java"));
   }
 
   @Test

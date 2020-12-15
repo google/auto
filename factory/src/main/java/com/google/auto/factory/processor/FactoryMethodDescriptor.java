@@ -38,8 +38,9 @@ abstract class FactoryMethodDescriptor {
   abstract ImmutableSet<Parameter> passedParameters();
   abstract ImmutableSet<Parameter> providedParameters();
   abstract ImmutableSet<Parameter> creationParameters();
-  abstract Builder toBuilder();
   abstract boolean isVarArgs();
+  abstract ImmutableSet<TypeMirror> exceptions();
+  abstract Builder toBuilder();
 
   final PackageAndClass factoryName() {
     return declaration().getFactoryName();
@@ -47,10 +48,7 @@ abstract class FactoryMethodDescriptor {
 
   static Builder builder(AutoFactoryDeclaration declaration) {
     return new AutoValue_FactoryMethodDescriptor.Builder()
-        .declaration(checkNotNull(declaration))
-        .publicMethod(false)
-        .overridingMethod(false)
-        .isVarArgs(false);
+        .declaration(checkNotNull(declaration));
   }
 
   @AutoValue.Builder
@@ -64,6 +62,7 @@ abstract class FactoryMethodDescriptor {
     abstract Builder providedParameters(Iterable<Parameter> providedParameters);
     abstract Builder creationParameters(Iterable<Parameter> creationParameters);
     abstract Builder isVarArgs(boolean isVarargs);
+    abstract Builder exceptions(Iterable<? extends TypeMirror> exceptions);
     abstract FactoryMethodDescriptor buildImpl();
 
     FactoryMethodDescriptor build() {
