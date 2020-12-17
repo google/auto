@@ -107,7 +107,7 @@
     <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>ecj</artifactId>
-      <version>3.23.0</version>
+      <version>3.24.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
