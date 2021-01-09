@@ -17,6 +17,7 @@ package tests;
 
 import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
+import java.util.Map;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableType;
 
@@ -27,5 +28,7 @@ final class CheckerFrameworkNullable {
       @NullableDecl String nullableDecl,
       @Provided @NullableDecl String providedNullableDecl,
       @NullableType String nullableType,
-      @Provided @NullableType String providedNullableType) {}
+      @Provided @NullableType String providedNullableType,
+      Map.@NullableType Entry<?, ?> nestedNullableType,
+      @Provided Map.@NullableType Entry<?, ?> providedNestedNullableType) {}
 }

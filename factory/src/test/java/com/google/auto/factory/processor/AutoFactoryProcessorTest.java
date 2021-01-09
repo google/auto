@@ -15,6 +15,8 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
+import static com.google.common.truth.TruthJUnit.assume;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -427,6 +429,11 @@ public class AutoFactoryProcessorTest {
 
   @Test
   public void checkerFrameworkNullableType() {
+    // TYPE_USE annotations are pretty much unusable with annotation processors on Java 8 because
+    // of bugs that mean they only appear in the javax.lang.model API when the compiler feels like
+    // it. Checking for a java.specification.version that does not start with "1." eliminates 8 and
+    // any earlier version.
+    assume().that(JAVA_SPECIFICATION_VERSION.value()).doesNotMatch("1\\..*");
     Compilation compilation =
         javac.compile(JavaFileObjects.forResource("good/CheckerFrameworkNullable.java"));
     assertThat(compilation).succeededWithoutWarnings();
