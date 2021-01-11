@@ -2146,6 +2146,34 @@ public class AutoValueTest {
   }
 
   @AutoValue
+  public abstract static class BuilderWithPrefixedGettersAndUnprefixedSetters {
+    public abstract String getOAuth();
+    public abstract String getOBrien();
+
+    public static Builder builder() {
+      return new AutoValue_AutoValueTest_BuilderWithPrefixedGettersAndUnprefixedSetters.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder oAuth(String x);
+      public abstract Builder OBrien(String x);
+      public abstract BuilderWithPrefixedGettersAndUnprefixedSetters build();
+    }
+  }
+
+  @Test
+  public void testBuilderWithPrefixedGetterAndUnprefixedSetter() {
+    BuilderWithPrefixedGettersAndUnprefixedSetters x =
+        BuilderWithPrefixedGettersAndUnprefixedSetters.builder()
+        .oAuth("OAuth")
+        .OBrien("Flann")
+        .build();
+    assertThat(x.getOAuth()).isEqualTo("OAuth");
+    assertThat(x.getOBrien()).isEqualTo("Flann");
+  }
+
+  @AutoValue
   public abstract static class BuilderWithPropertyBuilders<FooT extends Comparable<FooT>> {
     public abstract ImmutableList<FooT> getFoos();
 

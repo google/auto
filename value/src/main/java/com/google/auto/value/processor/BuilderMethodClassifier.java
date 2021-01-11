@@ -363,19 +363,32 @@ class BuilderMethodClassifier {
     if (valueGetter != null) {
       propertyNameToSetters = propertyNameToUnprefixedSetters;
       propertyName = methodName;
-    } else if (valueGetter == null && methodName.startsWith("set") && methodName.length() > 3) {
+    } else if (methodName.startsWith("set") && methodName.length() > 3) {
       propertyNameToSetters = propertyNameToPrefixedSetters;
       propertyName = PropertyNames.decapitalizeLikeJavaBeans(methodName.substring(3));
       valueGetter = propertyNameToGetter.get(propertyName);
       if (valueGetter == null) {
         // If our property is defined by a getter called getOAuth() then it is called "OAuth"
-        // because of Introspector.decapitalize. Therefore we want Introspector.decapitalize to
-        // be used for the setter too, so that you can write setOAuth(x). Meanwhile if the property
-        // is defined by a getter called oAuth() then it is called "oAuth", but you would still
-        // expect to be able to set it using setOAuth(x). Hence the second try using a decapitalize
-        // method without the quirky two-leading-capitals rule.
+        // because of JavaBeans rules. Therefore we want JavaBeans rules to be used for the setter
+        // too, so that you can write setOAuth(x). Meanwhile if the property is defined by a getter
+        // called oAuth() then it is called "oAuth", but you would still expect to be able to set it
+        // using setOAuth(x). Hence the second try using a decapitalize method without the quirky
+        // two-leading-capitals rule.
         propertyName = PropertyNames.decapitalizeNormally(methodName.substring(3));
         valueGetter = propertyNameToGetter.get(propertyName);
+      }
+    } else {
+      // We might also have an unprefixed setter, so the getter is called OAuth() or getOAuth() and
+      // the setter is called oAuth(x), where again JavaBeans rules imply that it should be called
+      // OAuth(x). Iterating over the properties here is a bit clunky but this case should be
+      // unusual.
+      propertyNameToSetters = propertyNameToUnprefixedSetters;
+      for (Map.Entry<String, ExecutableElement> entry : propertyNameToGetter.entrySet()) {
+        if (methodName.equals(PropertyNames.decapitalizeNormally(entry.getKey()))) {
+          propertyName = entry.getKey();
+          valueGetter = entry.getValue();
+          break;
+        }
       }
     }
     if (valueGetter == null || propertyNameToSetters == null) {
