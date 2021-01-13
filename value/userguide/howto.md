@@ -239,22 +239,27 @@ If you're sure, here is how to do it:
 abstract class IgnoreExample {
   static IgnoreExample create(String normalProperty, String ignoredProperty) {
     IgnoreExample ie = new AutoValue_IgnoreExample(normalProperty);
-    ie.ignoredProperty = ignoredProperty;
+    ie.ignoredProperty.set(ignoredProperty);
     return ie;
   }
 
   abstract String normalProperty();
 
-  private String ignoredProperty; // sadly, it can't be `final`
+  private final AtomicReference<String> ignoredProperty = new AtomicReference<>();
 
   final String ignoredProperty() {
-    return ignoredProperty;
+    return ignoredProperty.get();
   }
 }
 ```
 
 Note that this means the field is also ignored by `toString`; to AutoValue
 it simply doesn't exist.
+
+Note that we use `AtomicReference<String>` to ensure that other threads will
+correctly see the value that was written. You could also make the field
+`volatile`, or use `synchronized` (`synchronized (ie)` around the assignment and
+`synchronized` on the `ignoredProperty()` method).
 
 ## <a name="supertypes"></a>... have AutoValue also implement abstract methods from my supertypes?
 
