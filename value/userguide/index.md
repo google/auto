@@ -276,10 +276,3 @@ How do I...
     class/method/field?](howto.md#copy_annotations)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
-
-## <a name="more"></a>More information
-
-See the links in the sidebar at the top left.
-
-<!-- TODO(kevinb): there are some tidbits of information that don't seem to
-     belong anywhere yet; such as how it implements floating-point equality -->
