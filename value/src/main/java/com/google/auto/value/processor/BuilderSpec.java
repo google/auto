@@ -302,8 +302,8 @@ class BuilderSpec {
         for (Element buildMethod : errorElements) {
           errorReporter.reportError(
               buildMethod,
-              "[AutoValueBuilderBuild] Builder must have a single no-argument method returning"
-                  + " %s%s",
+              "[AutoValueBuilderBuild] Builder must have a single no-argument method, typically"
+                  + " called build(), that returns %s%s",
               autoValueClass,
               typeParamsString());
         }

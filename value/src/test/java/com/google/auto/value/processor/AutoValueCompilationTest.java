@@ -2539,7 +2539,8 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Builder must have a single no-argument method returning foo.bar.Baz<T>")
+            "Builder must have a single no-argument method, typically called build(), that returns"
+                + " foo.bar.Baz<T>")
         .inFile(javaFileObject)
         .onLineContaining("public interface Builder<T>");
   }
@@ -2569,11 +2570,15 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Builder must have a single no-argument method returning foo.bar.Baz")
+        .hadErrorContaining(
+            "Builder must have a single no-argument method, typically called build(), that returns"
+                + " foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("Baz build()");
     assertThat(compilation)
-        .hadErrorContaining("Builder must have a single no-argument method returning foo.bar.Baz")
+        .hadErrorContaining(
+            "Builder must have a single no-argument method, typically called build(), that returns"
+                + " foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("Baz create()");
   }
