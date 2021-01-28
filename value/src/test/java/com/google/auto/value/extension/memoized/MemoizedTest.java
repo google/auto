@@ -22,6 +22,8 @@ import com.google.auto.value.AutoValue;
 import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.auto.value.extension.memoized.MemoizedTest.HashCodeEqualsOptimization.EqualsCounter;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.Immutable;
+import com.google.errorprone.annotations.ImmutableTypeParameter;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -481,5 +483,28 @@ public class MemoizedTest {
     ResourceUriPath<String> path =
         ResourceUriPath.create(new TypeEdgeIterable<String, ResourceUri>() {});
     assertThat(path.edges()).isNotNull();
+  }
+
+  @Immutable
+  @AutoValue
+  abstract static class Unchanging<@ImmutableTypeParameter T> {
+    abstract T value();
+
+    @Override
+    @Memoized
+    public abstract int hashCode();
+
+    static <@ImmutableTypeParameter T> Unchanging<T> of(T value) {
+      return new AutoValue_MemoizedTest_Unchanging<T>(value);
+    }
+  }
+
+  @Test
+  public void copiedTypeAnnotations() {
+    for (Class<?> c = Unchanging.of("foo").getClass(); c != Object.class; c = c.getSuperclass()) {
+      assertThat(c.getTypeParameters()).hasLength(1);
+      assertThat(c.getTypeParameters()[0].isAnnotationPresent(ImmutableTypeParameter.class))
+          .isTrue();
+    }
   }
 }

@@ -31,6 +31,7 @@ import static com.google.common.collect.Sets.union;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -50,7 +51,6 @@ import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.common.base.Equivalence.Wrapper;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.FormatMethod;
@@ -65,9 +65,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.lang.annotation.Inherited;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.Messager;
@@ -80,7 +78,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -126,13 +123,9 @@ public final class MemoizeExtension extends AutoValueExtension {
   }
 
   private static ImmutableSet<ExecutableElement> memoizedMethods(Context context) {
-    ImmutableSet.Builder<ExecutableElement> memoizedMethods = ImmutableSet.builder();
-    for (ExecutableElement method : methodsIn(context.autoValueClass().getEnclosedElements())) {
-      if (getAnnotationMirror(method, MEMOIZED_NAME).isPresent()) {
-        memoizedMethods.add(method);
-      }
-    }
-    return memoizedMethods.build();
+    return methodsIn(context.autoValueClass().getEnclosedElements()).stream()
+        .filter(m -> getAnnotationMirror(m, MEMOIZED_NAME).isPresent())
+        .collect(toImmutableSet());
   }
 
   static final class Generator {
@@ -164,7 +157,7 @@ public final class MemoizeExtension extends AutoValueExtension {
           classBuilder(className)
               .superclass(superType())
               .addAnnotations(copiedClassAnnotations(context.autoValueClass()))
-              .addTypeVariables(typeVariableNames())
+              .addTypeVariables(annotatedTypeVariableNames())
               .addModifiers(isFinal ? FINAL : ABSTRACT)
               .addMethod(constructor());
       generatedAnnotationSpec(elements, sourceVersion, MemoizeExtension.class)
@@ -193,23 +186,31 @@ public final class MemoizeExtension extends AutoValueExtension {
     }
 
     private ImmutableList<TypeVariableName> typeVariableNames() {
-      ImmutableList.Builder<TypeVariableName> typeVariableNamesBuilder = ImmutableList.builder();
-      for (TypeParameterElement typeParameter : context.autoValueClass().getTypeParameters()) {
-        typeVariableNamesBuilder.add(TypeVariableName.get(typeParameter));
-      }
-      return typeVariableNamesBuilder.build();
+      return context.autoValueClass().getTypeParameters().stream()
+          .map(TypeVariableName::get)
+          .collect(toImmutableList());
+    }
+
+    private ImmutableList<TypeVariableName> annotatedTypeVariableNames() {
+      return context.autoValueClass().getTypeParameters().stream()
+          .map(
+              p ->
+                  TypeVariableName.get(p)
+                      .annotated(
+                          p.getAnnotationMirrors().stream()
+                              .map(AnnotationSpec::get)
+                              .collect(toImmutableList())))
+          .collect(toImmutableList());
     }
 
     private MethodSpec constructor() {
       MethodSpec.Builder constructor = constructorBuilder();
-      for (Map.Entry<String, TypeMirror> property : context.propertyTypes().entrySet()) {
-        constructor.addParameter(annotatedType(property.getValue()), property.getKey() + "$");
-      }
-      List<String> namesWithDollars = new ArrayList<String>();
-      for (String property : context.properties().keySet()) {
-        namesWithDollars.add(property + "$");
-      }
-      constructor.addStatement("super($L)", Joiner.on(", ").join(namesWithDollars));
+      context
+          .propertyTypes()
+          .forEach((name, type) -> constructor.addParameter(annotatedType(type), name + "$"));
+      String superParams =
+          context.properties().keySet().stream().map(n -> n + "$").collect(joining(", "));
+      constructor.addStatement("super($L)", superParams);
       return constructor.build();
     }
 
@@ -478,15 +479,15 @@ public final class MemoizeExtension extends AutoValueExtension {
         return elements.overrides(method, objectMethod(methodName), context.autoValueClass());
       }
 
-      private ExecutableElement objectMethod(final String methodName) {
+      private ExecutableElement objectMethod(String methodName) {
         TypeElement object = elements.getTypeElement(Object.class.getName());
-        for (ExecutableElement method : methodsIn(object.getEnclosedElements())) {
-          if (method.getSimpleName().contentEquals(methodName)) {
-            return method;
-          }
-        }
-        throw new IllegalArgumentException(
-            String.format("No method in Object named \"%s\"", methodName));
+        return methodsIn(object.getEnclosedElements()).stream()
+            .filter(m -> m.getSimpleName().contentEquals(methodName))
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format("No method in Object named \"%s\"", methodName)));
       }
 
       private boolean pullDownMethodAnnotation(AnnotationMirror annotation) {
