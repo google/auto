@@ -291,7 +291,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
     #if ($propertyBuilder)
 
     @`java.lang.Override`
-    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder() {
+    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder(${propertyBuilder.propertyBuilderMethodParameters}) {
       if (${propertyBuilder.name} == null) {
 
         ## This is the first time someone has asked for the builder. If the property it sets already

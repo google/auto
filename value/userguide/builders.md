@@ -98,3 +98,4 @@ exposing yourself to initialization-order problems.
         **breaking the chain**?](builders-howto.md#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](builders-howto.md#collection_both)
+    *   ... [define a `Comparator` to accumulate values for a sorted-collection-valued property?](builders=howto.md#accumulate-sorted)

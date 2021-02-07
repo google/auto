@@ -31,6 +31,7 @@ How do I...
         **"breaking the chain"**?](#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
+    *   ... [define a `Comparator` to accumulate values for a sorted-collection-valued property?](#accumulate-sorted)
 *   ... [access nested builders while building?](#nested_builders)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
@@ -502,6 +503,40 @@ has been called, any subsequent call to `setFoos` will throw an unchecked
 exception. On the other hand, calling `setFoos` first is okay; a later call to
 `foosBuilder` will return a builder already populated with the
 previously-supplied elements.
+
+### <a name="accumulate-sorted"></a>... define a `Comparator` to accumulate values for a sorted-collection-valued property?
+
+You can define a method `foosBuilder(Comparator<T>)` that returns the associated builder type for that
+sorted collection (ie. `SortedSet` or `SortedMap`) that uses given comparator to sort added values. 
+In this example, we have an `ImmutableSortedSet<String>` which can be built using the `countriesBuilder(Comparatror<String>)` method:
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract String name();
+  public abstract int numberOfLegs();
+  public abstract ImmutableSortedSet<String> countries();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setName(String value);
+    public abstract Builder setNumberOfLegs(int value);
+    public abstract ImmutableSortedSet.Builder<String> countriesBuilder(Comparator<String> comparator);
+    public abstract Animal build();
+  }
+}
+```
+
+The name of this method must be exactly the property name (`countries` here)
+followed by the string `Builder`. Even if the properties follow the
+`getCountries()` convention, the builder method must be `countriesBuilder()`
+and not `getCountriesBuilder()`.
+
+The name of the builder method is unrestricted. Type of the parameter need to implement `java.util.Comparator` interface.
 
 ## <a name="nested_builders"></a>... access nested builders while building?
 
