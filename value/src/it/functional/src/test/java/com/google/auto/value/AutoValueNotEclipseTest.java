@@ -114,7 +114,7 @@ public class AutoValueNotEclipseTest {
     builder.anImmutableSortedMapBuilder(naturalOrder())
         .put("Charlie", 1).put("Alfa", 2).put("Bravo", 3);
     builder.anImmutableSortedSetBuilder(reverseOrder())
-        .addAll(Set.of(1, 5, 9, 3));
+        .add(1).add(5).add(9).add(3);
     builder.nonGenericImmutableSortedMapBuilder(naturalOrder())
         .put(9, 99).put(1, 11).put(3, 33);
     builder.nonGenericImmutableSortedSetBuilder(comparing(Object::toString).reversed())
