@@ -15,7 +15,9 @@
  */
 package com.google.auto.value.processor;
 
+import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toMap;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -23,10 +25,11 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -264,9 +267,10 @@ class PropertyBuilderClassifier {
 
     Optional<ExecutableElement> maybeBuilderMaker;
     if (method.getParameters().isEmpty()) {
-      maybeBuilderMaker = builderMaker(barNoArgMethods, barBuilderTypeElement);
+      maybeBuilderMaker = noArgBuilderMaker(barNoArgMethods, barBuilderTypeElement);
     } else {
-      maybeBuilderMaker = withComparatorBuilderMaker(barTypeElement, barBuilderTypeElement);
+      Map<String, ExecutableElement> barOneArgMethods = oneArgumentMethodsOf(barTypeElement);
+      maybeBuilderMaker = oneArgBuilderMaker(barOneArgMethods, barBuilderTypeElement);
     }
 
     if (!maybeBuilderMaker.isPresent()) {
@@ -295,8 +299,8 @@ class PropertyBuilderClassifier {
     if (toBuilder != null
         && !toBuilder.getModifiers().contains(Modifier.STATIC)
         && typeUtils.isAssignable(
-            typeUtils.erasure(toBuilder.getReturnType()),
-            typeUtils.erasure(barBuilderTypeMirror))) {
+        typeUtils.erasure(toBuilder.getReturnType()),
+        typeUtils.erasure(barBuilderTypeMirror))) {
       builtToBuilder = toBuilder.getSimpleName().toString();
     } else {
       Optional<ExecutableElement> maybeCopyAll =
@@ -338,65 +342,70 @@ class PropertyBuilderClassifier {
     return Optional.of(propertyBuilder);
   }
 
-  private static final ImmutableSet<String> BUILDER_METHOD_NAMES =
-      ImmutableSet.of("naturalOrder", "builder", "newBuilder");
+  private static final ImmutableSet<String> BUILDER_METHOD_NAMES = ImmutableSet.of("naturalOrder", "builder", "newBuilder");
 
   // (2) `BarBuilder must have a public no-arg constructor, or `Bar` must have a visible static
   //      method `naturalOrder(), `builder()`, or `newBuilder()` that returns `BarBuilder`.
-  private Optional<ExecutableElement> builderMaker(
-      Map<String, ExecutableElement> barNoArgMethods, TypeElement barBuilderTypeElement) {
-    for (String builderMethodName : BUILDER_METHOD_NAMES) {
-      ExecutableElement method = barNoArgMethods.get(builderMethodName);
-      if (method != null
-          && method.getModifiers().contains(Modifier.STATIC)
-          && typeUtils.isSameType(
-              typeUtils.erasure(method.getReturnType()),
-              typeUtils.erasure(barBuilderTypeElement.asType()))) {
-        // TODO(emcmanus): check visibility. We don't want to require public for @AutoValue
-        // builders. By not checking visibility we risk accepting something as a builder maker
-        // and then failing when the generated code tries to call Bar.builder(). But the risk
-        // seems small.
-        return Optional.of(method);
-      }
+  private Optional<ExecutableElement> noArgBuilderMaker(Map<String, ExecutableElement> barNoArgMethods,
+                                                        TypeElement barBuilderTypeElement) {
+
+    return builderMaker(BUILDER_METHOD_NAMES, barNoArgMethods, barBuilderTypeElement, 0);
+  }
+
+  private static final ImmutableSet<String> ONE_ARGUMEMNT_BUILDER_METHOD_NAMES = ImmutableSet.of("orderedBy", "builder");
+
+  private Optional<ExecutableElement> oneArgBuilderMaker(Map<String, ExecutableElement> barOneArgMethods,
+                                                         TypeElement barBuilderTypeElement) {
+
+    return builderMaker(ONE_ARGUMEMNT_BUILDER_METHOD_NAMES, barOneArgMethods, barBuilderTypeElement, 1);
+  }
+
+  private Optional<ExecutableElement> builderMaker(ImmutableSet<String> methodNamesToCheck,
+                                                   Map<String, ExecutableElement> methods,
+                                                   TypeElement barBuilderTypeElement,
+                                                   int argumentsCount) {
+    Optional<ExecutableElement> maybeMethod = methodNamesToCheck.stream()
+        .map(methods::get)
+        .filter(Objects::nonNull)
+        .filter(method -> method.getModifiers().contains(Modifier.STATIC))
+        .filter(method -> typeUtils.isSameType(typeUtils.erasure(method.getReturnType()), typeUtils.erasure(barBuilderTypeElement.asType())))
+        .findFirst();
+
+    if (maybeMethod.isPresent()) {
+      // TODO(emcmanus): check visibility. We don't want to require public for @AutoValue
+      // builders. By not checking visibility we risk accepting something as a builder maker
+      // and then failing when the generated code tries to call Bar.builder(). But the risk
+      // seems small.
+      return maybeMethod;
     }
+
     return ElementFilter.constructorsIn(barBuilderTypeElement.getEnclosedElements())
         .stream()
-        .filter(c -> c.getParameters().isEmpty())
+        .filter(c -> c.getParameters().size() == argumentsCount)
         .filter(c -> c.getModifiers().contains(Modifier.PUBLIC))
         .findFirst();
   }
 
-  private Optional<ExecutableElement> withComparatorBuilderMaker(TypeElement barTypeElement, TypeElement barBuilderTypeElement) {
-    return getOneArgumentMethod(barTypeElement, "orderedBy").map(method -> {
-          if (!method.getModifiers().contains(Modifier.STATIC)) {
-            return null;
-          }
-          if (!typeUtils.isSameType(typeUtils.erasure(method.getReturnType()), typeUtils.erasure(barBuilderTypeElement.asType()))) {
-            return null;
-          }
-          return method;
-        }
-    );
-  }
-
-  private Optional<ExecutableElement> getOneArgumentMethod(TypeElement barTypeElement, String methodName) {
-    return ElementFilter.methodsIn(elementUtils.getAllMembers(barTypeElement)).stream()
-        .filter(method -> method.getParameters().size() == 1)
-        .filter(method -> methodName.equals(method.getSimpleName().toString()))
-        .filter(method -> !isStaticInterfaceMethodNotIn(method, barTypeElement))
-        .findFirst();
-  }
-
   private Map<String, ExecutableElement> noArgMethodsOf(TypeElement type) {
-    // Can't easily use ImmutableMap here because getAllMembers could return more than one method
-    // with the same name.
-    Map<String, ExecutableElement> methods = new LinkedHashMap<>();
-    for (ExecutableElement method : ElementFilter.methodsIn(elementUtils.getAllMembers(type))) {
-      if (method.getParameters().isEmpty() && !isStaticInterfaceMethodNotIn(method, type)) {
-        methods.put(method.getSimpleName().toString(), method);
-      }
-    }
-    return methods;
+    return methodsOf(type, 0);
+  }
+
+  private Map<String, ExecutableElement> oneArgumentMethodsOf(TypeElement type) {
+    return methodsOf(type, 1);
+  }
+
+  private ImmutableMap<String, ExecutableElement> methodsOf(TypeElement type, int argumentsCount) {
+    return ElementFilter.methodsIn(elementUtils.getAllMembers(type)).stream()
+        .filter(method -> method.getParameters().size() == argumentsCount)
+        .filter(method -> !isStaticInterfaceMethodNotIn(method, type))
+        .collect(collectingAndThen(
+            toMap(
+                method -> method.getSimpleName().toString(),
+                Function.identity(),
+                (method1, method2) -> method1
+            ),
+            ImmutableMap::copyOf
+        ));
   }
 
   // Work around an Eclipse compiler bug: https://bugs.eclipse.org/bugs/show_bug.cgi?id=547185
