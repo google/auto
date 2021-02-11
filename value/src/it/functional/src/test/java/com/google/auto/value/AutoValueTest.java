@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,6 +61,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import javax.annotation.Nullable;
@@ -3475,5 +3477,89 @@ public class AutoValueTest {
     BuilderAnnotationsCopied.Builder builder = BuilderAnnotationsCopied.builder();
     assertThat(builder.getClass().getAnnotations()).asList().containsExactly(myAnnotation("thing"));
     assertThat(builder.setFoo("foo").build().foo()).isEqualTo("foo");
+  }
+
+  @AutoValue
+  abstract static class DataWithSortedCollectionBuilders<K, V> {
+    abstract ImmutableSortedMap<K, V> anImmutableSortedMap();
+
+    abstract ImmutableSortedSet<V> anImmutableSortedSet();
+
+    abstract ImmutableSortedMap<Integer, V> nonGenericImmutableSortedMap();
+
+    abstract ImmutableSortedSet nonGenericImmutableSortedSet();
+
+    abstract DataWithSortedCollectionBuilders.Builder<K, V> toBuilder();
+
+    static <K, V> DataWithSortedCollectionBuilders.Builder<K, V> builder() {
+      return new AutoValue_AutoValueTest_DataWithSortedCollectionBuilders.Builder<K, V>();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder<K, V> {
+      abstract DataWithSortedCollectionBuilders.Builder<K, V> anImmutableSortedMap(SortedMap<K, V> anImmutableSortedMap);
+
+      abstract ImmutableSortedMap.Builder<K, V> anImmutableSortedMapBuilder(Comparator<K> keyComparator);
+
+      abstract DataWithSortedCollectionBuilders.Builder<K, V> anImmutableSortedSet(SortedSet<V> anImmutableSortedSet);
+
+      abstract ImmutableSortedSet.Builder<V> anImmutableSortedSetBuilder(Comparator<V> comparator);
+
+      abstract ImmutableSortedMap.Builder<Integer, V> nonGenericImmutableSortedMapBuilder(Comparator<Integer> keyComparator);
+
+      abstract ImmutableSortedSet.Builder nonGenericImmutableSortedSetBuilder(Comparator comparator);
+
+      abstract DataWithSortedCollectionBuilders<K, V> build();
+    }
+  }
+
+  @Test
+  public void shouldGenerateBuildersWithComparators() {
+    //given
+    Comparator<String> stringComparator = new Comparator<String>() {
+      @Override
+      public int compare(String left, String right) {
+        return left.compareTo(right);
+      }
+    };
+
+    Comparator<Integer> intComparator = new Comparator<Integer>() {
+      @Override
+      public int compare(Integer o1, Integer o2) {
+        return o1 - o2;
+      }
+    };
+
+    Comparator comparator = new Comparator() {
+      @Override
+      public int compare(Object left, Object right) {
+        return String.valueOf(left).compareTo(String.valueOf(right));
+      }
+    };
+
+    AutoValueTest.DataWithSortedCollectionBuilders.Builder<String, Integer> builder = AutoValueTest.DataWithSortedCollectionBuilders.builder();
+
+    //when
+    builder.anImmutableSortedMapBuilder(stringComparator)
+        .put("Charlie", 1).put("Alfa", 2).put("Bravo", 3);
+    builder.anImmutableSortedSetBuilder(intComparator)
+        .add(1,5,9,3);
+    builder.nonGenericImmutableSortedMapBuilder(intComparator)
+        .put(9, 99).put(1, 11).put(3, 33);
+    builder.nonGenericImmutableSortedSetBuilder(comparator)
+        .add("Bravo", "Charlie", "Alfa");
+
+    AutoValueTest.DataWithSortedCollectionBuilders<String, Integer> data = builder.build();
+
+    AutoValueTest.DataWithSortedCollectionBuilders.Builder<String, Integer> copiedBuilder = data.toBuilder();
+    AutoValueTest.DataWithSortedCollectionBuilders<String, Integer> copiedData = copiedBuilder.build();
+
+    //then
+    assertThat(data.anImmutableSortedMap().keySet()).containsExactly("Alfa", "Bravo", "Charlie").inOrder();
+    assertThat(data.anImmutableSortedSet()).containsExactly(1, 3, 5, 9).inOrder();
+    assertThat(data.nonGenericImmutableSortedMap().keySet()).containsExactly(1, 3, 9).inOrder();
+    assertThat(data.nonGenericImmutableSortedSet()).containsExactly("Alfa", "Bravo", "Charlie").inOrder();
+
+    assertThat(copiedData).isEqualTo(data);
   }
 }
