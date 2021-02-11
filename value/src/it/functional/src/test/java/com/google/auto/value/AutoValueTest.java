@@ -17,9 +17,6 @@ package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static java.util.Comparator.comparing;
-import static java.util.Comparator.naturalOrder;
-import static java.util.Comparator.reverseOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -63,7 +60,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -161,7 +157,7 @@ public class AutoValueTest {
         omitIdentifiers
             ? "{23, true, false, foo, bar, <html>}"
             : "SimpleWithGetters{"
-            + "foo=23, bar=true, otherBar=false, package=foo, package0=bar, HTMLPage=<html>}";
+                + "foo=23, bar=true, otherBar=false, package=foo, package0=bar, HTMLPage=<html>}";
     assertThat(instance.toString()).isEqualTo(expectedString);
   }
 
@@ -186,15 +182,12 @@ public class AutoValueTest {
   @AutoValue
   abstract static class StrangeGetters {
     abstract int get1st();
-
     abstract int get_1st(); // by default we'll use _1st where identifiers are needed, so foil that.
 
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder set1st(int x);
-
       abstract Builder set_1st(int x);
-
       abstract StrangeGetters build();
     }
 
@@ -228,7 +221,7 @@ public class AutoValueTest {
 
   @Test
   public void testGettersAndConcreteNonGetters() {
-    GettersAndConcreteNonGetters instance = GettersAndConcreteNonGetters.create(23, new byte[]{1});
+    GettersAndConcreteNonGetters instance = GettersAndConcreteNonGetters.create(23, new byte[] {1});
     assertFalse(instance.hasNoBytes());
     String expectedString =
         omitIdentifiers ? "{23, [1]}" : "GettersAndConcreteNonGetters{foo=23, bytes=[1]}";
@@ -425,7 +418,7 @@ public class AutoValueTest {
 
   @Test
   public void testBooleanHashCode() {
-    for (boolean booleanValue : new boolean[]{false, true}) {
+    for (boolean booleanValue : new boolean[] {false, true}) {
       BooleanProperty booleanProperty = BooleanProperty.create(booleanValue);
       assertEquals(singlePropertyHash(booleanValue), booleanProperty.hashCode());
     }
@@ -1101,11 +1094,11 @@ public class AutoValueTest {
         omitIdentifiers
             ? ("{" + Arrays.toString(booleans) + ", " + Arrays.toString(ints) + "}")
             : ("PrimitiveArrays{booleans="
-            + Arrays.toString(booleans)
-            + ", "
-            + "ints="
-            + Arrays.toString(ints)
-            + "}");
+                + Arrays.toString(booleans)
+                + ", "
+                + "ints="
+                + Arrays.toString(ints)
+                + "}");
     assertThat(object1.toString()).isEqualTo(expectedString);
     assertThat(object1.ints()).isSameInstanceAs(object1.ints());
   }
@@ -1892,7 +1885,6 @@ public class AutoValueTest {
       implements ToBuilder<InheritedToBuilder.Builder<T, U>> {
 
     public abstract T t();
-
     public abstract U u();
 
     public static <T, U> Builder<T, U> builder() {
@@ -1902,9 +1894,7 @@ public class AutoValueTest {
     @AutoValue.Builder
     public abstract static class Builder<T, U> {
       public abstract Builder<T, U> setT(T t);
-
       public abstract Builder<T, U> setU(U u);
-
       public abstract InheritedToBuilder<T, U> build();
     }
   }
@@ -2160,7 +2150,6 @@ public class AutoValueTest {
   @AutoValue
   public abstract static class BuilderWithPrefixedGettersAndUnprefixedSetters {
     public abstract String getOAuth();
-
     public abstract String getOBrien();
 
     public static Builder builder() {
@@ -2170,9 +2159,7 @@ public class AutoValueTest {
     @AutoValue.Builder
     public abstract static class Builder {
       public abstract Builder oAuth(String x);
-
       public abstract Builder OBrien(String x);
-
       public abstract BuilderWithPrefixedGettersAndUnprefixedSetters build();
     }
   }
@@ -2181,9 +2168,9 @@ public class AutoValueTest {
   public void testBuilderWithPrefixedGetterAndUnprefixedSetter() {
     BuilderWithPrefixedGettersAndUnprefixedSetters x =
         BuilderWithPrefixedGettersAndUnprefixedSetters.builder()
-            .oAuth("OAuth")
-            .OBrien("Flann")
-            .build();
+        .oAuth("OAuth")
+        .OBrien("Flann")
+        .build();
     assertThat(x.getOAuth()).isEqualTo("OAuth");
     assertThat(x.getOBrien()).isEqualTo("Flann");
   }
@@ -2297,7 +2284,6 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder {
       abstract ImmutableList.Builder<String> listBuilder();
-
       abstract PropertyBuilderInheritsType build();
     }
   }
@@ -2675,9 +2661,9 @@ public class AutoValueTest {
         aClass = Integer.class,
         anEnum = RetentionPolicy.RUNTIME,
         anAnnotation =
-        @NestedAnnotation(
-            anInt = 73,
-            aClassArray = {String.class, Object.class}))
+            @NestedAnnotation(
+                anInt = 73,
+                aClassArray = {String.class, Object.class}))
     abstract String field1();
 
     @CopiedAnnotation
@@ -3333,7 +3319,6 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder setMetrics(ImmutableSet<? extends Number> metrics);
-
       abstract GenericExtends build();
     }
   }
@@ -3358,7 +3343,6 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder setList(List<String> list);
-
       abstract Child build();
     }
   }
@@ -3402,18 +3386,14 @@ public class AutoValueTest {
   @SuppressWarnings("ClassCanBeStatic")
   static class OuterWithTypeParam<T extends Number> {
     class InnerWithTypeParam<U> {}
-
     class InnerWithoutTypeParam {}
-
     static class Nested {}
   }
 
   @AutoValue
   abstract static class Nesty {
     abstract OuterWithTypeParam<Double>.InnerWithTypeParam<String> innerWithTypeParam();
-
     abstract OuterWithTypeParam<Double>.InnerWithoutTypeParam innerWithoutTypeParam();
-
     abstract OuterWithTypeParam.Nested nested();
 
     static Builder builder() {
@@ -3424,11 +3404,8 @@ public class AutoValueTest {
     abstract static class Builder {
       abstract Builder setInnerWithTypeParam(
           OuterWithTypeParam<Double>.InnerWithTypeParam<String> x);
-
       abstract Builder setInnerWithoutTypeParam(OuterWithTypeParam<Double>.InnerWithoutTypeParam x);
-
       abstract Builder setNested(OuterWithTypeParam.Nested x);
-
       abstract Nesty build();
     }
   }
@@ -3467,7 +3444,6 @@ public class AutoValueTest {
     @MyAnnotation("thing")
     abstract static class Builder {
       abstract Builder setFoo(String x);
-
       abstract BuilderAnnotationsNotCopied build();
     }
   }
@@ -3492,7 +3468,6 @@ public class AutoValueTest {
     @MyAnnotation("thing")
     abstract static class Builder {
       abstract Builder setFoo(String x);
-
       abstract BuilderAnnotationsCopied build();
     }
   }
@@ -3507,13 +3482,9 @@ public class AutoValueTest {
   @AutoValue
   abstract static class DataWithSortedCollectionBuilders<K, V> {
     abstract ImmutableSortedMap<K, V> anImmutableSortedMap();
-
     abstract ImmutableSortedSet<V> anImmutableSortedSet();
-
     abstract ImmutableSortedMap<Integer, V> nonGenericImmutableSortedMap();
-
     abstract ImmutableSortedSet nonGenericImmutableSortedSet();
-
     abstract DataWithSortedCollectionBuilders.Builder<K, V> toBuilder();
 
     static <K, V> DataWithSortedCollectionBuilders.Builder<K, V> builder() {
@@ -3523,17 +3494,11 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder<K, V> {
       abstract DataWithSortedCollectionBuilders.Builder<K, V> anImmutableSortedMap(SortedMap<K, V> anImmutableSortedMap);
-
       abstract ImmutableSortedMap.Builder<K, V> anImmutableSortedMapBuilder(Comparator<K> keyComparator);
-
       abstract DataWithSortedCollectionBuilders.Builder<K, V> anImmutableSortedSet(SortedSet<V> anImmutableSortedSet);
-
       abstract ImmutableSortedSet.Builder<V> anImmutableSortedSetBuilder(Comparator<V> comparator);
-
       abstract ImmutableSortedMap.Builder<Integer, V> nonGenericImmutableSortedMapBuilder(Comparator<Integer> keyComparator);
-
       abstract ImmutableSortedSet.Builder nonGenericImmutableSortedSetBuilder(Comparator comparator);
-
       abstract DataWithSortedCollectionBuilders<K, V> build();
     }
   }

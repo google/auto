@@ -288,19 +288,20 @@ class PropertyBuilderClassifier {
 
     String barBuilderType = TypeEncoder.encodeWithAnnotations(barBuilderTypeMirror);
     String rawBarType = TypeEncoder.encodeRaw(barTypeMirror);
-    String factoryInitializer = rawBarType + "." + builderMaker.getSimpleName()
-        + "("
-        + (method.getParameters().isEmpty() ? "" : method.getParameters().get(0).getSimpleName())
-        + ")";
-    String initializer = (builderMaker.getKind() == ElementKind.CONSTRUCTOR) ? "new " + barBuilderType + "()" : factoryInitializer;
+
+    String arguments = method.getParameters().isEmpty() ? "" : method.getParameters().get(0).getSimpleName().toString();
+    String constructorInitializer = "new " + barBuilderType + "(" + arguments + ")";
+    String factoryInitializer = rawBarType + "." + builderMaker.getSimpleName() + "(" + arguments + ")";
+    String initializer = (builderMaker.getKind() == ElementKind.CONSTRUCTOR) ? constructorInitializer : factoryInitializer;
+
     String builtToBuilder = null;
     String copyAll = null;
     ExecutableElement toBuilder = barNoArgMethods.get("toBuilder");
     if (toBuilder != null
         && !toBuilder.getModifiers().contains(Modifier.STATIC)
         && typeUtils.isAssignable(
-        typeUtils.erasure(toBuilder.getReturnType()),
-        typeUtils.erasure(barBuilderTypeMirror))) {
+            typeUtils.erasure(toBuilder.getReturnType()),
+            typeUtils.erasure(barBuilderTypeMirror))) {
       builtToBuilder = toBuilder.getSimpleName().toString();
     } else {
       Optional<ExecutableElement> maybeCopyAll =
