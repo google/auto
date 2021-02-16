@@ -75,6 +75,11 @@ public final class MoreTypes {
     protected int doHash(TypeMirror t) {
       return MoreTypes.hash(t, ImmutableSet.<Element>of());
     }
+
+    @Override
+    public String toString() {
+      return "MoreTypes.equivalence()";
+    }
   }
 
   /**

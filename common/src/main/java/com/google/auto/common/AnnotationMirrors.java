@@ -58,6 +58,11 @@ public final class AnnotationMirrors {
           return Arrays.hashCode(new int[] {MoreTypes.equivalence().hash(type),
               AnnotationValues.equivalence().pairwise().hash(annotationValues)});
         }
+
+        @Override
+        public String toString() {
+         return "AnnotationMirrors.equivalence()";
+        }
     };
 
   /**
