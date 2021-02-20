@@ -350,11 +350,21 @@ class BuilderMethodClassifier {
   }
 
   /**
-   * Classifies a method given that it has one argument. Currently, a method with one argument can
-   * only be a setter, meaning that it must look like {@code foo(T)} or {@code setFoo(T)}, where the
-   * {@code AutoValue} class has a property called {@code foo} of type {@code T}.
+   * Classifies a method given that it has one argument. A method with one argument can be:
+   *
+   * <ul>
+   *   <li>a setter, meaning that it looks like {@code foo(T)} or {@code setFoo(T)}, where the
+   *       {@code AutoValue} class has a property called {@code foo} of type {@code T};
+   *   <li>a property builder with one argument, meaning it looks like {@code
+   *       ImmutableSortedSet.Builder<V> foosBuilder(Comparator<V>)}, where the {@code AutoValue}
+   *       class has a property called {@code foos} with a type whose builder can be made with an
+   *       argument of the given type.
+   * </ul>
    */
   private void classifyMethodOneArg(ExecutableElement method) {
+    if (classifyPropertyBuilderOneArg(method)) {
+      return;
+    }
     String methodName = method.getSimpleName().toString();
     Map<String, ExecutableElement> propertyNameToGetter = getterToPropertyName.inverse();
     String propertyName = null;
@@ -415,6 +425,38 @@ class BuilderMethodClassifier {
             method, "Setter methods must return %s%s", builderType, typeParamsString());
       }
     }
+  }
+
+  /**
+   * Classifies a method given that it has one argument and is a property builder with a parameter,
+   * like {@code ImmutableSortedSet.Builder<String> foosBuilder(Comparator<String>)}.
+   *
+   * @param method A method to classify
+   * @return true if method has been classified successfully
+   */
+  private boolean classifyPropertyBuilderOneArg(ExecutableElement method) {
+    String methodName = method.getSimpleName().toString();
+    if (!methodName.endsWith("Builder")) {
+      return false;
+    }
+    String property = methodName.substring(0, methodName.length() - "Builder".length());
+    if (!getterToPropertyName.containsValue(property)) {
+      return false;
+    }
+    PropertyBuilderClassifier propertyBuilderClassifier =
+        new PropertyBuilderClassifier(
+            errorReporter,
+            typeUtils,
+            elementUtils,
+            this,
+            getterToPropertyName,
+            getterToPropertyType,
+            eclipseHack);
+    Optional<PropertyBuilder> maybePropertyBuilder =
+        propertyBuilderClassifier.makePropertyBuilder(method, property);
+    maybePropertyBuilder.ifPresent(
+        propertyBuilder -> propertyNameToPropertyBuilder.put(property, propertyBuilder));
+    return maybePropertyBuilder.isPresent();
   }
 
   // A frequent source of problems is where the JavaBeans conventions have been followed for

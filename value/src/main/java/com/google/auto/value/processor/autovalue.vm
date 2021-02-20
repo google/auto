@@ -291,7 +291,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
     #if ($propertyBuilder)
 
     @`java.lang.Override`
-    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder() {
+    ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder($propertyBuilder.propertyBuilderMethodParameters) {
       if (${propertyBuilder.name} == null) {
 
         ## This is the first time someone has asked for the builder. If the property it sets already
@@ -327,7 +327,16 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
         #end
 
+      } #if (!$propertyBuilder.propertyBuilderMethodParameters.empty) else {
+          ## This check only happens if the property-builder method has a parameter.
+          ## We don't know if the existing builder was created with the same parameter,
+          ## so we throw to avoid possibly giving you a builder that is different from
+          ## the one you asked for.
+
+        throw new IllegalStateException("Property builder for $p.name is already defined");
       }
+        #end
+
       return $propertyBuilder.name;
     }
 

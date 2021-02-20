@@ -419,7 +419,22 @@ followed by the string `Builder`. Even if the properties follow the
 `getCountries()` convention, the builder method must be `countriesBuilder()`
 and not `getCountriesBuilder()`.
 
-You may notice a small problem with this example: the caller can no longer
+It's also possible to have a method like `countriesBuilder` with a single
+argument, provided that the `Builder` class has a public constructor or a
+static `builder` method, with one parameter that the argument can be assigned
+to. For example, if `countries()` were an `ImmutableSortedSet<String>` and you
+wanted to supply a `Comparator` to `ImmutableSortedSet.Builder`, you could
+write:
+
+```java
+    public abstract ImmutableSortedSet.Builder<String>
+        countriesBuilder(Comparator<String> comparator);
+```
+
+That works because `ImmutableSortedSet.Builder` has a constructor that
+accepts a `Comparator` parameter.
+
+You may notice a small problem with these examples: the caller can no longer
 create their instance in a single chained statement:
 
 ```java
