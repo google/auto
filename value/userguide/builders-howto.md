@@ -79,10 +79,13 @@ it will simply default to `null` as you would expect. And if it is
 [Optional](#optional) it will default to an empty `Optional` as you might also
 expect. But if it isn't either of those things (including if it is a
 primitive-valued property, which *can't* be null), then `build()` will throw an
-unchecked exception.
+unchecked exception. This includes collection properties, which must be given a
+value. They don't default to empty unless there is a
+[collection builder](#accumulate).
 
-But this presents a problem, since one of the main *advantages* of a builder in
-the first place is that callers can specify only the properties they care about!
+But this requirement to supply a value presents a problem, since one of the main
+*advantages* of a builder in the first place is that callers can specify only
+the properties they care about!
 
 The solution is to provide a default value for such properties. Fortunately this
 is easy: just set it on the newly-constructed builder instance before returning
