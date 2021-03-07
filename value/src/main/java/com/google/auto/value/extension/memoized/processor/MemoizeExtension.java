@@ -176,6 +176,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       return JavaFile.builder(context.packageName(), generated.build()).build().toString();
     }
 
+    // LINT.IfChange
     private TypeName superType() {
       ClassName superType = ClassName.get(context.packageName(), classToExtend);
       ImmutableList<TypeVariableName> typeVariableNames = typeVariableNames();
@@ -251,6 +252,7 @@ public final class MemoizeExtension extends AutoValueExtension {
           .build();
     }
 
+    // LINT.IfChange
     /**
      * True if the given class name is in the com.google.auto.value package or a subpackage. False
      * if the class name contains {@code Test}, since many AutoValue tests under

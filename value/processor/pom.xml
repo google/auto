@@ -155,6 +155,7 @@
             <include>com/google/auto/value/extension/memoized/processor/**/*.java</include>
             <include>com/google/auto/value/extension/serializable/processor/**/*.java</include>
             <include>com/google/auto/value/extension/serializable/serializer/**/*.java</include>
+            <include>com/google/auto/value/extension/toprettystring/processor/**/*.java</include>
           </includes>
           <compilerArgs>
             <!-- This is something of a hack to allow tests to pass. Ideally we would build
