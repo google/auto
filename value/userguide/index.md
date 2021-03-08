@@ -274,5 +274,7 @@ How do I...
     set?](howto.md#oneof)
 *   ... [copy annotations from a class/method to the implemented
     class/method/field?](howto.md#copy_annotations)
+*   ... [create a **pretty string** representation?](howto.md#toprettystring)
+
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->

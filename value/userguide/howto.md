@@ -42,6 +42,7 @@ How do I...
 *   ... [make a class where only one of its properties is ever set?](#oneof)
 *   ... [copy annotations from a class/method to the implemented
     class/method/field?](#copy_annotations)
+*   ... [create a **pretty string** representation?](#toprettystring)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
 
@@ -679,3 +680,45 @@ final class AutoValue_Example extends Example {
 ```
 
 [`@AutoValue.CopyAnnotations`]: http://static.javadoc.io/com.google.auto.value/auto-value/1.6/com/google/auto/value/AutoValue.CopyAnnotations.html
+
+## <a name="toprettystring"></a>... create a pretty string representation?
+
+If you have a value class with a long `toString()` representation, annotate a
+method with [`@ToPrettyString`] and AutoValue will generate an implementation that
+returns a pretty String rendering of the instance. For example:
+
+```java
+@AutoValue
+abstract class Song {
+  abstract String lyrics();
+  abstract List<Artist> artists();
+
+  @ToPrettyString
+  abstract String toPrettyString();
+}
+```
+
+Below is a sample rendering of the result of calling `toPrettyString()`.
+
+```
+Song{
+  lyrics = I'm off the deep end, watch as I dive in
+    I'll never meet the ground
+    Crash through the surface, where they can't hurt us
+    We're far from the shallow now.,
+  artists = [
+    Artist {
+      name = "Lady Gaga",
+    },
+    Artist {
+      nestedProperty = "Bradley Cooper",
+    }
+  ],
+}
+```
+
+`@ToPrettyString` can be used on the default `toString()` to override the
+default AutoValue-generated `toString()` implementation, or on another
+user-defined method.
+
+[`@ToPrettyString`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/toprettystring/ToPrettyString.java
