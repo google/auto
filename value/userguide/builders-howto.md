@@ -32,6 +32,7 @@ How do I...
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](#collection_both)
 *   ... [access nested builders while building?](#nested_builders)
+*   ... [create a "step builder"?](#step)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
@@ -615,5 +616,15 @@ There are no requirements on the name of the builder class. Instead of
 If `speciesBuilder()` is never called then the final `species()` property will
 be set as if by `speciesBuilder().build()`. In the example, that would result
 in an exception because the required properties of `Species` have not been set.
+
+## <a name="step"></a>... create a "step builder"?
+
+A [_step builder_](http://rdafbn.blogspot.com/2012/07/step-builder-pattern_28.html)
+is a collection of builder interfaces that take you step by step through the
+setting of each of a list of required properties. We think that these are a nice
+idea in principle but not necessarily in practice. Regardless, if you want to
+use AutoValue to implement a step builder,
+[this example](https://github.com/google/auto/issues/1000#issuecomment-792875738)
+shows you how.
 
 [protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders
