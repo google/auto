@@ -71,7 +71,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "Primitives{"
+            "Primitives {"
                 + "\n  i = 1,"
                 + "\n  l = 2,"
                 + "\n  b = 3,"
@@ -100,7 +100,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrimitiveArray{"
+            "PrimitiveArray {"
                 + "\n  longs = ["
                 + "\n    1,"
                 + "\n    2,"
@@ -116,7 +116,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrimitiveArray{" // force newline
+            "PrimitiveArray {" // force newline
                 + "\n  longs = [],"
                 + "\n}");
   }
@@ -127,7 +127,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrimitiveArray{" // force newline
+            "PrimitiveArray {" // force newline
                 + "\n  longs = null,"
                 + "\n}");
   }
@@ -148,7 +148,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyCollection{"
+            "PrettyCollection {"
                 + "\n  collection = ["
                 + "\n    hello,"
                 + "\n    world,"
@@ -164,7 +164,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyCollection{"
+            "PrettyCollection {"
                 + "\n  collection = ["
                 + "\n    hello"
                 + "\n    world"
@@ -180,7 +180,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyCollection{" // force newline
+            "PrettyCollection {" // force newline
                 + "\n  collection = [],"
                 + "\n}");
   }
@@ -191,7 +191,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyCollection{" // force newline
+            "PrettyCollection {" // force newline
                 + "\n  collection = null,"
                 + "\n}");
   }
@@ -217,7 +217,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "NestedCollection{"
+            "NestedCollection {"
                 + "\n  nestedCollection = ["
                 + "\n    ["
                 + "\n      hello,"
@@ -245,7 +245,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "NestedCollection{"
+            "NestedCollection {"
                 + "\n  nestedCollection = ["
                 + "\n    ["
                 + "\n      hello"
@@ -266,7 +266,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "NestedCollection{" // force newline
+            "NestedCollection {" // force newline
                 + "\n  nestedCollection = [],"
                 + "\n}");
   }
@@ -279,7 +279,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "NestedCollection{"
+            "NestedCollection {"
                 + "\n  nestedCollection = ["
                 + "\n    [],"
                 + "\n    [],"
@@ -293,7 +293,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "NestedCollection{" // force newline
+            "NestedCollection {" // force newline
                 + "\n  nestedCollection = null,"
                 + "\n}");
   }
@@ -314,7 +314,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "ImmutablePrimitiveArray{"
+            "ImmutablePrimitiveArray {"
                 + "\n  immutableIntArray = ["
                 + "\n    1,"
                 + "\n    2,"
@@ -329,7 +329,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "ImmutablePrimitiveArray{" // force newline
+            "ImmutablePrimitiveArray {" // force newline
                 + "\n  immutableIntArray = [],"
                 + "\n}");
   }
@@ -341,7 +341,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "ImmutablePrimitiveArray{" // force newline
+            "ImmutablePrimitiveArray {" // force newline
                 + "\n  immutableIntArray = null,"
                 + "\n}");
   }
@@ -361,7 +361,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMap{" // force newline
+            "PrettyMap {" // force newline
                 + "\n  map = {"
                 + "\n    1: 2,"
                 + "\n  },"
@@ -377,7 +377,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMap{"
+            "PrettyMap {"
                 + "\n  map = {"
                 + "\n    key1"
                 + "\n    newline: value1"
@@ -395,7 +395,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMap{" // force newline
+            "PrettyMap {" // force newline
                 + "\n  map = {},"
                 + "\n}");
   }
@@ -406,7 +406,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMap{" // force newline
+            "PrettyMap {" // force newline
                 + "\n  map = null,"
                 + "\n}");
   }
@@ -439,7 +439,7 @@ public class ToPrettyStringTest {
     MapOfMaps valueType = new AutoValue_ToPrettyStringTest_MapOfMaps(mapOfMaps);
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "MapOfMaps{"
+            "MapOfMaps {"
                 + "\n  mapOfMaps = {"
                 + "\n    {"
                 + "\n      k1_k: k1_v,"
@@ -481,7 +481,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "MapOfMaps{"
+            "MapOfMaps {"
                 + "\n  mapOfMaps = {"
                 + "\n    {"
                 + "\n      k_k"
@@ -502,7 +502,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "MapOfMaps{" // force newline
+            "MapOfMaps {" // force newline
                 + "\n  mapOfMaps = {},"
                 + "\n}");
   }
@@ -515,7 +515,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "MapOfMaps{" // force newline
+            "MapOfMaps {" // force newline
                 + "\n  mapOfMaps = {"
                 + "\n    {}: {},"
                 + "\n  },"
@@ -528,7 +528,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "MapOfMaps{" // force newline
+            "MapOfMaps {" // force newline
                 + "\n  mapOfMaps = null,"
                 + "\n}");
   }
@@ -550,7 +550,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMultimap{" // force newline
+            "PrettyMultimap {" // force newline
                 + "\n  multimap = {"
                 + "\n    k: ["
                 + "\n      v1,"
@@ -570,7 +570,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMultimap{"
+            "PrettyMultimap {"
                 + "\n  multimap = {"
                 + "\n    key"
                 + "\n    newline: ["
@@ -590,7 +590,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMultimap{" // force newline
+            "PrettyMultimap {" // force newline
                 + "\n  multimap = {},"
                 + "\n}");
   }
@@ -601,7 +601,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PrettyMultimap{" // force newline
+            "PrettyMultimap {" // force newline
                 + "\n  multimap = null,"
                 + "\n}");
   }
@@ -622,7 +622,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "JavaOptional{" // force newline
+            "JavaOptional {" // force newline
                 + "\n  optional = hello, world,"
                 + "\n}");
   }
@@ -634,7 +634,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "JavaOptional{" // force newline
+            "JavaOptional {" // force newline
                 + "\n  optional = <empty>,"
                 + "\n}");
   }
@@ -647,7 +647,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "JavaOptional{" // force newline
+            "JavaOptional {" // force newline
                 + "\n  optional = optional"
                 + "\n  with"
                 + "\n  newline,"
@@ -661,7 +661,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "JavaOptional{" // force newline
+            "JavaOptional {" // force newline
                 + "\n  optional = null,"
                 + "\n}");
   }
@@ -683,7 +683,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "GuavaOptional{" // force newline
+            "GuavaOptional {" // force newline
                 + "\n  optional = hello, world,"
                 + "\n}");
   }
@@ -695,7 +695,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "GuavaOptional{" // force newline
+            "GuavaOptional {" // force newline
                 + "\n  optional = <absent>,"
                 + "\n}");
   }
@@ -708,7 +708,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "GuavaOptional{" // force newline
+            "GuavaOptional {" // force newline
                 + "\n  optional = optional"
                 + "\n  with"
                 + "\n  newline,"
@@ -722,7 +722,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "GuavaOptional{" // force newline
+            "GuavaOptional {" // force newline
                 + "\n  optional = null,"
                 + "\n}");
   }
@@ -755,7 +755,7 @@ public class ToPrettyStringTest {
                                 new int[][] {{1, 2}, {3, 4, 5}, {}}, "value\nwith\nnewline"))))));
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "NestAllTheThings{"
+            "NestAllTheThings {"
                 + "\n  value = ["
                 + "\n    {"
                 + "\n      ["
@@ -799,7 +799,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.customName())
         .isEqualTo(
-            "WithCustomName{" // force newline
+            "WithCustomName {" // force newline
                 + "\n  i = 1,"
                 + "\n}");
   }
@@ -819,7 +819,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toString())
         .isEqualTo(
-            "OverridesToString{" // force newline
+            "OverridesToString {" // force newline
                 + "\n  i = 1,"
                 + "\n}");
   }
@@ -872,7 +872,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "PropertyHasToPrettyString{"
+            "PropertyHasToPrettyString {"
                 + "\n  parameterizedWithString = custom"
                 + "\n  @ToPrettyString"
                 + "\n  method,"
@@ -915,7 +915,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "CollectionSubtypesWithFixedTypeParameters{"
+            "CollectionSubtypesWithFixedTypeParameters {"
                 + "\n  list = ["
                 + "\n    a,"
                 + "\n    b,"
@@ -946,7 +946,7 @@ public class ToPrettyStringTest {
 
     assertThat(valueType.toPrettyString())
         .isEqualTo(
-            "JavaBeans{"
+            "JavaBeans {"
                 + "\n  int = 4,"
                 + "\n  boolean = false,"
                 + "\n  notAJavaIdentifier = not,"

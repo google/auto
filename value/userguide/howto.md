@@ -701,7 +701,7 @@ abstract class Song {
 Below is a sample rendering of the result of calling `toPrettyString()`.
 
 ```
-Song{
+Song {
   lyrics = I'm off the deep end, watch as I dive in
     I'll never meet the ground
     Crash through the surface, where they can't hurt us
@@ -711,7 +711,7 @@ Song{
       name = "Lady Gaga",
     },
     Artist {
-      nestedProperty = "Bradley Cooper",
+      name = "Bradley Cooper",
     }
   ],
 }

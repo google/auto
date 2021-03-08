@@ -102,7 +102,7 @@ public final class ToPrettyStringExtension extends AutoValueExtension {
             .addModifiers(
                 intersection(toPrettyStringMethod.getModifiers(), INHERITED_VISIBILITY_MODIFIERS));
 
-    method.addCode("return $S", context.autoValueClass().getSimpleName() + "{");
+    method.addCode("return $S", context.autoValueClass().getSimpleName() + " {");
     ToPrettyStringImplementation implementation = ToPrettyStringImplementation.create(context);
     method.addCode(implementation.toStringCodeBlock.build());
 
