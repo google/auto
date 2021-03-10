@@ -28,5 +28,6 @@ final class ClassNames {
   static final String AUTO_ONE_OF_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoOneOf";
   static final String AUTO_VALUE_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoValue";
   static final String AUTO_VALUE_BUILDER_NAME = AUTO_VALUE_NAME + ".Builder";
+  static final String AUTO_BUILDER_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoBuilder";
   static final String COPY_ANNOTATIONS_NAME = AUTO_VALUE_NAME + ".CopyAnnotations";
 }

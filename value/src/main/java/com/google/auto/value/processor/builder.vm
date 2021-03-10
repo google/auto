@@ -11,10 +11,12 @@
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
-
-## Template for AutoValue builders.
+##
+##
+##
+## Template for AutoValue and AutoBuilder builders.
 ## This template uses the Apache Velocity Template Language (VTL).
-## The variables ($isFinal, $props, and so on) are defined by the fields of AutoValueTemplateVars.
+## The variables ($isFinal, $props, and so on) are defined by the fields of AutoValueOrBuilderTemplateVars.
 ##
 ## Comments, like this one, begin with ##. The comment text extends up to and including the newline
 ## character at the end of the line. So comments also serve to join a line to the next one.
@@ -24,13 +26,13 @@
 ## Post-processing will remove unwanted spaces and blank lines, but will not join two lines.
 ## It will also replace classes spelled as (e.g.) `java.util.Arrays`, with the backquotes, to
 ## use just Arrays if that class can be imported unambiguously, or java.util.Arrays if not.
-
+##
 #foreach ($a in $builderAnnotations)
-
-$a##
+$a
 #end
-
-static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
+#if (!$autoBuilder) static #end##
+#if ($isFinal) final #end##
+class ${builderName}${builderFormalTypes} ##
 #if ($builderIsInterface) implements #else extends #end
     ${builderTypeName}${builderActualTypes} {
 
@@ -57,12 +59,12 @@ static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
   #end
 #end
 
-  Builder() {
+  ${builderName}() {
   }
 
-#if (!$toBuilderMethods.empty)
+#if ($toBuilderConstructor)
 
-  private Builder(${origClass}${actualTypes} source) {
+  private ${builderName}(${origClass}${actualTypes} source) {
 
   #foreach ($p in $props)
 
@@ -262,7 +264,7 @@ static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
   #end
 #end
 
-    return new ${finalSubclass}${actualTypes}(
+    return new ${builtClass}${actualTypes}(
 #foreach ($p in $props)
 
         this.$p #if ($foreach.hasNext) , #end

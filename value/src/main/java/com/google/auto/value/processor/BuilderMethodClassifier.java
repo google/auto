@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.nullableAnnotationFor;
+import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.common.collect.Sets.difference;
 
 import com.google.auto.common.MoreElements;

@@ -99,7 +99,7 @@ abstract class TemplateVars {
     return parsedTemplate().evaluate(vars);
   }
 
-  private Map<String, Object> toVars() {
+  private ImmutableMap<String, Object> toVars() {
     Map<String, Object> vars = new TreeMap<>();
     for (Field field : fields) {
       Object value = fieldValue(field, this);
@@ -112,6 +112,11 @@ abstract class TemplateVars {
       }
     }
     return ImmutableMap.copyOf(vars);
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + toVars();
   }
 
   static Template parsedTemplateForResource(String resourceName) {

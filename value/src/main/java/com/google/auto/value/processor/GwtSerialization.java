@@ -85,7 +85,7 @@ class GwtSerialization {
     if (shouldWriteGwtSerializer()) {
       GwtTemplateVars vars = new GwtTemplateVars();
       vars.pkg = autoVars.pkg;
-      vars.subclass = autoVars.finalSubclass;
+      vars.subclass = autoVars.builtClass;
       vars.formalTypes = autoVars.formalTypes;
       vars.actualTypes = autoVars.actualTypes;
       vars.useBuilder = !autoVars.builderTypeName.isEmpty();
@@ -242,7 +242,7 @@ class GwtSerialization {
           .printMessage(
               Diagnostic.Kind.WARNING, "Could not write generated class " + className + ": " + e);
       // A warning rather than an error for the reason explained in
-      // AutoValueOrOneOfProcessor.writeSourceFile.
+      // AutoValueishProcessor.writeSourceFile.
     }
   }
 

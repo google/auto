@@ -16,8 +16,8 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.hasAnnotationMirror;
-import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.nullableAnnotationFor;
+import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
+import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
@@ -28,7 +28,7 @@ import static javax.lang.model.util.ElementFilter.typesIn;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.extension.AutoValueExtension;
-import com.google.auto.value.processor.AutoValueOrOneOfProcessor.Property;
+import com.google.auto.value.processor.AutoValueishProcessor.Property;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
@@ -258,11 +258,11 @@ class BuilderSpec {
     }
 
     void defineVars(
-        AutoValueTemplateVars vars,
+        AutoValueOrBuilderTemplateVars vars,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods =
           abstractMethods(builderTypeElement, processingEnv);
-      boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
+      boolean autoValueHasToBuilder = toBuilderMethods != null && !toBuilderMethods.isEmpty();
       ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType =
           TypeVariables.rewriteReturnTypes(
               processingEnv.getElementUtils(),
@@ -289,9 +289,10 @@ class BuilderSpec {
       for (ExecutableElement method : methodsIn(builderTypeElement.getEnclosedElements())) {
         if (method.getSimpleName().contentEquals("builder")
                 && method.getModifiers().contains(Modifier.STATIC)
-                && method.getAnnotationMirrors().isEmpty()) {
-          // For now we ignore methods with annotations, because for example we do want to allow
-          // Jackson's @JsonCreator.
+                && method.getAnnotationMirrors().isEmpty()
+                && !(vars instanceof AutoBuilderTemplateVars)) {
+          // For now we don't warn for methods with annotations, because for example we do want to
+          // allow Jackson's @JsonCreator. We also don't warn if this is an @AutoBuilder.
           errorReporter.reportWarning(
               method,
               "[AutoValueBuilderInBuilder] Static builder() method should be in the containing"

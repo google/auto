@@ -64,8 +64,8 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_VALUE_NAME)
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.DYNAMIC)
-public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
-  private static final String OMIT_IDENTIFIERS_OPTION = "com.google.auto.value.OmitIdentifiers";
+public class AutoValueProcessor extends AutoValueishProcessor {
+  static final String OMIT_IDENTIFIERS_OPTION = "com.google.auto.value.OmitIdentifiers";
 
   // We moved MemoizeExtension to a different package, which had an unexpected effect:
   // now if an old version of AutoValue is in the class path, ServiceLoader can pick up both the
@@ -241,7 +241,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
 
     String finalSubclass = generatedSubclassName(type, 0);
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
-    vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
+    vars.builtClass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.types = processingEnv.getTypeUtils();
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     defineSharedVarsForType(type, methods, vars);
@@ -425,6 +425,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
         ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
+    vars.toBuilderConstructor = !vars.toBuilderMethods.isEmpty();
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
         propertyFieldAnnotationMap(type, propertyMethods);
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
@@ -437,6 +438,7 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
           ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
               propertyNameToMethodMap(propertyMethods).inverse();
           builder.defineVars(vars, methodToPropertyName);
+          vars.builderName = "Builder";
           vars.builderAnnotations = copiedClassAnnotations(builder.builderType());
         });
   }

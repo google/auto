@@ -57,8 +57,8 @@ public class AutoValueCompilationTest {
   public void simpleSuccess() {
     // Positive test case that ensures we generate the expected code for at least one case.
     // Most AutoValue code-generation tests are functional, meaning that we check that the generated
-    // code does the right thing rather than checking what it looks like, but this test is a sanity
-    // check that we are not generating correct but weird code.
+    // code does the right thing rather than checking what it looks like, but this test checks that
+    // we are not generating correct but weird code.
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",

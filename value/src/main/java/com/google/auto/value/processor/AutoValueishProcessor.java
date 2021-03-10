@@ -83,11 +83,12 @@ import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
- * Shared code between AutoValueProcessor and AutoOneOfProcessor.
+ * Shared code between {@link AutoValueProcessor}, {@link AutoOneOfProcessor}, and {@link
+ * AutoBuilderProcessor}.
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
-abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
+abstract class AutoValueishProcessor extends AbstractProcessor {
   private final String annotationClassName;
 
   /**
@@ -97,7 +98,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    */
   private final List<String> deferredTypeNames = new ArrayList<>();
 
-  AutoValueOrOneOfProcessor(String annotationClassName) {
+  AutoValueishProcessor(String annotationClassName) {
     this.annotationClassName = annotationClassName;
   }
 
@@ -416,7 +417,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   final void defineSharedVarsForType(
       TypeElement type,
       ImmutableSet<ExecutableElement> methods,
-      AutoValueOrOneOfTemplateVars vars) {
+      AutoValueishTemplateVars vars) {
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
@@ -457,7 +458,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   static String generatedClassName(TypeElement type, String prefix) {
     String name = type.getSimpleName().toString();
     while (type.getEnclosingElement() instanceof TypeElement) {
-      type = (TypeElement) type.getEnclosingElement();
+      type = MoreElements.asType(type.getEnclosingElement());
       name = type.getSimpleName() + "_" + name;
     }
     String pkg = TypeSimplifier.packageNameOf(type);
@@ -611,7 +612,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    * anyway, so the special behaviour is not useful, and of course it behaves poorly with examples
    * like {@code OAuth}.
    */
-  private static String nameWithoutPrefix(String name) {
+  static String nameWithoutPrefix(String name) {
     if (name.startsWith("get")) {
       name = name.substring(3);
     } else {
@@ -693,8 +694,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       ObjectMethod override = objectMethodToOverride(method);
       boolean canGenerate =
           method.getModifiers().contains(Modifier.ABSTRACT)
-              || isJavaLangObject((TypeElement) method.getEnclosingElement());
-      if (!override.equals(ObjectMethod.NONE) && canGenerate) {
+               || isJavaLangObject(MoreElements.asType(method.getEnclosingElement()));
+     if (!override.equals(ObjectMethod.NONE) && canGenerate) {
         methodsToGenerate.put(override, method);
       }
     }
