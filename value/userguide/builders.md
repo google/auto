@@ -76,7 +76,7 @@ Be sure to put the static `builder()` method directly in your value class (e.g.,
 `Animal` class is always initialized before `Builder`. Otherwise you may be
 exposing yourself to initialization-order problems.
 
-## <a name="howto"></a>How do I...
+## How do I... <a name="howto"></a>
 
 *   ... [use (or not use) `set` **prefixes**?](builders-howto.md#beans)
 *   ... [use different **names** besides
@@ -89,12 +89,14 @@ exposing yourself to initialization-order problems.
 *   ... [**validate** property values?](builders-howto.md#validate)
 *   ... [**normalize** (modify) a property value at `build`
     time?](builders-howto.md#normalize)
-*   ... [expose **both** a builder and a factory
-    method?](builders-howto.md#both)
+*   ... [expose **both** a builder and a factory method?](builders-howto.md#both)
+*   ... [handle `Optional` properties?](builders-howto.md#optional)
 *   ... [use a **collection**-valued property?](builders-howto.md#collection)
     *   ... [let my builder **accumulate** values for a collection-valued
         property (not require them all at once)?](builders-howto.md#accumulate)
     *   ... [accumulate values for a collection-valued property, without
-        **breaking the chain**?](builders-howto.md#add)
+        **"breaking the chain"**?](builders-howto.md#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](builders-howto.md#collection_both)
+*   ... [access nested builders while building?](builders-howto.md#nested_builders)
+*   ... [create a "step builder"?](builders-howto.md#step)
