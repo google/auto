@@ -13,7 +13,7 @@ jobs:
     name: "JDK ${{ matrix.java }}"
     strategy:
       matrix:
-        java: [ 8, 11, 15 ]
+        java: [ 8, 11 ]
     runs-on: ubuntu-latest
     steps:
       - name: 'Check out repository'
@@ -31,7 +31,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: 'Install'
         shell: bash
-        run: mvn -B dependency:go-offline test clean -U -DskipTests=true -f build-pom.xml
+        run: mvn -B dependency:go-offline test clean -U --quiet --fail-never -DskipTests=true -f build-pom.xml
       - name: 'Test'
         shell: bash
         run: mvn -B verify -U --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true -f build-pom.xml
