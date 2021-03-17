@@ -59,6 +59,7 @@ import javax.lang.model.type.TypeMirror;
  *   <li>The AutoValue class must implement {@link Serializable}.
  *   <li>Unserializable fields in the AutoValue class must be supported by a {@link
  *       com.google.auto.value.extension.serializable.serializer.interfaces.SerializerExtension}.
+ * </ul>
  */
 @AutoService(AutoValueExtension.class)
 public final class SerializableAutoValueExtension extends AutoValueExtension {

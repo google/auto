@@ -2,6 +2,8 @@
 
 # Run by GitHub Actions (see .github/workflows/ci.yml)
 
+set -e
+
 echo -e "Publishing javadoc...\n"
 
 mvn -f build-pom.xml javadoc:aggregate

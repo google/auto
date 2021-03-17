@@ -37,8 +37,8 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
- * An annotation {@link Processor} that reports errors for {@link Memoized @Memoized} methods that
- * are not inside {@code AutoValue}-annotated classes.
+ * An annotation {@link Processor} that reports errors for {@code @Memoized} methods that are not
+ * inside {@code AutoValue}-annotated classes.
  */
 @AutoService(Processor.class)
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)

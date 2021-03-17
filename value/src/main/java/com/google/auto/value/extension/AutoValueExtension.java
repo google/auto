@@ -120,13 +120,12 @@ public abstract class AutoValueExtension {
      * that the final type of the property might be different because of type variables. For
      * example, if you have...
      *
-     * <pre>
+     * <pre>{@code
      *   interface Parent<T> {
      *     T bar();
      *   }
      *
-     *  {@code @AutoValue abstract class Foo implements Parent<String> {...}}
-     * </pre>
+     *  @AutoValue abstract class Foo implements Parent<String> {...}}</pre>
      *
      * ...then the type of the {@code bar} property in {@code Foo} is actually {@code String}, but
      * the {@code ExecutableElement} will be the the method in {@code Parent}, whose return type is
@@ -418,11 +417,11 @@ public abstract class AutoValueExtension {
    * Context#abstractMethods()}.
    *
    * <p>For example, Android's {@code Parcelable} interface includes a <a
-   * href="http://developer.android.com/reference/android/os/Parcelable.html#writeToParcel(android.os.Parcel,
-   * int)">method</a> {@code void writeToParcel(Parcel, int)}. Normally AutoValue would not know
-   * what to do with that abstract method. But an {@code AutoValueExtension} that understands {@code
-   * Parcelable} can provide a useful implementation and return the {@code writeToParcel} method
-   * here. That will prevent a warning about the method from AutoValue.
+   * href="http://developer.android.com/reference/android/os/Parcelable.html#writeToParcel(android.os.Parcel,int)">method</a>
+   * {@code void writeToParcel(Parcel, int)}. Normally AutoValue would not know what to do with that
+   * abstract method. But an {@code AutoValueExtension} that understands {@code Parcelable} can
+   * provide a useful implementation and return the {@code writeToParcel} method here. That will
+   * prevent a warning about the method from AutoValue.
    *
    * @param context the Context of the code generation for this class.
    */
