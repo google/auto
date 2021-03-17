@@ -120,12 +120,11 @@ public abstract class AutoValueExtension {
      * that the final type of the property might be different because of type variables. For
      * example, if you have...
      *
-     * <pre>{@code
-     *   interface Parent<T> {
+     * <pre>
+     *   {@code interface Parent<T>} {
      *     T bar();
      *   }
-     *
-     *  @AutoValue abstract class Foo implements Parent<String> {...}}</pre>
+     *  {@code @AutoValue abstract class Foo implements Parent<String> {...}}</pre>
      *
      * ...then the type of the {@code bar} property in {@code Foo} is actually {@code String}, but
      * the {@code ExecutableElement} will be the the method in {@code Parent}, whose return type is
