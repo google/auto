@@ -62,7 +62,7 @@ jobs:
         env:
           CI_DEPLOY_USERNAME: ${{ secrets.CI_DEPLOY_USERNAME }}
           CI_DEPLOY_PASSWORD: ${{ secrets.CI_DEPLOY_PASSWORD }}
-        run: mvn source:jar javadoc:jar deploy -DskipTests=true -f build-pom.xml
+        run: ./util/publish-snapshot-on-commit.sh
 
   generate_docs:
     name: 'Generate latest docs'
