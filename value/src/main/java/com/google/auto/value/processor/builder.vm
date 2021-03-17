@@ -1,0 +1,271 @@
+## Copyright 2014 Google LLC
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+
+## Template for AutoValue builders.
+## This template uses the Apache Velocity Template Language (VTL).
+## The variables ($isFinal, $props, and so on) are defined by the fields of AutoValueTemplateVars.
+##
+## Comments, like this one, begin with ##. The comment text extends up to and including the newline
+## character at the end of the line. So comments also serve to join a line to the next one.
+## Velocity deletes a newline after a directive (#if, #foreach, #end etc) so ## is not needed there.
+## That does mean that we sometimes need an extra blank line after such a directive.
+##
+## Post-processing will remove unwanted spaces and blank lines, but will not join two lines.
+## It will also replace classes spelled as (e.g.) `java.util.Arrays`, with the backquotes, to
+## use just Arrays if that class can be imported unambiguously, or java.util.Arrays if not.
+
+#foreach ($a in $builderAnnotations)
+
+$a##
+#end
+
+static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
+#if ($builderIsInterface) implements #else extends #end
+    ${builderTypeName}${builderActualTypes} {
+
+#foreach ($p in $props)
+
+  #if ($p.kind.primitive)
+
+  private $types.boxedClass($p.typeMirror).simpleName $p;
+
+  #else
+
+    #if ($builderPropertyBuilders[$p.name])
+    ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
+    ## private ImmutableList.Builder<String> stringsBuilder$;
+    ## private ImmutableList<String> strings;
+
+  private ${builderPropertyBuilders[$p.name].builderType} ##
+      ${builderPropertyBuilders[$p.name].name};
+
+    #end
+
+  private $p.type $p #if ($p.optional && !$p.nullable) = $p.optional.empty #end ;
+
+  #end
+#end
+
+  Builder() {
+  }
+
+#if (!$toBuilderMethods.empty)
+
+  private Builder(${origClass}${actualTypes} source) {
+
+  #foreach ($p in $props)
+
+    this.$p = source.${p.getter}();
+
+  #end
+
+  }
+
+#end
+
+#foreach ($p in $props)
+
+  ## The following is either null or an instance of PropertyBuilderClassifier.PropertyBuilder
+  #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
+
+  ## Setter and/or property builder
+
+  #foreach ($setter in $builderSetters[$p.name])
+
+  @`java.lang.Override`
+  ${setter.access}${builderTypeName}${builderActualTypes} ##
+      ${setter.name}(${setter.nullableAnnotation}$setter.parameterType $p) {
+
+    ## Omit null check for primitive, or @Nullable, or if we are going to be calling a copy method
+    ## such as Optional.of, which will have its own null check if appropriate.
+    #if (!$setter.primitiveParameter && !$p.nullable && ${setter.copy($p)} == $p)
+
+      #if ($identifiers)
+
+    if ($p == null) {
+      throw new NullPointerException("Null $p.name");
+    }
+      #else
+        ## Just throw NullPointerException with no message if it's null.
+        ## The Object cast has no effect on the code but silences an ErrorProne warning.
+
+    ((`java.lang.Object`) ${p}).getClass();
+      #end
+
+    #end
+
+    #if ($propertyBuilder)
+
+    if (${propertyBuilder.name} != null) {
+      throw new IllegalStateException(#if ($identifiers)"Cannot set $p after calling ${p.name}Builder()"#end);
+    }
+
+    #end
+
+    this.$p = ${setter.copy($p)};
+    return this;
+  }
+
+  #end
+
+  #if ($propertyBuilder)
+
+  @`java.lang.Override`
+  ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder($propertyBuilder.propertyBuilderMethodParameters) {
+    if (${propertyBuilder.name} == null) {
+
+      ## This is the first time someone has asked for the builder. If the property it sets already
+      ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
+      ## there is also a setter for this property) then we copy that value into the builder.
+      ## Otherwise the builder starts out empty.
+      ## If we have neither a setter nor a toBuilder() method, then the builder always starts
+      ## off empty.
+
+      #if ($builderSetters[$p.name].empty && $toBuilderMethods.empty)
+
+      ${propertyBuilder.name} = ${propertyBuilder.initializer};
+
+      #else
+
+      if ($p == null) {
+        ${propertyBuilder.name} = ${propertyBuilder.initializer};
+      } else {
+
+        #if (${propertyBuilder.builtToBuilder})
+
+        ${propertyBuilder.name} = ${p}.${propertyBuilder.builtToBuilder}();
+
+        #else
+
+        ${propertyBuilder.name} = ${propertyBuilder.initializer};
+        ${propertyBuilder.name}.${propertyBuilder.copyAll}($p);
+
+        #end
+
+        $p = null;
+      }
+
+      #end
+
+    } #if (!$propertyBuilder.propertyBuilderMethodParameters.empty) else {
+        ## This check only happens if the property-builder method has a parameter.
+        ## We don't know if the existing builder was created with the same parameter,
+        ## so we throw to avoid possibly giving you a builder that is different from
+        ## the one you asked for.
+
+      throw new IllegalStateException("Property builder for $p.name is already defined");
+    }
+      #end
+
+    return $propertyBuilder.name;
+  }
+
+  #end
+
+  ## Getter
+
+  #if ($builderGetters[$p.name])
+
+  @`java.lang.Override`
+  ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
+    #if ($builderGetters[$p.name].optional)
+
+    if ($p == null) {
+      return $builderGetters[$p.name].optional.empty;
+    } else {
+      return ${builderGetters[$p.name].optional.rawType}.of($p);
+    }
+
+    #else
+      #if ($builderRequiredProperties.contains($p))
+
+    if ($p == null) {
+      throw new IllegalStateException(#if ($identifiers)"Property \"$p.name\" has not been set"#end);
+    }
+
+      #end
+
+      #if ($propertyBuilder)
+
+    if (${propertyBuilder.name} != null) {
+      return ${propertyBuilder.name}.build();
+    }
+    if ($p == null) {
+      ${propertyBuilder.beforeInitDefault}
+      $p = ${propertyBuilder.initDefault};
+    }
+
+      #end
+
+    return $p;
+
+    #end
+
+  }
+
+  #end
+#end
+
+  @`java.lang.Override`
+  ${buildMethod.get().access}${origClass}${actualTypes} ${buildMethod.get().name}() {
+
+#foreach ($p in $props)
+  #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
+  #if ($propertyBuilder)
+
+    if (${propertyBuilder.name} != null) {
+      this.$p = ${propertyBuilder.name}.build();
+    } else if (this.$p == null) {
+      ${propertyBuilder.beforeInitDefault}
+      this.$p = ${propertyBuilder.initDefault};
+    }
+
+  #end
+#end
+
+#if (!$builderRequiredProperties.empty)
+  #if ($identifiers)  ## build a friendly message showing all missing properties
+
+    `java.lang.String` missing = "";
+
+    #foreach ($p in $builderRequiredProperties)
+
+    if (this.$p == null) {
+      missing += " $p.name";
+    }
+
+    #end
+
+    if (!missing.isEmpty()) {
+      throw new IllegalStateException("Missing required properties:" + missing);
+    }
+
+  #else  ## just throw an exception if anything is missing
+
+    if (#foreach ($p in $builderRequiredProperties)##
+        this.$p == null##
+        #if ($foreach.hasNext) || #end
+        #end) {
+      throw new IllegalStateException();
+    }
+  #end
+#end
+
+    return new ${finalSubclass}${actualTypes}(
+#foreach ($p in $props)
+
+        this.$p #if ($foreach.hasNext) , #end
+#end );
+  }
+}
