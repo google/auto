@@ -1,0 +1,19 @@
+unnamed package
+com.google.auto.common
+com.google.auto.factory
+com.google.auto.factory.processor
+com.google.auto.service
+com.google.auto.service.processor
+com.google.auto.value
+com.google.auto.value.extension
+com.google.auto.value.extension.memoized
+com.google.auto.value.extension.memoized.processor
+com.google.auto.value.extension.serializable
+com.google.auto.value.extension.serializable.processor
+com.google.auto.value.extension.serializable.serializer
+com.google.auto.value.extension.serializable.serializer.impl
+com.google.auto.value.extension.serializable.serializer.interfaces
+com.google.auto.value.extension.serializable.serializer.runtime
+com.google.auto.value.extension.toprettystring
+com.google.auto.value.extension.toprettystring.processor
+com.google.auto.value.processor
