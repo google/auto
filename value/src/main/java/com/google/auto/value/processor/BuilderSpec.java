@@ -260,7 +260,8 @@ class BuilderSpec {
     void defineVars(
         AutoValueTemplateVars vars,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
-      Iterable<ExecutableElement> builderMethods = abstractMethods(builderTypeElement);
+      Iterable<ExecutableElement> builderMethods =
+          abstractMethods(builderTypeElement, processingEnv);
       boolean autoValueHasToBuilder = !toBuilderMethods.isEmpty();
       ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType =
           TypeVariables.rewriteReturnTypes(
@@ -269,6 +270,9 @@ class BuilderSpec {
               getterToPropertyName.keySet(),
               autoValueClass,
               builderTypeElement);
+      ImmutableMap.Builder<String, TypeMirror> propertyTypes = ImmutableMap.builder();
+      getterToPropertyType.forEach(
+          (getter, type) -> propertyTypes.put(getterToPropertyName.get(getter), type));
       Optional<BuilderMethodClassifier> optionalClassifier =
           BuilderMethodClassifier.classify(
               builderMethods,
@@ -277,7 +281,7 @@ class BuilderSpec {
               autoValueClass,
               builderTypeElement,
               getterToPropertyName,
-              getterToPropertyType,
+              propertyTypes.build(),
               autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
@@ -532,7 +536,8 @@ class BuilderSpec {
    * then this method will throw an exception that will cause us to defer processing of the current
    * class until a later annotation-processing round.
    */
-  private ImmutableSet<ExecutableElement> abstractMethods(TypeElement typeElement) {
+  static ImmutableSet<ExecutableElement> abstractMethods(
+      TypeElement typeElement, ProcessingEnvironment processingEnv) {
     Set<ExecutableElement> methods =
         getLocalAndInheritedMethods(
             typeElement, processingEnv.getTypeUtils(), processingEnv.getElementUtils());

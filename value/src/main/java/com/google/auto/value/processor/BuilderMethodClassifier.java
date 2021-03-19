@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -65,7 +66,7 @@ class BuilderMethodClassifier {
   private final TypeElement autoValueClass;
   private final TypeElement builderType;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
-  private final ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType;
+  private final ImmutableMap<String, TypeMirror> propertyTypes;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
 
   private final Set<ExecutableElement> buildMethods = new LinkedHashSet<>();
@@ -85,14 +86,14 @@ class BuilderMethodClassifier {
       TypeElement autoValueClass,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType) {
+      ImmutableMap<String, TypeMirror> propertyTypes) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.autoValueClass = autoValueClass;
     this.builderType = builderType;
     this.getterToPropertyName = getterToPropertyName;
-    this.getterToPropertyType = getterToPropertyType;
+    this.propertyTypes = propertyTypes;
     ImmutableMap.Builder<String, ExecutableElement> getterToPropertyNameBuilder =
         ImmutableMap.builder();
     for (ExecutableElement getter : getterToPropertyName.keySet()) {
@@ -111,9 +112,9 @@ class BuilderMethodClassifier {
    * @param autoValueClass the {@code AutoValue} class containing the builder.
    * @param builderType the builder class or interface within {@code autoValueClass}.
    * @param getterToPropertyName a map from getter methods to the properties they get.
-   * @param getterToPropertyType a map from getter methods to their return types. The return types
-   *     here use type parameters from the builder class (if any) rather than from the {@code
-   *     AutoValue} class, even though the getter methods are in the latter.
+   * @param propertyTypes a map from property names to types. The types here use type parameters
+   *     from the builder class (if any) rather than from the {@code AutoValue} class, even though
+   *     the getter methods are in the latter.
    * @param autoValueHasToBuilder true if the containing {@code @AutoValue} class has a {@code
    *     toBuilder()} method.
    * @return an {@code Optional} that contains the results of the classification if it was
@@ -126,7 +127,7 @@ class BuilderMethodClassifier {
       TypeElement autoValueClass,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType,
+      ImmutableMap<String, TypeMirror> propertyTypes,
       boolean autoValueHasToBuilder) {
     BuilderMethodClassifier classifier =
         new BuilderMethodClassifier(
@@ -135,7 +136,7 @@ class BuilderMethodClassifier {
             autoValueClass,
             builderType,
             getterToPropertyName,
-            getterToPropertyType);
+            propertyTypes);
     if (classifier.classifyMethods(methods, autoValueHasToBuilder)) {
       return Optional.of(classifier);
     } else {
@@ -147,8 +148,8 @@ class BuilderMethodClassifier {
    * Returns a multimap from the name of a property to the methods that set it. If the property is
    * defined by an abstract method in the {@code @AutoValue} class called {@code foo()} or {@code
    * getFoo()} then the name of the property is {@code foo} and there will be an entry in the map
-   * where the key is {@code "foo"} and the value describes a method in the builder called
-   * {@code foo} or {@code setFoo}.
+   * where the key is {@code "foo"} and the value describes a method in the builder called {@code
+   * foo} or {@code setFoo}.
    */
   ImmutableMultimap<String, PropertySetter> propertyNameToSetters() {
     return ImmutableMultimap.copyOf(
@@ -203,7 +204,7 @@ class BuilderMethodClassifier {
     }
     getterToPropertyName.forEach(
         (getter, property) -> {
-          TypeMirror propertyType = getterToPropertyType.get(getter);
+          TypeMirror propertyType = propertyTypes.get(property);
           boolean hasSetter = propertyNameToSetter.containsKey(property);
           PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
           boolean hasBuilder = propertyBuilder != null;
@@ -286,8 +287,8 @@ class BuilderMethodClassifier {
                 typeUtils,
                 elementUtils,
                 this,
-                getterToPropertyName,
-                getterToPropertyType,
+                this::propertyIsNullable,
+                propertyTypes,
                 eclipseHack);
         Optional<PropertyBuilder> propertyBuilder =
             propertyBuilderClassifier.makePropertyBuilder(method, property);
@@ -313,7 +314,7 @@ class BuilderMethodClassifier {
 
   private void classifyGetter(ExecutableElement builderGetter, ExecutableElement originalGetter) {
     String propertyName = getterToPropertyName.get(originalGetter);
-    TypeMirror originalGetterType = getterToPropertyType.get(originalGetter);
+    TypeMirror originalGetterType = propertyTypes.get(propertyName);
     TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
     String builderGetterTypeString = TypeEncoder.encodeWithAnnotations(builderGetterType);
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
@@ -449,8 +450,8 @@ class BuilderMethodClassifier {
             typeUtils,
             elementUtils,
             this,
-            getterToPropertyName,
-            getterToPropertyType,
+            this::propertyIsNullable,
+            propertyTypes,
             eclipseHack);
     Optional<PropertyBuilder> maybePropertyBuilder =
         propertyBuilderClassifier.makePropertyBuilder(method, property);
@@ -491,7 +492,7 @@ class BuilderMethodClassifier {
     VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
     boolean nullableParameter =
         nullableAnnotationFor(parameterElement, parameterElement.asType()).isPresent();
-    TypeMirror targetType = getterToPropertyType.get(valueGetter);
+    TypeMirror targetType = propertyTypes.get(getterToPropertyName.get(valueGetter));
     ExecutableType finalSetter =
         MoreTypes.asExecutable(
             typeUtils.asMemberOf(MoreTypes.asDeclared(builderType.asType()), setter));
@@ -525,7 +526,10 @@ class BuilderMethodClassifier {
     errorReporter.reportError(
         setter,
         "[AutoValueGetVsSet] Parameter type %s of setter method should be %s to match getter %s.%s",
-        parameterType, targetType, autoValueClass, valueGetter.getSimpleName());
+        parameterType,
+        targetType,
+        autoValueClass,
+        valueGetter.getSimpleName());
     return Optional.empty();
   }
 
@@ -539,7 +543,8 @@ class BuilderMethodClassifier {
       ExecutableElement valueGetter,
       ExecutableElement setter,
       TypeMirror parameterType) {
-    DeclaredType targetType = MoreTypes.asDeclared(getterToPropertyType.get(valueGetter));
+    DeclaredType targetType =
+        MoreTypes.asDeclared(propertyTypes.get(getterToPropertyName.get(valueGetter)));
     for (ExecutableElement copyOfMethod : copyOfMethods) {
       Optional<Copier> function =
           getConvertingSetterFunction(copyOfMethod, targetType, parameterType);
@@ -692,5 +697,17 @@ class BuilderMethodClassifier {
 
   private String typeParamsString() {
     return TypeSimplifier.actualTypeParametersString(autoValueClass);
+  }
+
+  /**
+   * True if the given property is nullable, either because its type has a {@code @Nullable} type
+   * annotation, or because its getter method has a {@code @Nullable} method annotation.
+   */
+  private boolean propertyIsNullable(String property) {
+    ExecutableElement getter = getterToPropertyName.inverse().get(property);
+    return Stream.of(getter, getter.getReturnType())
+        .flatMap(ac -> ac.getAnnotationMirrors().stream())
+        .map(a -> a.getAnnotationType().asElement().getSimpleName())
+        .anyMatch(n -> n.contentEquals("Nullable"));
   }
 }

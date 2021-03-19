@@ -21,16 +21,13 @@ import static java.util.stream.Collectors.toMap;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.lang.model.element.AnnotationMirror;
+import java.util.function.Predicate;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -57,8 +54,8 @@ class PropertyBuilderClassifier {
   private final Types typeUtils;
   private final Elements elementUtils;
   private final BuilderMethodClassifier builderMethodClassifier;
-  private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
-  private final ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType;
+  private final Predicate<String> propertyIsNullable;
+  private final ImmutableMap<String, TypeMirror> propertyTypes;
   private final EclipseHack eclipseHack;
 
   PropertyBuilderClassifier(
@@ -66,15 +63,15 @@ class PropertyBuilderClassifier {
       Types typeUtils,
       Elements elementUtils,
       BuilderMethodClassifier builderMethodClassifier,
-      ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType,
+      Predicate<String> propertyIsNullable,
+      ImmutableMap<String, TypeMirror> propertyTypes,
       EclipseHack eclipseHack) {
     this.errorReporter = errorReporter;
     this.typeUtils = typeUtils;
     this.elementUtils = elementUtils;
     this.builderMethodClassifier = builderMethodClassifier;
-    this.getterToPropertyName = getterToPropertyName;
-    this.getterToPropertyType = getterToPropertyType;
+    this.propertyIsNullable = propertyIsNullable;
+    this.propertyTypes = propertyTypes;
     this.eclipseHack = eclipseHack;
   }
 
@@ -219,8 +216,7 @@ class PropertyBuilderClassifier {
     TypeElement barBuilderTypeElement = MoreTypes.asTypeElement(barBuilderTypeMirror);
     Map<String, ExecutableElement> barBuilderNoArgMethods = noArgMethodsOf(barBuilderTypeElement);
 
-    ExecutableElement barGetter = getterToPropertyName.inverse().get(property);
-    TypeMirror barTypeMirror = getterToPropertyType.get(barGetter);
+    TypeMirror barTypeMirror = propertyTypes.get(property);
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           method,
@@ -229,10 +225,10 @@ class PropertyBuilderClassifier {
           property);
       return Optional.empty();
     }
-    if (isNullable(barGetter)) {
+    if (propertyIsNullable.test(property)) {
       errorReporter.reportError(
-          barGetter,
-          "[AutoValueNullBuilder] Property %s has a property builder so it cannot be @Nullable",
+          method,
+          "[AutoValueNullBuilder] Property %s is @Nullable so it cannot have a property builder",
           property);
     }
     TypeElement barTypeElement = MoreTypes.asTypeElement(barTypeMirror);
@@ -454,19 +450,5 @@ class PropertyBuilderClassifier {
               return typeUtils.isAssignable(barTypeMirror, methodMirror.getParameterTypes().get(0));
             })
         .findFirst();
-  }
-
-  private static boolean isNullable(ExecutableElement getter) {
-    List<List<? extends AnnotationMirror>> annotationLists =
-        ImmutableList.of(
-            getter.getAnnotationMirrors(), getter.getReturnType().getAnnotationMirrors());
-    for (List<? extends AnnotationMirror> annotations : annotationLists) {
-      for (AnnotationMirror annotation : annotations) {
-        if (annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable")) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }

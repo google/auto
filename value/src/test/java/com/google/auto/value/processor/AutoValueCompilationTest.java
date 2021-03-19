@@ -1929,9 +1929,9 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Property strings has a property builder so it cannot be @Nullable")
+        .hadErrorContaining("Property strings is @Nullable so it cannot have a property builder")
         .inFile(javaFileObject)
-        .onLineContaining("@Nullable ImmutableList<String> strings()");
+        .onLineContaining("stringsBuilder()");
   }
 
   @Test
@@ -1963,9 +1963,9 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Property strings has a property builder so it cannot be @Nullable")
+        .hadErrorContaining("Property strings is @Nullable so it cannot have a property builder")
         .inFile(javaFileObject)
-        .onLineContaining("@Nullable ImmutableList<String> strings()");
+        .onLineContaining("stringsBuilder()");
   }
 
   @Test
