@@ -49,6 +49,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
@@ -244,8 +245,10 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     vars.finalSubclass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.types = processingEnv.getTypeUtils();
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
-    defineSharedVarsForType(type, methods, vars);
-    defineVarsForType(type, vars, toBuilderMethods, propertyMethodsAndTypes, builder);
+    Optional<DeclaredType> nullableAnnotationType = Nullables.nullableMentionedInMethods(methods);
+    defineSharedVarsForType(type, methods, vars, nullableAnnotationType);
+    defineVarsForType(type, vars, toBuilderMethods, propertyMethodsAndTypes, builder,
+        nullableAnnotationType);
 
     // If we've encountered problems then we might end up invoking extensions with inconsistent
     // state. Anyway we probably don't want to generate code which is likely to provoke further
@@ -420,7 +423,8 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
       AutoValueTemplateVars vars,
       ImmutableSet<ExecutableElement> toBuilderMethods,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
-      Optional<BuilderSpec.Builder> maybeBuilder) {
+      Optional<BuilderSpec.Builder> maybeBuilder,
+      Optional<DeclaredType> nullableAnnotationType) {
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
     // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
@@ -430,7 +434,11 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
         propertyMethodAnnotationMap(type, propertyMethods);
     vars.props =
-        propertySet(propertyMethodsAndTypes, annotatedPropertyFields, annotatedPropertyMethods);
+        propertySet(
+            propertyMethodsAndTypes,
+            annotatedPropertyFields,
+            annotatedPropertyMethods,
+            nullableAnnotationType);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     maybeBuilder.ifPresent(
         builder -> {

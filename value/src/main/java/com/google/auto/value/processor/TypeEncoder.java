@@ -116,16 +116,15 @@ final class TypeEncoder {
       ImmutableList<AnnotationMirror> extraAnnotations,
       Set<TypeMirror> excludedAnnotationTypes) {
     StringBuilder sb = new StringBuilder();
+    ImmutableList<AnnotationMirror> annotationsOnType =
+        ImmutableList.<AnnotationMirror>builder()
+            .addAll(type.getAnnotationMirrors())
+            .addAll(extraAnnotations)
+            .build();
     // A function that is equivalent to t.getAnnotationMirrors() except when the t in question is
     // our starting type. In that case we also add extraAnnotations to the result.
     Function<TypeMirror, List<? extends AnnotationMirror>> getTypeAnnotations =
-        t ->
-            (t == type)
-                ? ImmutableList.<AnnotationMirror>builder()
-                    .addAll(t.getAnnotationMirrors())
-                    .addAll(extraAnnotations)
-                    .build()
-                : t.getAnnotationMirrors();
+        t -> (t == type) ? annotationsOnType : t.getAnnotationMirrors();
     return new AnnotatedEncodingTypeVisitor(excludedAnnotationTypes, getTypeAnnotations)
         .visit2(type, sb)
         .toString();

@@ -35,26 +35,16 @@ static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
     ${builderTypeName}${builderActualTypes} {
 
 #foreach ($p in $props)
-
-  #if ($p.kind.primitive)
-
-  private $types.boxedClass($p.typeMirror).simpleName $p;
-
-  #else
-
-    #if ($builderPropertyBuilders[$p.name])
-    ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
-    ## private ImmutableList.Builder<String> stringsBuilder$;
-    ## private ImmutableList<String> strings;
-
+  #if ($builderPropertyBuilders[$p.name])
+  ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
+  ## private ImmutableList.Builder<String> stringsBuilder$;
+  ## private @Nullable ImmutableList<String> strings;
   private ${builderPropertyBuilders[$p.name].builderType} ##
       ${builderPropertyBuilders[$p.name].name};
-
-    #end
-
-  private $p.type $p #if ($p.optional && !$p.nullable) = $p.optional.empty #end ;
-
   #end
+
+  private $p.builderFieldType $p #if ($p.optional && !$p.nullable) = $p.optional.empty #end ;
+
 #end
 
   Builder() {
@@ -234,38 +224,58 @@ static #if ($isFinal) final #end class Builder${builderFormalTypes} ##
   #end
 #end
 
-#if (!$builderRequiredProperties.empty)
-  #if ($identifiers)  ## build a friendly message showing all missing properties
-
-    `java.lang.String` missing = "";
-
-    #foreach ($p in $builderRequiredProperties)
-
-    if (this.$p == null) {
-      missing += " $p.name";
-    }
-
-    #end
-
-    if (!missing.isEmpty()) {
-      throw new IllegalStateException("Missing required properties:" + missing);
-    }
-
-  #else  ## just throw an exception if anything is missing
-
-    if (#foreach ($p in $builderRequiredProperties)##
-        this.$p == null##
-        #if ($foreach.hasNext) || #end
-        #end) {
-      throw new IllegalStateException();
-    }
-  #end
-#end
-
+#if ($builderRequiredProperties.empty)
     return new ${finalSubclass}${actualTypes}(
-#foreach ($p in $props)
+  #foreach ($p in $props)
 
         this.$p #if ($foreach.hasNext) , #end
-#end );
+  #end );
+
+#else
+
+    ## Copy the required properties into local variables so nullness analysis
+    ## will know they haven't changed between the null check and the constructor
+    ## call. We have to use the original type, possibly boxed, because we don't
+    ## want a @Nullable annotation on a local variable.
+    #foreach ($p in $builderRequiredProperties)
+    #if ($p.kind.primitive) `$types.boxedClass($p.typeMirror)` #else $p.type #end $p = this.$p;
+    #end
+
+    if (#foreach ($p in $builderRequiredProperties)##
+        $p == null##
+          #if ($foreach.hasNext)
+
+        || #end
+        #end) {
+  #if ($identifiers)  ## build a friendly message showing all missing properties
+    #if ($builderRequiredProperties.size() == 1)
+
+      String missing$ = " $builderRequiredProperties.iterator().next()";
+
+    #else
+
+      `java.lang.StringBuilder` missing$ = new `java.lang.StringBuilder`();
+      #foreach ($p in $builderRequiredProperties)
+      if ($p == null) {
+        missing$.append(" $p.name");
+      }
+      #end
+
+    #end
+      throw new IllegalStateException("Missing required properties:" + missing$);
+  #else  ## just throw an exception if anything is missing
+      throw new IllegalStateException();
+  #end
+    }
+
+    ## Now use either $p or this.$p depending on whether we copied into a local
+    ## variable above.
+    return new ${finalSubclass}${actualTypes}(
+  #foreach ($p in $props)
+
+        #if (!$builderRequiredProperties.contains($p))this.#end$p##
+        #if ($foreach.hasNext) , #end
+  #end );
+#end
   }
 }

@@ -53,6 +53,12 @@ import org.junit.runners.JUnit4;
 public class AutoValueCompilationTest {
   @Rule public final Expect expect = Expect.create();
 
+  // PLEASE DON'T ADD NEW POSITIVE TEST CASES HERE!
+  // Well, sometimes it's appropriate, but usually you should add them to AutoValueTest.java.
+  // We don't care as much about what the code looks like as that it does what it is supposed to do,
+  // and that's what AutoValueTest checks. The more positive test cases we have in this file, the
+  // more strings we have to update here when some detail of the generated code changes.
+
   @Test
   public void simpleSuccess() {
     // Positive test case that ensures we generate the expected code for at least one case.
@@ -959,6 +965,17 @@ public class AutoValueCompilationTest {
 
   @Test
   public void correctBuilder() {
+    // Also tests behaviour when @org.jspecify.nullness.Nullable is available.
+    JavaFileObject jspecifyNullable =
+        JavaFileObjects.forSourceLines(
+            "org.jspecify.nullness.Nullable",
+            "package org.jspecify.nullness;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface Nullable {}");
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -970,7 +987,7 @@ public class AutoValueCompilationTest {
             "",
             "import java.util.ArrayList;",
             "import java.util.List;",
-            "import javax.annotation.Nullable;",
+            "import org.jspecify.nullness.Nullable;",
             "",
             "@AutoValue",
             "public abstract class Baz<T extends Number> {",
@@ -978,7 +995,7 @@ public class AutoValueCompilationTest {
             "  @SuppressWarnings(\"mutable\")",
             "  public abstract byte[] aByteArray();",
             "  @SuppressWarnings(\"mutable\")",
-            "  @Nullable public abstract int[] aNullableIntArray();",
+            "  public abstract int @Nullable [] aNullableIntArray();",
             "  public abstract List<T> aList();",
             "  public abstract ImmutableList<T> anImmutableList();",
             "  public abstract Optional<String> anOptionalString();",
@@ -990,7 +1007,7 @@ public class AutoValueCompilationTest {
             "  public abstract static class Builder<T extends Number> {",
             "    public abstract Builder<T> anInt(int x);",
             "    public abstract Builder<T> aByteArray(byte[] x);",
-            "    public abstract Builder<T> aNullableIntArray(@Nullable int[] x);",
+            "    public abstract Builder<T> aNullableIntArray(int @Nullable [] x);",
             "    public abstract Builder<T> aList(List<T> x);",
             "    public abstract Builder<T> anImmutableList(List<T> x);",
             "    public abstract ImmutableList.Builder<T> anImmutableListBuilder();",
@@ -1048,13 +1065,13 @@ public class AutoValueCompilationTest {
             "import java.util.List;",
             sorted(
                 GeneratedImport.importGeneratedAnnotationType(),
-                "import javax.annotation.Nullable;"),
+                "import org.jspecify.nullness.Nullable;"),
             "",
             "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",
             "final class AutoValue_Baz<T extends Number> extends Baz<T> {",
             "  private final int anInt;",
             "  private final byte[] aByteArray;",
-            "  private final int[] aNullableIntArray;",
+            "  private final int @Nullable [] aNullableIntArray;",
             "  private final List<T> aList;",
             "  private final ImmutableList<T> anImmutableList;",
             "  private final Optional<String> anOptionalString;",
@@ -1063,7 +1080,7 @@ public class AutoValueCompilationTest {
             "  private AutoValue_Baz(",
             "      int anInt,",
             "      byte[] aByteArray,",
-            "      @Nullable int[] aNullableIntArray,",
+            "      int @Nullable [] aNullableIntArray,",
             "      List<T> aList,",
             "      ImmutableList<T> anImmutableList,",
             "      Optional<String> anOptionalString,",
@@ -1087,8 +1104,7 @@ public class AutoValueCompilationTest {
             "  }",
             "",
             "  @SuppressWarnings(\"mutable\")",
-            "  @Nullable",
-            "  @Override public int[] aNullableIntArray() {",
+            "  @Override public int @Nullable [] aNullableIntArray() {",
             "    return aNullableIntArray;",
             "  }",
             "",
@@ -1120,7 +1136,7 @@ public class AutoValueCompilationTest {
             "        + \"}\";",
             "  }",
             "",
-            "  @Override public boolean equals(Object o) {",
+            "  @Override public boolean equals(@Nullable Object o) {",
             "    if (o == this) {",
             "      return true;",
             "    }",
@@ -1165,15 +1181,15 @@ public class AutoValueCompilationTest {
             "  }",
             "",
             "  static final class Builder<T extends Number> extends Baz.Builder<T> {",
-            "    private Integer anInt;",
-            "    private byte[] aByteArray;",
-            "    private int[] aNullableIntArray;",
-            "    private List<T> aList;",
+            "    private @Nullable Integer anInt;",
+            "    private byte @Nullable [] aByteArray;",
+            "    private int @Nullable [] aNullableIntArray;",
+            "    private @Nullable List<T> aList;",
             "    private ImmutableList.Builder<T> anImmutableListBuilder$;",
-            "    private ImmutableList<T> anImmutableList;",
+            "    private @Nullable ImmutableList<T> anImmutableList;",
             "    private Optional<String> anOptionalString = Optional.absent();",
             "    private NestedAutoValue.Builder<T> aNestedAutoValueBuilder$;",
-            "    private NestedAutoValue<T> aNestedAutoValue;",
+            "    private @Nullable NestedAutoValue<T> aNestedAutoValue;",
             "",
             "    Builder() {",
             "    }",
@@ -1213,7 +1229,7 @@ public class AutoValueCompilationTest {
             "    }",
             "",
             "    @Override",
-            "    public Baz.Builder<T> aNullableIntArray(@Nullable int[] aNullableIntArray) {",
+            "    public Baz.Builder<T> aNullableIntArray(int @Nullable [] aNullableIntArray) {",
             "      this.aNullableIntArray = aNullableIntArray;",
             "      return this;",
             "    }",
@@ -1312,24 +1328,29 @@ public class AutoValueCompilationTest {
                 + "NestedAutoValue.builder();",
             "        this.aNestedAutoValue = aNestedAutoValue$builder.build();",
             "      }",
-            "      String missing = \"\";",
-            "      if (this.anInt == null) {",
-            "        missing += \" anInt\";",
-            "      }",
-            "      if (this.aByteArray == null) {",
-            "        missing += \" aByteArray\";",
-            "      }",
-            "      if (this.aList == null) {",
-            "        missing += \" aList\";",
-            "      }",
-            "      if (!missing.isEmpty()) {",
-            "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
+            "      Integer anInt = this.anInt;",
+            "      byte[] aByteArray = this.aByteArray;",
+            "      List<T> aList = this.aList;",
+            "      if (anInt == null",
+            "          || aByteArray == null",
+            "          || aList == null) {",
+            "        StringBuilder missing$ = new StringBuilder();",
+            "        if (anInt == null) {",
+            "          missing$.append(\" anInt\");",
+            "        }",
+            "        if (aByteArray == null) {",
+            "          missing$.append(\" aByteArray\");",
+            "        }",
+            "        if (aList == null) {",
+            "          missing$.append(\" aList\");",
+            "        }",
+            "        throw new IllegalStateException(\"Missing required properties:\" + missing$);",
             "      }",
             "      return new AutoValue_Baz<T>(",
-            "          this.anInt,",
-            "          this.aByteArray,",
+            "          anInt,",
+            "          aByteArray,",
             "          this.aNullableIntArray,",
-            "          this.aList,",
+            "          aList,",
             "          this.anImmutableList,",
             "          this.anOptionalString,",
             "          this.aNestedAutoValue);",
@@ -1340,7 +1361,7 @@ public class AutoValueCompilationTest {
         javac()
             .withProcessors(new AutoValueProcessor())
             .withOptions("-Xlint:-processing", "-implicit:none")
-            .compile(javaFileObject, nestedJavaFileObject);
+            .compile(javaFileObject, nestedJavaFileObject, jspecifyNullable);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")
