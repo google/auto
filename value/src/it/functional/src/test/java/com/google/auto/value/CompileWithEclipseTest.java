@@ -113,7 +113,16 @@ public class CompileWithEclipseTest {
         fileManager.getJavaFileObjectsFromFiles(sources);
     String outputDir = tmp.getRoot().toString();
     ImmutableList<String> options =
-        ImmutableList.of("-d", outputDir, "-s", outputDir, "-source", version, "-target", version);
+        ImmutableList.of(
+            "-d",
+            outputDir,
+            "-s",
+            outputDir,
+            "-source",
+            version,
+            "-target",
+            version,
+            "-warn:-warningToken,-intfAnnotation");
     JavaCompiler.CompilationTask task =
         compiler.getTask(null, fileManager, null, options, null, sourceFileObjects);
     // Explicitly supply an empty list of extensions for AutoValueProcessor, because otherwise this

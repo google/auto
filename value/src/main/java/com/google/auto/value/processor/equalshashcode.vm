@@ -49,7 +49,7 @@
     this.$p == that.${p.getter}() ##
   #elseif ($p.kind == "ARRAY")
     `java.util.Arrays`.equals(this.$p, ##
-        (that instanceof $subclass) ? (($subclass) that).$p : that.${p.getter}()) ##
+        (that instanceof $subclass) ? (($subclass$wildcardTypes) that).$p : that.${p.getter}()) ##
   #elseif ($p.nullable)
     (this.$p == null ? that.${p.getter}() == null : this.${p}.equals(that.${p.getter}())) ##
   #else

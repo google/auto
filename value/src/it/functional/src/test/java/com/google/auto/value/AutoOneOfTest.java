@@ -560,6 +560,8 @@ public class AutoOneOfTest {
 
   @AutoOneOf(MaybeEmpty.Kind.class)
   public abstract static class MaybeEmpty implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     public enum Kind {
       EMPTY, STRING,
     }

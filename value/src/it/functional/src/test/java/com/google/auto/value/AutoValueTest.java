@@ -288,6 +288,8 @@ public class AutoValueTest {
 
   @AutoValue
   public abstract static class Serialize implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     public abstract int integer();
 
     public abstract String string();
@@ -849,6 +851,8 @@ public class AutoValueTest {
   @Test
   public void testGenericClassWithHairyBounds() throws Exception {
     class ComparableList<E> extends ArrayList<E> implements Comparable<ComparableList<E>> {
+      private static final long serialVersionUID = 1L;
+
       @Override
       public int compareTo(ComparableList<E> list) {
         throw new UnsupportedOperationException();
@@ -1266,7 +1270,7 @@ public class AutoValueTest {
   }
 
   @AutoValue
-  public abstract static class ComplexInheritance extends AbstractBase implements A, B {
+  public abstract static class ComplexInheritance extends AbstractBase implements IntfA, IntfB {
     public static ComplexInheritance create(String name) {
       return new AutoValue_AutoValueTest_ComplexInheritance(name);
     }
@@ -1281,9 +1285,9 @@ public class AutoValueTest {
     }
   }
 
-  interface A extends Base {}
+  interface IntfA extends Base {}
 
-  interface B extends Base {}
+  interface IntfB extends Base {}
 
   interface Base {
     int answer();
@@ -1356,7 +1360,7 @@ public class AutoValueTest {
   }
 
   @AutoValue
-  public abstract static class InheritTwice implements A, B {
+  public abstract static class InheritTwice implements IntfA, IntfB {
     public static InheritTwice create(int answer) {
       return new AutoValue_AutoValueTest_InheritTwice(answer);
     }
@@ -2883,6 +2887,8 @@ public class AutoValueTest {
   }
 
   public static class MyMap<K, V> extends HashMap<K, V> {
+    private static final long serialVersionUID = 1L;
+
     public MyMap() {}
 
     public MyMap(Map<K, V> map) {
@@ -2891,6 +2897,8 @@ public class AutoValueTest {
   }
 
   public static class MyMapBuilder<K, V> extends LinkedHashMap<K, V> {
+    private static final long serialVersionUID = 1L;
+
     public MyMapBuilder() {}
 
     public MyMapBuilder(Map<K, V> map) {
@@ -2936,6 +2944,8 @@ public class AutoValueTest {
   }
 
   public static class MyStringMap<V> extends MyMap<String, V> {
+    private static final long serialVersionUID = 1L;
+
     public MyStringMap() {}
 
     public MyStringMap(Map<String, V> map) {
@@ -2948,6 +2958,8 @@ public class AutoValueTest {
   }
 
   public static class MyStringMapBuilder<V> extends MyMapBuilder<String, V> {
+    private static final long serialVersionUID = 1L;
+
     public MyStringMapBuilder() {}
 
     public MyStringMapBuilder(Map<String, V> map) {

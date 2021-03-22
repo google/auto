@@ -438,6 +438,8 @@ public class AutoAnnotationTest {
   }
 
   public static class IntList extends ArrayList<Integer> {
+    private static final long serialVersionUID = 1L;
+
     IntList(Collection<Integer> c) {
       super(c);
     }

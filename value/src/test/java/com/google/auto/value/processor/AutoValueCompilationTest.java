@@ -1129,10 +1129,10 @@ public class AutoValueCompilationTest {
             "      return this.anInt == that.anInt()",
             "          && Arrays.equals(this.aByteArray, "
                 + "(that instanceof AutoValue_Baz) "
-                + "? ((AutoValue_Baz) that).aByteArray : that.aByteArray())",
+                + "? ((AutoValue_Baz<?>) that).aByteArray : that.aByteArray())",
             "          && Arrays.equals(this.aNullableIntArray, "
                 + "(that instanceof AutoValue_Baz) "
-                + "? ((AutoValue_Baz) that).aNullableIntArray : that.aNullableIntArray())",
+                + "? ((AutoValue_Baz<?>) that).aNullableIntArray : that.aNullableIntArray())",
             "          && this.aList.equals(that.aList())",
             "          && this.anImmutableList.equals(that.anImmutableList())",
             "          && this.anOptionalString.equals(that.anOptionalString())",
