@@ -56,9 +56,6 @@ class AutoValueTemplateVars extends AutoValueOrOneOfTemplateVars {
    */
   String gwtCompatibleAnnotation;
 
-  /** The text of the serialVersionUID constant, or empty if there is none. */
-  String serialVersionUID;
-
   /** The simple name of the generated subclass. */
   String subclass;
   /**

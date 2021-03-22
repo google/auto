@@ -433,6 +433,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
     vars.equalsParameterType = equalsParameterType(methodsToGenerate);
+    vars.serialVersionUID = getSerialVersionUID(type);
   }
 
   /** Returns the spelling to be used in the generated code for the given list of annotations. */
@@ -833,8 +834,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   }
 
   /**
-   * Returns a string like {@code "1234L"} if {@code type instanceof Serializable} and defines
-   * {@code serialVersionUID = 1234L}; otherwise {@code ""}.
+   * Returns a string like {@code "private static final long serialVersionUID = 1234L"} if {@code
+   * type instanceof Serializable} and defines {@code serialVersionUID = 1234L}; otherwise {@code
+   * ""}.
    */
   final String getSerialVersionUID(TypeElement type) {
     TypeMirror serializable = elementUtils().getTypeElement(Serializable.class.getName()).asType();
@@ -846,7 +848,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
           if (field.getModifiers().containsAll(Arrays.asList(Modifier.STATIC, Modifier.FINAL))
               && field.asType().getKind() == TypeKind.LONG
               && value != null) {
-            return value + "L";
+            return "private static final long serialVersionUID = " + value + "L;";
           } else {
             errorReporter.reportError(
                 field, "serialVersionUID must be a static final long compile-time constant");

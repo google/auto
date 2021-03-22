@@ -431,7 +431,6 @@ public class AutoValueProcessor extends AutoValueOrOneOfProcessor {
         propertyMethodAnnotationMap(type, propertyMethods);
     vars.props =
         propertySet(propertyMethodsAndTypes, annotatedPropertyFields, annotatedPropertyMethods);
-    vars.serialVersionUID = getSerialVersionUID(type);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     maybeBuilder.ifPresent(
         builder -> {

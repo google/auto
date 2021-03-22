@@ -177,9 +177,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
   }
 #end
 
-#if (!$serialVersionUID.empty)
-  private static final long serialVersionUID = $serialVersionUID;
-#end
+  $serialVersionUID
 
 #if ($builderTypeName != "")
 

@@ -81,4 +81,11 @@ abstract class AutoValueOrOneOfTemplateVars extends TemplateVars {
    * wildcard, for example {@code <?, ?>}.
    */
   String wildcardTypes;
+
+  /**
+   * The text of the complete serialVersionUID declaration, or empty if there is none. When
+   * non-empty, it will be something like {@code private static final long serialVersionUID =
+   * 123L;}.
+   */
+  String serialVersionUID;
 }
