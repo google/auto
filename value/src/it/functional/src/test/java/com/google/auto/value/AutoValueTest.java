@@ -73,6 +73,7 @@ import org.junit.runners.JUnit4;
 
 /** @author emcmanus@google.com (Éamonn McManus) */
 @RunWith(JUnit4.class)
+@SuppressWarnings({"AutoValueImmutableFields", "AutoValueFinalMethods", "TypeNameShadowing"})
 public class AutoValueTest {
   private static boolean omitIdentifiers;
 
@@ -3481,6 +3482,7 @@ public class AutoValueTest {
   }
 
   @AutoValue
+  @AutoValue.CopyAnnotations
   @SuppressWarnings({"rawtypes", "unchecked"}) // deliberately checking handling of raw types
   abstract static class DataWithSortedCollectionBuilders<K, V> {
     abstract ImmutableSortedMap<K, V> anImmutableSortedMap();
