@@ -56,6 +56,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -383,7 +384,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         (propertyMethod, returnType) -> {
           String propertyType =
               TypeEncoder.encodeWithAnnotations(
-                  returnType, getExcludedAnnotationTypes(propertyMethod));
+                  returnType, ImmutableList.of(), getExcludedAnnotationTypes(propertyMethod));
           String propertyName = methodToPropertyName.get(propertyMethod);
           String identifier = methodToIdentifier.get(propertyMethod);
           ImmutableList<String> fieldAnnotations =
@@ -432,7 +433,8 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    vars.equalsParameterType = equalsParameterType(methodsToGenerate);
+    Optional<DeclaredType> nullable = Nullables.nullableMentionedInMethods(methods);
+    vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullable);
     vars.serialVersionUID = getSerialVersionUID(type);
   }
 
@@ -567,12 +569,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   }
 
   private static OptionalInt nullableAnnotationIndex(List<? extends AnnotationMirror> annotations) {
-    for (int i = 0; i < annotations.size(); i++) {
-      if (isNullable(annotations.get(i))) {
-        return OptionalInt.of(i);
-      }
-    }
-    return OptionalInt.empty();
+    return IntStream.range(0, annotations.size())
+        .filter(i -> isNullable(annotations.get(i)))
+        .findFirst();
   }
 
   private static boolean isNullable(AnnotationMirror annotation) {
@@ -706,14 +705,40 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    * Returns the encoded parameter type of the {@code equals(Object)} method that is to be
    * generated, or an empty string if the method is not being generated. The parameter type includes
    * any type annotations, for example {@code @Nullable}.
+   *
+   * @param methodsToGenerate the Object methods that are being generated
+   * @param nullable the type of a {@code @Nullable} type annotation that we have found, if any
    */
-  static String equalsParameterType(Map<ObjectMethod, ExecutableElement> methodsToGenerate) {
+  static String equalsParameterType(
+      Map<ObjectMethod, ExecutableElement> methodsToGenerate, Optional<DeclaredType> nullable) {
     ExecutableElement equals = methodsToGenerate.get(ObjectMethod.EQUALS);
     if (equals == null) {
       return ""; // this will not be referenced because no equals method will be generated
     }
     TypeMirror parameterType = equals.getParameters().get(0).asType();
-    return TypeEncoder.encodeWithAnnotations(parameterType);
+    // Add @Nullable if we know one and the parameter doesn't already have one.
+    // The @Nullable we add will be a type annotation, but if the parameter already has @Nullable
+    // then that might be a type annotation or an annotation on the parameter.
+    ImmutableList<AnnotationMirror> extraAnnotations =
+        nullable.isPresent() && !nullableAnnotationFor(equals, parameterType).isPresent()
+            ? ImmutableList.of(annotationMirror(nullable.get()))
+            : ImmutableList.of();
+    return TypeEncoder.encodeWithAnnotations(parameterType, extraAnnotations, ImmutableSet.of());
+  }
+
+  private static AnnotationMirror annotationMirror(DeclaredType annotationType) {
+    return new AnnotationMirror() {
+      @Override
+      public DeclaredType getAnnotationType() {
+        return annotationType;
+      }
+
+      @Override
+      public ImmutableMap<? extends ExecutableElement, ? extends AnnotationValue>
+          getElementValues() {
+        return ImmutableMap.of();
+      }
+    };
   }
 
   /**

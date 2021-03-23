@@ -15,9 +15,11 @@
  */
 package com.google.auto.value;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.TruthJUnit.assume;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assume.assumeTrue;
@@ -151,6 +153,19 @@ public class AutoValueJava8Test {
     assertThat(instance.randomInt()).isEqualTo(23);
     assertThat(instance.toString())
         .isEqualTo("NullableProperties{nullableString=null, randomInt=23}");
+  }
+
+  @Test
+  public void testEqualsParameterIsAnnotated() throws NoSuchMethodException {
+    // Sadly we can't rely on JDK 8 to handle type annotations correctly.
+    // Some versions do, some don't. So skip the test unless we are on at least JDK 9.
+    double javaVersion = Double.parseDouble(JAVA_SPECIFICATION_VERSION.value());
+    assume().that(javaVersion).isAtLeast(9.0);
+    Method equals =
+        NullableProperties.create(null, 23).getClass().getMethod("equals", Object.class);
+    AnnotatedType[] parameterTypes = equals.getAnnotatedParameterTypes();
+    assertThat(parameterTypes).hasLength(1);
+    assertThat(parameterTypes[0].getAnnotation(Nullable.class)).isNotNull();
   }
 
   @AutoAnnotation
