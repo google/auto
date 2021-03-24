@@ -39,7 +39,8 @@ class Nullables {
    * Returns the type of a {@code @Nullable} type-annotation, if one is found anywhere in the
    * signatures of the given methods.
    */
-  static Optional<DeclaredType> nullableMentionedInMethods(Collection<ExecutableElement> methods) {
+  static Optional<AnnotationMirror> nullableMentionedInMethods(
+      Collection<ExecutableElement> methods) {
     return methods.stream()
         .flatMap(
             method ->
@@ -52,18 +53,19 @@ class Nullables {
         .orElse(Optional.empty());
   }
 
-  private static Optional<DeclaredType> nullableIn(TypeMirror type) {
+  private static Optional<AnnotationMirror> nullableIn(TypeMirror type) {
     return new NullableFinder().visit(type);
   }
 
-  private static Optional<DeclaredType> nullableIn(List<? extends AnnotationMirror> annotations) {
+  private static Optional<AnnotationMirror> nullableIn(
+      List<? extends AnnotationMirror> annotations) {
     return annotations.stream()
-        .map(AnnotationMirror::getAnnotationType)
-        .filter(t -> t.asElement().getSimpleName().contentEquals("Nullable"))
+        .filter(a -> a.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable"))
+        .map(a -> (AnnotationMirror) a)  // get rid of the pesky wildcard
         .findFirst();
   }
 
-  private static class NullableFinder extends SimpleTypeVisitor8<Optional<DeclaredType>, Void> {
+  private static class NullableFinder extends SimpleTypeVisitor8<Optional<AnnotationMirror>, Void> {
     private final TypeMirrorSet visiting = new TypeMirrorSet();
 
     NullableFinder() {
@@ -73,7 +75,7 @@ class Nullables {
     // Primitives can't be @Nullable so we don't check that.
 
     @Override
-    public Optional<DeclaredType> visitDeclared(DeclaredType t, Void unused) {
+    public Optional<AnnotationMirror> visitDeclared(DeclaredType t, Void unused) {
       if (!visiting.add(t)) {
         return Optional.empty();
       }
@@ -83,7 +85,7 @@ class Nullables {
     }
 
     @Override
-    public Optional<DeclaredType> visitTypeVariable(TypeVariable t, Void unused) {
+    public Optional<AnnotationMirror> visitTypeVariable(TypeVariable t, Void unused) {
       if (!visiting.add(t)) {
         return Optional.empty();
       }
@@ -93,14 +95,14 @@ class Nullables {
     }
 
     @Override
-    public Optional<DeclaredType> visitArray(ArrayType t, Void unused) {
+    public Optional<AnnotationMirror> visitArray(ArrayType t, Void unused) {
       return nullableIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(() -> visit(t.getComponentType()));
     }
 
     @Override
-    public Optional<DeclaredType> visitWildcard(WildcardType t, Void unused) {
+    public Optional<AnnotationMirror> visitWildcard(WildcardType t, Void unused) {
       return nullableIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(
@@ -112,13 +114,13 @@ class Nullables {
     }
 
     @Override
-    public Optional<DeclaredType> visitIntersection(IntersectionType t, Void unused) {
+    public Optional<AnnotationMirror> visitIntersection(IntersectionType t, Void unused) {
       return nullableIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(() -> visitAll(t.getBounds()));
     }
 
-    private Optional<DeclaredType> visitAll(List<? extends TypeMirror> types) {
+    private Optional<AnnotationMirror> visitAll(List<? extends TypeMirror> types) {
       return types.stream()
           .map(this::visit)
           .filter(Optional::isPresent)

@@ -433,7 +433,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    Optional<DeclaredType> nullable = Nullables.nullableMentionedInMethods(methods);
+    Optional<AnnotationMirror> nullable = Nullables.nullableMentionedInMethods(methods);
     vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullable);
     vars.serialVersionUID = getSerialVersionUID(type);
   }
@@ -710,7 +710,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    * @param nullable the type of a {@code @Nullable} type annotation that we have found, if any
    */
   static String equalsParameterType(
-      Map<ObjectMethod, ExecutableElement> methodsToGenerate, Optional<DeclaredType> nullable) {
+      Map<ObjectMethod, ExecutableElement> methodsToGenerate, Optional<AnnotationMirror> nullable) {
     ExecutableElement equals = methodsToGenerate.get(ObjectMethod.EQUALS);
     if (equals == null) {
       return ""; // this will not be referenced because no equals method will be generated
@@ -721,24 +721,9 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     // then that might be a type annotation or an annotation on the parameter.
     ImmutableList<AnnotationMirror> extraAnnotations =
         nullable.isPresent() && !nullableAnnotationFor(equals, parameterType).isPresent()
-            ? ImmutableList.of(annotationMirror(nullable.get()))
+            ? ImmutableList.of(nullable.get())
             : ImmutableList.of();
     return TypeEncoder.encodeWithAnnotations(parameterType, extraAnnotations, ImmutableSet.of());
-  }
-
-  private static AnnotationMirror annotationMirror(DeclaredType annotationType) {
-    return new AnnotationMirror() {
-      @Override
-      public DeclaredType getAnnotationType() {
-        return annotationType;
-      }
-
-      @Override
-      public ImmutableMap<? extends ExecutableElement, ? extends AnnotationValue>
-          getElementValues() {
-        return ImmutableMap.of();
-      }
-    };
   }
 
   /**

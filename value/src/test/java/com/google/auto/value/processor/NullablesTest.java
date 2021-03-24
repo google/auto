@@ -39,6 +39,7 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -165,7 +166,9 @@ public class NullablesTest {
           expect
               .withMessage("method %s should have @Nullable", nullableMethod)
               .about(optionals())
-              .that(Nullables.nullableMentionedInMethods(notNullablePlusNullable))
+              .that(
+                  Nullables.nullableMentionedInMethods(notNullablePlusNullable)
+                      .map(AnnotationMirror::getAnnotationType))
               .hasValue(nullableType);
         }
         ran = true;
