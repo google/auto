@@ -58,7 +58,8 @@ public class CompileWithEclipseTest {
   @BeforeClass
   public static void setSourceRoot() {
     assertWithMessage("basedir property must be set - test must be run from Maven")
-        .that(SOURCE_ROOT).isNotNull();
+        .that(SOURCE_ROOT)
+        .isNotNull();
   }
 
   public @Rule TemporaryFolder tmp = new TemporaryFolder();
@@ -69,14 +70,16 @@ public class CompileWithEclipseTest {
   private static final Predicate<File> JAVA_FILE =
       f -> f.getName().endsWith(".java") && !IGNORED_TEST_FILES.contains(f.getName());
 
-  private static final Predicate<File> JAVA8_TEST =
-      f -> f.getName().equals("AutoValueJava8Test.java")
-          || f.getName().equals("AutoOneOfJava8Test.java")
-          || f.getName().equals("EmptyExtension.java");
+  private static final ImmutableSet<String> JAVA8_FILE_NAMES =
+      ImmutableSet.of(
+          "AutoOneOfJava8Test.java",
+          "AutoValueJava8Test.java",
+          "EclipseNullable.java",
+          "EmptyExtension.java");
 
   @Test
   public void compileWithEclipseJava6() throws Exception {
-    compileWithEclipse("6", JAVA_FILE.and(JAVA8_TEST.negate()));
+    compileWithEclipse("6", JAVA_FILE.and(f -> !JAVA8_FILE_NAMES.contains(f.getName())));
   }
 
   @Test
@@ -103,10 +106,11 @@ public class CompileWithEclipseTest {
     // fileManager.getLocation(SYSTEM_MODULES).
     File rtJar = new File(JAVA_HOME.value() + "/lib/rt.jar");
     if (rtJar.exists()) {
-      List<File> bootClassPath = ImmutableList.<File>builder()
-          .add(rtJar)
-          .addAll(fileManager.getLocation(StandardLocation.PLATFORM_CLASS_PATH))
-          .build();
+      List<File> bootClassPath =
+          ImmutableList.<File>builder()
+              .add(rtJar)
+              .addAll(fileManager.getLocation(StandardLocation.PLATFORM_CLASS_PATH))
+              .build();
       fileManager.setLocation(StandardLocation.PLATFORM_CLASS_PATH, bootClassPath);
     }
     Iterable<? extends JavaFileObject> sourceFileObjects =
@@ -122,7 +126,16 @@ public class CompileWithEclipseTest {
             version,
             "-target",
             version,
-            "-warn:-warningToken,-intfAnnotation");
+            "-warn:-warningToken,-intfAnnotation,+nullAnnot("
+                + "com.google.auto.value.nullness.Nullable|"
+                + "com.google.auto.value.nullness.NonNull|"
+                + "com.google.auto.value.nullness.NullMarked)");
+    // +nullAnnot turns on nullability analysis, and the class-names in parentheses specify what
+    // the annotations are for nullable, not-nullable, and default-non-null, respectively. We will
+    // switch to using the JSpecify annotations when available.
+    // The purpose of turning on +nullAnnot is just to see what warnings it produces. We don't
+    // currently try to avoid all those warnings, which appears impossible anyway because of Eclipse
+    // bugs.
     JavaCompiler.CompilationTask task =
         compiler.getTask(null, fileManager, null, options, null, sourceFileObjects);
     // Explicitly supply an empty list of extensions for AutoValueProcessor, because otherwise this

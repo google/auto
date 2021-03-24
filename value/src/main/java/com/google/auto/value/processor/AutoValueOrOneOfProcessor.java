@@ -152,6 +152,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     private final String identifier;
     private final ExecutableElement method;
     private final String type;
+    private final String builderFieldType;
     private final ImmutableList<String> fieldAnnotations;
     private final ImmutableList<String> methodAnnotations;
     private final Optional<String> nullableAnnotation;
@@ -162,6 +163,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
         String identifier,
         ExecutableElement method,
         String type,
+        String builderFieldType,
         ImmutableList<String> fieldAnnotations,
         ImmutableList<String> methodAnnotations,
         Optional<String> nullableAnnotation) {
@@ -169,6 +171,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
       this.identifier = identifier;
       this.method = method;
       this.type = type;
+      this.builderFieldType = builderFieldType;
       this.fieldAnnotations = fieldAnnotations;
       this.methodAnnotations = methodAnnotations;
       this.nullableAnnotation = nullableAnnotation;
@@ -256,6 +259,15 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
 
     public boolean isNullable() {
       return nullableAnnotation.isPresent();
+    }
+
+    /**
+     * The spelling for a builder field to set this property. If the property has primitive type,
+     * this will be the corresponding boxed type. If the property is not already {@code @Nullable},
+     * and a {@code @Nullable} is available, it will be applied to the (possibly boxed) type.
+     */
+    public String getBuilderFieldType() {
+      return builderFieldType;
     }
 
     public String getAccess() {
@@ -369,11 +381,13 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
    *     specifically. Type annotations do not appear because they are considered part of the return
    *     type and will appear when that is spelled out. Annotations that are excluded by {@code
    *     AutoValue.CopyAnnotations} also do not appear here.
+   * @param nullableAnnotationType
    */
   final ImmutableSet<Property> propertySet(
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields,
-      ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods) {
+      ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods,
+      Optional<DeclaredType> nullableAnnotationType) {
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         propertyNameToMethodMap(propertyMethodsAndTypes.keySet()).inverse();
     Map<ExecutableElement, String> methodToIdentifier = new LinkedHashMap<>(methodToPropertyName);
@@ -382,9 +396,23 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     ImmutableSet.Builder<Property> props = ImmutableSet.builder();
     propertyMethodsAndTypes.forEach(
         (propertyMethod, returnType) -> {
+          Set<TypeMirror> excludedAnnotationTypes = getExcludedAnnotationTypes(propertyMethod);
           String propertyType =
               TypeEncoder.encodeWithAnnotations(
-                  returnType, ImmutableList.of(), getExcludedAnnotationTypes(propertyMethod));
+                  returnType, ImmutableList.of(), excludedAnnotationTypes);
+          Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
+          // Use the boxed type for builder fields (if the type is primitive) and add a
+          // @Nullable annotation if one is available and the type is not already @Nullable
+          // or Optional.
+          ImmutableList<AnnotationMirror> extraAnnotations =
+              (nullableAnnotation.isPresent()
+                      || !nullableAnnotationType.isPresent()
+                      || Optionalish.isOptional(returnType))
+                  ? ImmutableList.of()
+                  : ImmutableList.of(annotationMirror(nullableAnnotationType.get()));
+          String builderFieldType =
+              TypeEncoder.encodeWithAnnotations(
+                  box(returnType), extraAnnotations, excludedAnnotationTypes);
           String propertyName = methodToPropertyName.get(propertyMethod);
           String identifier = methodToIdentifier.get(propertyMethod);
           ImmutableList<String> fieldAnnotations =
@@ -392,13 +420,13 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
           ImmutableList<AnnotationMirror> methodAnnotationMirrors =
               annotatedPropertyMethods.get(propertyMethod);
           ImmutableList<String> methodAnnotations = annotationStrings(methodAnnotationMirrors);
-          Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
           Property p =
               new Property(
                   propertyName,
                   identifier,
                   propertyMethod,
                   propertyType,
+                  builderFieldType,
                   fieldAnnotations,
                   methodAnnotations,
                   nullableAnnotation);
@@ -412,11 +440,18 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     return props.build();
   }
 
+  private TypeMirror box(TypeMirror type) {
+    return type.getKind().isPrimitive()
+        ? typeUtils().boxedClass(MoreTypes.asPrimitiveType(type)).asType()
+        : type;
+  }
+
   /** Defines the template variables that are shared by AutoValue and AutoOneOf. */
   final void defineSharedVarsForType(
       TypeElement type,
       ImmutableSet<ExecutableElement> methods,
-      AutoValueOrOneOfTemplateVars vars) {
+      AutoValueOrOneOfTemplateVars vars,
+      Optional<DeclaredType> nullableAnnotationType) {
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
@@ -433,8 +468,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
     vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    Optional<DeclaredType> nullable = Nullables.nullableMentionedInMethods(methods);
-    vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullable);
+    vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullableAnnotationType);
     vars.serialVersionUID = getSerialVersionUID(type);
   }
 
@@ -1128,6 +1162,7 @@ abstract class AutoValueOrOneOfProcessor extends AbstractProcessor {
   }
 
   final void writeSourceFile(String className, String text, TypeElement originatingType) {
+    if (className.contains("EclipseNullable")) System.err.println(text);
     try {
       JavaFileObject sourceFile =
           processingEnv.getFiler().createSourceFile(className, originatingType);

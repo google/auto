@@ -113,8 +113,10 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
     AutoOneOfTemplateVars vars = new AutoOneOfTemplateVars();
     vars.generatedClass = TypeSimplifier.simpleNameOf(subclass);
     vars.propertyToKind = propertyToKind;
-    defineSharedVarsForType(autoOneOfType, methods, vars);
-    defineVarsForType(autoOneOfType, vars, propertyMethodsAndTypes, kindGetter);
+    Optional<DeclaredType> nullableAnnotationType = Nullables.nullableMentionedInMethods(methods);
+    defineSharedVarsForType(autoOneOfType, methods, vars, nullableAnnotationType);
+    defineVarsForType(
+        autoOneOfType, vars, propertyMethodsAndTypes, kindGetter, nullableAnnotationType);
 
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoOneOfType.asType());
@@ -264,9 +266,11 @@ public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
       TypeElement type,
       AutoOneOfTemplateVars vars,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
-      ExecutableElement kindGetter) {
+      ExecutableElement kindGetter,
+      Optional<DeclaredType> nullableAnnotationType) {
     vars.props = propertySet(
-        propertyMethodsAndTypes, ImmutableListMultimap.of(), ImmutableListMultimap.of());
+        propertyMethodsAndTypes, ImmutableListMultimap.of(), ImmutableListMultimap.of(),
+        nullableAnnotationType);
     vars.kindGetter = kindGetter.getSimpleName().toString();
     vars.kindType = TypeEncoder.encode(kindGetter.getReturnType());
     TypeElement javaIoSerializable = elementUtils().getTypeElement("java.io.Serializable");
