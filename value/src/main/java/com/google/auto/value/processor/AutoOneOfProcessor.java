@@ -58,7 +58,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_ONE_OF_NAME)
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
-public class AutoOneOfProcessor extends AutoValueOrOneOfProcessor {
+public class AutoOneOfProcessor extends AutoValueishProcessor {
   public AutoOneOfProcessor() {
     super(AUTO_ONE_OF_NAME);
   }

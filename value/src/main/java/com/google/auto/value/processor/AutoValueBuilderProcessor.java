@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.value.processor.AutoValueOrOneOfProcessor.hasAnnotationMirror;
+import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
 

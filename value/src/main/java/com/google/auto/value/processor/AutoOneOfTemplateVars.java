@@ -25,7 +25,7 @@ import java.util.Map;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @SuppressWarnings("unused") // the fields in this class are only read via reflection
-class AutoOneOfTemplateVars extends AutoValueOrOneOfTemplateVars {
+class AutoOneOfTemplateVars extends AutoValueishTemplateVars {
   /**
    * The properties defined by the parent class's abstract methods. The elements of this set are in
    * the same order as the original abstract method declarations in the AutoOneOf class.

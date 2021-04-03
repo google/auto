@@ -192,6 +192,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   ## BUILDER CLASS
 
+  #set($autoBuilder = false)
   #parse("builder.vm")
 #end
 
