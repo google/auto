@@ -32,6 +32,7 @@
   <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
+    <kotlin.version>1.4.32</kotlin.version>
     <exclude.tests>this-matches-nothing</exclude.tests>
   </properties>
   <dependencies>
@@ -105,6 +106,11 @@
       <artifactId>escapevelocity</artifactId>
       <version>0.9.1</version>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>${kotlin.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -112,7 +118,39 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-       <version>3.2.0</version>
+        <version>3.2.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <!--
+          The Kotlin configuration here is a bit unusual. JetBrains recommends
+          <https://kotlinlang.org/docs/maven.html#compile-kotlin-and-java-sources>
+          a fairly invasive reconfiguration of the maven-compiler-plugin (which compiles Java)
+          in order to ensure that the Kotlin compiler can run first. In our case, we have just
+          one Kotlin file that a test in Java accesses. So, even though it is in src/test/java,
+          we compile it in the `compile` goal, which means it is available to the Java test sources
+          when they are compiled in the `default-testCompile` goal.
+
+          Currently if you want to use JDK ≥ 16 then you must set
+          JAVA_TOOL_OPTIONS=__illegal-access=permit
+          except the two underscores should be dashes (which XML comments won't allow us to write).
+          This is a bug that will presumably be fixed in a forthcoming version.
+          -->
+          <execution>
+            <id>compile</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <sourceDirs>
+                <sourceDir>${project.basedir}/src/test/java</sourceDir>
+              </sourceDirs>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -132,6 +170,7 @@
             <arg>-Xlint:all</arg>
             <arg>-encoding</arg>
             <arg>utf8</arg>
+            <arg>-Acom.google.auto.value.AutoBuilderIsUnstable</arg>
           </compilerArgs>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
@@ -210,6 +249,19 @@
       </activation>
       <properties>
         <test.jvm.flags>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</test.jvm.flags>
+      </properties>
+    </profile>
+    <profile>
+      <!-- Before JDK 11, parameter names from already-compiled classes are not reliably available
+           to the compiler even when they are present in class files. Since our Kotlin test file
+           obviously has to be compiled separately from the Java test that uses it,
+           AutoBuilderKotlinTest doesn't pass on earlier JDK versions. -->
+      <id>exclude-separate-compilation-parameter-names</id>
+      <activation>
+        <jdk>(,11)</jdk>
+      </activation>
+      <properties>
+        <exclude.tests>**/AutoBuilderKotlinTest.java</exclude.tests>
       </properties>
     </profile>
   </profiles>

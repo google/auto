@@ -124,8 +124,7 @@ public final class AutoBuilderCompilationTest {
   @Test
   public void simpleRecord() {
     double version = Double.parseDouble(JAVA_SPECIFICATION_VERSION.value());
-    assume().that(version).isAtLeast(15.0);
-    String release = Integer.toString((int) version);
+    assume().that(version).isAtLeast(16.0);
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -147,8 +146,8 @@ public final class AutoBuilderCompilationTest {
             "}");
     Compilation compilation =
         javac()
-            .withOptions("--release", release, "--enable-preview")
             .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
