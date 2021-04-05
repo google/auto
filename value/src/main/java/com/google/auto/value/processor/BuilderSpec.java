@@ -119,7 +119,7 @@ class BuilderSpec {
     private final TypeElement builderTypeElement;
     private ImmutableSet<ExecutableElement> toBuilderMethods;
     private ExecutableElement buildMethod;
-    private BuilderMethodClassifier classifier;
+    private BuilderMethodClassifier<?> classifier;
 
     Builder(TypeElement builderTypeElement) {
       this.builderTypeElement = builderTypeElement;
@@ -270,18 +270,18 @@ class BuilderSpec {
               getterToPropertyName.keySet(),
               autoValueClass,
               builderTypeElement);
-      ImmutableMap.Builder<String, TypeMirror> propertyTypes = ImmutableMap.builder();
+      ImmutableMap.Builder<String, TypeMirror> rewrittenPropertyTypes = ImmutableMap.builder();
       getterToPropertyType.forEach(
-          (getter, type) -> propertyTypes.put(getterToPropertyName.get(getter), type));
-      Optional<BuilderMethodClassifier> optionalClassifier =
-          BuilderMethodClassifier.classify(
+          (getter, type) -> rewrittenPropertyTypes.put(getterToPropertyName.get(getter), type));
+      Optional<BuilderMethodClassifier<ExecutableElement>> optionalClassifier =
+          BuilderMethodClassifierForAutoValue.classify(
               builderMethods,
               errorReporter,
               processingEnv,
               autoValueClass,
               builderTypeElement,
               getterToPropertyName,
-              propertyTypes.build(),
+              rewrittenPropertyTypes.build(),
               autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;

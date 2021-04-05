@@ -586,7 +586,7 @@ public class AutoValueJava8Test {
   public abstract static class BuilderWithPrefixedGetters<T extends Comparable<T>> {
     public abstract ImmutableList<T> getList();
 
-    public abstract T getT();
+    public abstract @Nullable T getT();
 
     @SuppressWarnings("mutable")
     public abstract int @Nullable [] getInts();
@@ -601,7 +601,7 @@ public class AutoValueJava8Test {
     public abstract static class Builder<T extends Comparable<T>> {
       public abstract Builder<T> setList(ImmutableList<T> list);
 
-      public abstract Builder<T> setT(T t);
+      public abstract Builder<T> setT(@Nullable T t);
 
       public abstract Builder<T> setInts(int[] ints);
 
