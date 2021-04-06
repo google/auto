@@ -34,14 +34,6 @@ public final class AutoBuilderTest {
       this.aString = aString;
     }
 
-    int anInt() {
-      return anInt;
-    }
-
-    String aString() {
-      return aString;
-    }
-
     @Override
     public boolean equals(Object x) {
       if (x instanceof Simple) {

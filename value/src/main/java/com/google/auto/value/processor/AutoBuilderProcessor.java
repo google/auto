@@ -20,9 +20,7 @@ import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.collect.ImmutableSortedMap.toImmutableSortedMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
 
 import com.google.auto.common.AnnotationMirrors;
@@ -32,12 +30,8 @@ import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +46,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
@@ -105,20 +100,21 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     TypeElement constructedType = findConstructedType(autoBuilderType);
     checkModifiersIfNested(constructedType); // TODO: error message is wrong
     ExecutableElement constructor = findConstructor(constructedType, autoBuilderType);
-    ImmutableMap<String, TypeMirror> parameterNamesAndTypes =
-        constructor.getParameters().stream()
-            .collect(toImmutableMap(p -> p.getSimpleName().toString(), Element::asType));
-    ImmutableBiMap<ExecutableElement, String> getterToPropertyName =
-        findPropertyMethods(constructedType, autoBuilderType, parameterNamesAndTypes);
     BuilderSpec builderSpec = new BuilderSpec(constructedType, processingEnv, errorReporter());
     BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
+    ImmutableSet<ExecutableElement> methods =
+        abstractMethodsIn(
+            getLocalAndInheritedMethods(autoBuilderType, typeUtils(), elementUtils()));
+    Optional<BuilderMethodClassifier<VariableElement>> classifier =
+        BuilderMethodClassifierForAutoBuilder.classify(
+            methods, errorReporter(), processingEnv, constructor, constructedType, autoBuilderType);
+    if (!classifier.isPresent()) {
+      // We've already output one or more error messages.
+      return;
+    }
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes =
-        Maps.toMap(getterToPropertyName.keySet(), ExecutableElement::getReturnType);
-    vars.props =
-        propertySet(
-            propertyMethodsAndTypes, ImmutableListMultimap.of(), ImmutableListMultimap.of());
-    builder.defineVars(vars, getterToPropertyName);
+    vars.props = propertySet(constructor);
+    builder.defineVars(vars, classifier.get());
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
@@ -132,75 +128,29 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     writeSourceFile(generatedClassName, text, autoBuilderType);
   }
 
-  private ImmutableBiMap<ExecutableElement, String> findPropertyMethods(
-      TypeElement constructedType,
-      TypeElement autoBuilderType,
-      ImmutableMap<String, TypeMirror> parameterNamesAndTypes) {
-    PackageElement autoBuilderPackage = getPackage(autoBuilderType);
-    ImmutableSet<ExecutableElement> noArgMethods =
-        visibleNoArgMethods(constructedType, autoBuilderPackage);
-    return propertyMethods(
-            noArgMethods.stream()
-                .collect(toImmutableMap(m -> m.getSimpleName().toString(), m -> m)),
-            parameterNamesAndTypes)
-        .orElseGet(
-            () ->
-                propertyMethods(prefixedNameToMethod(noArgMethods), parameterNamesAndTypes)
-                    .orElseThrow(
-                        () ->
-                            // TODO(b/183005059): detect if the parameter names are arg0, arg1 etc
-                            // That almost certainly means the target wasn't compiled with
-                            // -parameters.
-                            errorReporter()
-                                .abortWithError(
-                                    autoBuilderType,
-                                    "Could not find getters to match constructor parameters %s",
-                                    parameterNamesAndTypes)));
+  private ImmutableSet<Property> propertySet(ExecutableElement constructor) {
+    return constructor.getParameters().stream().map(this::newProperty).collect(toImmutableSet());
   }
 
-  private ImmutableMap<String, ExecutableElement> prefixedNameToMethod(
-      ImmutableSet<ExecutableElement> noArgMethods) {
-    return prefixedGettersIn(noArgMethods).stream()
-        .collect(
-            toImmutableSortedMap(
-                String.CASE_INSENSITIVE_ORDER,
-                m -> nameWithoutPrefix(m.getSimpleName().toString()),
-                m -> m));
-  }
-
-  private Optional<ImmutableBiMap<ExecutableElement, String>> propertyMethods(
-      ImmutableMap<String, ExecutableElement> nameToMethod,
-      ImmutableMap<String, TypeMirror> parameterNamesAndTypes) {
-    ImmutableBiMap.Builder<ExecutableElement, String> propertyMethodsBuilder =
-        ImmutableBiMap.builder();
-    parameterNamesAndTypes.forEach(
-        (name, type) -> {
-          ExecutableElement method = nameToMethod.get(name);
-          if (method != null && typeUtils().isSameType(type, method.getReturnType())) {
-            propertyMethodsBuilder.put(method, name);
-          }
-        });
-    ImmutableBiMap<ExecutableElement, String> propertyMethods = propertyMethodsBuilder.build();
-    if (propertyMethods.values().equals(parameterNamesAndTypes.keySet())) {
-      return Optional.of(propertyMethods);
-    }
-    return Optional.empty();
-  }
-
-  private ImmutableSet<ExecutableElement> visibleNoArgMethods(
-      TypeElement constructedType, PackageElement autoBuilderPackage) {
-    return getLocalAndInheritedMethods(constructedType, typeUtils(), elementUtils()).stream()
-        .filter(m -> m.getParameters().isEmpty())
-        .filter(m -> visibleFrom(m, autoBuilderPackage))
-        .collect(toImmutableSet());
+  private Property newProperty(VariableElement var) {
+    String name = var.getSimpleName().toString();
+    TypeMirror type = var.asType();
+    return new Property(
+        name,
+        name,
+        TypeEncoder.encode(type),
+        type,
+        Optional.empty());
   }
 
   private ExecutableElement findConstructor(
       TypeElement constructedType, TypeElement autoBuilderType) {
+    // TODO(b/183005059): choose a constructor based on parameter names and types.
+    // Currently we always choose the constructor with the most parameters, and there must be
+    // exactly one of those.
     List<ExecutableElement> constructors = visibleConstructors(constructedType, autoBuilderType);
     List<ExecutableElement> maxConstructors = maxConstructors(constructors);
     if (maxConstructors.size() > 1) {
-      // TODO(b/183005059): choose a constructor based on parameter names and types.
       errorReporter()
           .abortWithError(
               autoBuilderType,

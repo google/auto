@@ -151,30 +151,23 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   public static class Property {
     private final String name;
     private final String identifier;
-    private final ExecutableElement method;
     private final String type;
-    private final ImmutableList<String> fieldAnnotations;
-    private final ImmutableList<String> methodAnnotations;
+    private final TypeMirror typeMirror;
     private final Optional<String> nullableAnnotation;
     private final Optionalish optional;
 
     Property(
         String name,
         String identifier,
-        ExecutableElement method,
         String type,
-        ImmutableList<String> fieldAnnotations,
-        ImmutableList<String> methodAnnotations,
+        TypeMirror typeMirror,
         Optional<String> nullableAnnotation) {
       this.name = name;
       this.identifier = identifier;
-      this.method = method;
       this.type = type;
-      this.fieldAnnotations = fieldAnnotations;
-      this.methodAnnotations = methodAnnotations;
+      this.typeMirror = typeMirror;
       this.nullableAnnotation = nullableAnnotation;
-      TypeMirror propertyType = method.getReturnType();
-      this.optional = Optionalish.createIfOptional(propertyType);
+      this.optional = Optionalish.createIfOptional(typeMirror);
     }
 
     /**
@@ -198,16 +191,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       return name;
     }
 
-    /**
-     * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
-     * class. For property {@code foo}, this will be {@code foo} or {@code getFoo} or {@code isFoo}.
-     */
-    public String getGetter() {
-      return method.getSimpleName().toString();
-    }
-
     public TypeMirror getTypeMirror() {
-      return method.getReturnType();
+      return typeMirror;
     }
 
     public String getType() {
@@ -215,23 +200,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     }
 
     public TypeKind getKind() {
-      return method.getReturnType().getKind();
-    }
-
-    /**
-     * Returns the annotations (in string form) that should be applied to the property's field
-     * declaration.
-     */
-    public List<String> getFieldAnnotations() {
-      return fieldAnnotations;
-    }
-
-    /**
-     * Returns the annotations (in string form) that should be applied to the property's method
-     * implementation.
-     */
-    public List<String> getMethodAnnotations() {
-      return methodAnnotations;
+      return typeMirror.getKind();
     }
 
     /**
@@ -258,6 +227,56 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     public boolean isNullable() {
       return nullableAnnotation.isPresent();
     }
+  }
+
+  /** A {@link Property} that corresponds to an abstract getter method in the source. */
+  public static class GetterProperty extends Property {
+    private final ExecutableElement method;
+    private final ImmutableList<String> fieldAnnotations;
+    private final ImmutableList<String> methodAnnotations;
+
+    GetterProperty(
+        String name,
+        String identifier,
+        ExecutableElement method,
+        String type,
+        ImmutableList<String> fieldAnnotations,
+        ImmutableList<String> methodAnnotations,
+        Optional<String> nullableAnnotation) {
+      super(
+          name,
+          identifier,
+          type,
+          method.getReturnType(),
+          nullableAnnotation);
+      this.method = method;
+      this.fieldAnnotations = fieldAnnotations;
+      this.methodAnnotations = methodAnnotations;
+    }
+
+    /**
+     * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
+     * class. For property {@code foo}, this will be {@code foo} or {@code getFoo} or {@code isFoo}.
+     */
+    public String getGetter() {
+      return method.getSimpleName().toString();
+    }
+
+    /**
+     * Returns the annotations (in string form) that should be applied to the property's field
+     * declaration.
+     */
+    public List<String> getFieldAnnotations() {
+      return fieldAnnotations;
+    }
+
+    /**
+     * Returns the annotations (in string form) that should be applied to the property's method
+     * implementation.
+     */
+    public List<String> getMethodAnnotations() {
+      return methodAnnotations;
+    }
 
     public String getAccess() {
       return SimpleMethod.access(method);
@@ -265,7 +284,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof Property && ((Property) obj).method.equals(method);
+      return obj instanceof GetterProperty
+          && ((GetterProperty) obj).method.equals(method);
     }
 
     @Override
@@ -395,7 +415,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           ImmutableList<String> methodAnnotations = annotationStrings(methodAnnotationMirrors);
           Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
           Property p =
-              new Property(
+              new GetterProperty(
                   propertyName,
                   identifier,
                   propertyMethod,

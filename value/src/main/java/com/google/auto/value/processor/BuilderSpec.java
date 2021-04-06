@@ -257,7 +257,7 @@ class BuilderSpec {
       return builderMethods;
     }
 
-    void defineVars(
+    void defineVarsForAutoValue(
         AutoValueOrBuilderTemplateVars vars,
         ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
       Iterable<ExecutableElement> builderMethods =
@@ -288,9 +288,9 @@ class BuilderSpec {
       }
       for (ExecutableElement method : methodsIn(builderTypeElement.getEnclosedElements())) {
         if (method.getSimpleName().contentEquals("builder")
-                && method.getModifiers().contains(Modifier.STATIC)
-                && method.getAnnotationMirrors().isEmpty()
-                && !(vars instanceof AutoBuilderTemplateVars)) {
+            && method.getModifiers().contains(Modifier.STATIC)
+            && method.getAnnotationMirrors().isEmpty()
+            && !(vars instanceof AutoBuilderTemplateVars)) {
           // For now we don't warn for methods with annotations, because for example we do want to
           // allow Jackson's @JsonCreator. We also don't warn if this is an @AutoBuilder.
           errorReporter.reportWarning(
@@ -299,7 +299,11 @@ class BuilderSpec {
                   + " class");
         }
       }
-      this.classifier = optionalClassifier.get();
+      defineVars(vars, optionalClassifier.get());
+    }
+
+    void defineVars(AutoValueOrBuilderTemplateVars vars, BuilderMethodClassifier<?> classifier) {
+      this.classifier = classifier;
       Set<ExecutableElement> buildMethods = classifier.buildMethods();
       if (buildMethods.size() != 1) {
         Set<? extends Element> errorElements =
