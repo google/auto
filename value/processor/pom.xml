@@ -41,7 +41,7 @@
   </scm>
 
   <properties>
-    <auto-service.version>1.0-rc7</auto-service.version>
+    <auto-service.version>1.0</auto-service.version>
     <errorprone.version>2.6.0</errorprone.version>
   </properties>
 
