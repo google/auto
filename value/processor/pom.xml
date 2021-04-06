@@ -184,7 +184,7 @@
                 <path>
                   <groupId>com.google.auto.value</groupId>
                   <artifactId>auto-value</artifactId>
-                  <version>HEAD-SNAPSHOT</version>
+                  <version>${project.version}</version>
                 </path>
                 <path>
                   <groupId>com.google.auto.service</groupId>
