@@ -41,6 +41,7 @@
   </scm>
 
   <properties>
+    <auto-service.version>1.0-rc7</auto-service.version>
     <errorprone.version>2.6.0</errorprone.version>
   </properties>
 
@@ -52,15 +53,13 @@
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
-      <artifactId>auto-service</artifactId>
-      <version>1.0-rc7</version>
-      <scope>provided</scope>
+      <artifactId>auto-service-annotations</artifactId>
+      <version>${auto-service.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.errorprone</groupId>
       <artifactId>error_prone_annotations</artifactId>
       <version>${errorprone.version}</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.escapevelocity</groupId>
@@ -169,7 +168,33 @@
                  META-INF/services entry for a class that the compiler has not yet generated. -->
             <arg>-AallowedMissingSerializableExtensionClasses=.*TestStringSerializerFactory</arg>
           </compilerArgs>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.auto.service</groupId>
+              <artifactId>auto-service</artifactId>
+              <version>${auto-service.version}</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
+        <executions>
+          <execution>
+            <id>default-testCompile</id>
+            <configuration>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>com.google.auto.value</groupId>
+                  <artifactId>auto-value</artifactId>
+                  <version>HEAD-SNAPSHOT</version>
+                </path>
+                <path>
+                  <groupId>com.google.auto.service</groupId>
+                  <artifactId>auto-service</artifactId>
+                  <version>${auto-service.version}</version>
+                </path>
+              </annotationProcessorPaths>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
