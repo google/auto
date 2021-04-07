@@ -28,20 +28,19 @@ public final class AutoBuilderKotlinTest {
     static KotlinDataBuilder builder() {
       return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataBuilder();
     }
-    // There's a pesky problem with JavaBeans casing which means that calling a property
-    // AString (with getter getAString()) doesn't work because it doesn't find setAString.
-    abstract KotlinDataBuilder setMyInt(int x);
 
-    abstract KotlinDataBuilder setMyString(String x);
+    abstract KotlinDataBuilder setAnInt(int x);
+
+    abstract KotlinDataBuilder setAString(String x);
 
     abstract KotlinData build();
   }
 
   @Test
   public void simpleKotlin() {
-    KotlinData x = KotlinDataBuilder.builder().setMyInt(23).setMyString("skidoo").build();
-    assertThat(x.getMyInt()).isEqualTo(23);
-    assertThat(x.getMyString()).isEqualTo("skidoo");
+    KotlinData x = KotlinDataBuilder.builder().setAnInt(23).setAString("skidoo").build();
+    assertThat(x.getAnInt()).isEqualTo(23);
+    assertThat(x.getAString()).isEqualTo("skidoo");
   }
 
   @AutoBuilder(ofClass = KotlinDataWithNullable.class)
@@ -50,9 +49,9 @@ public final class AutoBuilderKotlinTest {
       return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithNullableBuilder();
     }
 
-    abstract KotlinDataWithNullableBuilder setMyInt(int x);
+    abstract KotlinDataWithNullableBuilder setAnInt(int x);
 
-    abstract KotlinDataWithNullableBuilder setMyString(String x);
+    abstract KotlinDataWithNullableBuilder setAString(String x);
 
     abstract KotlinDataWithNullable build();
   }
@@ -61,13 +60,13 @@ public final class AutoBuilderKotlinTest {
   public void kotlinWithNullable() {
     // TODO(b/183005059): this does not work yet.
     // KotlinDataWithNullable empty = KotlinDataWithNullableBuilder.builder().build();
-    // assertThat(empty.getMyInt()).isNull();
-    // assertThat(empty.getMyString()).isNull();
+    // assertThat(empty.getAnInt()).isNull();
+    // assertThat(empty.getAString()).isNull();
 
     KotlinDataWithNullable notEmpty =
-        KotlinDataWithNullableBuilder.builder().setMyString("answer").setMyInt(42).build();
-    assertThat(notEmpty.getMyString()).isEqualTo("answer");
-    assertThat(notEmpty.getMyInt()).isEqualTo(42);
+        KotlinDataWithNullableBuilder.builder().setAString("answer").setAnInt(42).build();
+    assertThat(notEmpty.getAString()).isEqualTo("answer");
+    assertThat(notEmpty.getAnInt()).isEqualTo(42);
   }
 
   @AutoBuilder(ofClass = KotlinDataWithDefaults.class)
@@ -76,9 +75,9 @@ public final class AutoBuilderKotlinTest {
       return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithDefaultsBuilder();
     }
 
-    abstract KotlinDataWithDefaultsBuilder setMyInt(int x);
+    abstract KotlinDataWithDefaultsBuilder setAnInt(int x);
 
-    abstract KotlinDataWithDefaultsBuilder setMyString(String x);
+    abstract KotlinDataWithDefaultsBuilder setAString(String x);
 
     abstract KotlinDataWithDefaults build();
   }
@@ -94,8 +93,8 @@ public final class AutoBuilderKotlinTest {
     // be confused, but fortunately the constructor is marked synthetic, and javax.lang.model
     // doesn't show synthetic elements.
     KotlinDataWithDefaults x =
-        KotlinDataWithDefaultsBuilder.builder().setMyString("answer").setMyInt(42).build();
-    assertThat(x.getMyString()).isEqualTo("answer");
-    assertThat(x.getMyInt()).isEqualTo(42);
+        KotlinDataWithDefaultsBuilder.builder().setAString("answer").setAnInt(42).build();
+    assertThat(x.getAString()).isEqualTo("answer");
+    assertThat(x.getAnInt()).isEqualTo(42);
   }
 }

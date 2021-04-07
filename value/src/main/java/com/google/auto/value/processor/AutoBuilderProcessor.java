@@ -21,6 +21,8 @@ import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIER
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
 
 import com.google.auto.common.AnnotationMirrors;
@@ -34,8 +36,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -99,12 +103,12 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     checkModifiersIfNested(autoBuilderType);
     TypeElement constructedType = findConstructedType(autoBuilderType);
     checkModifiersIfNested(constructedType); // TODO: error message is wrong
-    ExecutableElement constructor = findConstructor(constructedType, autoBuilderType);
-    BuilderSpec builderSpec = new BuilderSpec(constructedType, processingEnv, errorReporter());
-    BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
     ImmutableSet<ExecutableElement> methods =
         abstractMethodsIn(
             getLocalAndInheritedMethods(autoBuilderType, typeUtils(), elementUtils()));
+    ExecutableElement constructor = findConstructor(constructedType, autoBuilderType, methods);
+    BuilderSpec builderSpec = new BuilderSpec(constructedType, processingEnv, errorReporter());
+    BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
     Optional<BuilderMethodClassifier<VariableElement>> classifier =
         BuilderMethodClassifierForAutoBuilder.classify(
             methods, errorReporter(), processingEnv, constructor, constructedType, autoBuilderType);
@@ -135,56 +139,123 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   private Property newProperty(VariableElement var) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
-    return new Property(
-        name,
-        name,
-        TypeEncoder.encode(type),
-        type,
-        Optional.empty());
+    return new Property(name, name, TypeEncoder.encode(type), type, Optional.empty());
   }
 
   private ExecutableElement findConstructor(
-      TypeElement constructedType, TypeElement autoBuilderType) {
-    // TODO(b/183005059): choose a constructor based on parameter names and types.
-    // Currently we always choose the constructor with the most parameters, and there must be
-    // exactly one of those.
+      TypeElement constructedType,
+      TypeElement autoBuilderType,
+      ImmutableSet<ExecutableElement> methods) {
     List<ExecutableElement> constructors = visibleConstructors(constructedType, autoBuilderType);
-    List<ExecutableElement> maxConstructors = maxConstructors(constructors);
-    if (maxConstructors.size() > 1) {
-      errorReporter()
-          .abortWithError(
-              autoBuilderType,
-              "[AutoBuilderNoMaxConstructor] @AutoBuilder constructed type %s must have one"
-                  + " visible constructor with more parameters than any other, but there are %d"
-                  + " constructors with %d parameters",
-              constructedType,
-              maxConstructors.size(),
-              maxConstructors.get(0).getParameters().size());
+    switch (constructors.size()) {
+      case 0:
+        throw errorReporter()
+            .abortWithError(
+                autoBuilderType,
+                "[AutoBuilderNoConstructor] No visible constructors for %s",
+                constructedType);
+      case 1:
+        return constructors.get(0);
+      default:
+        return matchingConstructor(autoBuilderType, constructors, methods);
     }
-    return maxConstructors.get(0);
   }
 
   private ImmutableList<ExecutableElement> visibleConstructors(
       TypeElement constructedType, TypeElement autoBuilderType) {
-    ImmutableList<ExecutableElement> constructors =
-        constructorsIn(constructedType.getEnclosedElements()).stream()
-            .filter(c -> visibleFrom(c, getPackage(autoBuilderType)))
-            .collect(toImmutableList());
-    if (constructors.isEmpty()) {
-      errorReporter()
-          .abortWithError(
-              autoBuilderType,
-              "[AutoBuilderNoConstructor] No visible constructors for %s",
-              constructedType);
-    }
-    return constructors;
+    return constructorsIn(constructedType.getEnclosedElements()).stream()
+        .filter(c -> visibleFrom(c, getPackage(autoBuilderType)))
+        .collect(toImmutableList());
   }
 
-  private ImmutableList<ExecutableElement> maxConstructors(List<ExecutableElement> constructors) {
-    int maxParams = constructors.stream().mapToInt(c -> c.getParameters().size()).max().getAsInt();
-    return constructors.stream()
-        .filter(c -> c.getParameters().size() == maxParams)
-        .collect(toImmutableList());
+  private ExecutableElement matchingConstructor(
+      TypeElement autoBuilderType,
+      List<ExecutableElement> constructors,
+      ImmutableSet<ExecutableElement> methods) {
+    // There's more than one visible constructor. We try to find the one that corresponds to the
+    // methods in the @AutoBuilder interface. This is a bit approximate. We're basically just
+    // looking for a constructor where all the parameter names correspond to setters or
+    // property builders in the interface. We might find out after choosing one that it is wrong
+    // for whatever reason (types don't match, spurious methods, etc). But it is likely that if
+    // the names are all accounted for in the methods, and if there's no other matching constructor
+    // with more parameters, then this is indeed the one we want. If we later get errors when we
+    // try to analyze the interface in detail, those are probably legitimate errors and not because
+    // we picked the wrong constructor.
+    ImmutableList<ExecutableElement> matches =
+        constructors.stream()
+            .filter(c -> constructorMatches(c, methods))
+            .collect(toImmutableList());
+    switch (matches.size()) {
+      case 0:
+        throw errorReporter()
+            .abortWithError(
+                autoBuilderType,
+                "[AutoBuilderNoMatch] Property names do not correspond to the parameter names of"
+                    + " any constructor:\n%s",
+                constructorListString(constructors));
+      case 1:
+        return matches.get(0);
+      default:
+        // More than one match, let's see if we can find the best one.
+    }
+    int max = matches.stream().mapToInt(c -> c.getParameters().size()).max().getAsInt();
+    ImmutableList<ExecutableElement> maxMatches =
+        matches.stream().filter(c -> c.getParameters().size() == max).collect(toImmutableList());
+    if (maxMatches.size() > 1) {
+      throw errorReporter()
+          .abortWithError(
+              autoBuilderType,
+              "[AutoBuilderAmbiguous] Property names correspond to more than one constructor:\n"
+                  + "%s",
+              constructorListString(maxMatches));
+    }
+    return maxMatches.get(0);
+  }
+
+  private String constructorListString(List<ExecutableElement> constructors) {
+    return constructors.stream().map(this::constructorString).collect(joining("\n  ", "  ", ""));
+  }
+
+  private String constructorString(ExecutableElement constructor) {
+    return constructor.getParameters().stream()
+        .map(v -> v.asType() + " " + v.getSimpleName())
+        .collect(joining(", ", "(", ")"));
+  }
+
+  private boolean constructorMatches(
+      ExecutableElement constructor, ImmutableSet<ExecutableElement> methods) {
+    // Start with the complete set of parameter names and remove them one by one as we find
+    // corresponding methods. We ignore case, under the assumption that it is unlikely that a case
+    // difference is going to allow a constructor to match when another one is better.
+    // A parameter named foo could be matched by methods like this:
+    //    X foo(Y)
+    //    X setFoo(Y)
+    //    X fooBuilder()
+    //    X fooBuilder(Y)
+    // There are further constraints, including on the types X and Y, that will later be imposed by
+    // BuilderMethodClassifier, but here we just require that there be at least one method with
+    // one of these shapes for foo.
+    NavigableSet<String> parameterNames =
+        constructor.getParameters().stream()
+            .map(v -> v.getSimpleName().toString())
+            .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
+    for (ExecutableElement method : methods) {
+      String name = method.getSimpleName().toString();
+      if (name.endsWith("Builder")) {
+        String property = name.substring(0, name.length() - "Builder".length());
+        parameterNames.remove(property);
+      }
+      if (method.getParameters().size() == 1) {
+        parameterNames.remove(name);
+        if (name.startsWith("set")) {
+          parameterNames.remove(name.substring(3));
+        }
+      }
+      if (parameterNames.isEmpty()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean visibleFrom(Element element, PackageElement fromPackage) {
