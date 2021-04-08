@@ -35,14 +35,14 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
   private BuilderMethodClassifierForAutoValue(
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
-      TypeElement autoValueClass,
+      TypeMirror builtType,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
       ImmutableMap<String, TypeMirror> rewrittenPropertyTypes) {
     super(
         errorReporter,
         processingEnv,
-        autoValueClass,
+        builtType,
         builderType,
         rewrittenPropertyTypes);
     this.errorReporter = errorReporter;
@@ -81,7 +81,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
         new BuilderMethodClassifierForAutoValue(
             errorReporter,
             processingEnv,
-            autoValueClass,
+            autoValueClass.asType(),
             builderType,
             getterToPropertyName,
             rewrittenPropertyTypes);

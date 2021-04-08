@@ -34,14 +34,14 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
   private BuilderMethodClassifierForAutoBuilder(
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
-      TypeElement ofClass,
+      TypeMirror builtType,
       TypeElement builderType,
       ImmutableBiMap<VariableElement, String> paramToPropertyName,
       ImmutableMap<String, TypeMirror> propertyTypes) {
     super(
         errorReporter,
         processingEnv,
-        ofClass,
+        builtType,
         builderType,
         propertyTypes);
     this.paramToPropertyName = paramToPropertyName;
@@ -54,7 +54,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
    * @param errorReporter where to report errors.
    * @param processingEnv the ProcessingEnvironment for annotation processing.
    * @param callMethod the constructor or static method that AutoBuilder will call.
-   * @param ofClass the class to be built.
+   * @param builtType the type to be built.
    * @param builderType the builder class or interface within {@code ofClass}.
    * @return an {@code Optional} that contains the results of the classification if it was
    *     successful or nothing if it was not.
@@ -64,7 +64,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
       ExecutableElement callMethod,
-      TypeElement ofClass,
+      TypeMirror builtType,
       TypeElement builderType) {
     ImmutableBiMap<VariableElement, String> paramToPropertyName =
         callMethod.getParameters().stream()
@@ -76,7 +76,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
         new BuilderMethodClassifierForAutoBuilder(
             errorReporter,
             processingEnv,
-            ofClass,
+            builtType,
             builderType,
             paramToPropertyName,
             propertyTypes);

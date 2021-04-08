@@ -81,12 +81,14 @@ class GwtSerialization {
    * com.example.AutoValue_Foo_CustomFieldSerializer.
    *
    * @param autoVars the template variables defined for this type.
+   * @param finalSubclass the simple name of the AutoValue class being generated, AutoValue_Foo
+   *     in the example.
    */
-  void maybeWriteGwtSerializer(AutoValueTemplateVars autoVars) {
+  void maybeWriteGwtSerializer(AutoValueTemplateVars autoVars, String finalSubclass) {
     if (shouldWriteGwtSerializer()) {
       GwtTemplateVars vars = new GwtTemplateVars();
       vars.pkg = autoVars.pkg;
-      vars.subclass = autoVars.builtClass;
+      vars.subclass = finalSubclass;
       vars.formalTypes = autoVars.formalTypes;
       vars.actualTypes = autoVars.actualTypes;
       vars.useBuilder = !autoVars.builderTypeName.isEmpty();

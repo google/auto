@@ -44,7 +44,19 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 public @interface AutoBuilder {
-  Class<?> ofClass() default Void.class;
+  /**
+   * The static method from {@link #ofClass} to call when the build-method of the builder is called.
+   * By default this is empty, meaning that a constructor rather than a static method should be
+   * called. There can be more than one method with the given name, or more than one constructor, in
+   * which case the one to call is the one whose parameter names and types correspond to the
+   * abstract methods of the class or interface with the {@code @AutoBuilder} annotation.
+   */
+  String callMethod() default "";
 
-  // TODO(b/183005059): support calling static methods as well as constructors.
+  /**
+   * The class or interface containing the constructor or static method that the generated builder
+   * will eventually call. By default this is the class or interface that <i>contains</i> the class
+   * or interface with the {@code @AutoBuilder} annotation.
+   */
+  Class<?> ofClass() default Void.class;
 }

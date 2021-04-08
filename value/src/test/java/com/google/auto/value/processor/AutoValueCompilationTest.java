@@ -1866,10 +1866,15 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining(
-            "Method matches a property of foo.bar.Baz but has return type T instead of U")
+        .hadErrorContainingMatch(
+            "Method matches a property of foo\\.bar\\.Baz<T, ?U> but has return type T instead of"
+                + " U")
         .inFile(javaFileObject)
         .onLineContaining("T blam()");
+    // The <T, ?U> is because we're depending on TypeMirror.toString(), and the JDK actually spells
+    // this as <T,U> with no space. While it's not completely sound to expect a given string from
+    // TypeMirror.toString(), in practice it's hard to imagine that it would be anything other
+    // than "foo.bar.Baz<T,U>" or "foo.bar.Baz<T, U>" given the specification.
   }
 
   @Test

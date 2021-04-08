@@ -16,9 +16,11 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.fail;
 
 import com.google.common.base.MoreObjects;
 import java.math.BigInteger;
+import java.time.LocalTime;
 import java.util.Objects;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,6 +35,10 @@ public final class AutoBuilderTest {
     Simple(int anInt, String aString) {
       this.anInt = anInt;
       this.aString = aString;
+    }
+
+    static Simple of(int anInt, String aString) {
+      return new Simple(anInt, aString);
     }
 
     @Override
@@ -186,5 +192,68 @@ public final class AutoBuilderTest {
         Overload.builder2().setAnInt(17).setAString("17").setABigInteger(big17).build();
     Overload expected2 = new Overload(17, "17", big17);
     assertThat(actual2).isEqualTo(expected2);
+  }
+
+  @AutoBuilder(callMethod = "of", ofClass = Simple.class)
+  interface SimpleStaticBuilder {
+    SimpleStaticBuilder anInt(int x);
+
+    SimpleStaticBuilder aString(String x);
+
+    Simple build();
+  }
+
+  static SimpleStaticBuilder simpleStaticBuilder() {
+    return new AutoBuilder_AutoBuilderTest_SimpleStaticBuilder();
+  }
+
+  @Test
+  public void staticMethod() {
+    Simple actual = simpleStaticBuilder().anInt(17).aString("17").build();
+    Simple expected = new Simple(17, "17");
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  // We can't be sure that the java.time package has parameter names, so we use this intermediary.
+  // Otherwise we could just write @AutoBuilder(callMethod = "of", ofClass = LocalTime.class).
+  // It's still interesting to test this as a realistic example.
+  static LocalTime localTimeOf(int hour, int minute, int second, int nanoOfSecond) {
+    return LocalTime.of(hour, minute, second, nanoOfSecond);
+  }
+
+  static LocalTimeBuilder localTimeBuilder() {
+    return new AutoBuilder_AutoBuilderTest_LocalTimeBuilder().nanoOfSecond(0);
+  }
+
+  @AutoBuilder(callMethod = "localTimeOf")
+  interface LocalTimeBuilder {
+    LocalTimeBuilder hour(int hour);
+
+    LocalTimeBuilder minute(int minute);
+
+    LocalTimeBuilder second(int second);
+
+    LocalTimeBuilder nanoOfSecond(int nanoOfSecond);
+
+    LocalTime build();
+  }
+
+  @Test
+  public void staticMethodOfContainingClass() {
+    LocalTime actual = localTimeBuilder().hour(12).minute(34).second(56).build();
+    LocalTime expected = LocalTime.of(12, 34, 56);
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void missingRequiredProperty() {
+    // This test is compiled at source level 7 by CompileWithEclipseTest, so we can't use
+    // assertThrows with a lambda.
+    try {
+      localTimeBuilder().hour(12).minute(34).build();
+      fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
+    }
   }
 }

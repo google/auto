@@ -433,7 +433,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     return props.build();
   }
 
-  /** Defines the template variables that are shared by AutoValue and AutoOneOf. */
+  /** Defines the template variables that are shared by AutoValue, AutoOneOf, and AutoBuilder. */
   final void defineSharedVarsForType(
       TypeElement type,
       ImmutableSet<ExecutableElement> methods,

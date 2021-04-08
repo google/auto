@@ -24,14 +24,17 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
+import static javax.lang.model.util.ElementFilter.methodsIn;
 
 import com.google.auto.common.AnnotationMirrors;
+import com.google.auto.common.AnnotationValues;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
 import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Ascii;
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.lang.reflect.Field;
@@ -40,6 +43,7 @@ import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -48,6 +52,7 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -101,39 +106,45 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
               "[AutoBuilderWrongType] @AutoBuilder only applies to classes and interfaces");
     }
     checkModifiersIfNested(autoBuilderType);
-    TypeElement constructedType = findConstructedType(autoBuilderType);
-    checkModifiersIfNested(constructedType); // TODO: error message is wrong
+    // The annotation is guaranteed to be present by the contract of Processor#process
+    AnnotationMirror autoBuilderAnnotation =
+        getAnnotationMirror(autoBuilderType, AUTO_BUILDER_NAME).get();
+    TypeElement ofClass = getOfClass(autoBuilderType, autoBuilderAnnotation);
+    String callMethod = findCallMethodValue(autoBuilderAnnotation);
+    checkModifiersIfNested(ofClass); // TODO: error message is wrong
     ImmutableSet<ExecutableElement> methods =
         abstractMethodsIn(
             getLocalAndInheritedMethods(autoBuilderType, typeUtils(), elementUtils()));
-    ExecutableElement constructor = findConstructor(constructedType, autoBuilderType, methods);
-    BuilderSpec builderSpec = new BuilderSpec(constructedType, processingEnv, errorReporter());
+    ExecutableElement executable = findExecutable(ofClass, callMethod, autoBuilderType, methods);
+    BuilderSpec builderSpec = new BuilderSpec(ofClass, processingEnv, errorReporter());
     BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
+    TypeMirror builtType = builtType(executable);
     Optional<BuilderMethodClassifier<VariableElement>> classifier =
         BuilderMethodClassifierForAutoBuilder.classify(
-            methods, errorReporter(), processingEnv, constructor, constructedType, autoBuilderType);
+            methods, errorReporter(), processingEnv, executable, builtType, autoBuilderType);
     if (!classifier.isPresent()) {
       // We've already output one or more error messages.
       return;
     }
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(constructor);
+    vars.props = propertySet(executable);
     builder.defineVars(vars, classifier.get());
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
-    vars.builtClass = TypeEncoder.encodeRaw(constructedType.asType());
+    vars.builtType = TypeEncoder.encode(builtType);
+    vars.build = build(executable);
     vars.types = typeUtils();
     vars.toBuilderConstructor = false;
-    defineSharedVarsForType(constructedType, ImmutableSet.of(), vars);
+    defineSharedVarsForType(ofClass, ImmutableSet.of(), vars);
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoBuilderType.asType());
     text = Reformatter.fixup(text);
     writeSourceFile(generatedClassName, text, autoBuilderType);
   }
 
-  private ImmutableSet<Property> propertySet(ExecutableElement constructor) {
-    return constructor.getParameters().stream().map(this::newProperty).collect(toImmutableSet());
+  private ImmutableSet<Property> propertySet(ExecutableElement executable) {
+    return executable.getParameters().stream().map(this::newProperty).collect(toImmutableSet());
   }
 
   private Property newProperty(VariableElement var) {
@@ -142,57 +153,68 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     return new Property(name, name, TypeEncoder.encode(type), type, Optional.empty());
   }
 
-  private ExecutableElement findConstructor(
-      TypeElement constructedType,
+  private ExecutableElement findExecutable(
+      TypeElement ofClass,
+      String callMethod,
       TypeElement autoBuilderType,
       ImmutableSet<ExecutableElement> methods) {
-    List<ExecutableElement> constructors = visibleConstructors(constructedType, autoBuilderType);
-    switch (constructors.size()) {
+    List<ExecutableElement> executables =
+        findRelevantExecutables(ofClass, callMethod, autoBuilderType);
+    String description = callMethod.isEmpty() ? "constructor" : "static method named " + callMethod;
+    switch (executables.size()) {
       case 0:
         throw errorReporter()
             .abortWithError(
                 autoBuilderType,
-                "[AutoBuilderNoConstructor] No visible constructors for %s",
-                constructedType);
+                "[AutoBuilderNoVisible] No visible %s for %s",
+                description,
+                ofClass);
       case 1:
-        return constructors.get(0);
+        return executables.get(0);
       default:
-        return matchingConstructor(autoBuilderType, constructors, methods);
+        return matchingExecutable(autoBuilderType, executables, methods, description);
     }
   }
 
-  private ImmutableList<ExecutableElement> visibleConstructors(
-      TypeElement constructedType, TypeElement autoBuilderType) {
-    return constructorsIn(constructedType.getEnclosedElements()).stream()
+  private ImmutableList<ExecutableElement> findRelevantExecutables(
+      TypeElement ofClass, String callMethod, TypeElement autoBuilderType) {
+    List<? extends Element> elements = ofClass.getEnclosedElements();
+    Stream<ExecutableElement> relevantExecutables =
+        callMethod.isEmpty()
+            ? constructorsIn(elements).stream()
+            : methodsIn(elements).stream()
+                .filter(m -> m.getSimpleName().contentEquals(callMethod))
+                .filter(m -> m.getModifiers().contains(Modifier.STATIC));
+    return relevantExecutables
         .filter(c -> visibleFrom(c, getPackage(autoBuilderType)))
         .collect(toImmutableList());
   }
 
-  private ExecutableElement matchingConstructor(
+  private ExecutableElement matchingExecutable(
       TypeElement autoBuilderType,
-      List<ExecutableElement> constructors,
-      ImmutableSet<ExecutableElement> methods) {
-    // There's more than one visible constructor. We try to find the one that corresponds to the
-    // methods in the @AutoBuilder interface. This is a bit approximate. We're basically just
-    // looking for a constructor where all the parameter names correspond to setters or
-    // property builders in the interface. We might find out after choosing one that it is wrong
-    // for whatever reason (types don't match, spurious methods, etc). But it is likely that if
-    // the names are all accounted for in the methods, and if there's no other matching constructor
-    // with more parameters, then this is indeed the one we want. If we later get errors when we
-    // try to analyze the interface in detail, those are probably legitimate errors and not because
-    // we picked the wrong constructor.
+      List<ExecutableElement> executables,
+      ImmutableSet<ExecutableElement> methods,
+      String description) {
+    // There's more than one visible executable (constructor or method). We try to find the one that
+    // corresponds to the methods in the @AutoBuilder interface. This is a bit approximate. We're
+    // basically just looking for an executable where all the parameter names correspond to setters
+    // or property builders in the interface. We might find out after choosing one that it is wrong
+    // for whatever reason (types don't match, spurious methods, etc). But it is likely that if the
+    // names are all accounted for in the methods, and if there's no other matching executable with
+    // more parameters, then this is indeed the one we want. If we later get errors when we try to
+    // analyze the interface in detail, those are probably legitimate errors and not because we
+    // picked the wrong executable.
     ImmutableList<ExecutableElement> matches =
-        constructors.stream()
-            .filter(c -> constructorMatches(c, methods))
-            .collect(toImmutableList());
+        executables.stream().filter(x -> executableMatches(x, methods)).collect(toImmutableList());
     switch (matches.size()) {
       case 0:
         throw errorReporter()
             .abortWithError(
                 autoBuilderType,
                 "[AutoBuilderNoMatch] Property names do not correspond to the parameter names of"
-                    + " any constructor:\n%s",
-                constructorListString(constructors));
+                    + " any %s:\n%s",
+                description,
+                executableListString(executables));
       case 1:
         return matches.get(0);
       default:
@@ -205,28 +227,33 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       throw errorReporter()
           .abortWithError(
               autoBuilderType,
-              "[AutoBuilderAmbiguous] Property names correspond to more than one constructor:\n"
-                  + "%s",
-              constructorListString(maxMatches));
+              "[AutoBuilderAmbiguous] Property names correspond to more than one %s:\n%s",
+              description,
+              executableListString(maxMatches));
     }
     return maxMatches.get(0);
   }
 
-  private String constructorListString(List<ExecutableElement> constructors) {
-    return constructors.stream().map(this::constructorString).collect(joining("\n  ", "  ", ""));
+  private String executableListString(List<ExecutableElement> executables) {
+    return executables.stream().map(this::executableString).collect(joining("\n  ", "  ", ""));
   }
 
-  private String constructorString(ExecutableElement constructor) {
-    return constructor.getParameters().stream()
-        .map(v -> v.asType() + " " + v.getSimpleName())
-        .collect(joining(", ", "(", ")"));
+  private String executableString(ExecutableElement executable) {
+    Element nameSource =
+        executable.getKind() == ElementKind.CONSTRUCTOR
+            ? executable.getEnclosingElement()
+            : executable;
+    return nameSource.getSimpleName()
+        + executable.getParameters().stream()
+            .map(v -> v.asType() + " " + v.getSimpleName())
+            .collect(joining(", ", "(", ")"));
   }
 
-  private boolean constructorMatches(
-      ExecutableElement constructor, ImmutableSet<ExecutableElement> methods) {
+  private boolean executableMatches(
+      ExecutableElement executable, ImmutableSet<ExecutableElement> methods) {
     // Start with the complete set of parameter names and remove them one by one as we find
     // corresponding methods. We ignore case, under the assumption that it is unlikely that a case
-    // difference is going to allow a constructor to match when another one is better.
+    // difference is going to allow a candidate to match when another one is better.
     // A parameter named foo could be matched by methods like this:
     //    X foo(Y)
     //    X setFoo(Y)
@@ -236,7 +263,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     // BuilderMethodClassifier, but here we just require that there be at least one method with
     // one of these shapes for foo.
     NavigableSet<String> parameterNames =
-        constructor.getParameters().stream()
+        executable.getParameters().stream()
             .map(v -> v.getSimpleName().toString())
             .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
     for (ExecutableElement method : methods) {
@@ -274,6 +301,32 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     }
   }
 
+  private TypeMirror builtType(ExecutableElement executable) {
+    switch (executable.getKind()) {
+      case CONSTRUCTOR:
+        return executable.getEnclosingElement().asType();
+      case METHOD:
+        return executable.getReturnType();
+      default:
+        throw new VerifyException("Unexpected executable kind " + executable.getKind());
+    }
+  }
+
+  private String build(ExecutableElement executable) {
+    TypeElement enclosing = MoreElements.asType(executable.getEnclosingElement());
+    String type = TypeEncoder.encodeRaw(enclosing.asType());
+    switch (executable.getKind()) {
+      case CONSTRUCTOR:
+        boolean generic = !enclosing.getTypeParameters().isEmpty();
+        String typeParams = generic ? "<>" : "";
+        return "new " + type + typeParams;
+      case METHOD:
+        return type + "." + executable.getSimpleName();
+      default:
+        throw new VerifyException("Unexpected executable kind " + executable.getKind());
+    }
+  }
+
   private static final ElementKind ELEMENT_KIND_RECORD = elementKindRecord();
 
   private static ElementKind elementKindRecord() {
@@ -286,8 +339,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     }
   }
 
-  private TypeElement findConstructedType(TypeElement autoBuilderType) {
-    TypeElement ofClassValue = findOfClassValue(autoBuilderType);
+  private TypeElement getOfClass(
+      TypeElement autoBuilderType, AnnotationMirror autoBuilderAnnotation) {
+    TypeElement ofClassValue = findOfClassValue(autoBuilderAnnotation);
     boolean isDefault = typeUtils().isSameType(ofClassValue.asType(), javaLangVoid);
     if (!isDefault) {
       return ofClassValue;
@@ -306,10 +360,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     return MoreElements.asType(enclosing);
   }
 
-  private TypeElement findOfClassValue(TypeElement autoBuilderType) {
-    // The annotation is guaranteed to be present by the contract of Processor#process
-    AnnotationMirror autoBuilderAnnotation =
-        getAnnotationMirror(autoBuilderType, AUTO_BUILDER_NAME).get();
+  private TypeElement findOfClassValue(AnnotationMirror autoBuilderAnnotation) {
     AnnotationValue ofClassValue =
         AnnotationMirrors.getAnnotationValue(autoBuilderAnnotation, "ofClass");
     Object value = ofClassValue.getValue();
@@ -325,6 +376,12 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       }
     }
     throw new MissingTypeException(null);
+  }
+
+  private String findCallMethodValue(AnnotationMirror autoBuilderAnnotation) {
+    AnnotationValue callMethodValue =
+        AnnotationMirrors.getAnnotationValue(autoBuilderAnnotation, "callMethod");
+    return AnnotationValues.getString(callMethodValue);
   }
 
   @Override

@@ -67,7 +67,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
   private final ErrorReporter errorReporter;
   private final Types typeUtils;
   private final Elements elementUtils;
-  private final TypeElement autoValueClass;
+  private final TypeMirror builtType;
   private final TypeElement builderType;
 
   /**
@@ -99,13 +99,13 @@ abstract class BuilderMethodClassifier<E extends Element> {
   BuilderMethodClassifier(
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
-      TypeElement autoValueClass,
+      TypeMirror builtType,
       TypeElement builderType,
       ImmutableMap<String, TypeMirror> rewrittenPropertyTypes) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
-    this.autoValueClass = autoValueClass;
+    this.builtType = builtType;
     this.builderType = builderType;
     this.rewrittenPropertyTypes = rewrittenPropertyTypes;
     this.eclipseHack = new EclipseHack(processingEnv);
@@ -198,10 +198,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
         String setterName = settersPrefixed ? prefixWithSet(property) : property;
         errorReporter.reportError(
             builderType,
-            "[AutoValueBuilderMissingMethod] Expected a method with this signature: %s%s"
+            "[AutoValueBuilderMissingMethod] Expected a method with this signature: %s"
                 + " %s(%s), or a %sBuilder() method",
-            builderType,
-            typeParamsString(),
+            builderType.asType(),
             setterName,
             propertyType,
             property);
@@ -264,16 +263,15 @@ abstract class BuilderMethodClassifier<E extends Element> {
       }
     }
 
-    if (TYPE_EQUIVALENCE.equivalent(returnType, autoValueClass.asType())) {
+    if (TYPE_EQUIVALENCE.equivalent(returnType, builtType)) {
       buildMethods.add(method);
     } else {
       errorReporter.reportError(
           method,
           "[AutoValueBuilderNoArg] Method without arguments should be a build method returning"
-              + " %1$s%2$s, or a getter method with the same name and type as a getter method of"
+              + " %1$s, or a getter method with the same name and type as a getter method of"
               + " %1$s, or fooBuilder() where foo() or getFoo() is a getter method of %1$s",
-          autoValueClass,
-          typeParamsString());
+          builtType);
     }
   }
 
@@ -309,7 +307,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
         builderGetter,
         "[AutoValueBuilderReturnType] Method matches a property of %1$s but has return type %2$s"
             + " instead of %3$s or an Optional wrapping of %3$s",
-        autoValueClass,
+        builtType,
         builderGetterType,
         originalGetterType);
   }
@@ -372,7 +370,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
       errorReporter.reportError(
           method,
           "[AutoValueBuilderWhatProp] Method does not correspond to a property of %s",
-          autoValueClass);
+          builtType);
       checkForFailedJavaBean(method);
       return;
     }
@@ -387,7 +385,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
             propertyName, new PropertySetter(method, parameterType, function.get()));
       } else {
         errorReporter.reportError(
-            method, "Setter methods must return %s%s", builderType, typeParamsString());
+            method, "Setter methods must return %s", builderType.asType());
       }
     }
   }
@@ -457,7 +455,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
               setter,
               "[AutoValueNullNotNull] Parameter of setter method is @Nullable but property method"
                   + " %s.%s() is not",
-              autoValueClass,
+              typeUtils.erasure(builtType),
               propertyElement.getSimpleName());
           return Optional.empty();
         }
@@ -475,7 +473,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
         "[AutoValueGetVsSet] Parameter type %s of setter method should be %s to match getter %s.%s",
         parameterType,
         targetType,
-        autoValueClass,
+        typeUtils.erasure(builtType),
         propertyElement.getSimpleName());
     return Optional.empty();
   }
@@ -506,7 +504,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
             + " getter %s.%s, or it should be a type that can be passed to %s.%s to produce %s",
         parameterType,
         targetType,
-        autoValueClass,
+        typeUtils.erasure(builtType),
         propertyElement.getSimpleName(),
         targetTypeSimpleName,
         copyOfMethods.get(0).getSimpleName(),
@@ -640,10 +638,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
     // This is not internationalizationally correct, but it corresponds to what
     // Introspector.decapitalize does.
     return "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
-  }
-
-  private String typeParamsString() {
-    return TypeSimplifier.actualTypeParametersString(autoValueClass);
   }
 
   /**

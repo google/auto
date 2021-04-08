@@ -78,6 +78,15 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
   /** The builder's build method, often {@code "build"}. */
   Optional<SimpleMethod> buildMethod = Optional.empty();
 
+  /** The type that will be built by the {@code build()} method of a builder. */
+  String builtType;
+
+  /**
+   * The constructor or method invocation that the {@code build()} method of a builder should use,
+   * without any parameters. This might be {@code "new Foo"} or {@code "Foo.someMethod"}.
+   */
+  String build;
+
   /**
    * A multimap from property names (like foo) to the corresponding setters. The same property may
    * be set by more than one setter. For example, an ImmutableList might be set by {@code
@@ -133,13 +142,7 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
    * subclasses)
    */
   Boolean isFinal = false;
-  
+
   /** The type utilities returned by {@link ProcessingEnvironment#getTypeUtils()}. */
   Types types;
-
-  /**
-   * The simple name of the final generated subclass. For {@code @AutoValue public static class Foo
-   * {}} this should always be "AutoValue_Foo".
-   */
-  String builtClass;
 }

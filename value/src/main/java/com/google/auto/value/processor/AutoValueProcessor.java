@@ -239,13 +239,14 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     boolean extensionsPresent = !applicableExtensions.isEmpty();
     validateMethods(type, abstractMethods, toBuilderMethods, propertyMethods, extensionsPresent);
 
-    String finalSubclass = generatedSubclassName(type, 0);
+    String finalSubclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type, 0));
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
-    vars.builtClass = TypeSimplifier.simpleNameOf(finalSubclass);
     vars.types = processingEnv.getTypeUtils();
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     defineSharedVarsForType(type, methods, vars);
     defineVarsForType(type, vars, toBuilderMethods, propertyMethodsAndTypes, builder);
+    vars.builtType = vars.origClass + vars.actualTypes;
+    vars.build = "new " + finalSubclass + vars.actualTypes;
 
     // If we've encountered problems then we might end up invoking extensions with inconsistent
     // state. Anyway we probably don't want to generate code which is likely to provoke further
@@ -267,7 +268,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     text = Reformatter.fixup(text);
     writeSourceFile(subclass, text, type);
     GwtSerialization gwtSerialization = new GwtSerialization(gwtCompatibility, processingEnv, type);
-    gwtSerialization.maybeWriteGwtSerializer(vars);
+    gwtSerialization.maybeWriteGwtSerializer(vars, finalSubclass);
   }
 
   // Invokes each of the given extensions to generate its subclass, and returns the number of
