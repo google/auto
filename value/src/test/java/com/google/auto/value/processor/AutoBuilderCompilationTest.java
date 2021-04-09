@@ -618,4 +618,181 @@ public final class AutoBuilderCompilationTest {
         .inFile(javaFileObject)
         .onLineContaining("String alien()");
   }
+
+  @Test
+  public void alienOneArgMethod() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int one, int two) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder one(int x);",
+            "    abstract Builder two(int x);",
+            "    abstract Builder three(int x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderBuilderWhatProp] Method does not correspond to a parameter of Baz(int one,"
+                + " int two)")
+        .inFile(javaFileObject)
+        .onLineContaining("three(int x)");
+  }
+
+  @Test
+  public void setterReturnType() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int one, int two) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder one(int x);",
+            "    abstract void two(int x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderBuilderRet] Setter methods must return foo.bar.Baz.Builder")
+        .inFile(javaFileObject)
+        .onLineContaining("two(int x)");
+  }
+
+  @Test
+  public void nullableSetterForNonNullableParameter() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import org.jspecify.nullness.Nullable;",
+            "",
+            "class Baz {",
+            "  Baz(String thing) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder thing(@Nullable String x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    JavaFileObject nullableFileObject =
+        JavaFileObjects.forSourceLines(
+            "org.jspecify.nullness.Nullable",
+            "package org.jspecify.nullness;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface Nullable {}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject, nullableFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderNullNotNull] Parameter of setter method is @Nullable but parameter"
+                + " \"thing\" of Baz(java.lang.String thing) is not")
+        .inFile(javaFileObject)
+        .onLineContaining("thing(@Nullable String x)");
+  }
+
+  @Test
+  public void setterWrongType() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int up, int down) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder up(int x);",
+            "    abstract Builder down(String x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderGetVsSet] Parameter type java.lang.String of setter method should be int"
+                + " to match parameter \"down\" of Baz(int up, int down)")
+        .inFile(javaFileObject)
+        .onLineContaining("down(String x)");
+  }
+
+  @Test
+  public void setterWrongTypeEvenWithConversion() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import java.util.Optional;",
+            "",
+            "class Baz {",
+            "  Baz(Optional<String> maybe) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder maybe(int x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderGetVsSetOrConvert] Parameter type int of setter method should be"
+                + " java.util.Optional<java.lang.String> to match parameter \"maybe\" of"
+                + " Baz(java.util.Optional<java.lang.String> maybe), or it should be a type that"
+                + " can be passed to Optional.of to produce java.util.Optional<java.lang.String>")
+        .inFile(javaFileObject)
+        .onLineContaining("maybe(int x)");
+  }
 }

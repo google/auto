@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static com.google.common.collect.Sets.difference;
 
+import com.google.auto.common.MoreElements;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -40,12 +41,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
       ImmutableMap<String, TypeMirror> rewrittenPropertyTypes) {
-    super(
-        errorReporter,
-        processingEnv,
-        builtType,
-        builderType,
-        rewrittenPropertyTypes);
+    super(errorReporter, processingEnv, builtType, builderType, rewrittenPropertyTypes);
     this.errorReporter = errorReporter;
     this.getterToPropertyName = getterToPropertyName;
     this.getterNameToGetter =
@@ -100,6 +96,16 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
   }
 
   @Override
+  String propertyString(ExecutableElement propertyElement) {
+    TypeElement type = MoreElements.asType(propertyElement.getEnclosingElement());
+    return "property method "
+        + type.getQualifiedName()
+        + "."
+        + propertyElement.getSimpleName()
+        + "()";
+  }
+
+  @Override
   ImmutableBiMap<String, ExecutableElement> propertyElements() {
     return getterToPropertyName.inverse();
   }
@@ -131,7 +137,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
 
   @Override
   String getterMustMatch() {
-    return "a getter method of " + builtType;
+    return "a property method of " + builtType;
   }
 
   @Override

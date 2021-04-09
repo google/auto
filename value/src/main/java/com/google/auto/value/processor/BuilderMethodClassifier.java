@@ -374,8 +374,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
       // propertyNameToSetters can't be null when we call put on it below.
       errorReporter.reportError(
           method,
-          "[AutoValueBuilderWhatProp] Method does not correspond to a property of %s",
-          builtType);
+          "[%sBuilderWhatProp] Method does not correspond to %s",
+          autoWhat(),
+          getterMustMatch());
       checkForFailedJavaBean(method);
       return;
     }
@@ -389,7 +390,11 @@ abstract class BuilderMethodClassifier<E extends Element> {
         propertyNameToSetters.put(
             propertyName, new PropertySetter(method, parameterType, function.get()));
       } else {
-        errorReporter.reportError(method, "Setter methods must return %s", builderType.asType());
+        errorReporter.reportError(
+            method,
+            "[%sBuilderRet] Setter methods must return %s",
+            autoWhat(),
+            builderType.asType());
       }
     }
   }
@@ -456,10 +461,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
         if (!nullableProperty) {
           errorReporter.reportError(
               setter,
-              "[AutoValueNullNotNull] Parameter of setter method is @Nullable but property method"
-                  + " %s.%s() is not",
-              typeUtils.erasure(builtType),
-              propertyElement.getSimpleName());
+              "[%sNullNotNull] Parameter of setter method is @Nullable but %s is not",
+              autoWhat(),
+              propertyString(propertyElement));
           return Optional.empty();
         }
       }
@@ -473,11 +477,11 @@ abstract class BuilderMethodClassifier<E extends Element> {
     }
     errorReporter.reportError(
         setter,
-        "[AutoValueGetVsSet] Parameter type %s of setter method should be %s to match getter %s.%s",
+        "[%sGetVsSet] Parameter type %s of setter method should be %s to match %s",
+        autoWhat(),
         parameterType,
         targetType,
-        typeUtils.erasure(builtType),
-        propertyElement.getSimpleName());
+        propertyString(propertyElement));
     return Optional.empty();
   }
 
@@ -503,12 +507,12 @@ abstract class BuilderMethodClassifier<E extends Element> {
     String targetTypeSimpleName = targetType.asElement().getSimpleName().toString();
     errorReporter.reportError(
         setter,
-        "[AutoValueGetVsSetOrConvert] Parameter type %s of setter method should be %s to match"
-            + " getter %s.%s, or it should be a type that can be passed to %s.%s to produce %s",
+        "[%sGetVsSetOrConvert] Parameter type %s of setter method should be %s to match %s, or it"
+            + " should be a type that can be passed to %s.%s to produce %s",
+        autoWhat(),
         parameterType,
         targetType,
-        typeUtils.erasure(builtType),
-        propertyElement.getSimpleName(),
+        propertyString(propertyElement),
         targetTypeSimpleName,
         copyOfMethods.get(0).getSimpleName(),
         targetType);
@@ -673,6 +677,12 @@ abstract class BuilderMethodClassifier<E extends Element> {
   abstract TypeMirror originalPropertyType(E propertyElement);
 
   /**
+   * A string identifying the given property element, which is a method for AutoValue or a parameter
+   * for AutoBuilder.
+   */
+  abstract String propertyString(E propertyElement);
+
+  /**
    * Returns the name of the property that a no-arg builder method of the given name queries, if
    * any. For example, if your {@code @AutoValue} class has a method {@code abstract String
    * getBar()} then an abstract method in its builder with the same signature will query the {@code
@@ -693,7 +703,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
    */
   abstract void checkForFailedJavaBean(ExecutableElement rejectedSetter);
 
-  /** A string describing what sort of Auto this is, {@code "AutoValue"} or {@code "AutoBuilder"}. */
+  /**
+   * A string describing what sort of Auto this is, {@code "AutoValue"} or {@code "AutoBuilder"}.
+   */
   abstract String autoWhat();
 
   /**
@@ -703,8 +715,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
   abstract String getterMustMatch();
 
   /**
-   * A string describing what a property builder for property {@code foo} must match, {@code "foo()
-   * or getFoo()"} for AutoValue, {@code "foo"} for AutoBuilder.
+   * A string describing what a property builder for property {@code foo} must match, {@code foo()
+   * or getFoo()} for AutoValue, {@code foo} for AutoBuilder.
    */
   abstract String fooBuilderMustMatch();
 }

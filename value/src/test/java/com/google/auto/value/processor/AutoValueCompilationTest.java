@@ -335,7 +335,6 @@ public class AutoValueCompilationTest {
             "    return false;",
             "  }",
             "",
-
             "  @Override",
             "  public int hashCode() {",
             "    int h$ = 1;",
@@ -1587,7 +1586,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining(
             "Parameter type java.lang.String of setter method should be int "
-                + "to match getter foo.bar.Baz.blim")
+                + "to match property method foo.bar.Baz.blim()")
         .inFile(javaFileObject)
         .onLineContaining("Builder blim(String x)");
   }
@@ -1620,10 +1619,10 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Parameter type java.lang.String of setter method should be "
-                + "com.google.common.collect.ImmutableList<java.lang.String> to match getter "
-                + "foo.bar.Baz.blam, or it should be a type that can be passed to "
-                + "ImmutableList.copyOf")
+            "Parameter type java.lang.String of setter method should be"
+                + " com.google.common.collect.ImmutableList<java.lang.String> to match property"
+                + " method foo.bar.Baz.blam(), or it should be a type that can be passed to"
+                + " ImmutableList.copyOf")
         .inFile(javaFileObject)
         .onLineContaining("Builder blam(String x)");
   }
@@ -1657,11 +1656,11 @@ public class AutoValueCompilationTest {
             .compile(javaFileObject);
     assertThat(compilation)
         .hadErrorContaining(
-            "Parameter type java.util.Collection<java.lang.Integer> of setter method should be "
-                + "com.google.common.collect.ImmutableList<java.lang.String> to match getter "
-                + "foo.bar.Baz.blam, or it should be a type that can be passed to "
-                + "ImmutableList.copyOf to produce "
-                + "com.google.common.collect.ImmutableList<java.lang.String>")
+            "Parameter type java.util.Collection<java.lang.Integer> of setter method should be"
+                + " com.google.common.collect.ImmutableList<java.lang.String> to match property"
+                + " method foo.bar.Baz.blam(), or it should be a type that can be passed to"
+                + " ImmutableList.copyOf to produce"
+                + " com.google.common.collect.ImmutableList<java.lang.String>")
         .inFile(javaFileObject)
         .onLineContaining("Builder blam(Collection<Integer> x)");
   }
@@ -1694,7 +1693,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining(
             "Parameter type java.lang.String of setter method should be int "
-                + "to match getter foo.bar.Baz.getBlim")
+                + "to match property method foo.bar.Baz.getBlim()")
         .inFile(javaFileObject)
         .onLineContaining("Builder blim(String x)");
   }
@@ -1768,7 +1767,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property of foo.bar.Item")
+        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Item")
         .inFile(javaFileObject)
         .onLineContaining("Builder setTitle(String title)");
     assertThat(compilation)
@@ -1802,7 +1801,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property of foo.bar.Baz")
+        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("Builder blim(int x)");
   }
@@ -1836,6 +1835,35 @@ public class AutoValueCompilationTest {
         .hadErrorContaining("If any setter methods use the setFoo convention then all must")
         .inFile(javaFileObject)
         .onLineContaining("Builder blim(int x)");
+  }
+
+  @Test
+  public void autoValueBuilderSetterReturnType() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract int blim();",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder {",
+            "    void blim(int x);",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("Setter methods must return foo.bar.Baz.Builder")
+        .inFile(javaFileObject)
+        .onLineContaining("void blim(int x)");
   }
 
   @Test
@@ -2456,8 +2484,8 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining(
             "Method without arguments should be a build method returning foo.bar.Baz, or a getter"
-                + " method with the same name and type as a getter method of foo.bar.Baz, or"
-                + " fooBuilder() where foo() or getFoo() is a getter method of foo.bar.Baz")
+                + " method with the same name and type as a property method of foo.bar.Baz, or"
+                + " fooBuilder() where foo() or getFoo() is a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("Builder whut()");
   }
@@ -2486,7 +2514,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property of foo.bar.Baz")
+        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("void whut(String x)");
   }
@@ -3296,7 +3324,7 @@ public class AutoValueCompilationTest {
             "}");
     private static final String GENERATED_PROPERTY_TYPE =
         String.join(
-            "\n",
+            "\n", //
             "package foo.baz;",
             "",
             "public class GeneratedPropertyType {}");
@@ -3325,18 +3353,14 @@ public class AutoValueCompilationTest {
         GENERATED_TYPES.forEach(
             (typeName, source) -> {
               try {
-                JavaFileObject generated =
-                    processingEnv
-                        .getFiler()
-                        .createSourceFile(typeName);
+                JavaFileObject generated = processingEnv.getFiler().createSourceFile(typeName);
                 try (Writer writer = generated.openWriter()) {
                   writer.write(source);
                 }
               } catch (IOException e) {
                 throw new UncheckedIOException(e);
               }
-            }
-        );
+            });
       }
       return false;
     }
@@ -3348,6 +3372,6 @@ public class AutoValueCompilationTest {
   }
 
   private String sorted(String... imports) {
-     return Arrays.stream(imports).sorted().collect(joining("\n"));
- }
+    return Arrays.stream(imports).sorted().collect(joining("\n"));
+  }
 }

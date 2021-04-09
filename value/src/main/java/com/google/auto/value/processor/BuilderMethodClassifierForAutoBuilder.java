@@ -40,12 +40,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       TypeElement builderType,
       ImmutableBiMap<VariableElement, String> paramToPropertyName,
       ImmutableMap<String, TypeMirror> propertyTypes) {
-    super(
-        errorReporter,
-        processingEnv,
-        builtType,
-        builderType,
-        propertyTypes);
+    super(errorReporter, processingEnv, builtType, builderType, propertyTypes);
     this.executable = executable;
     this.paramToPropertyName = paramToPropertyName;
   }
@@ -110,6 +105,14 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
   @Override
   TypeMirror originalPropertyType(VariableElement propertyElement) {
     return propertyElement.asType();
+  }
+
+  @Override
+  String propertyString(VariableElement propertyElement) {
+    return "parameter \""
+        + propertyElement.getSimpleName()
+        + "\" of "
+        + AutoBuilderProcessor.executableString(executable);
   }
 
   @Override
