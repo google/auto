@@ -236,10 +236,12 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private String executableListString(List<ExecutableElement> executables) {
-    return executables.stream().map(this::executableString).collect(joining("\n  ", "  ", ""));
+    return executables.stream()
+        .map(AutoBuilderProcessor::executableString)
+        .collect(joining("\n  ", "  ", ""));
   }
 
-  private String executableString(ExecutableElement executable) {
+  static String executableString(ExecutableElement executable) {
     Element nameSource =
         executable.getKind() == ElementKind.CONSTRUCTOR
             ? executable.getEnclosingElement()

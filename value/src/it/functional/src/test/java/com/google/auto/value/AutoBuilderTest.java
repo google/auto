@@ -15,10 +15,12 @@
  */
 package com.google.auto.value;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import java.math.BigInteger;
 import java.time.LocalTime;
 import java.util.Objects;
@@ -254,6 +256,67 @@ public final class AutoBuilderTest {
       fail();
     } catch (IllegalStateException e) {
       assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
+    }
+  }
+
+  static class ListContainer {
+    private final ImmutableList<String> list;
+
+    ListContainer(ImmutableList<String> list) {
+      this.list = checkNotNull(list);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof ListContainer && list.equals(((ListContainer) o).list);
+    }
+
+    @Override
+    public int hashCode() {
+      return list.hashCode();
+    }
+
+    @Override
+    public String toString() {
+      return list.toString();
+    }
+
+    static Builder builder() {
+      return new AutoBuilder_AutoBuilderTest_ListContainer_Builder();
+    }
+
+    @AutoBuilder
+    interface Builder {
+      Builder setList(Iterable<String> list);
+
+      ImmutableList.Builder<String> listBuilder();
+
+      ListContainer build();
+    }
+  }
+
+  @Test
+  public void propertyBuilder() {
+    ListContainer expected = new ListContainer(ImmutableList.of("one", "two", "three"));
+    ListContainer actual1 =
+        ListContainer.builder().setList(ImmutableList.of("one", "two", "three")).build();
+    assertThat(actual1).isEqualTo(expected);
+
+    ListContainer.Builder builder2 = ListContainer.builder();
+    builder2.listBuilder().add("one", "two", "three");
+    assertThat(builder2.build()).isEqualTo(expected);
+
+    ListContainer.Builder builder3 = ListContainer.builder().setList(ImmutableList.of("one"));
+    builder3.listBuilder().add("two", "three");
+    assertThat(builder3.build()).isEqualTo(expected);
+
+    ListContainer.Builder builder4 = ListContainer.builder();
+    builder4.listBuilder();
+    try {
+      builder4.setList(ImmutableList.of("one", "two", "three"));
+      fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().isEqualTo("Cannot set list after calling listBuilder()");
     }
   }
 }

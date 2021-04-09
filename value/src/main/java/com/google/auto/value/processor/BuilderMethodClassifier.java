@@ -55,10 +55,10 @@ import javax.lang.model.util.Types;
 /**
  * Classifies methods inside builder types, based on their names and parameter and return types.
  *
- * @param <E> the kind of {@link Element} that the corresponding properties are defined by.
- *     This is {@link ExecutableElement} for AutoValue, where properties are defined by abstract
- *     methods, and {@link VariableElement} for AutoBuilder, where they are defined by constructor
- *     or method parameters.
+ * @param <E> the kind of {@link Element} that the corresponding properties are defined by. This is
+ *     {@link ExecutableElement} for AutoValue, where properties are defined by abstract methods,
+ *     and {@link VariableElement} for AutoBuilder, where they are defined by constructor or method
+ *     parameters.
  * @author Éamonn McManus
  */
 abstract class BuilderMethodClassifier<E extends Element> {
@@ -72,15 +72,15 @@ abstract class BuilderMethodClassifier<E extends Element> {
 
   /**
    * Property types, rewritten to refer to type variables in the builder. For example, suppose you
-   * have {@code @AutoValue abstract class Foo<T>} with a getter {@code abstract T bar()} and
-   * a builder {@code @AutoValue.Builder interface Builder<T>} with a setter {@code abstract
-   * Builder<T> setBar(T t)}. Then the {@code T} of {@code Foo<T>} and the {@code T} of
-   * {@code Foo.Builder<T>} are two separate variables. Originally {@code bar()} returned the
-   * {@code T} of {@code Foo<T>}, but in this map we have rewritten it to be the {@code T} of
-   * {@code Foo.Builder<T>}.
+   * have {@code @AutoValue abstract class Foo<T>} with a getter {@code abstract T bar()} and a
+   * builder {@code @AutoValue.Builder interface Builder<T>} with a setter {@code abstract
+   * Builder<T> setBar(T t)}. Then the {@code T} of {@code Foo<T>} and the {@code T} of {@code
+   * Foo.Builder<T>} are two separate variables. Originally {@code bar()} returned the {@code T} of
+   * {@code Foo<T>}, but in this map we have rewritten it to be the {@code T} of {@code
+   * Foo.Builder<T>}.
    *
-   * <p>Importantly, this rewrite <b>loses type annotations</b>, so when those are important we
-   * must be careful to look at the original type as reported by the {@link #originalPropertyType}
+   * <p>Importantly, this rewrite <b>loses type annotations</b>, so when those are important we must
+   * be careful to look at the original type as reported by the {@link #originalPropertyType}
    * method.
    */
   private final ImmutableMap<String, TypeMirror> rewrittenPropertyTypes;
@@ -165,7 +165,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
     } else {
       errorReporter.reportError(
           propertyNameToUnprefixedSetters.values().iterator().next().getSetter(),
-          "[AutoValueSetNotSet] If any setter methods use the setFoo convention then all must");
+          "[%sSetNotSet] If any setter methods use the setFoo convention then all must",
+          autoWhat());
       return false;
     }
     for (String property : rewrittenPropertyTypes.keySet()) {
@@ -180,8 +181,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
         // possible if Bar either has a toBuilder() method or BarBuilder has an addAll or putAll
         // method that accepts a Bar argument.
         boolean canMakeBarBuilder =
-            (propertyBuilder.getBuiltToBuilder() != null
-                || propertyBuilder.getCopyAll() != null);
+            (propertyBuilder.getBuiltToBuilder() != null || propertyBuilder.getCopyAll() != null);
         boolean needToMakeBarBuilder = (autoValueHasToBuilder || hasSetter);
         if (needToMakeBarBuilder && !canMakeBarBuilder) {
           errorReporter.reportError(
@@ -198,8 +198,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
         String setterName = settersPrefixed ? prefixWithSet(property) : property;
         errorReporter.reportError(
             builderType,
-            "[AutoValueBuilderMissingMethod] Expected a method with this signature: %s"
+            "[%sBuilderMissingMethod] Expected a method with this signature: %s"
                 + " %s(%s), or a %sBuilder() method",
+            autoWhat(),
             builderType.asType(),
             setterName,
             propertyType,
@@ -220,7 +221,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
         break;
       default:
         errorReporter.reportError(
-            method, "[AutoValueBuilderArgs] Builder methods must have 0 or 1 parameters");
+            method, "[%sBuilderArgs] Builder methods must have 0 or 1 parameters", autoWhat());
     }
   }
 
@@ -268,10 +269,14 @@ abstract class BuilderMethodClassifier<E extends Element> {
     } else {
       errorReporter.reportError(
           method,
-          "[AutoValueBuilderNoArg] Method without arguments should be a build method returning"
-              + " %1$s, or a getter method with the same name and type as a getter method of"
-              + " %1$s, or fooBuilder() where foo() or getFoo() is a getter method of %1$s",
-          builtType);
+          "[%1$sBuilderNoArg] Method without arguments should be a build method returning"
+              + " %2$s, or a getter method with the same name and type as %3$s,"
+              + " or fooBuilder() where %4$s is %3$s",
+          // "where foo() or getFoo() is a method in..." or "where foo is a parameter of..."
+          autoWhat(),
+          builtType,
+          getterMustMatch(),
+          fooBuilderMustMatch());
     }
   }
 
@@ -384,8 +389,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
         propertyNameToSetters.put(
             propertyName, new PropertySetter(method, parameterType, function.get()));
       } else {
-        errorReporter.reportError(
-            method, "Setter methods must return %s", builderType.asType());
+        errorReporter.reportError(method, "Setter methods must return %s", builderType.asType());
       }
     }
   }
@@ -421,7 +425,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
         propertyBuilder -> propertyNameToPropertyBuilder.put(property, propertyBuilder));
     return maybePropertyBuilder.isPresent();
   }
-
 
   /**
    * Returns an {@code Optional} describing how to convert a value from the setter's parameter type
@@ -653,8 +656,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
   }
 
   /**
-   * Returns a map from property names to the corresponding source program elements. For
-   * AutoValue, these elements are the abstract getter methods in the {@code @AutoValue} class. For
+   * Returns a map from property names to the corresponding source program elements. For AutoValue,
+   * these elements are the abstract getter methods in the {@code @AutoValue} class. For
    * AutoBuilder, they are the parameters of the constructor or method that the generated builder
    * will call.
    */
@@ -663,8 +666,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
   /**
    * Returns the property type as it appears on the original source program element. This can be
    * different from the type stored in {@link #rewrittenPropertyTypes} since that one will refer to
-   * type variables in the builder rather than in the original class. Also,
-   * {@link #rewrittenPropertyTypes} will not have type annotations even if they were present on the
+   * type variables in the builder rather than in the original class. Also, {@link
+   * #rewrittenPropertyTypes} will not have type annotations even if they were present on the
    * original element, so {@code originalPropertyType} is the right thing to use for those.
    */
   abstract TypeMirror originalPropertyType(E propertyElement);
@@ -672,8 +675,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
   /**
    * Returns the name of the property that a no-arg builder method of the given name queries, if
    * any. For example, if your {@code @AutoValue} class has a method {@code abstract String
-   * getBar()} then an abstract method in its builder with the same signature will query the
-   * {@code bar} property.
+   * getBar()} then an abstract method in its builder with the same signature will query the {@code
+   * bar} property.
    */
   abstract Optional<String> propertyForBuilderGetter(String methodName);
 
@@ -689,4 +692,19 @@ abstract class BuilderMethodClassifier<E extends Element> {
    * parameter names are unambiguously the same as the property names.
    */
   abstract void checkForFailedJavaBean(ExecutableElement rejectedSetter);
+
+  /** A string describing what sort of Auto this is, {@code "AutoValue"} or {@code "AutoBuilder"}. */
+  abstract String autoWhat();
+
+  /**
+   * A string describing what a builder getter must match: a property method for AutoValue, a
+   * parameter for AutoBuilder.
+   */
+  abstract String getterMustMatch();
+
+  /**
+   * A string describing what a property builder for property {@code foo} must match, {@code "foo()
+   * or getFoo()"} for AutoValue, {@code "foo"} for AutoBuilder.
+   */
+  abstract String fooBuilderMustMatch();
 }

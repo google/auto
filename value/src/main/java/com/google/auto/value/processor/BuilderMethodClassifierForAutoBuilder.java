@@ -29,11 +29,13 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 
 class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<VariableElement> {
+  private final ExecutableElement executable;
   private final ImmutableBiMap<VariableElement, String> paramToPropertyName;
 
   private BuilderMethodClassifierForAutoBuilder(
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
+      ExecutableElement executable,
       TypeMirror builtType,
       TypeElement builderType,
       ImmutableBiMap<VariableElement, String> paramToPropertyName,
@@ -44,6 +46,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
         builtType,
         builderType,
         propertyTypes);
+    this.executable = executable;
     this.paramToPropertyName = paramToPropertyName;
   }
 
@@ -53,7 +56,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
    * @param methods the abstract methods in {@code builderType} and its ancestors.
    * @param errorReporter where to report errors.
    * @param processingEnv the ProcessingEnvironment for annotation processing.
-   * @param callMethod the constructor or static method that AutoBuilder will call.
+   * @param executable the constructor or static method that AutoBuilder will call.
    * @param builtType the type to be built.
    * @param builderType the builder class or interface within {@code ofClass}.
    * @return an {@code Optional} that contains the results of the classification if it was
@@ -63,19 +66,20 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       Iterable<ExecutableElement> methods,
       ErrorReporter errorReporter,
       ProcessingEnvironment processingEnv,
-      ExecutableElement callMethod,
+      ExecutableElement executable,
       TypeMirror builtType,
       TypeElement builderType) {
     ImmutableBiMap<VariableElement, String> paramToPropertyName =
-        callMethod.getParameters().stream()
+        executable.getParameters().stream()
             .collect(toImmutableBiMap(v -> v, v -> v.getSimpleName().toString()));
     ImmutableMap<String, TypeMirror> propertyTypes =
-        callMethod.getParameters().stream()
+        executable.getParameters().stream()
             .collect(toImmutableMap(v -> v.getSimpleName().toString(), Element::asType));
     BuilderMethodClassifier<VariableElement> classifier =
         new BuilderMethodClassifierForAutoBuilder(
             errorReporter,
             processingEnv,
+            executable,
             builtType,
             builderType,
             paramToPropertyName,
@@ -106,5 +110,20 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
   @Override
   TypeMirror originalPropertyType(VariableElement propertyElement) {
     return propertyElement.asType();
+  }
+
+  @Override
+  String autoWhat() {
+    return "AutoBuilder";
+  }
+
+  @Override
+  String getterMustMatch() {
+    return "a parameter of " + AutoBuilderProcessor.executableString(executable);
+  }
+
+  @Override
+  String fooBuilderMustMatch() {
+    return "foo";
   }
 }

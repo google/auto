@@ -486,4 +486,136 @@ public final class AutoBuilderCompilationTest {
         .inFile(javaFileObject)
         .onLineContaining("interface Builder");
   }
+
+  @Test
+  public void inconsistentSetPrefix() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int one, int two) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder one(int x);",
+            "    abstract Builder setTwo(int x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderSetNotSet] If any setter methods use the setFoo convention then all must")
+        .inFile(javaFileObject)
+        .onLineContaining("Builder one(int x)");
+  }
+
+  @Test
+  public void missingSetter() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int one, int two) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder one(int x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderBuilderMissingMethod] Expected a method with this signature:"
+                + " foo.bar.Baz.Builder two(int), or a twoBuilder() method")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void tooManyArgs() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int one, int two) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder one(int x);",
+            "    abstract Builder two(int x);",
+            "    abstract Builder many(int x, int y);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderBuilderArgs] Builder methods must have 0 or 1 parameters")
+        .inFile(javaFileObject)
+        .onLineContaining("many(int x, int y)");
+  }
+
+  @Test
+  public void alienNoArgMethod() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  Baz(int one, int two) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder one(int x);",
+            "    abstract Builder two(int x);",
+            "    abstract String alien();",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderBuilderNoArg] Method without arguments should be a build method returning"
+                + " foo.bar.Baz, or a getter method with the same name and type as a parameter of"
+                + " Baz(int one, int two), or fooBuilder() where foo is a parameter of Baz(int"
+                + " one, int two)")
+        .inFile(javaFileObject)
+        .onLineContaining("String alien()");
+  }
 }

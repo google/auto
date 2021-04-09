@@ -31,6 +31,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
   private final ErrorReporter errorReporter;
   private final ImmutableBiMap<ExecutableElement, String> getterToPropertyName;
   private final ImmutableMap<String, ExecutableElement> getterNameToGetter;
+  private final TypeMirror builtType;
 
   private BuilderMethodClassifierForAutoValue(
       ErrorReporter errorReporter,
@@ -49,6 +50,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
     this.getterToPropertyName = getterToPropertyName;
     this.getterNameToGetter =
         Maps.uniqueIndex(getterToPropertyName.keySet(), m -> m.getSimpleName().toString());
+    this.builtType = builtType;
   }
 
   /**
@@ -120,5 +122,20 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
               + " for some but not all methods. These methods don't follow the convention: %s",
           difference(allGetters, prefixedGetters));
     }
+  }
+
+  @Override
+  String autoWhat() {
+    return "AutoValue";
+  }
+
+  @Override
+  String getterMustMatch() {
+    return "a getter method of " + builtType;
+  }
+
+  @Override
+  String fooBuilderMustMatch() {
+    return "foo() or getFoo()";
   }
 }
