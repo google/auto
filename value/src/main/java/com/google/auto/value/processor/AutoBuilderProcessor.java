@@ -110,8 +110,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     AnnotationMirror autoBuilderAnnotation =
         getAnnotationMirror(autoBuilderType, AUTO_BUILDER_NAME).get();
     TypeElement ofClass = getOfClass(autoBuilderType, autoBuilderAnnotation);
+    checkModifiersIfNested(ofClass, autoBuilderType, "AutoBuilder ofClass");
     String callMethod = findCallMethodValue(autoBuilderAnnotation);
-    checkModifiersIfNested(ofClass); // TODO: error message is wrong
     ImmutableSet<ExecutableElement> methods =
         abstractMethodsIn(
             getLocalAndInheritedMethods(autoBuilderType, typeUtils(), elementUtils()));
@@ -160,7 +160,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       ImmutableSet<ExecutableElement> methods) {
     List<ExecutableElement> executables =
         findRelevantExecutables(ofClass, callMethod, autoBuilderType);
-    String description = callMethod.isEmpty() ? "constructor" : "static method named " + callMethod;
+    String description =
+        callMethod.isEmpty() ? "constructor" : "static method named \"" + callMethod + "\"";
     switch (executables.size()) {
       case 0:
         throw errorReporter()

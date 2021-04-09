@@ -154,5 +154,336 @@ public final class AutoBuilderCompilationTest {
         .hasSourceEquivalentTo(EXPECTED_SIMPLE_OUTPUT);
   }
 
-  // TODO(b/183005059): error tests
+  @Test
+  public void autoBuilderOnEnum() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "@AutoBuilder",
+            "public enum Baz {",
+            "  ZIG, ZAG, DUSTIN,",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderWrongType] @AutoBuilder only applies to classes and interfaces")
+        .inFile(javaFileObject)
+        .onLineContaining("enum Baz");
+  }
+
+  @Test
+  public void autoBuilderPrivate() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  @AutoBuilder",
+            "  private interface Builder {",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderPrivate] @AutoBuilder class must not be private")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void autoBuilderNestedInPrivate() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  private static class Private {",
+            "    @AutoBuilder",
+            "    public interface Builder {",
+            "      Baz build();",
+            "    }",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderInPrivate] @AutoBuilder class must not be nested in a private class")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void autoBuilderInner() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  @AutoBuilder",
+            "  abstract class Builder {",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderInner] Nested @AutoBuilder class must be static")
+        .inFile(javaFileObject)
+        .onLineContaining("class Builder");
+  }
+
+  @Test
+  public void innerConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  class Inner {}",
+            "",
+            "  @AutoBuilder(ofClass = Inner.class)",
+            "  interface Builder {",
+            "    abstract Inner build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderInner] Nested @AutoBuilder ofClass class must be static")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void noVisibleConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  @AutoBuilder(ofClass = System.class)",
+            "  interface Builder {",
+            "    abstract System build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderNoVisible] No visible constructor for java.lang.System")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void noVisibleMethod() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  private static Baz of() {",
+            "    return new Baz();",
+            "  }",
+            "",
+            "  @AutoBuilder(callMethod = \"of\")",
+            "  interface Builder {",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderNoVisible] No visible static method named \"of\" for foo.bar.Baz")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void methodNotStatic() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  Baz of() {",
+            "    return this;",
+            "  }",
+            "",
+            "  @AutoBuilder(callMethod = \"of\")",
+            "  interface Builder {",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderNoVisible] No visible static method named \"of\" for foo.bar.Baz")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void noMatchingConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  public Baz(int notMe) {}",
+            "",
+            "  public Baz(String notMeEither) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    Builder setBuh(String x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderNoMatch] Property names do not correspond to the parameter names of any"
+                + " constructor:\n"
+                + "    Baz(int notMe)\n"
+                + "    Baz(java.lang.String notMeEither)")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void twoMatchingConstructors() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  public Baz() {}",
+            "",
+            "  public Baz(int buh) {}",
+            "",
+            "  public Baz(String buh) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    Builder setBuh(String x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderAmbiguous] Property names correspond to more than one constructor:\n"
+                + "    Baz(int buh)\n"
+                + "    Baz(java.lang.String buh)")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void constructInterface() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public interface Baz {",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderEnclosing] @AutoBuilder must specify ofClass=Something.class or it must"
+                + " be nested inside the class to be built; actually nested inside interface"
+                + " foo.bar.Baz")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
 }

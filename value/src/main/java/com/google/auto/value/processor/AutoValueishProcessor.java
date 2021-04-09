@@ -643,27 +643,33 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   }
 
   /**
-   * Checks that, if the given {@code @AutoValue} or {@code @AutoOneOf} class is nested, it is
-   * static and not private. This check is not necessary for correctness, since the generated code
-   * would not compile if the check fails, but it produces better error messages for the user.
+   * Checks that, if the given {@code @AutoValue}, {@code @AutoOneOf}, or {@code @AutoBuilder} class
+   * is nested, it is static and not private. This check is not necessary for correctness, since the
+   * generated code would not compile if the check fails, but it produces better error messages for
+   * the user.
    */
   final void checkModifiersIfNested(TypeElement type) {
+    checkModifiersIfNested(type, type, simpleAnnotationName);
+  }
+
+  final void checkModifiersIfNested(TypeElement type, TypeElement reportedType, String what) {
     ElementKind enclosingKind = type.getEnclosingElement().getKind();
     if (enclosingKind.isClass() || enclosingKind.isInterface()) {
       if (type.getModifiers().contains(Modifier.PRIVATE)) {
         errorReporter.abortWithError(
-            type, "[AutoValuePrivate] @%s class must not be private", simpleAnnotationName);
+            reportedType, "[%sPrivate] @%s class must not be private", simpleAnnotationName, what);
       } else if (Visibility.effectiveVisibilityOfElement(type).equals(Visibility.PRIVATE)) {
         // The previous case, where the class itself is private, is much commoner so it deserves
         // its own error message, even though it would be caught by the test here too.
         errorReporter.abortWithError(
-            type,
-            "[AutoValueInPrivate] @%s class must not be nested in a private class",
-            simpleAnnotationName);
+            reportedType,
+            "[%sInPrivate] @%s class must not be nested in a private class",
+            simpleAnnotationName,
+            what);
       }
       if (!type.getModifiers().contains(Modifier.STATIC)) {
         errorReporter.abortWithError(
-            type, "[AutoValueInner] Nested @%s class must be static", simpleAnnotationName);
+            reportedType, "[%sInner] Nested @%s class must be static", simpleAnnotationName, what);
       }
     }
     // In principle type.getEnclosingElement() could be an ExecutableElement (for a class
