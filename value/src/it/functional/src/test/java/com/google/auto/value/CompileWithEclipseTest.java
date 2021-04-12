@@ -78,8 +78,8 @@ public class CompileWithEclipseTest {
               || f.getName().equals("EmptyExtension.java");
 
   @Test
-  public void compileWithEclipseJava6() throws Exception {
-    compileWithEclipse("6", JAVA_FILE.and(JAVA8_TEST.negate()));
+  public void compileWithEclipseJava7() throws Exception {
+    compileWithEclipse("7", JAVA_FILE.and(JAVA8_TEST.negate()));
   }
 
   @Test
