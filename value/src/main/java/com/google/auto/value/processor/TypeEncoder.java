@@ -163,9 +163,11 @@ final class TypeEncoder {
   }
 
   /**
-   * Returns the formal type parameters of the given type. If we have {@code @AutoValue abstract
-   * class Foo<T extends SomeClass>} then this method will return an encoding of {@code <T extends
-   * SomeClass>} for {@code Foo}. Likewise it will return an encoding of the angle-bracket part of:
+   * Returns a string representing the given type parameters as they would appear in a class
+   * declaration. For example, if we have {@code @AutoValue abstract
+   * class Foo<T extends SomeClass>} then if we call {@link TypeElement#getTypeParameters()} on
+   * the representation of {@code Foo}, this method will return an encoding of {@code <T extends
+   * SomeClass>}. Likewise it will return an encoding of the angle-bracket part of:
    * <br>
    * {@code Foo<SomeClass>}<br>
    * {@code Foo<T extends Number>}<br>
@@ -179,8 +181,7 @@ final class TypeEncoder {
    * {@code <E extends `java.lang.Enum`<E>>}<br>
    * {@code <K, V extends `java.lang.Comparable`<? extends K>>}.
    */
-  static String formalTypeParametersString(TypeElement type) {
-    List<? extends TypeParameterElement> typeParameters = type.getTypeParameters();
+  static String typeParametersString(List<? extends TypeParameterElement> typeParameters) {
     if (typeParameters.isEmpty()) {
       return "";
     } else {

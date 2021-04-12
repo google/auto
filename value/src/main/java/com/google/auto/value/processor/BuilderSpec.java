@@ -197,7 +197,8 @@ class BuilderSpec {
      * Finds any methods in the set that return the builder type. If the builder has type parameters
      * {@code <A, B>}, then the return type of the method must be {@code Builder<A, B>} with the
      * same parameter names. We enforce elsewhere that the names and bounds of the builder
-     * parameters must be the same as those of the @AutoValue class. Here's a correct example:
+     * parameters must be the same as those of the {@code @AutoValue} class. Here's a correct
+     * example:
      *
      * <pre>
      * {@code @AutoValue abstract class Foo<A extends Number, B> {
@@ -212,9 +213,7 @@ class BuilderSpec {
      * <p>We currently impose that there cannot be more than one such method.
      */
     ImmutableSet<ExecutableElement> toBuilderMethods(
-        Types typeUtils,
-        TypeElement autoValueType,
-        Set<ExecutableElement> abstractMethods) {
+        Types typeUtils, TypeElement autoValueType, Set<ExecutableElement> abstractMethods) {
 
       List<String> builderTypeParamNames =
           builderTypeElement.getTypeParameters().stream()
@@ -321,7 +320,8 @@ class BuilderSpec {
       this.buildMethod = Iterables.getOnlyElement(buildMethods);
       vars.builderIsInterface = builderTypeElement.getKind() == ElementKind.INTERFACE;
       vars.builderTypeName = TypeSimplifier.classNameOf(builderTypeElement);
-      vars.builderFormalTypes = TypeEncoder.formalTypeParametersString(builderTypeElement);
+      vars.builderFormalTypes =
+          TypeEncoder.typeParametersString(builderTypeElement.getTypeParameters());
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
       vars.buildMethod = Optional.of(new SimpleMethod(buildMethod));
       vars.builderGetters = classifier.builderGetters();
@@ -390,8 +390,8 @@ class BuilderSpec {
   }
 
   /**
-   * Specifies how to copy a parameter value into the target type. This might be the identity, or
-   * it might be something like {@code ImmutableList.of(...)} or {@code Optional.ofNullable(...)}.
+   * Specifies how to copy a parameter value into the target type. This might be the identity, or it
+   * might be something like {@code ImmutableList.of(...)} or {@code Optional.ofNullable(...)}.
    */
   static class Copier {
     static final Copier IDENTITY = acceptingNull(x -> x);
@@ -516,19 +516,24 @@ class BuilderSpec {
   }
 
   private static boolean sameTypeParameters(TypeElement a, TypeElement b) {
-    int nTypeParameters = a.getTypeParameters().size();
-    if (nTypeParameters != b.getTypeParameters().size()) {
+    return sameTypeParameters(a.getTypeParameters(), b.getTypeParameters());
+  }
+
+  static boolean sameTypeParameters(
+      List<? extends TypeParameterElement> aParams, List<? extends TypeParameterElement> bParams) {
+    int nTypeParameters = aParams.size();
+    if (nTypeParameters != bParams.size()) {
       return false;
     }
     for (int i = 0; i < nTypeParameters; i++) {
-      TypeParameterElement aParam = a.getTypeParameters().get(i);
-      TypeParameterElement bParam = b.getTypeParameters().get(i);
+      TypeParameterElement aParam = aParams.get(i);
+      TypeParameterElement bParam = bParams.get(i);
       if (!aParam.getSimpleName().equals(bParam.getSimpleName())) {
         return false;
       }
-      Set<TypeMirror> autoValueBounds = new TypeMirrorSet(aParam.getBounds());
-      Set<TypeMirror> builderBounds = new TypeMirrorSet(bParam.getBounds());
-      if (!autoValueBounds.equals(builderBounds)) {
+      Set<TypeMirror> aBounds = new TypeMirrorSet(aParam.getBounds());
+      Set<TypeMirror> bBounds = new TypeMirrorSet(bParam.getBounds());
+      if (!aBounds.equals(bBounds)) {
         return false;
       }
     }

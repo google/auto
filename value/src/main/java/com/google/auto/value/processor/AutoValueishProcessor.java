@@ -445,7 +445,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         generatedAnnotation(elementUtils(), processingEnv.getSourceVersion())
             .map(annotation -> TypeEncoder.encode(annotation.asType()))
             .orElse("");
-    vars.formalTypes = TypeEncoder.formalTypeParametersString(type);
+    vars.formalTypes = TypeEncoder.typeParametersString(type.getTypeParameters());
     vars.actualTypes = TypeSimplifier.actualTypeParametersString(type);
     vars.wildcardTypes = wildcardTypeParametersString(type);
     vars.annotations = copiedClassAnnotations(type);

@@ -292,7 +292,7 @@ public class TypeEncoderTest {
     TypeMirror multipleBoundsMirror = multipleBoundsElement.asType();
     String text = "`import`\n";
     text += "{" + TypeEncoder.encode(multipleBoundsMirror) + "}";
-    text += "{" + TypeEncoder.formalTypeParametersString(multipleBoundsElement) + "}";
+    text += "{" + TypeEncoder.typeParametersString(multipleBoundsElement.getTypeParameters()) + "}";
     String myPackage = getClass().getPackage().getName();
     String decoded =
         TypeEncoder.decode(text, elementUtils, typeUtils, myPackage, baseWithoutContainedTypes());

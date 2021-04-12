@@ -21,9 +21,17 @@ import static org.junit.Assert.fail;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.math.BigInteger;
 import java.time.LocalTime;
+import java.util.AbstractSet;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -318,5 +326,112 @@ public final class AutoBuilderTest {
     } catch (IllegalStateException e) {
       assertThat(e).hasMessageThat().isEqualTo("Cannot set list after calling listBuilder()");
     }
+  }
+
+  static <K, V extends Number> Map<K, V> singletonMap(K key, V value) {
+    return Collections.singletonMap(key, value);
+  }
+
+  static <K, V extends Number> SingletonMapBuilder<K, V> singletonMapBuilder() {
+    return new AutoBuilder_AutoBuilderTest_SingletonMapBuilder<>();
+  }
+
+  @AutoBuilder(callMethod = "singletonMap")
+  interface SingletonMapBuilder<K, V extends Number> {
+    SingletonMapBuilder<K, V> key(K key);
+    SingletonMapBuilder<K, V> value(V value);
+    Map<K, V> build();
+  }
+
+  @Test
+  public void genericStaticMethod() {
+    ImmutableMap<String, Integer> expected = ImmutableMap.of("17", 17);
+    SingletonMapBuilder<String, Integer> builder = singletonMapBuilder();
+    Map<String, Integer> actual = builder.key("17").value(17).build();
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  static class SingletonSet<E> extends AbstractSet<E> {
+    private final E element;
+
+    SingletonSet(E element) {
+      this.element = element;
+    }
+
+    @Override
+    public int size() {
+      return 1;
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+      return new Iterator<E>() {
+        private boolean first = true;
+
+        @Override
+        public boolean hasNext() {
+          return first;
+        }
+
+        @Override
+        public E next() {
+          if (!first) {
+            throw new NoSuchElementException();
+          }
+          first = false;
+          return element;
+        }
+      };
+    }
+  }
+
+  @AutoBuilder(ofClass = SingletonSet.class)
+  interface SingletonSetBuilder<E> {
+    SingletonSetBuilder<E> setElement(E element);
+    SingletonSet<E> build();
+  }
+
+  static <E> SingletonSetBuilder<E> singletonSetBuilder() {
+    return new AutoBuilder_AutoBuilderTest_SingletonSetBuilder<>();
+  }
+
+  @Test
+  public void genericClass() {
+    ImmutableSet<String> expected = ImmutableSet.of("foo");
+    SingletonSetBuilder<String> builder = singletonSetBuilder();
+    Set<String> actual = builder.setElement("foo").build();
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  static class TypedSingletonSet<E> extends SingletonSet<E> {
+    private final Class<?> type;
+
+    <T extends E> TypedSingletonSet(T element, Class<T> type) {
+      super(element);
+      this.type = type;
+    }
+
+    @Override
+    public String toString() {
+      return type.getName() + super.toString();
+    }
+  }
+
+  @AutoBuilder(ofClass = TypedSingletonSet.class)
+  interface TypedSingletonSetBuilder<E, T extends E> {
+    TypedSingletonSetBuilder<E, T> setElement(T element);
+    TypedSingletonSetBuilder<E, T> setType(Class<T> type);
+    TypedSingletonSet<E> build();
+  }
+
+  static <E, T extends E> TypedSingletonSetBuilder<E, T> typedSingletonSetBuilder() {
+    return new AutoBuilder_AutoBuilderTest_TypedSingletonSetBuilder<>();
+  }
+
+  @Test
+  public void genericClassWithGenericConstructor() {
+    TypedSingletonSetBuilder<CharSequence, String> builder = typedSingletonSetBuilder();
+    TypedSingletonSet<CharSequence> set = builder.setElement("foo").setType(String.class).build();
+    assertThat(set.toString()).isEqualTo("java.lang.String[foo]");
   }
 }

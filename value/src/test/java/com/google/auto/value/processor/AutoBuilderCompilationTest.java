@@ -795,4 +795,37 @@ public final class AutoBuilderCompilationTest {
         .inFile(javaFileObject)
         .onLineContaining("maybe(int x)");
   }
+
+  @Test
+  public void typeParamMismatch() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import java.util.Optional;",
+            "",
+            "class Baz<T> {",
+            "  Baz(T param) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder<E> {",
+            "    abstract Builder<E> param(E param);",
+            "    abstract Baz<E> build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderTypeParams] Builder type parameters <E> must match type parameters <T> of"
+                + " Baz(T param)")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder<E>");
+  }
 }
