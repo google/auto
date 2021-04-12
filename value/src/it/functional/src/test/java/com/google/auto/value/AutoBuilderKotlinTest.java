@@ -29,18 +29,18 @@ public final class AutoBuilderKotlinTest {
       return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataBuilder();
     }
 
-    abstract KotlinDataBuilder setAnInt(int x);
+    abstract KotlinDataBuilder setInt(int x);
 
-    abstract KotlinDataBuilder setAString(String x);
+    abstract KotlinDataBuilder setString(String x);
 
     abstract KotlinData build();
   }
 
   @Test
   public void simpleKotlin() {
-    KotlinData x = KotlinDataBuilder.builder().setAnInt(23).setAString("skidoo").build();
-    assertThat(x.getAnInt()).isEqualTo(23);
-    assertThat(x.getAString()).isEqualTo("skidoo");
+    KotlinData x = KotlinDataBuilder.builder().setInt(23).setString("skidoo").build();
+    assertThat(x.getInt()).isEqualTo(23);
+    assertThat(x.getString()).isEqualTo("skidoo");
   }
 
   @AutoBuilder(ofClass = KotlinDataWithNullable.class)

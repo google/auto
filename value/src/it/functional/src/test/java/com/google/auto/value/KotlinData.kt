@@ -15,7 +15,7 @@
  */
 package com.google.auto.value
 
-data class KotlinData(val anInt: Int, val aString: String)
+data class KotlinData(val int: Int, val string: String)
 
 data class KotlinDataWithNullable(val anInt: Int?, val aString: String?)
 

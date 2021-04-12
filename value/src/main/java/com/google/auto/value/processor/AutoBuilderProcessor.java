@@ -23,6 +23,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
@@ -39,6 +40,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
@@ -144,13 +146,21 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private ImmutableSet<Property> propertySet(ExecutableElement executable) {
-    return executable.getParameters().stream().map(this::newProperty).collect(toImmutableSet());
+    // Fix any parameter names that are reserved words in Java. Java source code can't have
+    // such parameter names, but Kotlin code might, for example.
+    Map<VariableElement, String> identifiers =
+        executable.getParameters().stream()
+            .collect(toMap(v -> v, v -> v.getSimpleName().toString()));
+    fixReservedIdentifiers(identifiers);
+    return executable.getParameters().stream()
+        .map(v -> newProperty(v, identifiers.get(v)))
+        .collect(toImmutableSet());
   }
 
-  private Property newProperty(VariableElement var) {
+  private Property newProperty(VariableElement var, String identifier) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
-    return new Property(name, name, TypeEncoder.encode(type), type, Optional.empty());
+    return new Property(name, identifier, TypeEncoder.encode(type), type, Optional.empty());
   }
 
   private ExecutableElement findExecutable(
