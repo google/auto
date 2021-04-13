@@ -354,6 +354,7 @@ class BuilderSpec {
    * five) then {@code Optional<T>} can be the corresponding boxed type.
    */
   public static class PropertyGetter {
+    private final String name;
     private final String access;
     private final String type;
     private final Optionalish optional;
@@ -371,9 +372,15 @@ class BuilderSpec {
      *     {@code Optional<T>} rather than {@code T}, as explained above.
      */
     PropertyGetter(ExecutableElement method, String type, Optionalish optional) {
+      this.name = method.getSimpleName().toString();
       this.access = SimpleMethod.access(method);
       this.type = type;
       this.optional = optional;
+    }
+
+    // Not accessed from templates so doesn't have to be public.
+    String getName() {
+      return name;
     }
 
     public String getAccess() {

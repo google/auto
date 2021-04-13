@@ -33,11 +33,13 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
+import com.google.auto.value.processor.BuilderSpec.PropertyGetter;
 import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Ascii;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
@@ -121,16 +123,19 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     BuilderSpec builderSpec = new BuilderSpec(ofClass, processingEnv, errorReporter());
     BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
     TypeMirror builtType = builtType(executable);
-    Optional<BuilderMethodClassifier<VariableElement>> classifier =
+    Optional<BuilderMethodClassifier<VariableElement>> maybeClassifier =
         BuilderMethodClassifierForAutoBuilder.classify(
             methods, errorReporter(), processingEnv, executable, builtType, autoBuilderType);
-    if (!classifier.isPresent()) {
+    if (!maybeClassifier.isPresent()) {
       // We've already output one or more error messages.
       return;
     }
+    BuilderMethodClassifier<VariableElement> classifier = maybeClassifier.get();
+    Map<String, String> propertyToGetterName =
+        Maps.transformValues(classifier.builderGetters(), PropertyGetter::getName);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(executable);
-    builder.defineVars(vars, classifier.get());
+    vars.props = propertySet(executable, propertyToGetterName);
+    builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
@@ -145,7 +150,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     writeSourceFile(generatedClassName, text, autoBuilderType);
   }
 
-  private ImmutableSet<Property> propertySet(ExecutableElement executable) {
+  private ImmutableSet<Property> propertySet(
+      ExecutableElement executable, Map<String, String> propertyToGetterName) {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
@@ -153,14 +159,18 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
             .collect(toMap(v -> v, v -> v.getSimpleName().toString()));
     fixReservedIdentifiers(identifiers);
     return executable.getParameters().stream()
-        .map(v -> newProperty(v, identifiers.get(v)))
+        .map(
+            v ->
+                newProperty(
+                    v, identifiers.get(v), propertyToGetterName.get(v.getSimpleName().toString())))
         .collect(toImmutableSet());
   }
 
-  private Property newProperty(VariableElement var, String identifier) {
+  private Property newProperty(VariableElement var, String identifier, String getterName) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
-    return new Property(name, identifier, TypeEncoder.encode(type), type, Optional.empty());
+    return new Property(
+        name, identifier, TypeEncoder.encode(type), type, Optional.empty(), getterName);
   }
 
   private ExecutableElement findExecutable(

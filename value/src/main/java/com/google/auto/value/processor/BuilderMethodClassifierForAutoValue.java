@@ -111,7 +111,8 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
   }
 
   @Override
-  Optional<String> propertyForBuilderGetter(String methodName) {
+  Optional<String> propertyForBuilderGetter(ExecutableElement method) {
+    String methodName = method.getSimpleName().toString();
     return Optional.ofNullable(getterNameToGetter.get(methodName)).map(getterToPropertyName::get);
   }
 

@@ -17,6 +17,7 @@ package com.google.auto.value;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.common.base.MoreObjects;
@@ -31,6 +32,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -433,5 +435,38 @@ public final class AutoBuilderTest {
     TypedSingletonSetBuilder<CharSequence, String> builder = typedSingletonSetBuilder();
     TypedSingletonSet<CharSequence> set = builder.setElement("foo").setType(String.class).build();
     assertThat(set.toString()).isEqualTo("java.lang.String[foo]");
+  }
+
+  static <T> ImmutableList<T> pair(T first, T second) {
+    return ImmutableList.of(first, second);
+  }
+
+  @AutoBuilder(callMethod = "pair")
+  interface PairBuilder<T> {
+    PairBuilder<T> setFirst(T x);
+    T getFirst();
+    PairBuilder<T> setSecond(T x);
+    Optional<T> getSecond();
+    ImmutableList<T> build();
+  }
+
+  static <T> PairBuilder<T> pairBuilder() {
+    return new AutoBuilder_AutoBuilderTest_PairBuilder<>();
+  }
+
+  @Test
+  public void genericGetters() {
+    PairBuilder<Number> builder = pairBuilder();
+    assertThat(builder.getSecond()).isEmpty();
+    builder.setSecond(2);
+    assertThat(builder.getSecond()).hasValue(2);
+    try {
+      builder.getFirst();
+      fail();
+    } catch (IllegalStateException expected) {
+    }
+    builder.setFirst(1.0);
+    assertThat(builder.getFirst()).isEqualTo(1.0);
+    assertThat(builder.build()).containsExactly(1.0, 2).inOrder();
   }
 }

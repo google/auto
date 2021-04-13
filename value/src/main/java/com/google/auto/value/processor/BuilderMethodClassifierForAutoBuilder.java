@@ -189,11 +189,24 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
   }
 
   @Override
-  Optional<String> propertyForBuilderGetter(String methodName) {
-    // TODO: handle getFoo -> foo
-    return paramToPropertyName.containsValue(methodName)
-        ? Optional.of(methodName)
-        : Optional.empty();
+  Optional<String> propertyForBuilderGetter(ExecutableElement method) {
+    String methodName = method.getSimpleName().toString();
+    if (paramToPropertyName.containsValue(methodName)) {
+      return Optional.of(methodName);
+    }
+    if (AutoValueishProcessor.isPrefixedGetter(method)) {
+      int prefixLength = methodName.startsWith("get") ? 3 : 2; // "get" or "is"
+      String unprefixed = methodName.substring(prefixLength);
+      String propertyName = PropertyNames.decapitalizeLikeJavaBeans(unprefixed);
+      if (paramToPropertyName.containsValue(propertyName)) {
+        return Optional.of(propertyName);
+      }
+      propertyName = PropertyNames.decapitalizeNormally(unprefixed);
+      if (paramToPropertyName.containsValue(propertyName)) {
+        return Optional.of(propertyName);
+      }
+    }
+    return Optional.empty();
   }
 
   @Override

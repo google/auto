@@ -21,6 +21,7 @@ import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_PACKAGE_NAME;
 import static com.google.auto.value.processor.ClassNames.COPY_ANNOTATIONS_NAME;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Sets.union;
 import static java.util.stream.Collectors.joining;
@@ -155,19 +156,22 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     private final TypeMirror typeMirror;
     private final Optional<String> nullableAnnotation;
     private final Optionalish optional;
+    private final String getter;
 
     Property(
         String name,
         String identifier,
         String type,
         TypeMirror typeMirror,
-        Optional<String> nullableAnnotation) {
+        Optional<String> nullableAnnotation,
+        String getter) {
       this.name = name;
       this.identifier = identifier;
       this.type = type;
       this.typeMirror = typeMirror;
       this.nullableAnnotation = nullableAnnotation;
       this.optional = Optionalish.createIfOptional(typeMirror);
+      this.getter = getter;
     }
 
     /**
@@ -227,6 +231,16 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     public boolean isNullable() {
       return nullableAnnotation.isPresent();
     }
+
+    /**
+     * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
+     * or {@code @AutoBuilder} class. For property {@code foo}, this will be {@code foo} or {@code
+     * getFoo} or {@code isFoo}. For AutoValue, this will also be the name of a getter method in a
+     * builder; in the case of AutoBuilder it will only be that and may be null.
+     */
+    public String getGetter() {
+      return getter;
+    }
   }
 
   /** A {@link Property} that corresponds to an abstract getter method in the source. */
@@ -248,18 +262,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           identifier,
           type,
           method.getReturnType(),
-          nullableAnnotation);
+          nullableAnnotation,
+          method.getSimpleName().toString());
       this.method = method;
       this.fieldAnnotations = fieldAnnotations;
       this.methodAnnotations = methodAnnotations;
-    }
-
-    /**
-     * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
-     * class. For property {@code foo}, this will be {@code foo} or {@code getFoo} or {@code isFoo}.
-     */
-    public String getGetter() {
-      return method.getSimpleName().toString();
     }
 
     /**
@@ -604,21 +611,19 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    * includes {@code isFoo} methods if they return {@code boolean}. This corresponds to JavaBeans
    * conventions.
    */
-  static ImmutableSet<ExecutableElement> prefixedGettersIn(Iterable<ExecutableElement> methods) {
-    ImmutableSet.Builder<ExecutableElement> getters = ImmutableSet.builder();
-    for (ExecutableElement method : methods) {
-      String name = method.getSimpleName().toString();
-      // Note that getfoo() (without a capital) is still a getter.
-      boolean get = name.startsWith("get") && !name.equals("get");
-      boolean is =
-          name.startsWith("is")
-              && !name.equals("is")
-              && method.getReturnType().getKind() == TypeKind.BOOLEAN;
-      if (get || is) {
-        getters.add(method);
-      }
-    }
-    return getters.build();
+  static ImmutableSet<ExecutableElement> prefixedGettersIn(Collection<ExecutableElement> methods) {
+    return methods.stream()
+        .filter(AutoValueishProcessor::isPrefixedGetter)
+        .collect(toImmutableSet());
+  }
+
+  static boolean isPrefixedGetter(ExecutableElement method) {
+    String name = method.getSimpleName().toString();
+    // Note that getfoo() (without a capital) is still a getter.
+    return (name.startsWith("get") && !name.equals("get"))
+        || (name.startsWith("is")
+            && !name.equals("is")
+            && method.getReturnType().getKind() == TypeKind.BOOLEAN);
   }
 
   /**

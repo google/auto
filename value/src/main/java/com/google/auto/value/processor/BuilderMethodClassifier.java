@@ -234,14 +234,14 @@ abstract class BuilderMethodClassifier<E extends Element> {
    * ImmutableList<String> foos()} or {@code getFoos()}.
    */
   private void classifyMethodNoArgs(ExecutableElement method) {
-    String methodName = method.getSimpleName().toString();
-    TypeMirror returnType = builderMethodReturnType(method);
-
-    Optional<String> getterProperty = propertyForBuilderGetter(methodName);
+    Optional<String> getterProperty = propertyForBuilderGetter(method);
     if (getterProperty.isPresent()) {
       classifyGetter(method, getterProperty.get());
       return;
     }
+
+    String methodName = method.getSimpleName().toString();
+    TypeMirror returnType = builderMethodReturnType(method);
 
     if (methodName.endsWith("Builder")) {
       String property = methodName.substring(0, methodName.length() - "Builder".length());
@@ -683,12 +683,12 @@ abstract class BuilderMethodClassifier<E extends Element> {
   abstract String propertyString(E propertyElement);
 
   /**
-   * Returns the name of the property that a no-arg builder method of the given name queries, if
+   * Returns the name of the property that the given no-arg builder method queries, if
    * any. For example, if your {@code @AutoValue} class has a method {@code abstract String
    * getBar()} then an abstract method in its builder with the same signature will query the {@code
    * bar} property.
    */
-  abstract Optional<String> propertyForBuilderGetter(String methodName);
+  abstract Optional<String> propertyForBuilderGetter(ExecutableElement method);
 
   /**
    * Checks for failed JavaBean usage when a method that looks like a setter doesn't actually match
