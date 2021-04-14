@@ -24,6 +24,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.time.LocalTime;
 import java.util.AbstractSet;
@@ -266,6 +267,29 @@ public final class AutoBuilderTest {
       fail();
     } catch (IllegalStateException e) {
       assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
+    }
+  }
+
+  static void throwException() throws IOException {
+    throw new IOException("oops");
+  }
+
+  static ThrowExceptionBuilder throwExceptionBuilder() {
+    return new AutoBuilder_AutoBuilderTest_ThrowExceptionBuilder();
+  }
+
+  @AutoBuilder(callMethod = "throwException")
+  interface ThrowExceptionBuilder {
+    void build() throws IOException;
+  }
+
+  @Test
+  public void emptyBuilderThrowsException() {
+    try {
+      throwExceptionBuilder().build();
+      fail();
+    } catch (IOException expected) {
+      assertThat(expected).hasMessageThat().isEqualTo("oops");
     }
   }
 

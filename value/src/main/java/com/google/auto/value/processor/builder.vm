@@ -219,8 +219,10 @@ class ${builderName}${builderFormalTypes} ##
   #end
 #end
 
+## build() method
+
   @`java.lang.Override`
-  ${buildMethod.get().access}${builtType} ${buildMethod.get().name}() {
+  ${buildMethod.get().access}${builtType} ${buildMethod.get().name}() ${buildMethod.get().throws} {
 
 #foreach ($p in $props)
   #set ($propertyBuilder = $builderPropertyBuilders[$p.name])
@@ -264,7 +266,7 @@ class ${builderName}${builderFormalTypes} ##
   #end
 #end
 
-    return ${build}(
+    #if ($builtType != "void") return #end ${build}(
 #foreach ($p in $props)
 
         this.$p #if ($foreach.hasNext) , #end
