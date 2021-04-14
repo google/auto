@@ -58,10 +58,9 @@ public final class AutoBuilderKotlinTest {
 
   @Test
   public void kotlinWithNullable() {
-    // TODO(b/183005059): this does not work yet.
-    // KotlinDataWithNullable empty = KotlinDataWithNullableBuilder.builder().build();
-    // assertThat(empty.getAnInt()).isNull();
-    // assertThat(empty.getAString()).isNull();
+    KotlinDataWithNullable empty = KotlinDataWithNullableBuilder.builder().build();
+    assertThat(empty.getAnInt()).isNull();
+    assertThat(empty.getAString()).isNull();
 
     KotlinDataWithNullable notEmpty =
         KotlinDataWithNullableBuilder.builder().setAString("answer").setAnInt(42).build();

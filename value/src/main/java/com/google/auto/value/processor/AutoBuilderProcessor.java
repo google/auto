@@ -169,8 +169,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   private Property newProperty(VariableElement var, String identifier, String getterName) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
+    Optional<String> nullableAnnotation = nullableAnnotationFor(var, var.asType());
     return new Property(
-        name, identifier, TypeEncoder.encode(type), type, Optional.empty(), getterName);
+        name, identifier, TypeEncoder.encode(type), type, nullableAnnotation, getterName);
   }
 
   private ExecutableElement findExecutable(
