@@ -647,8 +647,8 @@ public final class AutoBuilderCompilationTest {
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
-            "[AutoBuilderBuilderWhatProp] Method three does not correspond to a parameter of Baz(int one,"
-                + " int two)")
+            "[AutoBuilderBuilderWhatProp] Method three does not correspond to "
+                + "a parameter of Baz(int one, int two)")
         .inFile(javaFileObject)
         .onLineContaining("three(int x)");
   }
