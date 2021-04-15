@@ -21,8 +21,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies that the annotated interface or abstract class should be implemented as a builder;
- * THIS IS NOT YET READY FOR USE.
+ * Specifies that the annotated interface or abstract class should be implemented as a builder.
+ * This is still unstable; uses outside Google may break.
  *
  * <p>A simple example:
  *
