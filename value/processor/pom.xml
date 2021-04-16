@@ -72,12 +72,6 @@
       <version>0.3</version>
     </dependency>
     <dependency>
-      <groupId>net.ltgt.gradle.incap</groupId>
-      <artifactId>incap-processor</artifactId>
-      <version>0.3</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
@@ -190,6 +184,11 @@
                   <groupId>com.google.auto.service</groupId>
                   <artifactId>auto-service</artifactId>
                   <version>${auto-service.version}</version>
+                </path>
+                <path>
+                  <groupId>net.ltgt.gradle.incap</groupId>
+                  <artifactId>incap-processor</artifactId>
+                  <version>0.3</version>
                 </path>
               </annotationProcessorPaths>
             </configuration>
