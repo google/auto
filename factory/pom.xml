@@ -85,7 +85,7 @@
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
-      <artifactId>incap-processor</artifactId>
+      <artifactId>incap</artifactId>
       <version>0.3</version>
       <scope>provided</scope>
     </dependency>
@@ -161,7 +161,7 @@
             </path>
             <path>
               <groupId>net.ltgt.gradle.incap</groupId>
-              <artifactId>incap</artifactId>
+              <artifactId>incap-processor</artifactId>
               <version>0.3</version>
             </path>
           </annotationProcessorPaths>
