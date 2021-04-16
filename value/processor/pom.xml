@@ -168,6 +168,11 @@
               <artifactId>auto-service</artifactId>
               <version>${auto-service.version}</version>
             </path>
+            <path>
+              <groupId>net.ltgt.gradle.incap</groupId>
+              <artifactId>incap-processor</artifactId>
+              <version>0.3</version>
+            </path>
           </annotationProcessorPaths>
         </configuration>
         <executions>
@@ -184,11 +189,6 @@
                   <groupId>com.google.auto.service</groupId>
                   <artifactId>auto-service</artifactId>
                   <version>${auto-service.version}</version>
-                </path>
-                <path>
-                  <groupId>net.ltgt.gradle.incap</groupId>
-                  <artifactId>incap-processor</artifactId>
-                  <version>0.3</version>
                 </path>
               </annotationProcessorPaths>
             </configuration>

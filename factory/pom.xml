@@ -85,12 +85,6 @@
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
-      <artifactId>incap</artifactId>
-      <version>0.3</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap-processor</artifactId>
       <version>0.3</version>
       <scope>provided</scope>
@@ -164,6 +158,11 @@
               <groupId>com.google.auto.value</groupId>
               <artifactId>auto-value</artifactId>
               <version>${auto-value.version}</version>
+            </path>
+            <path>
+              <groupId>net.ltgt.gradle.incap</groupId>
+              <artifactId>incap</artifactId>
+              <version>0.3</version>
             </path>
           </annotationProcessorPaths>
         </configuration>
