@@ -836,6 +836,11 @@ public final class MoreTypes {
     }
 
     @Override
+    public Boolean visitError(ErrorType errorType, Void p) {
+      return false;
+    }
+
+    @Override
     public Boolean visitPrimitive(PrimitiveType type, Void p) {
       switch (type.getKind()) {
         case BOOLEAN:

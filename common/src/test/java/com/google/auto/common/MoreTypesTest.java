@@ -18,6 +18,7 @@ package com.google.auto.common;
 import static com.google.common.truth.Truth.assertThat;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import com.google.common.base.Function;
@@ -469,6 +470,21 @@ public class MoreTypesTest {
           .that(MoreTypes.isConversionFromObjectUnchecked(type))
           .isFalse();
     }
+  }
+
+  @Test
+  public void testIsTypeOf() {
+    Types types = compilationRule.getTypes();
+    PrimitiveType intType = types.getPrimitiveType(TypeKind.INT);
+    TypeMirror integerType = types.boxedClass(intType).asType();
+    WildcardType wildcardType = types.getWildcardType(null, null);
+    expect.that(MoreTypes.isTypeOf(int.class, intType)).isTrue();
+    expect.that(MoreTypes.isTypeOf(Integer.class, integerType)).isTrue();
+    expect.that(MoreTypes.isTypeOf(Integer.class, intType)).isFalse();
+    expect.that(MoreTypes.isTypeOf(int.class, integerType)).isFalse();
+    expect.that(MoreTypes.isTypeOf(Integer.class, FAKE_ERROR_TYPE)).isFalse();
+    assertThrows(
+        IllegalArgumentException.class, () -> MoreTypes.isTypeOf(Integer.class, wildcardType));
   }
 
   // The type of every field here is such that casting to it provokes an "unchecked" warning.
