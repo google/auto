@@ -5,6 +5,12 @@ import static com.google.common.truth.Truth.assertThat;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.Rule;
@@ -85,12 +91,40 @@ public class GradleTest {
     assertThat(result3.getOutput()).doesNotContain("Full recompilation is required");
   }
 
-  private BuildResult buildFakeProject() {
-    return GradleRunner.create()
+  private BuildResult buildFakeProject() throws IOException {
+    GradleRunner runner = GradleRunner.create()
         .withProjectDir(fakeProject.getRoot())
-        .withArguments("--info", "build")
-        .withGradleVersion("7.0") // TODO(emcmanus): Use the already-installed Gradle on GitHub
-        .build();
+        .withArguments("--info", "build");
+    Optional<File> gradleLocation = getGradleInstallation();
+    if (gradleLocation.isPresent()) {
+      runner.withGradleInstallation(gradleLocation.get());
+    } else {
+      runner.withGradleVersion("7.0");
+    }
+    return runner.build();
+  }
+
+  private static Optional<File> getGradleInstallation() throws IOException {
+    File installation = new File("/usr/share/gradle");
+    if (!installation.isDirectory()) {
+      return Optional.empty();
+    }
+    Optional<Path> coreJar;
+    Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
+    try (Stream<Path> files = Files.walk(installation.toPath().resolve("lib"))) {
+      coreJar =
+          files.filter(p -> {
+            Matcher matcher = corePattern.matcher(p.getFileName().toString());
+            if (matcher.matches()) {
+              int version = Integer.parseInt(matcher.group(1));
+              if (version >= 7) {
+                return true;
+              }
+            }
+            return false;
+          }).findFirst();
+    }
+    return coreJar.map(p -> installation);
   }
 
   private static String expandSystemProperties(String s) {
