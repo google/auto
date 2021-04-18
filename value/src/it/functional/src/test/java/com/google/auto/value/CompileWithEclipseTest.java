@@ -75,7 +75,8 @@ public class CompileWithEclipseTest {
       f ->
           f.getName().equals("AutoValueJava8Test.java")
               || f.getName().equals("AutoOneOfJava8Test.java")
-              || f.getName().equals("EmptyExtension.java");
+              || f.getName().equals("EmptyExtension.java")
+              || f.getName().equals("GradleTest.java");
 
   @Test
   public void compileWithEclipseJava7() throws Exception {
