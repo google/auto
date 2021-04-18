@@ -106,7 +106,7 @@ public class GradleTest {
   }
 
   private static Optional<File> getGradleInstallation() throws IOException {
-    Process proc = new ProcessBuilder("/bin/sh", "-c", "type gradle").start();
+    Process proc = new ProcessBuilder("/bin/sh", "-c", "ls -l /usr/bin/gradle").start();
     try (InputStream in = proc.getInputStream()) {
       int c;
       while ((c = in.read()) >= 0) {
