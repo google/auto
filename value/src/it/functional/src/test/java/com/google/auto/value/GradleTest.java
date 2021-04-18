@@ -107,6 +107,7 @@ public class GradleTest {
   private static Optional<File> getGradleInstallation() throws IOException {
     File installation = new File("/usr/share/gradle");
     if (!installation.isDirectory()) {
+      System.err.println("/usr/share/gradle does not exist");
       return Optional.empty();
     }
     Optional<Path> coreJar;
@@ -117,6 +118,7 @@ public class GradleTest {
             Matcher matcher = corePattern.matcher(p.getFileName().toString());
             if (matcher.matches()) {
               int version = Integer.parseInt(matcher.group(1));
+              System.err.println("Found version " + version + " in " + p);
               if (version >= 7) {
                 return true;
               }
