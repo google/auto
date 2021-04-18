@@ -110,8 +110,13 @@ public class GradleTest {
   private static Optional<File> getGradleInstallation() {
     String gradleHome = System.getenv("GRADLE_HOME");
     if (gradleHome != null) {
-      System.err.println("Found GRADLE_HOME: " + gradleHome);
-      return Optional.of(new File(gradleHome));
+      File gradleHomeFile = new File(gradleHome);
+      if (gradleHomeFile.isDirectory()) {
+        System.err.println("Found GRADLE_HOME: " + gradleHome);
+        return Optional.of(new File(gradleHome));
+      } else {
+        System.err.println("GRADLE_HOME is set to " + gradleHome + " which does not exist");
+      }
     }
     Path installationPath;
     try {
