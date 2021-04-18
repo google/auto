@@ -4,6 +4,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -105,6 +106,19 @@ public class GradleTest {
   }
 
   private static Optional<File> getGradleInstallation() throws IOException {
+    Process proc = new ProcessBuilder("/bin/sh", "-c", "type gradle").start();
+    try (InputStream in = proc.getInputStream()) {
+      int c;
+      while ((c = in.read()) >= 0) {
+        System.err.print((char) c);
+      }
+    }
+    System.err.println();
+    try {
+      proc.waitFor();
+    } catch (InterruptedException e) {
+      throw new AssertionError(e);
+    }
     File installation = new File("/usr/share/gradle");
     if (!installation.isDirectory()) {
       System.err.println("/usr/share/gradle does not exist");
