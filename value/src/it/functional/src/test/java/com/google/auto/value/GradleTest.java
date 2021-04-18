@@ -108,6 +108,11 @@ public class GradleTest {
   }
 
   private static Optional<File> getGradleInstallation() {
+    String gradleHome = System.getenv("GRADLE_HOME");
+    if (gradleHome != null) {
+      System.err.println("Found GRADLE_HOME: " + gradleHome);
+      return Optional.of(new File(gradleHome));
+    }
     Path installationPath;
     try {
       Path gradleExecutable = Paths.get("/usr/bin/gradle");
