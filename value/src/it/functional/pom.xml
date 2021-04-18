@@ -200,6 +200,9 @@
         <version>2.22.2</version>
         <configuration>
           <argLine>${test.jvm.flags}</argLine>
+          <systemPropertyVariables>
+            <autoValueVersion>${project.version}</autoValueVersion>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>
