@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,6 +54,8 @@ public class GradleTest {
           "  }",
           "}");
 
+  private static final Optional<File> GRADLE_INSTALLATION = getGradleInstallation();
+
   @Test
   public void basic() throws IOException {
     String autoValueVersion = System.getProperty("autoValueVersion");
@@ -96,37 +99,38 @@ public class GradleTest {
     GradleRunner runner = GradleRunner.create()
         .withProjectDir(fakeProject.getRoot())
         .withArguments("--info", "build");
-    Optional<File> gradleLocation = getGradleInstallation();
-    if (gradleLocation.isPresent()) {
-      runner.withGradleInstallation(gradleLocation.get());
+    if (GRADLE_INSTALLATION.isPresent()) {
+      runner.withGradleInstallation(GRADLE_INSTALLATION.get());
     } else {
       runner.withGradleVersion("7.0");
     }
     return runner.build();
   }
 
-  private static Optional<File> getGradleInstallation() throws IOException {
-    Process proc = new ProcessBuilder("/bin/sh", "-c", "ls -l /usr/bin/gradle").start();
-    try (InputStream in = proc.getInputStream()) {
-      int c;
-      while ((c = in.read()) >= 0) {
-        System.err.print((char) c);
-      }
-    }
-    System.err.println();
+  private static Optional<File> getGradleInstallation() {
+    Path installationPath;
     try {
-      proc.waitFor();
-    } catch (InterruptedException e) {
-      throw new AssertionError(e);
-    }
-    File installation = new File("/usr/share/gradle");
-    if (!installation.isDirectory()) {
-      System.err.println("/usr/share/gradle does not exist");
+      Path gradleExecutable = Paths.get("/usr/bin/gradle");
+      Path gradleLink = Files.readSymbolicLink(gradleExecutable);
+      if (!gradleLink.isAbsolute()) {
+        gradleLink = gradleExecutable.getParent().resolve(gradleLink);
+      }
+      if (!gradleLink.toString().endsWith("/bin/gradle")) {
+        System.err.println("Does not end with .../bin/gradle: " + gradleLink);
+        return Optional.empty();
+      }
+      installationPath = gradleLink.getParent().getParent();
+      if (!Files.isDirectory(installationPath)) {
+        System.err.println("Is not a directory: " + installationPath);
+        return Optional.empty();
+      }
+    } catch (IOException e) {
+      System.err.println(e);
       return Optional.empty();
     }
     Optional<Path> coreJar;
     Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
-    try (Stream<Path> files = Files.walk(installation.toPath().resolve("lib"))) {
+    try (Stream<Path> files = Files.walk(installationPath.resolve("lib"))) {
       coreJar =
           files.filter(p -> {
             Matcher matcher = corePattern.matcher(p.getFileName().toString());
@@ -139,8 +143,10 @@ public class GradleTest {
             }
             return false;
           }).findFirst();
+    } catch (IOException e) {
+      return Optional.empty();
     }
-    return coreJar.map(p -> installation);
+    return coreJar.map(unused -> installationPath.toFile());
   }
 
   private static String expandSystemProperties(String s) {
