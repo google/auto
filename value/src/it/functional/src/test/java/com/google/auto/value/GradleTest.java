@@ -112,10 +112,7 @@ public class GradleTest {
     if (gradleHome != null) {
       File gradleHomeFile = new File(gradleHome);
       if (gradleHomeFile.isDirectory()) {
-        System.err.println("Found GRADLE_HOME: " + gradleHome);
         return Optional.of(new File(gradleHome));
-      } else {
-        System.err.println("GRADLE_HOME is set to " + gradleHome + " which does not exist");
       }
     }
     Path installationPath;
@@ -126,16 +123,13 @@ public class GradleTest {
         gradleLink = gradleExecutable.getParent().resolve(gradleLink);
       }
       if (!gradleLink.toString().endsWith("/bin/gradle")) {
-        System.err.println("Does not end with .../bin/gradle: " + gradleLink);
         return Optional.empty();
       }
       installationPath = gradleLink.getParent().getParent();
       if (!Files.isDirectory(installationPath)) {
-        System.err.println("Is not a directory: " + installationPath);
         return Optional.empty();
       }
     } catch (IOException e) {
-      System.err.println(e);
       return Optional.empty();
     }
     Optional<Path> coreJar;
@@ -146,7 +140,6 @@ public class GradleTest {
             Matcher matcher = corePattern.matcher(p.getFileName().toString());
             if (matcher.matches()) {
               int version = Integer.parseInt(matcher.group(1));
-              System.err.println("Found version " + version + " in " + p);
               if (version >= 7) {
                 return true;
               }
