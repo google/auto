@@ -2,6 +2,8 @@
 
 [![Build Status](https://github.com/google/auto/actions/workflows/ci.yml/badge.svg)](https://github.com/google/auto/actions/workflows/ci.yml)
 
+[![Maintainability](https://cloud.quality-gate.com/dashboard/api/badge?projectName=google_auto&branchName=master)](https://cloud.quality-gate.com/dashboard/branches/68366#overview)
+
 A collection of source code generators for [Java][java].
 
 ## Auto‽
