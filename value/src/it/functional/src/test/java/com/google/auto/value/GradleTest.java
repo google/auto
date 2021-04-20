@@ -4,7 +4,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +14,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
+import org.gradle.util.GradleVersion;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -36,7 +36,6 @@ public class GradleTest {
           "dependencies {",
           "  compileOnlyApi      'com.google.auto.value:auto-value-annotations:${autoValueVersion}'",
           "  annotationProcessor 'com.google.auto.value:auto-value:${autoValueVersion}'",
-          "  testImplementation  'junit:junit:${junitVersion}'",
           "}");
 
   private static final String FOO_TEXT =
@@ -98,11 +97,11 @@ public class GradleTest {
   private BuildResult buildFakeProject() throws IOException {
     GradleRunner runner = GradleRunner.create()
         .withProjectDir(fakeProject.getRoot())
-        .withArguments("--info", "build");
+        .withArguments("--info", "compileJava");
     if (GRADLE_INSTALLATION.isPresent()) {
       runner.withGradleInstallation(GRADLE_INSTALLATION.get());
     } else {
-      runner.withGradleVersion("7.0");
+      runner.withGradleVersion(GradleVersion.current().getVersion());
     }
     return runner.build();
   }
@@ -140,7 +139,7 @@ public class GradleTest {
             Matcher matcher = corePattern.matcher(p.getFileName().toString());
             if (matcher.matches()) {
               int version = Integer.parseInt(matcher.group(1));
-              if (version >= 7) {
+              if (version >= 5) {
                 return true;
               }
             }
