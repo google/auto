@@ -33,6 +33,7 @@ How do I...
         collection-valued property?](#collection_both)
 *   ... [access nested builders while building?](#nested_builders)
 *   ... [create a "step builder"?](#step)
+*   ... [create a builder for something other than an `@AutoValue`?](#autobuilder)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
@@ -626,5 +627,12 @@ idea in principle but not necessarily in practice. Regardless, if you want to
 use AutoValue to implement a step builder,
 [this example](https://github.com/google/auto/issues/1000#issuecomment-792875738)
 shows you how.
+
+## <a name="autobuilder"></a> ... create a builder for something other than an `@AutoValue`?
+
+Sometimes you want to make a builder like the kind described here, but have it
+build something other than an `@AutoValue` class, or even call a static method.
+In that case you can use `@AutoBuilder`. See
+[its documentation](autobuilder.md).
 
 [protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders

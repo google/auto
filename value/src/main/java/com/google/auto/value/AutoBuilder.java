@@ -28,8 +28,8 @@ import java.lang.annotation.Target;
  *
  * <pre>
  *
- *   {@code @}AutoBuilder
- *   abstract class PersonBuilder(ofClass = Person.class) {
+ *   {@code @}AutoBuilder(ofClass = Person.class)
+ *   abstract class PersonBuilder {
  *     static PersonBuilder builder() {
  *       return new AutoBuilder_PersonBuilder();
  *     }
@@ -39,7 +39,9 @@ import java.lang.annotation.Target;
  *     abstract Person build();
  *   }</pre>
  *
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * @see <a
+ * href="https://github.com/google/auto/blob/master/value/userguide/autobuilder.md">AutoBuilder
+ * User's Guide</a>
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)

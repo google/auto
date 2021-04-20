@@ -102,3 +102,5 @@ exposing yourself to initialization-order problems.
 *   ... [access nested builders while
     building?](builders-howto.md#nested_builders)
 *   ... [create a "step builder"?](builders-howto.md#step)
+*   ... [create a builder for something other than an
+    `@AutoValue`?](builders-howto.md#autobuilder)
