@@ -143,27 +143,25 @@ public class GradleTest {
       if (!Files.isDirectory(installationPath)) {
         return Optional.empty();
       }
-    } catch (IOException e) {
-      return Optional.empty();
-    }
-    Optional<Path> coreJar;
-    Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
-    try (Stream<Path> files = Files.walk(installationPath.resolve("lib"))) {
-      coreJar =
-          files.filter(p -> {
-            Matcher matcher = corePattern.matcher(p.getFileName().toString());
-            if (matcher.matches()) {
-              int version = Integer.parseInt(matcher.group(1));
-              if (version >= 5) {
-                return true;
+      Optional<Path> coreJar;
+      Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
+      try (Stream<Path> files = Files.walk(installationPath.resolve("lib"))) {
+        coreJar =
+            files.filter(p -> {
+              Matcher matcher = corePattern.matcher(p.getFileName().toString());
+              if (matcher.matches()) {
+                int version = Integer.parseInt(matcher.group(1));
+                if (version >= 5) {
+                  return true;
+                }
               }
-            }
-            return false;
-          }).findFirst();
+              return false;
+            }).findFirst();
+      }
+      return coreJar.map(unused -> installationPath.toFile());
     } catch (IOException e) {
       return Optional.empty();
     }
-    return coreJar.map(unused -> installationPath.toFile());
   }
 
   private static String expandSystemProperties(String s) {
