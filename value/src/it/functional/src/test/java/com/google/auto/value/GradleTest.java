@@ -1,7 +1,24 @@
+/*
+ * Copyright 2021 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -64,22 +81,22 @@ public class GradleTest {
 
     // Set up the fake Gradle project.
     String buildGradleText = expandSystemProperties(BUILD_GRADLE_TEXT);
-    writeFile(fakeProject.newFile("build.gradle"), buildGradleText);
-    File srcDir = fakeProject.newFolder("src", "main", "java", "com", "example");
-    writeFile(new File(srcDir, "Foo.java"), FOO_TEXT);
+    writeFile(fakeProject.newFile("build.gradle").toPath(), buildGradleText);
+    Path srcDir = fakeProject.newFolder("src", "main", "java", "com", "example").toPath();
+    writeFile(srcDir.resolve("Foo.java"), FOO_TEXT);
 
     // Build it the first time.
     BuildResult result1 = buildFakeProject();
     assertThat(result1.getOutput()).contains(
         "Full recompilation is required because no incremental change information is available");
-    File output = new File(
-        fakeProject.getRoot(), "build/classes/java/main/com/example/AutoValue_Foo.class");
-    assertThat(output.exists()).isTrue();
+    Path output = fakeProject.getRoot().toPath()
+        .resolve("build/classes/java/main/com/example/AutoValue_Foo.class");
+    assertThat(Files.exists(output)).isTrue();
 
     // Add a source file to the project.
     String barText = FOO_TEXT.replace("Foo", "Bar");
-    File barFile = new File(srcDir, "Bar.java");
-    writeFile(new File(srcDir, "Bar.java"), barText);
+    Path barFile = srcDir.resolve("Bar.java");
+    writeFile(barFile, barText);
 
     // Build it a second time.
     BuildResult result2 = buildFakeProject();
@@ -89,7 +106,7 @@ public class GradleTest {
     // is not working, this will produce a message like this:
     //   Full recompilation is required because com.google.auto.value.processor.AutoValueProcessor
     //   is not incremental
-    assertThat(barFile.delete()).isTrue();
+    Files.delete(barFile);
     BuildResult result3 = buildFakeProject();
     assertThat(result3.getOutput()).doesNotContain("Full recompilation is required");
   }
@@ -117,11 +134,9 @@ public class GradleTest {
     Path installationPath;
     try {
       Path gradleExecutable = Paths.get("/usr/bin/gradle");
-      Path gradleLink = Files.readSymbolicLink(gradleExecutable);
-      if (!gradleLink.isAbsolute()) {
-        gradleLink = gradleExecutable.getParent().resolve(gradleLink);
-      }
-      if (!gradleLink.toString().endsWith("/bin/gradle")) {
+      Path gradleLink =
+          Files.readSymbolicLink(gradleExecutable).resolveSibling(gradleExecutable).normalize();
+      if (!gradleLink.endsWith("/bin/gradle")) {
         return Optional.empty();
       }
       installationPath = gradleLink.getParent().getParent();
@@ -159,12 +174,7 @@ public class GradleTest {
     return s;
   }
 
-  private static void writeFile(File file, String text) throws IOException {
-    try (PrintWriter writer = new PrintWriter(file, "UTF-8")) {
-      writer.print(text);
-      if (!text.endsWith("\n")) {
-        writer.println();
-      }
-    }
+  private static void writeFile(Path file, String text) throws IOException {
+    Files.write(file, ImmutableList.of(text), UTF_8);
   }
 }
