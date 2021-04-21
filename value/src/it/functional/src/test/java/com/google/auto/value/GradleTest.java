@@ -137,22 +137,17 @@ public class GradleTest {
       Path gradleLink =
           gradleExecutable.resolveSibling(Files.readSymbolicLink(gradleExecutable));
       if (!gradleLink.endsWith("bin/gradle")) {
-        System.err.printf("Gradle executable does not end with /bin/gradle: %s\n", gradleLink);
         return Optional.empty();
       }
       installationPath = gradleLink.getParent().getParent();
-      System.err.printf("gradleLink %s installationPath %s\n", gradleLink, installationPath);
       if (!Files.isDirectory(installationPath)) {
-        System.err.printf("Installation path does not exist: %s\n", installationPath);
         return Optional.empty();
       }
     } catch (IOException e) {
-      System.err.println(e);
       return Optional.empty();
     }
     Optional<Path> coreJar;
     Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
-    System.err.printf("Looking for libraries in %s\n", installationPath.resolve("lib"));
     try (Stream<Path> files = Files.walk(installationPath.resolve("lib"))) {
       coreJar =
           files.filter(p -> {
@@ -161,19 +156,11 @@ public class GradleTest {
               int version = Integer.parseInt(matcher.group(1));
               if (version >= 5) {
                 return true;
-              } else {
-                System.err.println("Version is " + version);
               }
-            } else {
-              System.err.printf("%s does not match\n", p.getFileName());
             }
             return false;
           }).findFirst();
-      if (!coreJar.isPresent()) {
-        System.err.println("Did not find gradle-core-*.jar");
-      }
     } catch (IOException e) {
-      System.err.println(e);
       return Optional.empty();
     }
     return coreJar.map(unused -> installationPath.toFile());
