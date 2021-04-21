@@ -165,7 +165,7 @@ public class GradleTest {
             }
             return false;
           }).findFirst();
-      if (coreJar.isEmpty()) {
+      if (!coreJar.isPresent()) {
         System.err.println("Did not find gradle-core-*.jar");
       }
     } catch (IOException e) {
