@@ -131,7 +131,6 @@ public class GradleTest {
         return Optional.of(new File(gradleHome));
       }
     }
-    Path installationPath;
     try {
       Path gradleExecutable = Paths.get("/usr/bin/gradle");
       Path gradleLink =
@@ -139,7 +138,7 @@ public class GradleTest {
       if (!gradleLink.endsWith("bin/gradle")) {
         return Optional.empty();
       }
-      installationPath = gradleLink.getParent().getParent();
+      Path installationPath = gradleLink.getParent().getParent();
       if (!Files.isDirectory(installationPath)) {
         return Optional.empty();
       }
