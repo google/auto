@@ -135,12 +135,13 @@ public class GradleTest {
     try {
       Path gradleExecutable = Paths.get("/usr/bin/gradle");
       Path gradleLink =
-          Files.readSymbolicLink(gradleExecutable).resolveSibling(gradleExecutable).normalize();
+          gradleExecutable.resolveSibling(Files.readSymbolicLink(gradleExecutable));
       if (!gradleLink.endsWith("bin/gradle")) {
         System.err.printf("Gradle executable does not end with /bin/gradle: %s\n", gradleLink);
         return Optional.empty();
       }
       installationPath = gradleLink.getParent().getParent();
+      System.err.printf("gradleLink %s installationPath %s\n", gradleLink, installationPath);
       if (!Files.isDirectory(installationPath)) {
         System.err.printf("Installation path does not exist: %s\n", installationPath);
         return Optional.empty();
