@@ -137,13 +137,16 @@ public class GradleTest {
       Path gradleLink =
           Files.readSymbolicLink(gradleExecutable).resolveSibling(gradleExecutable).normalize();
       if (!gradleLink.endsWith("/bin/gradle")) {
+        System.err.printf("Gradle executable does not end with /bin/gradle: %s\n", gradleLink);
         return Optional.empty();
       }
       installationPath = gradleLink.getParent().getParent();
       if (!Files.isDirectory(installationPath)) {
+        System.err.printf("Installation path does not exist: %s\n", installationPath);
         return Optional.empty();
       }
     } catch (IOException e) {
+      System.err.println(e);
       return Optional.empty();
     }
     Optional<Path> coreJar;
@@ -156,11 +159,17 @@ public class GradleTest {
               int version = Integer.parseInt(matcher.group(1));
               if (version >= 5) {
                 return true;
+              } else {
+                System.err.println("Version is " + version);
               }
             }
             return false;
           }).findFirst();
+      if (coreJar.isEmpty()) {
+        System.err.println("Did not find gradle-core-*.jar");
+      }
     } catch (IOException e) {
+      System.err.println(e);
       return Optional.empty();
     }
     return coreJar.map(unused -> installationPath.toFile());
