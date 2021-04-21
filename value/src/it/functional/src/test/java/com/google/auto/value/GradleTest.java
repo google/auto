@@ -136,7 +136,7 @@ public class GradleTest {
       Path gradleExecutable = Paths.get("/usr/bin/gradle");
       Path gradleLink =
           Files.readSymbolicLink(gradleExecutable).resolveSibling(gradleExecutable).normalize();
-      if (!gradleLink.endsWith("/bin/gradle")) {
+      if (!gradleLink.endsWith("bin/gradle")) {
         System.err.printf("Gradle executable does not end with /bin/gradle: %s\n", gradleLink);
         return Optional.empty();
       }
