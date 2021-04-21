@@ -66,7 +66,8 @@ public class CompileWithEclipseTest {
   public @Rule TemporaryFolder tmp = new TemporaryFolder();
 
   private static final ImmutableSet<String> IGNORED_TEST_FILES =
-      ImmutableSet.of("AutoValueNotEclipseTest.java", "CompileWithEclipseTest.java");
+      ImmutableSet.of(
+          "AutoValueNotEclipseTest.java", "CompileWithEclipseTest.java", "GradleTest.java");
 
   private static final Predicate<File> JAVA_FILE =
       f -> f.getName().endsWith(".java") && !IGNORED_TEST_FILES.contains(f.getName());
