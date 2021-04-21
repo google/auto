@@ -151,6 +151,7 @@ public class GradleTest {
     }
     Optional<Path> coreJar;
     Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
+    System.err.printf("Looking for libraries in %s\n", installationPath.resolve("lib"));
     try (Stream<Path> files = Files.walk(installationPath.resolve("lib"))) {
       coreJar =
           files.filter(p -> {
@@ -162,6 +163,8 @@ public class GradleTest {
               } else {
                 System.err.println("Version is " + version);
               }
+            } else {
+              System.err.printf("%s does not match\n", p.getFileName());
             }
             return false;
           }).findFirst();
