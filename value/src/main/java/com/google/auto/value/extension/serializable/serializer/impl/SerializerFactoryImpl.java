@@ -19,7 +19,9 @@ import com.google.auto.value.extension.serializable.serializer.interfaces.Serial
 import com.google.auto.value.extension.serializable.serializer.interfaces.SerializerExtension;
 import com.google.auto.value.extension.serializable.serializer.interfaces.SerializerFactory;
 import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.CodeBlock;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 
@@ -28,6 +30,7 @@ public final class SerializerFactoryImpl implements SerializerFactory {
 
   private final ImmutableList<SerializerExtension> extensions;
   private final ProcessingEnvironment env;
+  private final AtomicInteger idCount = new AtomicInteger();
 
   public SerializerFactoryImpl(
       ImmutableList<SerializerExtension> extensions, ProcessingEnvironment env) {
@@ -44,5 +47,10 @@ public final class SerializerFactoryImpl implements SerializerFactory {
       }
     }
     return IdentitySerializerFactory.getSerializer(typeMirror);
+  }
+
+  @Override
+  public CodeBlock newIdentifier(String prefix) {
+    return CodeBlock.of("$L$$$L", prefix, idCount.incrementAndGet());
   }
 }

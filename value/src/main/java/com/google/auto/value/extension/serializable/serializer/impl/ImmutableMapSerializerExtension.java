@@ -60,7 +60,7 @@ public final class ImmutableMapSerializerExtension implements SerializerExtensio
 
     return Optional.of(
         new ImmutableMapSerializer(
-            keyType, valueType, keyTypeSerializer, valueTypeSerializer, processingEnv));
+            keyType, valueType, keyTypeSerializer, valueTypeSerializer, factory, processingEnv));
   }
 
   private static class ImmutableMapSerializer implements Serializer {
@@ -71,6 +71,7 @@ public final class ImmutableMapSerializerExtension implements SerializerExtensio
     private final TypeMirror valueProxyType;
     private final Serializer keyTypeSerializer;
     private final Serializer valueTypeSerializer;
+    private final SerializerFactory factory;
     private final ProcessingEnvironment processingEnv;
 
     ImmutableMapSerializer(
@@ -78,6 +79,7 @@ public final class ImmutableMapSerializerExtension implements SerializerExtensio
         TypeMirror valueType,
         Serializer keyTypeSerializer,
         Serializer valueTypeSerializer,
+        SerializerFactory factory,
         ProcessingEnvironment processingEnv) {
       this.keyType = keyType;
       this.valueType = valueType;
@@ -85,6 +87,7 @@ public final class ImmutableMapSerializerExtension implements SerializerExtensio
       this.valueProxyType = valueTypeSerializer.proxyFieldType();
       this.keyTypeSerializer = keyTypeSerializer;
       this.valueTypeSerializer = valueTypeSerializer;
+      this.factory = factory;
       this.processingEnv = processingEnv;
     }
 
@@ -117,13 +120,15 @@ public final class ImmutableMapSerializerExtension implements SerializerExtensio
           generateValueMapFunction(valueProxyType, valueType, valueTypeSerializer::fromProxy));
     }
 
-    private static CodeBlock generateKeyMapFunction(
+    private CodeBlock generateKeyMapFunction(
         TypeMirror originalType,
         TypeMirror transformedType,
         Function<CodeBlock, CodeBlock> proxyMap) {
-      CodeBlock element = CodeBlock.of("element$$");
+      CodeBlock element = factory.newIdentifier("element");
+      CodeBlock value = factory.newIdentifier("value");
       return CodeBlock.of(
-          "value$$ -> $T.<$T, $T>wrapper($L -> $L).apply(value$$.getKey())",
+          "$1L -> $2T.<$3T, $4T>wrapper($5L -> $6L).apply($1L.getKey())",
+          value,
           FunctionWithExceptions.class,
           originalType,
           transformedType,
@@ -131,13 +136,15 @@ public final class ImmutableMapSerializerExtension implements SerializerExtensio
           proxyMap.apply(element));
     }
 
-    private static CodeBlock generateValueMapFunction(
+    private CodeBlock generateValueMapFunction(
         TypeMirror originalType,
         TypeMirror transformedType,
         Function<CodeBlock, CodeBlock> proxyMap) {
-      CodeBlock element = CodeBlock.of("element$$");
+      CodeBlock element = factory.newIdentifier("element");
+      CodeBlock value = factory.newIdentifier("value");
       return CodeBlock.of(
-          "value$$ -> $T.<$T, $T>wrapper($L -> $L).apply(value$$.getValue())",
+          "$1L -> $2T.<$3T, $4T>wrapper($5L -> $6L).apply($1L.getValue())",
+          value,
           FunctionWithExceptions.class,
           originalType,
           transformedType,

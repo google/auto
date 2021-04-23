@@ -415,4 +415,39 @@ public final class SerializableAutoValueExtensionTest {
 
     assertThat(actualAutoValue).isEqualTo(autoValue);
   }
+
+  /**
+   * Type that may result in nested lambdas in the generated code. Including this allows us to
+   * verify that we handle those correctly, in particular not reusing a lambda parameter name in
+   * another lambda nested inside the first one.
+   */
+  @SerializableAutoValue
+  @AutoValue
+  abstract static class ComplexType implements Serializable {
+    abstract ImmutableMap<String, ImmutableMap<String, Optional<String>>> a();
+
+    static ComplexType.Builder builder() {
+      return new AutoValue_SerializableAutoValueExtensionTest_ComplexType
+          .Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract ComplexType.Builder setA(
+          ImmutableMap<String, ImmutableMap<String, Optional<String>>> a);
+
+      abstract ComplexType build();
+    }
+  }
+
+  @Test
+  public void complexType() {
+    ImmutableMap<String, ImmutableMap<String, Optional<String>>> map =
+        ImmutableMap.of("foo", ImmutableMap.of("bar", Optional.of("baz")));
+    ComplexType complexType = ComplexType.builder().setA(map).build();
+
+    ComplexType reserialized = SerializableTester.reserialize(complexType);
+
+    assertThat(reserialized).isEqualTo(complexType);
+  }
 }

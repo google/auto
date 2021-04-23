@@ -42,6 +42,15 @@ public final class FakeSerializerFactory implements SerializerFactory {
     return new FakeIdentitySerializer(type, isIdentity);
   }
 
+  // This doesn't follow the contract, and always returns the same string for a given prefix.
+  // That means it will be wrong if two identifiers with the same prefix are in the same scope in
+  // the generated code, but for our purposes in this fake it is OK, and means we don't have to
+  // hardwire knowledge of the uniqueness algorithm into golden text in tests.
+  @Override
+  public CodeBlock newIdentifier(String prefix) {
+    return CodeBlock.of("$L$$", prefix);
+  }
+
   private static class FakeIdentitySerializer implements Serializer {
 
     private final TypeMirror typeMirror;
