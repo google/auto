@@ -1767,7 +1767,8 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Item")
+        .hadErrorContaining(
+            "Method setTitle does not correspond to a property method of foo.bar.Item")
         .inFile(javaFileObject)
         .onLineContaining("Builder setTitle(String title)");
     assertThat(compilation)
@@ -1801,7 +1802,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Baz")
+        .hadErrorContaining("Method blim does not correspond to a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("Builder blim(int x)");
   }
@@ -2514,7 +2515,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Baz")
+        .hadErrorContaining("Method whut does not correspond to a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("void whut(String x)");
   }

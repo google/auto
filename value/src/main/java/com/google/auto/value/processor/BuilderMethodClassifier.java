@@ -374,8 +374,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
       // propertyNameToSetters can't be null when we call put on it below.
       errorReporter.reportError(
           method,
-          "[%sBuilderWhatProp] Method does not correspond to %s",
+          "[%sBuilderWhatProp] Method %s does not correspond to %s",
           autoWhat(),
+          methodName,
           getterMustMatch());
       checkForFailedJavaBean(method);
       return;
