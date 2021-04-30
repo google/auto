@@ -155,6 +155,49 @@ public final class AutoBuilderCompilationTest {
   }
 
   @Test
+  public void buildOtherPackage() {
+    JavaFileObject built =
+        JavaFileObjects.forSourceLines(
+            "com.example.Built",
+            "package com.example;",
+            "",
+            "public class Built {",
+            "  private final int anInt;",
+            "  private final String aString;",
+            "",
+            "  public Built(int anInt, String aString) {",
+            "    this.anInt = anInt;",
+            "    this.aString = aString;",
+            "  }",
+            "}");
+    JavaFileObject builder =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Builder",
+            "package foo.bar;",
+            "",
+            "import com.example.Built;",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "@AutoBuilder(ofClass = Built.class)",
+            "public interface Builder {",
+            "  public static Builder builder() {",
+            "    return new AutoBuilder_Builder();",
+            "  }",
+            "",
+            "  Builder setAnInt(int x);",
+            "  Builder setAString(String x);",
+            "  Built build();",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(built, builder);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation).generatedSourceFile("foo.bar.AutoBuilder_Builder");
+  }
+
+  @Test
   public void autoBuilderOnEnum() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(

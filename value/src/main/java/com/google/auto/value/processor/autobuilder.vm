@@ -14,7 +14,7 @@
 
 ## Template for each generated AutoValue_Foo class.
 ## This template uses the Apache Velocity Template Language (VTL).
-## The variables ($pkg, $props, and so on) are defined by the fields of AutoValueTemplateVars.
+## The variables ($pkg, $props, and so on) are defined by the fields of AutoBuilderTemplateVars.
 ##
 ## Comments, like this one, begin with ##. The comment text extends up to and including the newline
 ## character at the end of the line. So comments also serve to join a line to the next one.
