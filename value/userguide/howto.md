@@ -708,10 +708,10 @@ Song {
     We're far from the shallow now.,
   artists = [
     Artist {
-      name = "Lady Gaga",
+      name = Lady Gaga,
     },
     Artist {
-      name = "Bradley Cooper",
+      name = Bradley Cooper,
     }
   ],
 }
