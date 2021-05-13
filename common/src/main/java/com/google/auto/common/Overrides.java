@@ -15,6 +15,8 @@
  */
 package com.google.auto.common;
 
+import static java.util.stream.Collectors.toList;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
@@ -114,12 +116,11 @@ abstract class Overrides {
         // can't be overridden.
         return false;
       }
-      TypeElement overriddenType;
       if (!(overridden.getEnclosingElement() instanceof TypeElement)) {
         return false;
         // We don't know how this could happen but we avoid blowing up if it does.
       }
-      overriddenType = MoreElements.asType(overridden.getEnclosingElement());
+      TypeElement overriddenType = MoreElements.asType(overridden.getEnclosingElement());
       // We erase the types before checking subtypes, because the TypeMirror we get for List<E> is
       // not a subtype of the one we get for Collection<E> since the two E instances are not the
       // same. For the purposes of overriding, type parameters in the containing type should not
@@ -261,6 +262,10 @@ abstract class Overrides {
           TypeElement element = MoreElements.asType(declared.asElement());
           List<? extends TypeMirror> actuals = declared.getTypeArguments();
           List<? extends TypeParameterElement> formals = element.getTypeParameters();
+          if (actuals.isEmpty()) {
+            // Either the formal type arguments are also empty or `declared` is raw.
+            actuals = formals.stream().map(t -> t.getBounds().get(0)).collect(toList());
+          }
           Verify.verify(actuals.size() == formals.size());
           for (int i = 0; i < actuals.size(); i++) {
             typeBindings.put(formals.get(i), actuals.get(i));

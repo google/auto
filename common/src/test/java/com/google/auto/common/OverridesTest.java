@@ -221,16 +221,23 @@ public class OverridesTest {
   }
 
   static class TypesForGenerics {
-    interface XCollection<E> {
+    interface GCollection<E> {
       boolean add(E x);
     }
 
-    interface XList<E> extends XCollection<E> {
-      @Override public boolean add(E x);
+    interface GList<E> extends GCollection<E> {
+      @Override boolean add(E x);
     }
 
-    static class StringList implements XList<String> {
+    static class StringList implements GList<String> {
       @Override public boolean add(String x) {
+        return false;
+      }
+    }
+
+    @SuppressWarnings("rawtypes")
+    static class RawList implements GList {
+      @Override public boolean add(Object x) {
         return false;
       }
     }
