@@ -125,6 +125,48 @@ public final class AutoBuilderTest {
     assertThat(x.getBar()).isEqualTo("skidoo");
   }
 
+  enum Truthiness {FALSY, TRUTHY}
+
+  @interface MyAnnotation {
+    String value();
+    int DEFAULT_ID = -1;
+    int id() default DEFAULT_ID;
+    Truthiness DEFAULT_TRUTHINESS = Truthiness.FALSY;
+    Truthiness truthiness() default Truthiness.FALSY;
+  }
+
+  // This method has a parameter for `truthiness`, even though that has a default, but it has no
+  // parameter for `id`, which also has a default.
+  @AutoAnnotation
+  static MyAnnotation myAnnotation(String value, Truthiness truthiness) {
+    return new AutoAnnotation_AutoBuilderTest_myAnnotation(value, truthiness);
+  }
+
+  @AutoBuilder(callMethod = "myAnnotation")
+  interface MyAnnotationBuilder {
+    MyAnnotationBuilder value(String x);
+    MyAnnotationBuilder truthiness(Truthiness x);
+    MyAnnotation build();
+  }
+
+  static MyAnnotationBuilder myAnnotationBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationBuilder()
+        .truthiness(MyAnnotation.DEFAULT_TRUTHINESS);
+  }
+
+  @Test
+  public void simpleAutoAnnotation() {
+    MyAnnotation annotation1 = myAnnotationBuilder().value("foo").build();
+    assertThat(annotation1.value()).isEqualTo("foo");
+    assertThat(annotation1.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation1.truthiness()).isEqualTo(MyAnnotation.DEFAULT_TRUTHINESS);
+    MyAnnotation annotation2 =
+        myAnnotationBuilder().value("bar").truthiness(Truthiness.TRUTHY).build();
+    assertThat(annotation2.value()).isEqualTo("bar");
+    assertThat(annotation2.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation2.truthiness()).isEqualTo(Truthiness.TRUTHY);
+  }
+
   static class Overload {
     final int anInt;
     final String aString;
