@@ -239,31 +239,41 @@ class ${builderName}${builderFormalTypes} ##
 #end
 
 #if (!$builderRequiredProperties.empty)
+    if (#foreach ($p in $builderRequiredProperties)##
+        this.$p == null##
+          #if ($foreach.hasNext)
+
+        || #end
+        #end) {
+
   #if ($identifiers)  ## build a friendly message showing all missing properties
+    #if ($builderRequiredProperties.size() == 1)
 
-    `java.lang.String` missing = "";
+    `java.lang.String` missing = " $builderRequiredProperties.iterator().next()";
 
-    #foreach ($p in $builderRequiredProperties)
+    #else
+
+    `java.lang.StringBuilder` missing = new `java.lang.StringBuilder`();
+
+      #foreach ($p in $builderRequiredProperties)
 
     if (this.$p == null) {
-      missing += " $p.name";
+      missing.append(" $p.name");
     }
 
+      #end
     #end
 
-    if (!missing.isEmpty()) {
-      throw new IllegalStateException("Missing required properties:" + missing);
-    }
+    throw new IllegalStateException("Missing required properties:" + missing);
 
   #else  ## just throw an exception if anything is missing
 
-    if (#foreach ($p in $builderRequiredProperties)##
-        this.$p == null##
-        #if ($foreach.hasNext) || #end
-        #end) {
-      throw new IllegalStateException();
-    }
+    throw new IllegalStateException();
+
   #end
+
+  }
+
 #end
 
     #if ($builtType != "void") return #end ${build}(
