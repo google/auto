@@ -311,7 +311,8 @@ property of type `Optional<String>`, say, then it will default to an empty
 `Optional` without needing to [specify](#default) a default explicitly. And,
 instead of or as well as the normal `setFoo(Optional<String>)` method, you can
 have `setFoo(String)`. Then `setFoo(s)` is equivalent to
-`setFoo(Optional.of(s))`.
+`setFoo(Optional.of(s))`. (If it is `setFoo(@Nullable String)`, then `setFoo(s)`
+is equivalent to `setFoo(Optional.ofNullable(s))`.)
 
 Here, `Optional` means either [`java.util.Optional`] from Java (Java 8 or
 later), or [`com.google.common.base.Optional`] from Guava. Java 8 also

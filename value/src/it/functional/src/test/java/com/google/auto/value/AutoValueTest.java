@@ -1672,6 +1672,13 @@ public class AutoValueTest {
             .build();
     assertThat(suppliedDirectly.optionalString()).hasValue("foo");
     assertThat(suppliedDirectly.optionalInteger()).hasValue(23);
+
+    try {
+      // The parameter is not marked @Nullable so this should fail.
+      OptionalPropertiesWithBuilder.builder().setOptionalString((String) null);
+      fail();
+    } catch (NullPointerException expected) {
+    }
   }
 
   @AutoValue
