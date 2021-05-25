@@ -172,6 +172,7 @@ public class ExtensionTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)

@@ -118,7 +118,10 @@ public class AutoValueCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
+            .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")
         .hasSourceEquivalentTo(expectedOutput);
@@ -216,7 +219,10 @@ public class AutoValueCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
+            .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")
         .hasSourceEquivalentTo(expectedOutput);
@@ -347,7 +353,8 @@ public class AutoValueCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
-            .withOptions("-Xlint:-processing", "-implicit:none")
+            .withOptions(
+                "-Xlint:-processing", "-implicit:none", "-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(annotFileObject, outerFileObject, nestyFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -1340,7 +1347,8 @@ public class AutoValueCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
-            .withOptions("-Xlint:-processing", "-implicit:none")
+            .withOptions(
+                "-Xlint:-processing", "-implicit:none", "-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(javaFileObject, nestedJavaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)

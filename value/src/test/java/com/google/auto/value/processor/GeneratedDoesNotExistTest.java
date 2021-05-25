@@ -48,6 +48,8 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @RunWith(Parameterized.class)
 public class GeneratedDoesNotExistTest {
+  private static final ImmutableList<String> STANDARD_OPTIONS =
+      ImmutableList.of("-A" + Nullables.NULLABLE_OPTION + "=");
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> data() {
@@ -57,12 +59,16 @@ public class GeneratedDoesNotExistTest {
       // TODO(b/72513371): use --release 8 once compile-testing supports that
       params.add(
           new Object[] {
-            ImmutableList.of(), "javax.annotation.processing.Generated",
+            STANDARD_OPTIONS, "javax.annotation.processing.Generated",
           });
     }
     params.add(
         new Object[] {
-          ImmutableList.of("-source", "8", "-target", "8"), "javax.annotation.Generated",
+          ImmutableList.<String>builder()
+              .addAll(STANDARD_OPTIONS)
+              .add("-source", "8", "-target", "8")
+              .build(),
+          "javax.annotation.Generated",
         });
     return params.build();
   }

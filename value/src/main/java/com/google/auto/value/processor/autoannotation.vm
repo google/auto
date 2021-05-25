@@ -213,7 +213,7 @@ final class $className implements $annotationName, `java.io.Serializable` {
 #end
 
   @`java.lang.Override`
-  public boolean equals(Object o) {
+  public boolean equals($equalsParameterType o) {
     if (o == this) {
       return true;
     }

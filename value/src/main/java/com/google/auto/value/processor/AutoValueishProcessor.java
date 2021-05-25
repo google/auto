@@ -109,11 +109,13 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   private String simpleAnnotationName;
 
   private ErrorReporter errorReporter;
+  private Nullables nullables;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
     errorReporter = new ErrorReporter(processingEnv);
+    nullables = new Nullables(processingEnv);
   }
 
   final ErrorReporter errorReporter() {
@@ -461,7 +463,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    Optional<AnnotationMirror> nullable = Nullables.nullableMentionedInMethods(methods);
+    Optional<AnnotationMirror> nullable = nullables.appropriateNullableGivenMethods(methods);
     vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullable);
     vars.serialVersionUID = getSerialVersionUID(type);
   }

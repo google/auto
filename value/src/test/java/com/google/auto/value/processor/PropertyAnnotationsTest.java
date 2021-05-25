@@ -274,6 +274,7 @@ public class PropertyAnnotationsTest {
 
     assertAbout(javaSource())
         .that(javaFileObject)
+        .withCompilerOptions("-A" + Nullables.NULLABLE_OPTION + "=")
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and()
@@ -514,6 +515,7 @@ public class PropertyAnnotationsTest {
 
     assertAbout(javaSource())
         .that(inputFile)
+        .withCompilerOptions("-A" + Nullables.NULLABLE_OPTION + "=")
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and()
@@ -552,6 +554,7 @@ public class PropertyAnnotationsTest {
 
     assertAbout(javaSource())
         .that(inputFile)
+        .withCompilerOptions("-A" + Nullables.NULLABLE_OPTION + "=")
         .processedWith(new AutoValueProcessor())
         .compilesWithoutError()
         .and()

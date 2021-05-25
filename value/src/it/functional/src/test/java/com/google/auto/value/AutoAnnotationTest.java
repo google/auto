@@ -16,10 +16,12 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.TruthJUnit.assume;
 
 import com.google.auto.value.annotations.Empty;
 import com.google.auto.value.annotations.GwtArrays;
 import com.google.auto.value.annotations.StringValues;
+import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -30,6 +32,7 @@ import java.io.ObjectStreamClass;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,6 +42,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -64,6 +68,33 @@ public class AutoAnnotationTest {
         .addEqualityGroup(expectedStringValues, actualStringValues)
         .addEqualityGroup(otherStringValues)
         .testEquals();
+  }
+
+  @Test
+  public void testEqualsParameterAnnotation() throws ReflectiveOperationException {
+    assume()
+        .that(Double.parseDouble(StandardSystemProperty.JAVA_SPECIFICATION_VERSION.value()))
+        .isAtLeast(8.0);
+    Class<? extends Annotation> jspecifyNullable;
+    try {
+      jspecifyNullable =
+          Class.forName("org.jspecify.nullness.Nullable").asSubclass(Annotation.class);
+    } catch (ClassNotFoundException e) {
+      throw new AssumptionViolatedException("No JSpecify @Nullable available", e);
+    }
+    @SuppressWarnings("GetClassOnAnnotation") // yes, I really want the implementation class
+    Class<? extends StringValues> autoAnnotationImpl = newStringValues(new String[0]).getClass();
+    Method equals = autoAnnotationImpl.getDeclaredMethod("equals", Object.class);
+    // The remaining faffing around with reflection is there because we have a Google-internal test
+    // that runs this code with -source 7 -target 7. We're really just doing this:
+    //   assertThat(equals.getAnnotatedParameterTypes()[0].isAnnotationPresent(jspecifyNullable))
+    //      .isTrue();
+    Method getAnnotatedParameterTypes = Method.class.getMethod("getAnnotatedParameterTypes");
+    Object[] annotatedParameterTypes = (Object[]) getAnnotatedParameterTypes.invoke(equals);
+    Method isAnnotationPresent =
+        annotatedParameterTypes[0].getClass().getMethod("isAnnotationPresent", Class.class);
+    assertThat(isAnnotationPresent.invoke(annotatedParameterTypes[0], jspecifyNullable))
+        .isEqualTo(true);
   }
 
   @Test

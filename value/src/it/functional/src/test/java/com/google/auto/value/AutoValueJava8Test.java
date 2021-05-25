@@ -55,6 +55,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
+import org.junit.AssumptionViolatedException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -549,6 +550,34 @@ public class AutoValueJava8Test {
 
       BuilderWithUnprefixedGetters<T> build();
     }
+  }
+
+  @AutoValue
+  abstract static class NoNullableRef {
+    abstract String foo();
+
+    static NoNullableRef of(String foo) {
+      return new AutoValue_AutoValueJava8Test_NoNullableRef(foo);
+    }
+  }
+
+  // Tests that we generate equals(@org.jspecify.nullness.Nullable x) if that annotation is
+  // available and there is no other @Nullable type annotation mentioned in the @AutoValue class.
+  // If there *are* other @Nullable type annotations, other test methods here will check that they
+  // are used instead.
+  @Test
+  public void testDefaultToJSpecifyNullable() throws ReflectiveOperationException {
+    Class<? extends Annotation> jspecifyNullable;
+    try {
+      jspecifyNullable =
+          Class.forName("org.jspecify.nullness.Nullable").asSubclass(Annotation.class);
+    } catch (ClassNotFoundException e) {
+      throw new AssumptionViolatedException("No JSpecify @Nullable available", e);
+    }
+    Class<? extends NoNullableRef> autoValueImpl = NoNullableRef.of("foo").getClass();
+    Method equals = autoValueImpl.getDeclaredMethod("equals", Object.class);
+    assertThat(equals.getAnnotatedParameterTypes()[0].isAnnotationPresent(jspecifyNullable))
+        .isTrue();
   }
 
   @Test

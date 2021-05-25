@@ -27,6 +27,7 @@ import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.Hashing;
@@ -46,6 +47,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -79,9 +81,28 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 public class AutoAnnotationProcessor extends AbstractProcessor {
   public AutoAnnotationProcessor() {}
 
+  private Elements elementUtils;
+  private Types typeUtils;
+  private Nullables nullables;
+  private TypeMirror javaLangObject;
+
   @Override
   public SourceVersion getSupportedSourceVersion() {
     return SourceVersion.latestSupported();
+  }
+
+  @Override
+  public ImmutableSet<String> getSupportedOptions() {
+    return ImmutableSet.of(Nullables.NULLABLE_OPTION);
+  }
+
+  @Override
+  public synchronized void init(ProcessingEnvironment processingEnv) {
+    super.init(processingEnv);
+    this.elementUtils = processingEnv.getElementUtils();
+    this.typeUtils = processingEnv.getTypeUtils();
+    this.nullables = new Nullables(processingEnv);
+    this.javaLangObject = elementUtils.getTypeElement("java.lang.Object").asType();
   }
 
   /**
@@ -104,13 +125,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     return new AbortProcessingException();
   }
 
-  private Elements elementUtils;
-  private Types typeUtils;
-
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    elementUtils = processingEnv.getElementUtils();
-    typeUtils = processingEnv.getTypeUtils();
     process(roundEnv);
     return false;
   }
@@ -163,6 +179,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     vars.generated = getGeneratedTypeName();
     vars.members = members;
     vars.params = parameters;
+    vars.equalsParameterType = equalsParameterType();
     vars.pkg = pkg;
     vars.wrapperTypesUsedInCollections = wrapperTypesUsedInCollections;
     vars.gwtCompatible = isGwtCompatible(annotationElement);
@@ -184,6 +201,18 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     return generatedAnnotation(elementUtils, processingEnv.getSourceVersion())
         .map(generatedAnnotation -> TypeEncoder.encode(generatedAnnotation.asType()))
         .orElse("");
+  }
+
+  private String equalsParameterType() {
+    // Unlike AutoValue, we don't currently try to guess a @Nullable based on the methods in your
+    // class. It's the default one or nothing.
+    ImmutableList<AnnotationMirror> equalsParameterAnnotations =
+        nullables
+            .appropriateNullableGivenMethods(ImmutableSet.of())
+            .map(ImmutableList::of)
+            .orElse(ImmutableList.of());
+    return TypeEncoder.encodeWithAnnotations(
+        javaLangObject, equalsParameterAnnotations, ImmutableSet.of());
   }
 
   /**

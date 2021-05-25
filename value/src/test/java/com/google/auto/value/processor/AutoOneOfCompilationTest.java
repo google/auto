@@ -237,7 +237,8 @@ public class AutoOneOfCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoOneOfProcessor())
-            .withOptions("-Xlint:-processing", "-implicit:none")
+            .withOptions(
+                "-Xlint:-processing", "-implicit:none", "-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -321,7 +322,8 @@ public class AutoOneOfCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoOneOfProcessor())
-            .withOptions("-Xlint:-processing", "-implicit:none")
+            .withOptions(
+                "-Xlint:-processing", "-implicit:none", "-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)

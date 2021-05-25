@@ -131,14 +131,17 @@ public class AutoValueProcessor extends AutoValueishProcessor {
   }
 
   @Override
-  public Set<String> getSupportedOptions() {
+  public ImmutableSet<String> getSupportedOptions() {
     ImmutableSet.Builder<String> builder = ImmutableSet.builder();
     AutoValueExtension.IncrementalExtensionType incrementalType =
         extensions.stream()
             .map(e -> e.incrementalType(processingEnv))
             .min(naturalOrder())
             .orElse(AutoValueExtension.IncrementalExtensionType.ISOLATING);
-    builder.add(OMIT_IDENTIFIERS_OPTION).addAll(optionsFor(incrementalType));
+    builder
+        .add(OMIT_IDENTIFIERS_OPTION)
+        .add(Nullables.NULLABLE_OPTION)
+        .addAll(optionsFor(incrementalType));
     for (AutoValueExtension extension : extensions) {
       builder.addAll(extension.getSupportedOptions());
     }

@@ -131,6 +131,7 @@ public class AutoAnnotationCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoAnnotationProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(annotationFactoryJavaFile, myAnnotationJavaFile, myEnumJavaFile);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -195,6 +196,7 @@ public class AutoAnnotationCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoAnnotationProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(annotationFactoryJavaFile, myAnnotationJavaFile);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -294,6 +296,7 @@ public class AutoAnnotationCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoAnnotationProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(annotationFactoryJavaFile, myAnnotationJavaFile, gwtCompatibleJavaFile);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -434,6 +437,7 @@ public class AutoAnnotationCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoAnnotationProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(annotationFactoryJavaFile, myEnumJavaFile, myAnnotationJavaFile);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)

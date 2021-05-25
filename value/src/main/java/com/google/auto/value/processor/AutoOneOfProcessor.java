@@ -69,6 +69,11 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
   }
 
   @Override
+  public ImmutableSet<String> getSupportedOptions() {
+    return ImmutableSet.of(Nullables.NULLABLE_OPTION);
+  }
+
+  @Override
   void processType(TypeElement autoOneOfType) {
     if (autoOneOfType.getKind() != ElementKind.CLASS) {
       errorReporter()

@@ -35,6 +35,12 @@ class AutoAnnotationTemplateVars extends TemplateVars {
    */
   Map<String, AutoAnnotationProcessor.Parameter> params;
 
+  /**
+   * A string representing the parameter type declaration of the equals(Object) method, including
+   * any annotations.
+   */
+  String equalsParameterType;
+
   /** The encoded form of the {@code Generated} class, or empty if it is not available. */
   String generated;
 
