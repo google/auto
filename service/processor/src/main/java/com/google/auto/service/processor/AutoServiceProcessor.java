@@ -186,12 +186,11 @@ public class AutoServiceProcessor extends AbstractProcessor {
         }
 
         Set<String> newServices = new HashSet<>(providers.get(providerInterface));
-        if (allServices.containsAll(newServices)) {
+        if (!allServices.addAll(newServices)) {
           log("No new service entries being added.");
           continue;
         }
 
-        allServices.addAll(newServices);
         log("New service file contents: " + allServices);
         FileObject fileObject = filer.createResource(StandardLocation.CLASS_OUTPUT, "",
             resourceFile);
