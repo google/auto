@@ -935,7 +935,25 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.
     if (hasAnnotationMirror(type, COPY_ANNOTATIONS_NAME)) {
       Set<String> excludedAnnotations =
-          union(getExcludedAnnotationClassNames(type), getAnnotationsMarkedWithInherited(type));
+          ImmutableSet.<String>builder()
+              .addAll(getExcludedAnnotationClassNames(type))
+              .addAll(getAnnotationsMarkedWithInherited(type))
+              //
+              // Kotlin classes have an intrinsic @Metadata annotation generated
+              // onto them by kotlinc. This annotation is specific to the annotated
+              // class and should not be implicitly copied. Doing so can mislead
+              // static analysis or metaprogramming tooling that reads the data
+              // contained in these annotations.
+              //
+              // It may be surprising to see AutoValue classes written in Kotlin
+              // when they could be written as Kotlin data classes, but this can
+              // come up in cases where consumers rely on AutoValue features or
+              // extensions that are not available in data classes.
+              //
+              // See: https://github.com/google/auto/issues/1087
+              //
+              .add(ClassNames.KOTLIN_METADATA_NAME)
+              .build();
 
       return copyAnnotations(type, type, excludedAnnotations);
     } else {

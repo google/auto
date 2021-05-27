@@ -3382,6 +3382,40 @@ public class AutoValueCompilationTest {
     }
   }
 
+  // This is a regression test for the problem described in
+  // https://github.com/google/auto/issues/1087.
+  @Test
+  public void kotlinMetadataAnnotationsAreImplicitlyExcludedFromCopying() {
+    JavaFileObject metadata =
+        JavaFileObjects.forSourceLines(
+            "kotlin.Metadata", "package kotlin;", "", "public @interface Metadata {", "}");
+    JavaFileObject test =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Test",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import kotlin.Metadata;",
+            "",
+            "@AutoValue.CopyAnnotations",
+            "@Metadata",
+            "@AutoValue",
+            "public abstract class Test {",
+            "  public abstract String string();",
+            "}");
+    AutoValueProcessor autoValueProcessor = new AutoValueProcessor();
+    Compilation compilation =
+        javac()
+            .withProcessors(autoValueProcessor)
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(test, metadata);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Test")
+        .contentsAsUtf8String()
+        .doesNotContain("kotlin.Metadata");
+  }
+
   private String sorted(String... imports) {
     return Arrays.stream(imports).sorted().collect(joining("\n"));
   }
