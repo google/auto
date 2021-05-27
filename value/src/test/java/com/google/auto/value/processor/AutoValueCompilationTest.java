@@ -3407,7 +3407,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Test")
         .contentsAsUtf8String()
-        .doesNotContain("@Metadata");
+        .doesNotContain("kotlin.Metadata");
   }
 
   private String sorted(String... imports) {
