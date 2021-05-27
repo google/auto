@@ -933,8 +933,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.
     if (hasAnnotationMirror(type, COPY_ANNOTATIONS_NAME)) {
       Set<String> excludedAnnotations = ImmutableSet.<String>builder()
-          .addAll(
-              union(getExcludedAnnotationClassNames(type), getAnnotationsMarkedWithInherited(type)))
+          .addAll(getExcludedAnnotationClassNames(type))
+          .addAll(getAnnotationsMarkedWithInherited(type))
           //
           // Kotlin classes have an intrinsic @Metadata annotation generated
           // onto them by kotlinc. This annotation is specific to the annotated
