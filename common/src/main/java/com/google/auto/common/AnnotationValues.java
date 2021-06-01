@@ -15,8 +15,8 @@
  */
 package com.google.auto.common;
 
+import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableList;

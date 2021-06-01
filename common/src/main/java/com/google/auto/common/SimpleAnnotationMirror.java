@@ -16,8 +16,8 @@
 
 package com.google.auto.common;
 
+import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
 import com.google.common.base.Joiner;
