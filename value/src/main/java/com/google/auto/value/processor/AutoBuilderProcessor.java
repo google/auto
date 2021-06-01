@@ -17,10 +17,10 @@ package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
+import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toMap;

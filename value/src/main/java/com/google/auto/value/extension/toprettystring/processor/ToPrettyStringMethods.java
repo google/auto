@@ -17,9 +17,9 @@
 package com.google.auto.value.extension.toprettystring.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.extension.toprettystring.processor.Annotations.toPrettyStringAnnotation;
-import static com.google.auto.value.extension.toprettystring.processor.ToPrettyStringCollectors.toImmutableList;
-import static com.google.auto.value.extension.toprettystring.processor.ToPrettyStringCollectors.toImmutableSet;
 import static com.google.common.collect.MoreCollectors.toOptional;
 
 import com.google.auto.value.extension.AutoValueExtension.Context;

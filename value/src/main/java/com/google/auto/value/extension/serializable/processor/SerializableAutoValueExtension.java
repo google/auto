@@ -15,9 +15,9 @@
  */
 package com.google.auto.value.extension.serializable.processor;
 
+import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.value.extension.serializable.processor.ClassNames.SERIALIZABLE_AUTO_VALUE_NAME;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.common.GeneratedAnnotationSpecs;

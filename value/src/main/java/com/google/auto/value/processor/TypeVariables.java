@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
