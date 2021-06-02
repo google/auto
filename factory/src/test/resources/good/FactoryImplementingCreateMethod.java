@@ -26,7 +26,7 @@ final class FactoryImplementingCreateMethod {
     Interface create();
 
     Interface create(int a);
-    
+
     Interface create(List<Integer> generic);
   }
 

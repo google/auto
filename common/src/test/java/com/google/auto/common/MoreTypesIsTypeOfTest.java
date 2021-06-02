@@ -43,13 +43,15 @@ public class MoreTypesIsTypeOfTest {
 
   private Elements elements;
 
-  @Before public void setUp() {
+  @Before
+  public void setUp() {
     this.elements = compilationRule.getElements();
   }
 
   private interface TestType {}
 
-  @Test public void isTypeOf_DeclaredType() {
+  @Test
+  public void isTypeOf_DeclaredType() {
     assertTrue(MoreTypes.isType(typeElementFor(TestType.class).asType()));
     assertWithMessage("mirror represents the TestType")
         .that(MoreTypes.isTypeOf(TestType.class, typeElementFor(TestType.class).asType()))
@@ -63,7 +65,8 @@ public class MoreTypesIsTypeOfTest {
     String[] array();
   }
 
-  @Test public void isTypeOf_ArrayType() {
+  @Test
+  public void isTypeOf_ArrayType() {
     assertTrue(MoreTypes.isType(typeElementFor(ArrayType.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(ArrayType.class));
     assertWithMessage("array mirror represents an array Class object")
@@ -75,7 +78,8 @@ public class MoreTypesIsTypeOfTest {
     boolean method();
   }
 
-  @Test public void isTypeOf_PrimitiveBoolean() {
+  @Test
+  public void isTypeOf_PrimitiveBoolean() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveBoolean.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveBoolean.class));
     assertWithMessage("mirror of a boolean").that(MoreTypes.isTypeOf(Boolean.TYPE, type)).isTrue();
@@ -85,7 +89,8 @@ public class MoreTypesIsTypeOfTest {
     byte method();
   }
 
-  @Test public void isTypeOf_PrimitiveByte() {
+  @Test
+  public void isTypeOf_PrimitiveByte() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveByte.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveByte.class));
     assertWithMessage("mirror of a byte").that(MoreTypes.isTypeOf(Byte.TYPE, type)).isTrue();
@@ -95,7 +100,8 @@ public class MoreTypesIsTypeOfTest {
     char method();
   }
 
-  @Test public void isTypeOf_PrimitiveChar() {
+  @Test
+  public void isTypeOf_PrimitiveChar() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveChar.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveChar.class));
     assertWithMessage("mirror of a char").that(MoreTypes.isTypeOf(Character.TYPE, type)).isTrue();
@@ -105,7 +111,8 @@ public class MoreTypesIsTypeOfTest {
     double method();
   }
 
-  @Test public void isTypeOf_PrimitiveDouble() {
+  @Test
+  public void isTypeOf_PrimitiveDouble() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveDouble.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveDouble.class));
     assertWithMessage("mirror of a double").that(MoreTypes.isTypeOf(Double.TYPE, type)).isTrue();
@@ -115,7 +122,8 @@ public class MoreTypesIsTypeOfTest {
     float method();
   }
 
-  @Test public void isTypeOf_PrimitiveFloat() {
+  @Test
+  public void isTypeOf_PrimitiveFloat() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveFloat.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveFloat.class));
     assertWithMessage("mirror of a float").that(MoreTypes.isTypeOf(Float.TYPE, type)).isTrue();
@@ -125,7 +133,8 @@ public class MoreTypesIsTypeOfTest {
     int method();
   }
 
-  @Test public void isTypeOf_PrimitiveInt() {
+  @Test
+  public void isTypeOf_PrimitiveInt() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveInt.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveInt.class));
     assertWithMessage("mirror of a int").that(MoreTypes.isTypeOf(Integer.TYPE, type)).isTrue();
@@ -135,7 +144,8 @@ public class MoreTypesIsTypeOfTest {
     long method();
   }
 
-  @Test public void isTypeOf_PrimitiveLong() {
+  @Test
+  public void isTypeOf_PrimitiveLong() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveLong.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveLong.class));
     assertWithMessage("mirror of a long").that(MoreTypes.isTypeOf(Long.TYPE, type)).isTrue();
@@ -145,7 +155,8 @@ public class MoreTypesIsTypeOfTest {
     short method();
   }
 
-  @Test public void isTypeOf_PrimitiveShort() {
+  @Test
+  public void isTypeOf_PrimitiveShort() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveShort.class).asType()));
     TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveShort.class));
     assertWithMessage("mirror of a short").that(MoreTypes.isTypeOf(Short.TYPE, type)).isTrue();
@@ -155,7 +166,8 @@ public class MoreTypesIsTypeOfTest {
     void method();
   }
 
-  @Test public void isTypeOf_void() {
+  @Test
+  public void isTypeOf_void() {
     assertTrue(MoreTypes.isType(typeElementFor(PrimitiveVoid.class).asType()));
     TypeMirror primitive = extractReturnTypeFromHolder(typeElementFor(PrimitiveVoid.class));
     assertWithMessage("mirror of a void").that(MoreTypes.isTypeOf(Void.TYPE, primitive)).isTrue();
@@ -165,21 +177,25 @@ public class MoreTypesIsTypeOfTest {
     Void method();
   }
 
-  @Test public void isTypeOf_Void() {
+  @Test
+  public void isTypeOf_Void() {
     assertTrue(MoreTypes.isType(typeElementFor(DeclaredVoid.class).asType()));
     TypeMirror declared = extractReturnTypeFromHolder(typeElementFor(DeclaredVoid.class));
     assertWithMessage("mirror of a void").that(MoreTypes.isTypeOf(Void.class, declared)).isTrue();
   }
 
-  @Test public void isTypeOf_fail() {
-    assertFalse(MoreTypes.isType(
-        getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType()));
+  @Test
+  public void isTypeOf_fail() {
+    assertFalse(
+        MoreTypes.isType(
+            getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType()));
     TypeMirror method =
         getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType();
     try {
       MoreTypes.isTypeOf(String.class, method);
       fail();
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   // Utility methods for this test.

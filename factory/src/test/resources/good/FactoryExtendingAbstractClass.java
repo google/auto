@@ -20,7 +20,7 @@ import tests.FactoryExtendingAbstractClass.AbstractFactory;
 
 @AutoFactory(extending = AbstractFactory.class)
 final class FactoryExtendingAbstractClass {
-  static abstract class AbstractFactory {
+  abstract static class AbstractFactory {
     abstract FactoryExtendingAbstractClass newInstance();
   }
 }

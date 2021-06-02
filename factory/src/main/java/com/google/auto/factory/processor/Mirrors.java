@@ -34,20 +34,23 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleElementVisitor6;
 
 final class Mirrors {
-  private Mirrors() { }
+  private Mirrors() {}
 
   static Name getQualifiedName(DeclaredType type) {
-    return type.asElement().accept(new SimpleElementVisitor6<Name, Void>() {
-      @Override
-      protected Name defaultAction(Element e, Void p) {
-        throw new AssertionError("DeclaredTypes should be TypeElements");
-      }
+    return type.asElement()
+        .accept(
+            new SimpleElementVisitor6<Name, Void>() {
+              @Override
+              protected Name defaultAction(Element e, Void p) {
+                throw new AssertionError("DeclaredTypes should be TypeElements");
+              }
 
-      @Override
-      public Name visitType(TypeElement e, Void p) {
-        return e.getQualifiedName();
-      }
-    }, null);
+              @Override
+              public Name visitType(TypeElement e, Void p) {
+                return e.getQualifiedName();
+              }
+            },
+            null);
   }
 
   /** {@code true} if {@code type} is a {@link Provider}. */
@@ -62,8 +65,8 @@ final class Mirrors {
   static ImmutableMap<String, AnnotationValue> simplifyAnnotationValueMap(
       Map<? extends ExecutableElement, ? extends AnnotationValue> annotationValueMap) {
     ImmutableMap.Builder<String, AnnotationValue> builder = ImmutableMap.builder();
-    for (Entry<? extends ExecutableElement, ? extends AnnotationValue> entry
-        : annotationValueMap.entrySet()) {
+    for (Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
+        annotationValueMap.entrySet()) {
       builder.put(entry.getKey().getSimpleName().toString(), entry.getValue());
     }
     return builder.build();
@@ -73,12 +76,11 @@ final class Mirrors {
    * Get the {@link AnnotationMirror} for the type {@code annotationType} present on the given
    * {@link Element} if it exists.
    */
-  static Optional<AnnotationMirror> getAnnotationMirror(Element element,
-      Class<? extends Annotation> annotationType) {
+  static Optional<AnnotationMirror> getAnnotationMirror(
+      Element element, Class<? extends Annotation> annotationType) {
     String annotationName = annotationType.getName();
     return element.getAnnotationMirrors().stream()
-        .filter(
-            a -> getQualifiedName(a.getAnnotationType()).contentEquals(annotationName))
+        .filter(a -> getQualifiedName(a.getAnnotationType()).contentEquals(annotationName))
         .<AnnotationMirror>map(x -> x) // get rid of wildcard <? extends AnnotationMirror>
         .findFirst();
   }

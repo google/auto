@@ -19,9 +19,17 @@ import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 
 final class ConstructorAnnotatedNonFinal {
-  @AutoFactory(allowSubclasses = true) ConstructorAnnotatedNonFinal() {}
+  @AutoFactory(allowSubclasses = true)
+  ConstructorAnnotatedNonFinal() {}
+
   ConstructorAnnotatedNonFinal(Object obj) {}
-  @AutoFactory(allowSubclasses = true) ConstructorAnnotatedNonFinal(String s) {}
-  @AutoFactory(allowSubclasses = true) ConstructorAnnotatedNonFinal(@Provided Object obj, int i) {}
-  @AutoFactory(allowSubclasses = true) ConstructorAnnotatedNonFinal(@Provided Object obj, char c) {}
+
+  @AutoFactory(allowSubclasses = true)
+  ConstructorAnnotatedNonFinal(String s) {}
+
+  @AutoFactory(allowSubclasses = true)
+  ConstructorAnnotatedNonFinal(@Provided Object obj, int i) {}
+
+  @AutoFactory(allowSubclasses = true)
+  ConstructorAnnotatedNonFinal(@Provided Object obj, char c) {}
 }

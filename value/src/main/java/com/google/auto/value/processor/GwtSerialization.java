@@ -99,9 +99,7 @@ class GwtSerialization {
           (vars.pkg.isEmpty() ? "" : vars.pkg + ".") + vars.subclass + "_CustomFieldSerializer";
       vars.serializerClass = TypeSimplifier.simpleNameOf(className);
       vars.props =
-          autoVars.props.stream()
-              .map(p -> new Property((GetterProperty) p))
-              .collect(toList());
+          autoVars.props.stream().map(p -> new Property((GetterProperty) p)).collect(toList());
       vars.classHashString = computeClassHash(autoVars.props, vars.pkg);
       String text = vars.toText();
       text = TypeEncoder.decode(text, processingEnv, vars.pkg, type.asType());
@@ -110,11 +108,11 @@ class GwtSerialization {
   }
 
   public static class Property {
-   private final GetterProperty property;
-   private final boolean isCastingUnchecked;
+    private final GetterProperty property;
+    private final boolean isCastingUnchecked;
 
-     Property(GetterProperty property) {
-     this.property = property;
+    Property(GetterProperty property) {
+      this.property = property;
       this.isCastingUnchecked = TypeSimplifier.isCastingUnchecked(property.getTypeMirror());
     }
 
@@ -255,8 +253,8 @@ class GwtSerialization {
   // Compute a hash that is guaranteed to change if the names, types, or order of the fields
   // change. We use TypeEncoder so that we can get a defined string for types, since
   // TypeMirror.toString() isn't guaranteed to remain the same.
-   private String computeClassHash(Iterable<AutoValueishProcessor.Property> props, String pkg) {
-   CRC32 crc = new CRC32();
+  private String computeClassHash(Iterable<AutoValueishProcessor.Property> props, String pkg) {
+    CRC32 crc = new CRC32();
     String encodedType = TypeEncoder.encode(type.asType()) + ":";
     String decodedType = TypeEncoder.decode(encodedType, processingEnv, "", null);
     if (!decodedType.startsWith(pkg)) {
@@ -265,8 +263,8 @@ class GwtSerialization {
       decodedType = pkg + "." + decodedType;
     }
     crc.update(decodedType.getBytes(UTF_8));
-     for (AutoValueishProcessor.Property prop : props) {
-     String encodedProp = prop + ":" + TypeEncoder.encode(prop.getTypeMirror()) + ";";
+    for (AutoValueishProcessor.Property prop : props) {
+      String encodedProp = prop + ":" + TypeEncoder.encode(prop.getTypeMirror()) + ";";
       String decodedProp = TypeEncoder.decode(encodedProp, processingEnv, pkg, null);
       crc.update(decodedProp.getBytes(UTF_8));
     }

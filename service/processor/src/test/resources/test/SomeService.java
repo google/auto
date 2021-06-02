@@ -15,4 +15,4 @@
  */
 package test;
 
-interface SomeService { }
+interface SomeService {}

@@ -23,15 +23,18 @@ import javax.inject.Provider;
  * @author Gregory Kick
  */
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-)
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
 final class MixedDepsImplementingInterfacesFactory
-    implements MixedDepsImplementingInterfaces.FromInt, MixedDepsImplementingInterfaces.FromObject,
-        MixedDepsImplementingInterfaces.MarkerA, MixedDepsImplementingInterfaces.MarkerB {
+    implements MixedDepsImplementingInterfaces.FromInt,
+        MixedDepsImplementingInterfaces.FromObject,
+        MixedDepsImplementingInterfaces.MarkerA,
+        MixedDepsImplementingInterfaces.MarkerB {
   private final Provider<String> sProvider;
 
-  @Inject MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
+  @Inject
+  MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
     this.sProvider = checkNotNull(sProvider, 1);
   }
 
@@ -43,11 +46,13 @@ final class MixedDepsImplementingInterfacesFactory
     return new MixedDepsImplementingInterfaces(checkNotNull(o, 1));
   }
 
-  @Override public MixedDepsImplementingInterfaces fromInt(int i) {
+  @Override
+  public MixedDepsImplementingInterfaces fromInt(int i) {
     return create(i);
   }
 
-  @Override public MixedDepsImplementingInterfaces fromObject(Object o) {
+  @Override
+  public MixedDepsImplementingInterfaces fromObject(Object o) {
     return create(o);
   }
 

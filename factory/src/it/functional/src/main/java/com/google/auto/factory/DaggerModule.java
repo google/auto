@@ -21,7 +21,8 @@ import dagger.Provides;
 
 @Module
 final class DaggerModule {
-  @Provides Dependency provideDependency(DependencyImpl impl) {
+  @Provides
+  Dependency provideDependency(DependencyImpl impl) {
     return impl;
   }
 

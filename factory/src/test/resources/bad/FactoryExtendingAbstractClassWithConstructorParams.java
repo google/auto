@@ -20,9 +20,9 @@ import tests.FactoryExtendingAbstractClassWithConstructorParams.AbstractFactory;
 
 @AutoFactory(extending = AbstractFactory.class)
 final class FactoryExtendingAbstractClassWithConstructorParams {
-  static abstract class AbstractFactory {
+  abstract static class AbstractFactory {
     protected AbstractFactory(Object obj) {}
-    
+
     abstract FactoryExtendingAbstractClassWithConstructorParams newInstance();
   }
 }

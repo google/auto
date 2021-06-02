@@ -79,12 +79,10 @@ final class FactoryWriter {
     this.factoriesBeingCreated = factoriesBeingCreated;
   }
 
-  void writeFactory(FactoryDescriptor descriptor)
-      throws IOException {
+  void writeFactory(FactoryDescriptor descriptor) throws IOException {
     String factoryName = descriptor.name().className();
     TypeSpec.Builder factory =
-        classBuilder(factoryName)
-            .addOriginatingElement(descriptor.declaration().targetType());
+        classBuilder(factoryName).addOriginatingElement(descriptor.declaration().targetType());
     generatedAnnotationSpec(
             elements,
             sourceVersion,
@@ -198,8 +196,7 @@ final class FactoryWriter {
     }
   }
 
-  private void addImplementationMethods(
-      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+  private void addImplementationMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     for (ImplementationMethodDescriptor methodDescriptor :
         descriptor.implementationMethodDescriptors()) {
       MethodSpec.Builder implementationMethod =
@@ -237,9 +234,7 @@ final class FactoryWriter {
               .map(AnnotationSpec::get)
               .collect(toList());
       ParameterSpec parameterSpec =
-          ParameterSpec.builder(type, parameter.name())
-              .addAnnotations(annotations)
-              .build();
+          ParameterSpec.builder(type, parameter.name()).addAnnotations(annotations).build();
       builder.add(parameterSpec);
     }
     return builder.build();

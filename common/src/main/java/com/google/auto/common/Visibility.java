@@ -76,8 +76,7 @@ public enum Visibility {
     Visibility effectiveVisibility = PUBLIC;
     Element currentElement = element;
     while (currentElement != null) {
-      effectiveVisibility =
-          Ordering.natural().min(effectiveVisibility, ofElement(currentElement));
+      effectiveVisibility = Ordering.natural().min(effectiveVisibility, ofElement(currentElement));
       currentElement = currentElement.getEnclosingElement();
     }
     return effectiveVisibility;

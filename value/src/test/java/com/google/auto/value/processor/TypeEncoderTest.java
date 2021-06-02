@@ -306,6 +306,7 @@ public class TypeEncoderTest {
   @SuppressWarnings("ClassCanBeStatic")
   static class Outer<T extends Number> {
     class InnerWithoutTypeParam {}
+
     class Middle<U> {
       class InnerWithTypeParam<V> {}
     }

@@ -70,18 +70,21 @@ public class SimpleTypeAnnotationValueTest {
 
   @Test
   public void visitorMethod() {
-    SimpleTypeAnnotationValue.of(objectType).accept(new SimpleAnnotationValueVisitor8<Void, Void>(){
-      @Override
-      public Void visitType(TypeMirror typeMirror, Void aVoid) {
-        // do nothing, expected case
-        return null;
-      }
+    SimpleTypeAnnotationValue.of(objectType)
+        .accept(
+            new SimpleAnnotationValueVisitor8<Void, Void>() {
+              @Override
+              public Void visitType(TypeMirror typeMirror, Void aVoid) {
+                // do nothing, expected case
+                return null;
+              }
 
-      @Override
-      protected Void defaultAction(Object o, Void aVoid) {
-        throw new AssertionError();
-      }
-    }, null);
+              @Override
+              protected Void defaultAction(Object o, Void aVoid) {
+                throw new AssertionError();
+              }
+            },
+            null);
   }
 
   @Test

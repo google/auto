@@ -24,7 +24,8 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class AutoFactoryDeclarationTest {
-  @Test public void identifiers() {
+  @Test
+  public void identifiers() {
     assertThat(isValidIdentifier("String")).isTrue();
     assertThat(isValidIdentifier("9CantStartWithNumber")).isFalse();
     assertThat(isValidIdentifier("enum")).isFalse();

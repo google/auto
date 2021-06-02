@@ -33,7 +33,7 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 
 final class Elements2 {
-  private Elements2() { }
+  private Elements2() {}
 
   static ImmutableSet<ExecutableElement> getConstructors(TypeElement type) {
     checkNotNull(type);

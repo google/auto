@@ -62,10 +62,12 @@ public class IncrementalExtensionTest {
     AutoValueExtension nonIsolatingExtension = new NonIsolatingExtension();
     assertThat(nonIsolatingExtension.incrementalType((ProcessingEnvironment) null))
         .isEqualTo(IncrementalExtensionType.UNKNOWN);
-    ImmutableList<AutoValueExtension> extensions = ImmutableList.<AutoValueExtension>builder()
-        .addAll(AutoValueProcessor.extensionsFromLoader(AutoValueProcessor.class.getClassLoader()))
-        .add(nonIsolatingExtension)
-        .build();
+    ImmutableList<AutoValueExtension> extensions =
+        ImmutableList.<AutoValueExtension>builder()
+            .addAll(
+                AutoValueProcessor.extensionsFromLoader(AutoValueProcessor.class.getClassLoader()))
+            .add(nonIsolatingExtension)
+            .build();
 
     AutoValueProcessor processor = new AutoValueProcessor(extensions);
     assertThat(processor.getSupportedOptions())
@@ -77,10 +79,12 @@ public class IncrementalExtensionTest {
     AutoValueExtension isolatingExtension = new IsolatingExtension();
     assertThat(isolatingExtension.incrementalType((ProcessingEnvironment) null))
         .isEqualTo(IncrementalExtensionType.ISOLATING);
-    ImmutableList<AutoValueExtension> extensions = ImmutableList.<AutoValueExtension>builder()
-        .addAll(AutoValueProcessor.extensionsFromLoader(AutoValueProcessor.class.getClassLoader()))
-        .add(isolatingExtension)
-        .build();
+    ImmutableList<AutoValueExtension> extensions =
+        ImmutableList.<AutoValueExtension>builder()
+            .addAll(
+                AutoValueProcessor.extensionsFromLoader(AutoValueProcessor.class.getClassLoader()))
+            .add(isolatingExtension)
+            .build();
 
     AutoValueProcessor processor = new AutoValueProcessor(extensions);
     assertThat(processor.getSupportedOptions())

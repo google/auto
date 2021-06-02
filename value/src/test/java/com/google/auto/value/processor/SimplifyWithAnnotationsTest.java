@@ -157,8 +157,7 @@ public class SimplifyWithAnnotationsTest {
 
     void testTypeSpellings(TypeElement testClass) {
       ExecutableElement witness =
-          ElementFilter.methodsIn(testClass.getEnclosedElements())
-              .stream()
+          ElementFilter.methodsIn(testClass.getEnclosedElements()).stream()
               .filter(m -> m.getSimpleName().contentEquals("witness"))
               .collect(onlyElement());
       if (witness.getReturnType().getAnnotationMirrors().isEmpty()) {

@@ -469,9 +469,7 @@ public class AutoAnnotationCompilationTest {
             "  @NotAutoAnnotation Empty notNewEmpty() {}",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoAnnotationProcessor())
-            .compile(erroneousJavaFileObject);
+        javac().withProcessors(new AutoAnnotationProcessor()).compile(erroneousJavaFileObject);
     assertThat(compilation)
         .hadErrorContaining("NotAutoAnnotation")
         .inFile(erroneousJavaFileObject)

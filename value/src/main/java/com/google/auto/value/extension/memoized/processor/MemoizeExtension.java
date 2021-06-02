@@ -597,9 +597,7 @@ public final class MemoizeExtension extends AutoValueExtension {
   /** Translate a {@link TypeMirror} into a {@link TypeName}, including type annotations. */
   private static TypeName annotatedType(TypeMirror type) {
     List<AnnotationSpec> annotations =
-        type.getAnnotationMirrors().stream()
-            .map(AnnotationSpec::get)
-            .collect(toList());
+        type.getAnnotationMirrors().stream().map(AnnotationSpec::get).collect(toList());
     return TypeName.get(type).annotated(annotations);
   }
 }

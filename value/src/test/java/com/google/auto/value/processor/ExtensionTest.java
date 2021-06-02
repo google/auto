@@ -251,9 +251,7 @@ public class ExtensionTest {
             "  abstract String dizzle();",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoValueProcessor(ImmutableList.of(ext1, ext2)))
-            .compile(impl);
+        javac().withProcessors(new AutoValueProcessor(ImmutableList.of(ext1, ext2))).compile(impl);
     assertThat(compilation)
         .hadErrorContaining("wants to consume a method that was already consumed")
         .inFile(impl)
@@ -597,10 +595,9 @@ public class ExtensionTest {
             "}");
     Compilation compilation =
         javac()
-        .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
-        .compile(javaFileObject);
-    assertThat(compilation)
-        .hadErrorContaining("writeToParcel");
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new FooExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation).hadErrorContaining("writeToParcel");
     assertThat(compilation)
         .hadWarningContaining(
             "Abstract method is neither a property getter nor a Builder converter, "
@@ -648,13 +645,12 @@ public class ExtensionTest {
             "public abstract class Baz {",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoValueProcessor(badJarLoader))
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoValueProcessor(badJarLoader)).compile(javaFileObject);
     assertThat(compilation).succeeded();
-    assertThat(compilation).hadWarningContaining(
-        "This may be due to a corrupt jar file in the compiler's classpath.\n  "
-            + ServiceConfigurationError.class.getName());
+    assertThat(compilation)
+        .hadWarningContaining(
+            "This may be due to a corrupt jar file in the compiler's classpath.\n  "
+                + ServiceConfigurationError.class.getName());
     assertThat(compilation).generatedSourceFile("foo.bar.AutoValue_Baz");
   }
 
@@ -858,8 +854,12 @@ public class ExtensionTest {
       String sideClassName = "Side_" + context.autoValueClass().getSimpleName();
       String sideClass =
           "" //
-          + "package " + context.packageName() + ";\n"
-          + "class " + sideClassName + " {}\n";
+              + "package "
+              + context.packageName()
+              + ";\n"
+              + "class "
+              + sideClassName
+              + " {}\n";
       Filer filer = context.processingEnvironment().getFiler();
       try {
         String sideClassFqName = context.packageName() + "." + sideClassName;
@@ -913,25 +913,27 @@ public class ExtensionTest {
 
   @Test
   public void propertyTypes() {
-    JavaFileObject parent = JavaFileObjects.forSourceLines(
-        "foo.bar.Parent",
-        "package foo.bar;",
-        "",
-        "import java.util.List;",
-        "",
-        "interface Parent<T> {",
-        "  T thing();",
-        "  List<T> list();",
-        "}");
-    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "abstract class Baz implements Parent<String> {",
-        "}");
+    JavaFileObject parent =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Parent",
+            "package foo.bar;",
+            "",
+            "import java.util.List;",
+            "",
+            "interface Parent<T> {",
+            "  T thing();",
+            "  List<T> list();",
+            "}");
+    JavaFileObject autoValueClass =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "abstract class Baz implements Parent<String> {",
+            "}");
     ContextChecker checker =
         context -> {
           assertThat(context.builder()).isEmpty();
@@ -956,15 +958,16 @@ public class ExtensionTest {
 
   @Test
   public void finalAutoValueClassName() {
-    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "abstract class Baz {",
-        "}");
+    JavaFileObject autoValueClass =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "abstract class Baz {",
+            "}");
     ContextChecker checker =
         context -> {
           assertThat(context.finalAutoValueClassName()).isEqualTo("foo.bar.AutoValue_Baz");
@@ -983,43 +986,45 @@ public class ExtensionTest {
 
   @Test
   public void builderContext() {
-    JavaFileObject parent = JavaFileObjects.forSourceLines(
-        "foo.bar.Parent",
-        "package foo.bar;",
-        "",
-        "import com.google.common.collect.ImmutableList;",
-        "",
-        "interface Parent<T> {",
-        "  T thing();",
-        "  ImmutableList<T> list();",
-        "}");
-    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "import com.google.common.collect.ImmutableList;",
-        "",
-        "@AutoValue",
-        "abstract class Baz implements Parent<String> {",
-        "  static Builder builder() {",
-        "    return new AutoValue_Baz.Builder();",
-        "  }",
-        "",
-        "  abstract Builder toBuilder();",
-        "",
-        "  @AutoValue.Builder",
-        "  abstract static class Builder {",
-        "    abstract Builder setThing(String x);",
-        "    abstract Builder setList(Iterable<String> x);",
-        "    abstract Builder setList(ImmutableList<String> x);",
-        "    abstract ImmutableList.Builder<String> listBuilder();",
-        "    abstract Baz autoBuild();",
-        "    Baz build() {",
-        "      return autoBuild();",
-        "    }",
-        "  }",
-        "}");
+    JavaFileObject parent =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Parent",
+            "package foo.bar;",
+            "",
+            "import com.google.common.collect.ImmutableList;",
+            "",
+            "interface Parent<T> {",
+            "  T thing();",
+            "  ImmutableList<T> list();",
+            "}");
+    JavaFileObject autoValueClass =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import com.google.common.collect.ImmutableList;",
+            "",
+            "@AutoValue",
+            "abstract class Baz implements Parent<String> {",
+            "  static Builder builder() {",
+            "    return new AutoValue_Baz.Builder();",
+            "  }",
+            "",
+            "  abstract Builder toBuilder();",
+            "",
+            "  @AutoValue.Builder",
+            "  abstract static class Builder {",
+            "    abstract Builder setThing(String x);",
+            "    abstract Builder setList(Iterable<String> x);",
+            "    abstract Builder setList(ImmutableList<String> x);",
+            "    abstract ImmutableList.Builder<String> listBuilder();",
+            "    abstract Baz autoBuild();",
+            "    Baz build() {",
+            "      return autoBuild();",
+            "    }",
+            "  }",
+            "}");
     ContextChecker checker =
         context -> {
           assertThat(context.builder()).isPresent();
@@ -1077,34 +1082,36 @@ public class ExtensionTest {
 
   @Test
   public void builderContextWithInheritance() {
-    JavaFileObject parent = JavaFileObjects.forSourceLines(
-        "foo.bar.Parent",
-        "package foo.bar;",
-        "",
-        "interface Parent<BuilderT> {",
-        "  BuilderT toBuilder();",
-        "  interface Builder<T, BuilderT, BuiltT> {",
-        "    BuilderT setThing(T x);",
-        "    BuiltT build();",
-        "  }",
-        "}");
-    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "",
-        "@AutoValue",
-        "abstract class Baz<T> implements Parent<Baz.Builder<T>> {",
-        "  abstract T thing();",
-        "  static <T> Builder<T> builder() {",
-        "    return new AutoValue_Baz.Builder<>();",
-        "  }",
-        "",
-        "  @AutoValue.Builder",
-        "  abstract static class Builder<T> implements Parent.Builder<T, Builder<T>, Baz<T>> {",
-        "  }",
-        "}");
+    JavaFileObject parent =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Parent",
+            "package foo.bar;",
+            "",
+            "interface Parent<BuilderT> {",
+            "  BuilderT toBuilder();",
+            "  interface Builder<T, BuilderT, BuiltT> {",
+            "    BuilderT setThing(T x);",
+            "    BuiltT build();",
+            "  }",
+            "}");
+    JavaFileObject autoValueClass =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "abstract class Baz<T> implements Parent<Baz.Builder<T>> {",
+            "  abstract T thing();",
+            "  static <T> Builder<T> builder() {",
+            "    return new AutoValue_Baz.Builder<>();",
+            "  }",
+            "",
+            "  @AutoValue.Builder",
+            "  abstract static class Builder<T> implements Parent.Builder<T, Builder<T>, Baz<T>> {",
+            "  }",
+            "}");
     ContextChecker checker =
         context -> {
           assertThat(context.builder()).isPresent();
@@ -1149,26 +1156,27 @@ public class ExtensionTest {
 
   @Test
   public void oddBuilderContext() {
-    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
-        "foo.bar.Baz",
-        "package foo.bar;",
-        "",
-        "import com.google.auto.value.AutoValue;",
-        "import com.google.common.collect.ImmutableList;",
-        "",
-        "@AutoValue",
-        "abstract class Baz {",
-        "  abstract String string();",
-        "",
-        "  @AutoValue.Builder",
-        "  abstract static class Builder {",
-        "    abstract Builder setString(String x);",
-        "    abstract Baz oddBuild();",
-        "    Baz build(int butNotReallyBecauseOfThisParameter) {",
-        "      return null;",
-        "    }",
-        "  }",
-        "}");
+    JavaFileObject autoValueClass =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import com.google.common.collect.ImmutableList;",
+            "",
+            "@AutoValue",
+            "abstract class Baz {",
+            "  abstract String string();",
+            "",
+            "  @AutoValue.Builder",
+            "  abstract static class Builder {",
+            "    abstract Builder setString(String x);",
+            "    abstract Baz oddBuild();",
+            "    Baz build(int butNotReallyBecauseOfThisParameter) {",
+            "      return null;",
+            "    }",
+            "  }",
+            "}");
     ContextChecker checker =
         context -> {
           assertThat(context.builder()).isPresent();
@@ -1199,25 +1207,26 @@ public class ExtensionTest {
   // https://github.com/google/auto/issues/809
   @Test
   public void propertyErrorShouldNotCrash() {
-    JavaFileObject autoValueClass = JavaFileObjects.forSourceLines(
-        "test.Test",
-        "package test;",
-        "import com.google.auto.value.AutoValue;",
-        "import java.util.List;",
-        "",
-        "@AutoValue",
-        "public abstract class Test {",
-        "  abstract Integer property();",
-        "  abstract List<String> listProperty();",
-        "",
-        "  @AutoValue.Builder",
-        "  public interface Builder {",
-        "    Builder property(Integer property);",
-        "    Builder listProperty(List<String> listProperty);",
-        "    Builder listProperty(Integer listPropertyValues);",
-        "    Test build();",
-        "  }",
-        "}");
+    JavaFileObject autoValueClass =
+        JavaFileObjects.forSourceLines(
+            "test.Test",
+            "package test;",
+            "import com.google.auto.value.AutoValue;",
+            "import java.util.List;",
+            "",
+            "@AutoValue",
+            "public abstract class Test {",
+            "  abstract Integer property();",
+            "  abstract List<String> listProperty();",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder {",
+            "    Builder property(Integer property);",
+            "    Builder listProperty(List<String> listProperty);",
+            "    Builder listProperty(Integer listPropertyValues);",
+            "    Test build();",
+            "  }",
+            "}");
     // We don't actually expect the extension to be invoked. Previously it was, and that led to a
     // NullPointerException when calling .setters() in the checker.
     ContextChecker checker =

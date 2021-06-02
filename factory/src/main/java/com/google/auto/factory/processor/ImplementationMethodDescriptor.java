@@ -22,10 +22,15 @@ import javax.lang.model.type.TypeMirror;
 @AutoValue
 abstract class ImplementationMethodDescriptor {
   abstract String name();
+
   abstract TypeMirror returnType();
+
   abstract boolean publicMethod();
+
   abstract ImmutableSet<Parameter> passedParameters();
+
   abstract boolean isVarArgs();
+
   abstract ImmutableSet<TypeMirror> exceptions();
 
   static Builder builder() {

@@ -229,9 +229,9 @@ public class GeneratedDoesNotExistTest {
     Processor noGeneratedProcessor = partialProxy(Processor.class, handler);
     Compilation compilation =
         javac()
-        .withOptions(javacOptions)
-        .withProcessors(noGeneratedProcessor)
-        .compile(javaFileObject);
+            .withOptions(javacOptions)
+            .withProcessors(noGeneratedProcessor)
+            .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")

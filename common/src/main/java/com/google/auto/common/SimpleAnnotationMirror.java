@@ -65,7 +65,7 @@ public final class SimpleAnnotationMirror implements AnnotationMirror {
         missingMembers.add(memberName);
       }
     }
-    
+
     checkArgument(
         unusedValues.isEmpty(),
         "namedValues has entries for members that are not in %s: %s",
@@ -77,8 +77,7 @@ public final class SimpleAnnotationMirror implements AnnotationMirror {
     this.annotationType = annotationType;
     this.namedValues = ImmutableMap.copyOf(namedValues);
     this.elementValues =
-        methodsIn(annotationType.getEnclosedElements())
-            .stream()
+        methodsIn(annotationType.getEnclosedElements()).stream()
             .collect(toImmutableMap(e -> e, e -> values.get(e.getSimpleName().toString())));
   }
 

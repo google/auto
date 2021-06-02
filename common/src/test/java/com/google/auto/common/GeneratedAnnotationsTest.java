@@ -187,8 +187,7 @@ public class GeneratedAnnotationsTest {
     // An alternative would be to delete this test method. JDK8 always has
     // javax.annotation.Generated so it isn't really meaningful to test it without.
     ImmutableList<String> options = ImmutableList.of("-source", "8", "-target", "8");
-    String generated =
-        runProcessor(options, "javax.annotation");
+    String generated = runProcessor(options, "javax.annotation");
     assertThat(generated).doesNotContain(JAVAX_ANNOTATION_GENERATED);
     assertThat(generated).doesNotContain(JAVAX_ANNOTATION_PROCESSING_GENERATED);
   }

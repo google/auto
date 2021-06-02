@@ -125,7 +125,9 @@ public class MemoizedTest {
     @org.checkerframework.checker.nullness.qual.Nullable
     String nullableWithTypeAnnotation() {
       nullableWithTypeAnnotationCount++;
-      return "nullable derived " + stringWithTypeAnnotation() + " "
+      return "nullable derived "
+          + stringWithTypeAnnotation()
+          + " "
           + nullableWithTypeAnnotationCount;
     }
 
@@ -236,8 +238,9 @@ public class MemoizedTest {
 
   @Before
   public void setUp() {
-    value = new AutoValue_MemoizedTest_Value(
-        "string", "stringWithTypeAnnotation", new HashCodeAndToStringCounter());
+    value =
+        new AutoValue_MemoizedTest_Value(
+            "string", "stringWithTypeAnnotation", new HashCodeAndToStringCounter());
     listValue = new AutoValue_MemoizedTest_ListValue<Integer, String>(0, "hello");
   }
 
@@ -377,8 +380,9 @@ public class MemoizedTest {
     Method nullable =
         AutoValue_MemoizedTest_Value.class.getDeclaredMethod("nullableWithTypeAnnotation");
     AnnotatedType returnType = nullable.getAnnotatedReturnType();
-    assertThat(returnType.isAnnotationPresent(
-                   org.checkerframework.checker.nullness.qual.Nullable.class))
+    assertThat(
+            returnType.isAnnotationPresent(
+                org.checkerframework.checker.nullness.qual.Nullable.class))
         .isTrue();
   }
 
@@ -389,11 +393,13 @@ public class MemoizedTest {
     // [1] @org.checkerframework.checker.nullness.qual.Nullable String stringWithTypeAnnotation,
     // [2] HashCodeAndToStringCounter counter
     // We don't currently copy @javax.annotation.Nullable because it is not a TYPE_USE annotation.
-    Constructor<?> constructor = AutoValue_MemoizedTest_Value.class.getDeclaredConstructor(
-        String.class, String.class, HashCodeAndToStringCounter.class);
+    Constructor<?> constructor =
+        AutoValue_MemoizedTest_Value.class.getDeclaredConstructor(
+            String.class, String.class, HashCodeAndToStringCounter.class);
     AnnotatedType paramType = constructor.getAnnotatedParameterTypes()[1];
-    assertThat(paramType.isAnnotationPresent(
-                   org.checkerframework.checker.nullness.qual.Nullable.class))
+    assertThat(
+            paramType.isAnnotationPresent(
+                org.checkerframework.checker.nullness.qual.Nullable.class))
         .isTrue();
   }
 
@@ -467,8 +473,7 @@ public class MemoizedTest {
 
   @AutoValue
   abstract static class ResourceUriPath<InputT> extends AbstractTypePath<InputT, ResourceUri> {
-    static <InputT> ResourceUriPath<InputT> create(
-        TypeEdgeIterable<InputT, ResourceUri> edges) {
+    static <InputT> ResourceUriPath<InputT> create(TypeEdgeIterable<InputT, ResourceUri> edges) {
       return new AutoValue_MemoizedTest_ResourceUriPath<>(edges);
     }
 

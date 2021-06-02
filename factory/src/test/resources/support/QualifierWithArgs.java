@@ -29,5 +29,6 @@ import javax.inject.Qualifier;
 @Retention(RUNTIME)
 @interface QualifierWithArgs {
   String name();
+
   int count();
 }

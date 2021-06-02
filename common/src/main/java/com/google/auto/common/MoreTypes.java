@@ -144,9 +144,7 @@ public final class MoreTypes {
       if (o instanceof ComparedElements) {
         ComparedElements that = (ComparedElements) o;
         int nArguments = aArguments.size();
-        if (!this.a.equals(that.a)
-            || !this.b.equals(that.b)
-            || nArguments != bArguments.size()) {
+        if (!this.a.equals(that.a) || !this.b.equals(that.b) || nArguments != bArguments.size()) {
           // The arguments must be the same size, but we check anyway.
           return false;
         }
@@ -436,7 +434,7 @@ public final class MoreTypes {
     public Integer visitUnknown(TypeMirror t, Set<Element> visiting) {
       throw new UnsupportedOperationException();
     }
-  };
+  }
 
   private static int hashList(List<? extends TypeMirror> mirrors, Set<Element> visiting) {
     int result = HASH_SEED;
@@ -537,7 +535,8 @@ public final class MoreTypes {
     public Element visitTypeVariable(TypeVariable t, Void p) {
       return t.asElement();
     }
-  };
+  }
+  ;
 
   // TODO(gak): consider removing these two methods as they're pretty trivial now
   public static TypeElement asTypeElement(TypeMirror mirror) {
@@ -882,10 +881,10 @@ public final class MoreTypes {
    * is {@link Object}.
    */
   // TODO(bcorso): Remove unused parameter Elements?
-  public static Optional<DeclaredType> nonObjectSuperclass(Types types, Elements elements,
-      DeclaredType type) {
+  public static Optional<DeclaredType> nonObjectSuperclass(
+      Types types, Elements elements, DeclaredType type) {
     checkNotNull(types);
-    checkNotNull(elements);  // This is no longer used, but here to avoid changing the API.
+    checkNotNull(elements); // This is no longer used, but here to avoid changing the API.
     checkNotNull(type);
 
     TypeMirror superclassType = asTypeElement(type).getSuperclass();
@@ -893,7 +892,7 @@ public final class MoreTypes {
       return Optional.absent();
     }
 
-    DeclaredType superclass =  asDeclared(superclassType);
+    DeclaredType superclass = asDeclared(superclassType);
     if (isObjectType(superclass)) {
       return Optional.absent();
     }
@@ -920,8 +919,8 @@ public final class MoreTypes {
    * {@code container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
    * parameter in the {@code Set.add(E e)} method, this will return a TypeMirror for {@code String}.
    */
-  public static TypeMirror asMemberOf(Types types, DeclaredType container,
-      VariableElement variable) {
+  public static TypeMirror asMemberOf(
+      Types types, DeclaredType container, VariableElement variable) {
     if (variable.getKind().equals(ElementKind.PARAMETER)) {
       ExecutableElement methodOrConstructor =
           MoreElements.asExecutable(variable.getEnclosingElement());
@@ -1013,7 +1012,7 @@ public final class MoreTypes {
       }
       return true;
     }
-    
+
     private static boolean isJavaLangObject(TypeMirror type) {
       if (type.getKind() != TypeKind.DECLARED) {
         return false;

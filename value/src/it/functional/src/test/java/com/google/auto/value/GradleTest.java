@@ -42,7 +42,8 @@ public class GradleTest {
   @Rule public TemporaryFolder fakeProject = new TemporaryFolder();
 
   private static final String BUILD_GRADLE_TEXT =
-      String.join("\n",
+      String.join(
+          "\n",
           "plugins {",
           "  id 'java-library'",
           "}",
@@ -50,12 +51,14 @@ public class GradleTest {
           "  maven { url = uri('${localRepository}') }",
           "}",
           "dependencies {",
-          "  compileOnlyApi      'com.google.auto.value:auto-value-annotations:${autoValueVersion}'",
+          "  compileOnlyApi     "
+              + " 'com.google.auto.value:auto-value-annotations:${autoValueVersion}'",
           "  annotationProcessor 'com.google.auto.value:auto-value:${autoValueVersion}'",
           "}");
 
   private static final String FOO_TEXT =
-      String.join("\n",
+      String.join(
+          "\n",
           "package com.example;",
           "",
           "import com.google.auto.value.AutoValue;",
@@ -86,10 +89,15 @@ public class GradleTest {
 
     // Build it the first time.
     BuildResult result1 = buildFakeProject();
-    assertThat(result1.getOutput()).contains(
-        "Full recompilation is required because no incremental change information is available");
-    Path output = fakeProject.getRoot().toPath()
-        .resolve("build/classes/java/main/com/example/AutoValue_Foo.class");
+    assertThat(result1.getOutput())
+        .contains(
+            "Full recompilation is required because no incremental change information is"
+                + " available");
+    Path output =
+        fakeProject
+            .getRoot()
+            .toPath()
+            .resolve("build/classes/java/main/com/example/AutoValue_Foo.class");
     assertThat(Files.exists(output)).isTrue();
 
     // Add a source file to the project.
@@ -111,9 +119,10 @@ public class GradleTest {
   }
 
   private BuildResult buildFakeProject() throws IOException {
-    GradleRunner runner = GradleRunner.create()
-        .withProjectDir(fakeProject.getRoot())
-        .withArguments("--info", "compileJava");
+    GradleRunner runner =
+        GradleRunner.create()
+            .withProjectDir(fakeProject.getRoot())
+            .withArguments("--info", "compileJava");
     if (GRADLE_INSTALLATION.isPresent()) {
       runner.withGradleInstallation(GRADLE_INSTALLATION.get());
     } else {
@@ -132,8 +141,7 @@ public class GradleTest {
     }
     try {
       Path gradleExecutable = Paths.get("/usr/bin/gradle");
-      Path gradleLink =
-          gradleExecutable.resolveSibling(Files.readSymbolicLink(gradleExecutable));
+      Path gradleLink = gradleExecutable.resolveSibling(Files.readSymbolicLink(gradleExecutable));
       if (!gradleLink.endsWith("bin/gradle")) {
         return Optional.empty();
       }
@@ -145,16 +153,19 @@ public class GradleTest {
       Pattern corePattern = Pattern.compile("gradle-core-([0-9]+)\\..*\\.jar");
       try (Stream<Path> files = Files.walk(installationPath.resolve("lib"))) {
         coreJar =
-            files.filter(p -> {
-              Matcher matcher = corePattern.matcher(p.getFileName().toString());
-              if (matcher.matches()) {
-                int version = Integer.parseInt(matcher.group(1));
-                if (version >= 5) {
-                  return true;
-                }
-              }
-              return false;
-            }).findFirst();
+            files
+                .filter(
+                    p -> {
+                      Matcher matcher = corePattern.matcher(p.getFileName().toString());
+                      if (matcher.matches()) {
+                        int version = Integer.parseInt(matcher.group(1));
+                        if (version >= 5) {
+                          return true;
+                        }
+                      }
+                      return false;
+                    })
+                .findFirst();
       }
       return coreJar.map(unused -> installationPath.toFile());
     } catch (IOException e) {

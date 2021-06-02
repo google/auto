@@ -98,7 +98,7 @@ public @interface AutoValue {
    * <p>If you want to copy annotations from your {@literal @}AutoValue-annotated class's methods to
    * the generated fields in the AutoValue_... implementation, annotate your method
    * with {@literal @}AutoValue.CopyAnnotations. For example, if Example.java is:<pre>
-
+   *
    *   {@code @}Immutable
    *   {@code @}AutoValue
    *   abstract class Example {

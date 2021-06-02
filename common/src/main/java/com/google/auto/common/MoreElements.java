@@ -218,8 +218,8 @@ public final class MoreElements {
    * {@link Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
    * annotation proxies.
    */
-  public static boolean isAnnotationPresent(Element element,
-      Class<? extends Annotation> annotationClass) {
+  public static boolean isAnnotationPresent(
+      Element element, Class<? extends Annotation> annotationClass) {
     return getAnnotationMirror(element, annotationClass).isPresent();
   }
 
@@ -229,8 +229,8 @@ public final class MoreElements {
    * safer alternative to calling {@link Element#getAnnotation} as it avoids any interaction with
    * annotation proxies.
    */
-  public static Optional<AnnotationMirror> getAnnotationMirror(Element element,
-      Class<? extends Annotation> annotationClass) {
+  public static Optional<AnnotationMirror> getAnnotationMirror(
+      Element element, Class<? extends Annotation> annotationClass) {
     String annotationClassName = annotationClass.getCanonicalName();
     for (AnnotationMirror annotationMirror : element.getAnnotationMirrors()) {
       TypeElement annotationTypeElement = asType(annotationMirror.getAnnotationType().asElement());

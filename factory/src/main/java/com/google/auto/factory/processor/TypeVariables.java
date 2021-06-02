@@ -38,8 +38,8 @@ final class TypeVariables {
     return type.accept(ReferencedTypeVariables.INSTANCE, new HashSet<>());
   }
 
-  private static final class ReferencedTypeVariables extends
-      SimpleTypeVisitor8<ImmutableSet<TypeVariable>, Set<Element>> {
+  private static final class ReferencedTypeVariables
+      extends SimpleTypeVisitor8<ImmutableSet<TypeVariable>, Set<Element>> {
 
     private static final ReferencedTypeVariables INSTANCE = new ReferencedTypeVariables();
 
@@ -53,8 +53,7 @@ final class TypeVariables {
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitDeclared(
-        DeclaredType t, Set<Element> visited) {
+    public ImmutableSet<TypeVariable> visitDeclared(DeclaredType t, Set<Element> visited) {
       if (!visited.add(t.asElement())) {
         return ImmutableSet.of();
       }
@@ -66,8 +65,7 @@ final class TypeVariables {
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitTypeVariable(
-        TypeVariable t, Set<Element> visited) {
+    public ImmutableSet<TypeVariable> visitTypeVariable(TypeVariable t, Set<Element> visited) {
       if (!visited.add(t.asElement())) {
         return ImmutableSet.of();
       }
@@ -79,8 +77,7 @@ final class TypeVariables {
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitUnion(
-        UnionType t, Set<Element> visited) {
+    public ImmutableSet<TypeVariable> visitUnion(UnionType t, Set<Element> visited) {
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       for (TypeMirror unionType : t.getAlternatives()) {
         typeVariables.addAll(unionType.accept(this, visited));
@@ -89,8 +86,7 @@ final class TypeVariables {
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitIntersection(
-        IntersectionType t, Set<Element> visited) {
+    public ImmutableSet<TypeVariable> visitIntersection(IntersectionType t, Set<Element> visited) {
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       for (TypeMirror intersectionType : t.getBounds()) {
         typeVariables.addAll(intersectionType.accept(this, visited));
@@ -99,8 +95,7 @@ final class TypeVariables {
     }
 
     @Override
-    public ImmutableSet<TypeVariable> visitWildcard(
-        WildcardType t, Set<Element> visited) {
+    public ImmutableSet<TypeVariable> visitWildcard(WildcardType t, Set<Element> visited) {
       ImmutableSet.Builder<TypeVariable> typeVariables = ImmutableSet.builder();
       TypeMirror extendsBound = t.getExtendsBound();
       if (extendsBound != null) {

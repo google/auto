@@ -17,7 +17,7 @@ package tests;
 
 import com.google.auto.factory.AutoFactory;
 
-class MultipleFactoriesImplementingInterface {  
+class MultipleFactoriesImplementingInterface {
   static interface Base {
     static interface Factory {
       public abstract Base abstractNonDefaultCreate();
@@ -25,8 +25,8 @@ class MultipleFactoriesImplementingInterface {
   }
 
   @AutoFactory(implementing = Base.Factory.class)
-  static class ClassA implements Base { }
+  static class ClassA implements Base {}
 
   @AutoFactory(implementing = Base.Factory.class)
   static class ClassB implements Base {}
-}  
+}

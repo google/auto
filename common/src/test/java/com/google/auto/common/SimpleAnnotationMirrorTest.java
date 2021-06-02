@@ -46,6 +46,7 @@ public class SimpleAnnotationMirrorTest {
 
   @interface MultipleValues {
     int value1();
+
     int value2();
   }
 

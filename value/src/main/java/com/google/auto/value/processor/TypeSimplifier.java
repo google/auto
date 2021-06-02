@@ -140,8 +140,7 @@ final class TypeSimplifier {
     if (typeParameters.isEmpty()) {
       return "";
     } else {
-      return typeParameters
-          .stream()
+      return typeParameters.stream()
           .map(e -> e.getSimpleName().toString())
           .collect(joining(", ", "<", ">"));
     }
@@ -264,8 +263,7 @@ final class TypeSimplifier {
    * {@code Map.Entry} everywhere rather than {@code Entry}.
    */
   private static Set<TypeMirror> topLevelTypes(Types typeUtil, Set<TypeMirror> types) {
-    return types
-        .stream()
+    return types.stream()
         .map(typeMirror -> MoreElements.asType(typeUtil.asElement(typeMirror)))
         .map(typeElement -> topLevelType(typeElement).asType())
         .collect(toCollection(TypeMirrorSet::new));

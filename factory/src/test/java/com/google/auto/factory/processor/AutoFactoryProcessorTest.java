@@ -170,6 +170,7 @@ public class AutoFactoryProcessorTest {
         .generatedSourceFile("tests.ConstructorAnnotatedThrowsFactory")
         .hasSourceEquivalentTo(loadExpectedFile("expected/ConstructorAnnotatedThrowsFactory.java"));
   }
+
   @Test
   public void constructorAnnotatedNonFinal() {
     Compilation compilation =

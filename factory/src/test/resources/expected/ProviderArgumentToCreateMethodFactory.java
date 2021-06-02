@@ -22,10 +22,11 @@ import javax.inject.Provider;
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
     comments = "https://github.com/google/auto/tree/master/factory"
-)
+    )
 final class ProviderArgumentToCreateMethodFactory
-    implements ProviderArgumentToCreateMethod.CustomCreator{
-  @Inject ProviderArgumentToCreateMethodFactory() {}
+    implements ProviderArgumentToCreateMethod.CustomCreator {
+  @Inject
+  ProviderArgumentToCreateMethodFactory() {}
 
   ProviderArgumentToCreateMethod create(Provider<String> stringProvider) {
     return new ProviderArgumentToCreateMethod(checkNotNull(stringProvider, 1));

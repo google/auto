@@ -28,10 +28,7 @@ public class GenericFoo<A, B extends List<? extends A>, C, E extends Enum<E>> {
   private final E depE;
 
   <D extends IntAccessor & StringAccessor> GenericFoo(
-      @Provided Provider<A> depA,
-      B depB,
-      D depD,
-      E depE) {
+      @Provided Provider<A> depA, B depB, D depD, E depE) {
     this.depA = depA.get();
     this.depB = depB;
     this.depDIntAccessor = depD;

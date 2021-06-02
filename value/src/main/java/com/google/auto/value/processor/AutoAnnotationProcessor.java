@@ -461,9 +461,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private static boolean isGwtCompatible(TypeElement annotationElement) {
-    return annotationElement
-        .getAnnotationMirrors()
-        .stream()
+    return annotationElement.getAnnotationMirrors().stream()
         .map(mirror -> mirror.getAnnotationType().asElement())
         .anyMatch(element -> element.getSimpleName().contentEquals("GwtCompatible"));
   }

@@ -68,8 +68,10 @@ abstract class Key {
     // TODO(gak): check for only one qualifier rather than using the first
     Optional<AnnotationMirror> qualifier =
         annotations.stream()
-            .filter(annotation ->
-                isAnnotationPresent(annotation.getAnnotationType().asElement(), Qualifier.class))
+            .filter(
+                annotation ->
+                    isAnnotationPresent(
+                        annotation.getAnnotationType().asElement(), Qualifier.class))
             .findFirst();
 
     TypeMirror keyType =

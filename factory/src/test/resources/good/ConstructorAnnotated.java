@@ -19,9 +19,17 @@ import com.google.auto.factory.AutoFactory;
 import com.google.auto.factory.Provided;
 
 final class ConstructorAnnotated {
-  @AutoFactory ConstructorAnnotated() {}
+  @AutoFactory
+  ConstructorAnnotated() {}
+
   ConstructorAnnotated(Object obj) {}
-  @AutoFactory ConstructorAnnotated(String s) {}
-  @AutoFactory ConstructorAnnotated(@Provided Object obj, int i) {}
-  @AutoFactory ConstructorAnnotated(@Provided Object obj, char c) {}
+
+  @AutoFactory
+  ConstructorAnnotated(String s) {}
+
+  @AutoFactory
+  ConstructorAnnotated(@Provided Object obj, int i) {}
+
+  @AutoFactory
+  ConstructorAnnotated(@Provided Object obj, char c) {}
 }

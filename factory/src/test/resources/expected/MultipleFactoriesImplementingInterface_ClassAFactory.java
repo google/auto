@@ -19,9 +19,9 @@ import javax.annotation.processing.Generated;
 import javax.inject.Inject;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
 final class MultipleFactoriesImplementingInterface_ClassAFactory
     implements MultipleFactoriesImplementingInterface.Base.Factory {
   @Inject

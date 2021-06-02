@@ -46,12 +46,19 @@ abstract class FactoryDescriptor {
       };
 
   abstract PackageAndClass name();
+
   abstract TypeMirror extendingType();
+
   abstract ImmutableSet<TypeMirror> implementingTypes();
+
   abstract boolean publicType();
+
   abstract ImmutableSet<FactoryMethodDescriptor> methodDescriptors();
+
   abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
+
   abstract boolean allowSubclasses();
+
   abstract ImmutableMap<Key, ProviderField> providers();
 
   final AutoFactoryDeclaration declaration() {
@@ -216,8 +223,7 @@ abstract class FactoryDescriptor {
    * in the same order.
    */
   private static boolean areDuplicateMethodDescriptors(
-      FactoryMethodDescriptor factory,
-      ImplementationMethodDescriptor implementation) {
+      FactoryMethodDescriptor factory, ImplementationMethodDescriptor implementation) {
 
     if (!factory.name().equals(implementation.name())) {
       return false;

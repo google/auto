@@ -178,9 +178,7 @@ public class AutoValueJava8Test {
   public void testNullablePropertyImplementationIsNullable() throws NoSuchMethodException {
     Method method =
         AutoValue_AutoValueJava8Test_NullableProperties.class.getDeclaredMethod("nullableString");
-    assertThat(method.getAnnotatedReturnType().getAnnotations())
-        .asList()
-        .contains(nullable());
+    assertThat(method.getAnnotatedReturnType().getAnnotations()).asList().contains(nullable());
   }
 
   @Test
@@ -214,8 +212,9 @@ public class AutoValueJava8Test {
 
   @Test
   public void testExcludedNullablePropertyImplementation() throws NoSuchMethodException {
-    Method method = AutoValue_AutoValueJava8Test_NullablePropertiesNotCopied.class
-        .getDeclaredMethod("nullableString");
+    Method method =
+        AutoValue_AutoValueJava8Test_NullablePropertiesNotCopied.class.getDeclaredMethod(
+            "nullableString");
     assertThat(method.getAnnotatedReturnType().getAnnotations())
         .asList()
         .doesNotContain(nullable());
@@ -805,6 +804,7 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder maybeJustMaybe(Optional<String> maybe);
+
       abstract OptionalOptional build();
     }
   }
@@ -839,6 +839,7 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder setPredicate(Predicate<? super Integer> predicate);
+
       abstract OptionalExtends build();
     }
   }

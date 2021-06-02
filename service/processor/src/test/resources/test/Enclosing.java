@@ -19,5 +19,5 @@ import com.google.auto.service.AutoService;
 
 public class Enclosing {
   @AutoService(SomeService.class)
-  public static class NestedSomeServiceProvider implements SomeService { }
+  public static class NestedSomeServiceProvider implements SomeService {}
 }

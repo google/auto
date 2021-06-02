@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
  *
  * @author Gregory Kick
  */
-@Target({ TYPE, CONSTRUCTOR })
+@Target({TYPE, CONSTRUCTOR})
 public @interface AutoFactory {
   /**
    * The <i>simple</i> name of the generated factory; the factory is always generated in the same
@@ -50,7 +50,7 @@ public @interface AutoFactory {
   /**
    * A list of interfaces that the generated factory is required to implement.
    */
-  Class<?>[] implementing() default { };
+  Class<?>[] implementing() default {};
 
   /**
    * The type that the generated factory is require to extend.

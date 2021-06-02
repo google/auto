@@ -220,8 +220,9 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     ImmutableMap<String, ExecutableElement> properties =
         propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
 
-    ExtensionContext context = new ExtensionContext(
-        processingEnv, type, properties, propertyMethodsAndTypes, abstractMethods);
+    ExtensionContext context =
+        new ExtensionContext(
+            processingEnv, type, properties, propertyMethodsAndTypes, abstractMethods);
     ImmutableList<AutoValueExtension> applicableExtensions = applicableExtensions(type, context);
     ImmutableSet<ExecutableElement> consumedMethods =
         methodsConsumedByExtensions(
@@ -234,8 +235,9 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       propertyMethodsAndTypes =
           propertyMethodsIn(immutableSetDifference(abstractMethods, toBuilderMethods), type);
       properties = propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
-      context = new ExtensionContext(
-          processingEnv, type, properties, propertyMethodsAndTypes, allAbstractMethods);
+      context =
+          new ExtensionContext(
+              processingEnv, type, properties, propertyMethodsAndTypes, allAbstractMethods);
     }
 
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();

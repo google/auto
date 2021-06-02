@@ -125,13 +125,20 @@ public final class AutoBuilderTest {
     assertThat(x.getBar()).isEqualTo("skidoo");
   }
 
-  enum Truthiness {FALSY, TRUTHY}
+  enum Truthiness {
+    FALSY,
+    TRUTHY
+  }
 
   @interface MyAnnotation {
     String value();
+
     int DEFAULT_ID = -1;
+
     int id() default DEFAULT_ID;
+
     Truthiness DEFAULT_TRUTHINESS = Truthiness.FALSY;
+
     Truthiness truthiness() default Truthiness.FALSY;
   }
 
@@ -145,7 +152,9 @@ public final class AutoBuilderTest {
   @AutoBuilder(callMethod = "myAnnotation")
   interface MyAnnotationBuilder {
     MyAnnotationBuilder value(String x);
+
     MyAnnotationBuilder truthiness(Truthiness x);
+
     MyAnnotation build();
   }
 
@@ -407,7 +416,9 @@ public final class AutoBuilderTest {
   @AutoBuilder(callMethod = "singletonMap")
   interface SingletonMapBuilder<K, V extends Number> {
     SingletonMapBuilder<K, V> key(K key);
+
     SingletonMapBuilder<K, V> value(V value);
+
     Map<K, V> build();
   }
 
@@ -456,6 +467,7 @@ public final class AutoBuilderTest {
   @AutoBuilder(ofClass = SingletonSet.class)
   interface SingletonSetBuilder<E> {
     SingletonSetBuilder<E> setElement(E element);
+
     SingletonSet<E> build();
   }
 
@@ -488,7 +500,9 @@ public final class AutoBuilderTest {
   @AutoBuilder(ofClass = TypedSingletonSet.class)
   interface TypedSingletonSetBuilder<E, T extends E> {
     TypedSingletonSetBuilder<E, T> setElement(T element);
+
     TypedSingletonSetBuilder<E, T> setType(Class<T> type);
+
     TypedSingletonSet<E> build();
   }
 
@@ -510,9 +524,13 @@ public final class AutoBuilderTest {
   @AutoBuilder(callMethod = "pair")
   interface PairBuilder<T> {
     PairBuilder<T> setFirst(T x);
+
     T getFirst();
+
     PairBuilder<T> setSecond(T x);
+
     Optional<T> getSecond();
+
     ImmutableList<T> build();
   }
 

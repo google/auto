@@ -19,11 +19,12 @@ import javax.annotation.processing.Generated;
 import javax.inject.Inject;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
 public final class PublicClassFactory {
-  @Inject public PublicClassFactory() {}
+  @Inject
+  public PublicClassFactory() {}
 
   public PublicClass create() {
     return new PublicClass();

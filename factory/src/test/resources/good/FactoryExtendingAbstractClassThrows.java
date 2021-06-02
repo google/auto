@@ -23,7 +23,7 @@ import tests.FactoryExtendingAbstractClassThrows.AbstractFactory;
 final class FactoryExtendingAbstractClassThrows {
   FactoryExtendingAbstractClassThrows() throws IOException, InterruptedException {}
 
-  static abstract class AbstractFactory {
+  abstract static class AbstractFactory {
     abstract FactoryExtendingAbstractClassThrows newInstance() throws Exception;
   }
 }

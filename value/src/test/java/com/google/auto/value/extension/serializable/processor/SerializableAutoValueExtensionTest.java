@@ -427,8 +427,7 @@ public final class SerializableAutoValueExtensionTest {
     abstract ImmutableMap<String, ImmutableMap<String, Optional<String>>> a();
 
     static ComplexType.Builder builder() {
-      return new AutoValue_SerializableAutoValueExtensionTest_ComplexType
-          .Builder();
+      return new AutoValue_SerializableAutoValueExtensionTest_ComplexType.Builder();
     }
 
     @AutoValue.Builder

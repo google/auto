@@ -26,4 +26,4 @@ import java.lang.annotation.Target;
  * @author Gregory Kick
  */
 @Target(PARAMETER)
-public @interface Provided { }
+public @interface Provided {}

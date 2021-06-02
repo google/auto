@@ -20,14 +20,15 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
 final class ClassUsingQualifierWithArgsFactory {
   private final Provider<String> providedDepAProvider;
 
-  @Inject ClassUsingQualifierWithArgsFactory(
-      @QualifierWithArgs(name="Fred", count=3) Provider<String> providedDepAProvider) {
+  @Inject
+  ClassUsingQualifierWithArgsFactory(
+      @QualifierWithArgs(name = "Fred", count = 3) Provider<String> providedDepAProvider) {
     this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
   }
 

@@ -45,25 +45,32 @@ public final class AnnotationMirrors {
       new Equivalence<AnnotationMirror>() {
         @Override
         protected boolean doEquivalent(AnnotationMirror left, AnnotationMirror right) {
-          return MoreTypes.equivalence().equivalent(left.getAnnotationType(),
-              right.getAnnotationType()) && AnnotationValues.equivalence().pairwise().equivalent(
-              getAnnotationValuesWithDefaults(left).values(),
-              getAnnotationValuesWithDefaults(right).values());
+          return MoreTypes.equivalence()
+                  .equivalent(left.getAnnotationType(), right.getAnnotationType())
+              && AnnotationValues.equivalence()
+                  .pairwise()
+                  .equivalent(
+                      getAnnotationValuesWithDefaults(left).values(),
+                      getAnnotationValuesWithDefaults(right).values());
         }
+
         @Override
         protected int doHash(AnnotationMirror annotation) {
           DeclaredType type = annotation.getAnnotationType();
           Iterable<AnnotationValue> annotationValues =
               getAnnotationValuesWithDefaults(annotation).values();
-          return Arrays.hashCode(new int[] {MoreTypes.equivalence().hash(type),
-              AnnotationValues.equivalence().pairwise().hash(annotationValues)});
+          return Arrays.hashCode(
+              new int[] {
+                MoreTypes.equivalence().hash(type),
+                AnnotationValues.equivalence().pairwise().hash(annotationValues)
+              });
         }
 
         @Override
         public String toString() {
-         return "AnnotationMirrors.equivalence()";
+          return "AnnotationMirrors.equivalence()";
         }
-    };
+      };
 
   /**
    * Returns an {@link Equivalence} for {@link AnnotationMirror} as some implementations
@@ -100,8 +107,10 @@ public final class AnnotationMirrors {
       } else {
         throw new IllegalStateException(
             "Unset annotation value without default should never happen: "
-            + MoreElements.asType(method.getEnclosingElement()).getQualifiedName()
-            + '.' + method.getSimpleName() + "()");
+                + MoreElements.asType(method.getEnclosingElement()).getQualifiedName()
+                + '.'
+                + method.getSimpleName()
+                + "()");
       }
     }
     return values.build();
@@ -136,24 +145,29 @@ public final class AnnotationMirrors {
         return entry;
       }
     }
-    throw new IllegalArgumentException(String.format("@%s does not define an element %s()",
-        MoreElements.asType(annotationMirror.getAnnotationType().asElement()).getQualifiedName(),
-        elementName));
+    throw new IllegalArgumentException(
+        String.format(
+            "@%s does not define an element %s()",
+            MoreElements.asType(annotationMirror.getAnnotationType().asElement())
+                .getQualifiedName(),
+            elementName));
   }
 
   /**
    * Returns all {@linkplain AnnotationMirror annotations} that are present on the given
    * {@link Element} which are themselves annotated with {@code annotationType}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(Element element,
-      final Class<? extends Annotation> annotationType) {
+  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+      Element element, final Class<? extends Annotation> annotationType) {
     List<? extends AnnotationMirror> annotations = element.getAnnotationMirrors();
     return FluentIterable.from(annotations)
-        .filter(new Predicate<AnnotationMirror>() {
-          @Override public boolean apply(AnnotationMirror input) {
-            return isAnnotationPresent(input.getAnnotationType().asElement(), annotationType);
-          }
-        })
+        .filter(
+            new Predicate<AnnotationMirror>() {
+              @Override
+              public boolean apply(AnnotationMirror input) {
+                return isAnnotationPresent(input.getAnnotationType().asElement(), annotationType);
+              }
+            })
         .toSet();
   }
 

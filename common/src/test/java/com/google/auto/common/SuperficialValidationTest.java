@@ -35,231 +35,263 @@ import org.junit.runners.JUnit4;
 public class SuperficialValidationTest {
   @Test
   public void missingReturnType() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "abstract class TestClass {",
-        "  abstract MissingType blah();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "abstract class TestClass {",
+            "  abstract MissingType blah();",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void missingGenericReturnType() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "abstract class TestClass {",
-        "  abstract MissingType<?> blah();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "abstract class TestClass {",
+            "  abstract MissingType<?> blah();",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void missingReturnTypeTypeParameter() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "import java.util.Map;",
-        "import java.util.Set;",
-        "",
-        "abstract class TestClass {",
-        "  abstract Map<Set<?>, MissingType<?>> blah();",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "import java.util.Map;",
+            "import java.util.Set;",
+            "",
+            "abstract class TestClass {",
+            "  abstract Map<Set<?>, MissingType<?>> blah();",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void missingTypeParameter() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "class TestClass<T extends MissingType> {}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass", //
+            "package test;",
+            "",
+            "class TestClass<T extends MissingType> {}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void missingParameterType() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "abstract class TestClass {",
-        "  abstract void foo(MissingType x);",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "abstract class TestClass {",
+            "  abstract void foo(MissingType x);",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void missingAnnotation() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "@MissingAnnotation",
-        "class TestClass {}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass", //
+            "package test;",
+            "",
+            "@MissingAnnotation",
+            "class TestClass {}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void handlesRecursiveTypeParams() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "class TestClass<T extends Comparable<T>> {}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass", //
+            "package test;",
+            "",
+            "class TestClass<T extends Comparable<T>> {}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
+              }
+            })
         .compilesWithoutError();
   }
 
   @Test
   public void handlesRecursiveType() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "abstract class TestClass {",
-        "  abstract TestClass foo(TestClass x);",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "abstract class TestClass {",
+            "  abstract TestClass foo(TestClass x);",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
+              }
+            })
         .compilesWithoutError();
   }
 
   @Test
   public void missingWildcardBound() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "import java.util.Set;",
-        "",
-        "class TestClass {",
-        "  Set<? extends MissingType> extendsTest() {",
-        "    return null;",
-        "  }",
-        "",
-        "  Set<? super MissingType> superTest() {",
-        "    return null;",
-        "  }",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "import java.util.Set;",
+            "",
+            "class TestClass {",
+            "  Set<? extends MissingType> extendsTest() {",
+            "    return null;",
+            "  }",
+            "",
+            "  Set<? super MissingType> superTest() {",
+            "    return null;",
+            "  }",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void missingIntersection() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines(
-        "test.TestClass",
-        "package test;",
-        "",
-        "class TestClass<T extends Number & Missing> {}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.TestClass",
+            "package test;",
+            "",
+            "class TestClass<T extends Number & Missing> {}");
     assertAbout(javaSource())
         .that(javaFileObject)
-        .processedWith(new AssertingProcessor() {
-          @Override void runAssertions() {
-            TypeElement testClassElement =
-                processingEnv.getElementUtils().getTypeElement("test.TestClass");
-            assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-          }
-        })
+        .processedWith(
+            new AssertingProcessor() {
+              @Override
+              void runAssertions() {
+                TypeElement testClassElement =
+                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+              }
+            })
         .failsToCompile();
   }
 
   @Test
   public void invalidAnnotationValue() {
-    JavaFileObject javaFileObject = JavaFileObjects.forSourceLines("test.Outer",
-        "package test;",
-        "",
-        "final class Outer {",
-        "  @interface TestAnnotation {",
-        "    Class[] classes();",
-        "  }",
-        "",
-        "  @TestAnnotation(classes = Foo)",
-        "  static class TestClass {}",
-        "}");
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.Outer",
+            "package test;",
+            "",
+            "final class Outer {",
+            "  @interface TestAnnotation {",
+            "    Class[] classes();",
+            "  }",
+            "",
+            "  @TestAnnotation(classes = Foo)",
+            "  static class TestClass {}",
+            "}");
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(

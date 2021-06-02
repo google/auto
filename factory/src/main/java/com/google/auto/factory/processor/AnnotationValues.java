@@ -32,24 +32,29 @@ final class AnnotationValues {
   static boolean asBoolean(AnnotationValue value) {
     return value.accept(
         new SimpleAnnotationValueVisitor6<Boolean, Void>() {
-          @Override protected Boolean defaultAction(Object o, Void p) {
+          @Override
+          protected Boolean defaultAction(Object o, Void p) {
             throw new IllegalArgumentException();
           }
 
-          @Override public Boolean visitBoolean(boolean b, Void p) {
+          @Override
+          public Boolean visitBoolean(boolean b, Void p) {
             return b;
           }
-        }, null);
+        },
+        null);
   }
 
   static TypeElement asType(AnnotationValue value) {
     return value.accept(
         new SimpleAnnotationValueVisitor6<TypeElement, Void>() {
-          @Override protected TypeElement defaultAction(Object o, Void p) {
+          @Override
+          protected TypeElement defaultAction(Object o, Void p) {
             throw new IllegalArgumentException();
           }
 
-          @Override public TypeElement visitType(TypeMirror t, Void p) {
+          @Override
+          public TypeElement visitType(TypeMirror t, Void p) {
             return t.accept(
                 new SimpleTypeVisitor6<TypeElement, Void>() {
                   @Override
@@ -59,12 +64,14 @@ final class AnnotationValues {
 
                   @Override
                   public TypeElement visitDeclared(DeclaredType t, Void p) {
-                    return Iterables.getOnlyElement(ElementFilter.typesIn(
-                        ImmutableList.of(t.asElement())));
+                    return Iterables.getOnlyElement(
+                        ElementFilter.typesIn(ImmutableList.of(t.asElement())));
                   }
-                }, null);
+                },
+                null);
           }
-        }, null);
+        },
+        null);
   }
 
   static ImmutableList<? extends AnnotationValue> asList(AnnotationValue value) {
@@ -80,6 +87,7 @@ final class AnnotationValues {
               List<? extends AnnotationValue> vals, Void p) {
             return ImmutableList.copyOf(vals);
           }
-        }, null);
+        },
+        null);
   }
 }

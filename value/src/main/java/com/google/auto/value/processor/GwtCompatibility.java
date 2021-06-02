@@ -62,9 +62,7 @@ class GwtCompatibility {
         annotationArguments = "";
       } else {
         annotationArguments =
-            getElementValues(annotation)
-                .entrySet()
-                .stream()
+            getElementValues(annotation).entrySet().stream()
                 .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
                 .collect(joining(", ", "(", ")"));
       }

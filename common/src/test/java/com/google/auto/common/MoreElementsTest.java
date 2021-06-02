@@ -80,8 +80,7 @@ public class MoreElementsTest {
 
   @Test
   public void asPackage() {
-    assertThat(MoreElements.asPackage(javaLangPackageElement))
-        .isEqualTo(javaLangPackageElement);
+    assertThat(MoreElements.asPackage(javaLangPackageElement)).isEqualTo(javaLangPackageElement);
   }
 
   @Test
@@ -89,17 +88,19 @@ public class MoreElementsTest {
     try {
       MoreElements.asPackage(stringElement);
       fail();
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
-  @Test public void asTypeElement() {
-    Element typeElement =
-        compilation.getElements().getTypeElement(String.class.getCanonicalName());
+  @Test
+  public void asTypeElement() {
+    Element typeElement = compilation.getElements().getTypeElement(String.class.getCanonicalName());
     assertTrue(MoreElements.isType(typeElement));
     assertThat(MoreElements.asType(typeElement)).isEqualTo(typeElement);
   }
 
-  @Test public void asTypeElement_notATypeElement() {
+  @Test
+  public void asTypeElement_notATypeElement() {
     TypeElement typeElement =
         compilation.getElements().getTypeElement(String.class.getCanonicalName());
     for (ExecutableElement e : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
@@ -143,7 +144,8 @@ public class MoreElementsTest {
     try {
       MoreElements.asType(javaLangPackageElement);
       fail();
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   @Test
@@ -158,7 +160,8 @@ public class MoreElementsTest {
     try {
       MoreElements.asVariable(javaLangPackageElement);
       fail();
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   @Test
@@ -166,8 +169,8 @@ public class MoreElementsTest {
     for (Element methodElement : ElementFilter.methodsIn(stringElement.getEnclosedElements())) {
       assertThat(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
     }
-    for (Element methodElement
-        : ElementFilter.constructorsIn(stringElement.getEnclosedElements())) {
+    for (Element methodElement :
+        ElementFilter.constructorsIn(stringElement.getEnclosedElements())) {
       assertThat(MoreElements.asExecutable(methodElement)).isEqualTo(methodElement);
     }
   }
@@ -177,7 +180,8 @@ public class MoreElementsTest {
     try {
       MoreElements.asExecutable(javaLangPackageElement);
       fail();
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -217,12 +221,14 @@ public class MoreElementsTest {
 
     Element annotationElement = documented.get().getAnnotationType().asElement();
     expect.that(MoreElements.isType(annotationElement)).isTrue();
-    expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
+    expect
+        .that(MoreElements.asType(annotationElement).getQualifiedName().toString())
         .isEqualTo(Documented.class.getCanonicalName());
 
     annotationElement = innerAnnotation.get().getAnnotationType().asElement();
     expect.that(MoreElements.isType(annotationElement)).isTrue();
-    expect.that(MoreElements.asType(annotationElement).getQualifiedName().toString())
+    expect
+        .that(MoreElements.asType(annotationElement).getQualifiedName().toString())
         .isEqualTo(InnerAnnotation.class.getCanonicalName());
   }
 
@@ -270,14 +276,16 @@ public class MoreElementsTest {
     Set<ExecutableElement> objectMethods = visibleMethodsFromObject();
     assertThat(childTypeMethods).containsAtLeastElementsIn(objectMethods);
     Set<ExecutableElement> nonObjectMethods = Sets.difference(childTypeMethods, objectMethods);
-    assertThat(nonObjectMethods).containsExactly(
+    assertThat(nonObjectMethods)
+        .containsExactly(
             getMethod(ParentInterface.class, "bar", longMirror),
             getMethod(ParentClass.class, "foo"),
             getMethod(Child.class, "bar"),
             getMethod(Child.class, "baz"),
             getMethod(Child.class, "buh", intMirror),
             getMethod(Child.class, "buh", intMirror, intMirror))
-        .inOrder();;
+        .inOrder();
+    ;
   }
 
   @Test
@@ -293,7 +301,8 @@ public class MoreElementsTest {
     Set<ExecutableElement> objectMethods = visibleMethodsFromObject();
     assertThat(childTypeMethods).containsAtLeastElementsIn(objectMethods);
     Set<ExecutableElement> nonObjectMethods = Sets.difference(childTypeMethods, objectMethods);
-    assertThat(nonObjectMethods).containsExactly(
+    assertThat(nonObjectMethods)
+        .containsExactly(
             getMethod(ParentInterface.class, "bar", longMirror),
             getMethod(ParentClass.class, "foo"),
             getMethod(Child.class, "bar"),
@@ -316,7 +325,8 @@ public class MoreElementsTest {
     Set<ExecutableElement> objectMethods = allMethodsFromObject();
     assertThat(childTypeMethods).containsAtLeastElementsIn(objectMethods);
     Set<ExecutableElement> nonObjectMethods = Sets.difference(childTypeMethods, objectMethods);
-    assertThat(nonObjectMethods).containsExactly(
+    assertThat(nonObjectMethods)
+        .containsExactly(
             getMethod(ParentInterface.class, "staticMethod"),
             getMethod(ParentInterface.class, "bar", longMirror),
             getMethod(ParentClass.class, "staticMethod"),
@@ -357,8 +367,8 @@ public class MoreElementsTest {
   public void getLocalAndInheritedMethods_DaggerBug() {
     Elements elementUtils = compilation.getElements();
     TypeElement main = elementUtils.getTypeElement(Main.ParentComponent.class.getCanonicalName());
-    Set<ExecutableElement> methods = MoreElements.getLocalAndInheritedMethods(
-        main, compilation.getTypes(), elementUtils);
+    Set<ExecutableElement> methods =
+        MoreElements.getLocalAndInheritedMethods(main, compilation.getTypes(), elementUtils);
     assertThat(methods).hasSize(1);
     ExecutableElement method = methods.iterator().next();
     assertThat(method.getSimpleName().toString()).isEqualTo("injectable");

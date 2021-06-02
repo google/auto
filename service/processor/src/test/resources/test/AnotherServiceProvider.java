@@ -18,4 +18,4 @@ package test;
 import com.google.auto.service.AutoService;
 
 @AutoService(AnotherService.class)
-public class AnotherServiceProvider implements AnotherService { }
+public class AnotherServiceProvider implements AnotherService {}

@@ -83,8 +83,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     try {
       doProcess(roundEnv);
     } catch (Throwable e) {
-      messager.printMessage(Kind.ERROR, "Failed to process @AutoFactory annotations:\n"
-          + Throwables.getStackTraceAsString(e));
+      messager.printMessage(
+          Kind.ERROR,
+          "Failed to process @AutoFactory annotations:\n" + Throwables.getStackTraceAsString(e));
     }
     return false;
   }
@@ -127,49 +128,53 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         simpleNamesToNames(indexedMethods.keySet());
     FactoryWriter factoryWriter = new FactoryWriter(processingEnv, factoriesBeingCreated);
 
-    indexedMethods.asMap().forEach(
-        (factoryName, methodDescriptors) -> {
-          // The sets of classes that are mentioned in the `extending` and `implementing` elements,
-          // respectively, of the @AutoFactory annotations for this factory.
-          ImmutableSet.Builder<TypeMirror> extending = newTypeSetBuilder();
-          ImmutableSortedSet.Builder<TypeMirror> implementing = newTypeSetBuilder();
-          boolean publicType = false;
-          Boolean allowSubclasses = null;
-          boolean skipCreation = false;
-          for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
-            extending.add(methodDescriptor.declaration().extendingType().asType());
-            for (TypeElement implementingType :
-                methodDescriptor.declaration().implementingTypes()) {
-              implementing.add(implementingType.asType());
-            }
-            publicType |= methodDescriptor.publicMethod();
-            if (allowSubclasses == null) {
-              allowSubclasses = methodDescriptor.declaration().allowSubclasses();
-            } else if (!allowSubclasses.equals(methodDescriptor.declaration().allowSubclasses())) {
-              skipCreation = true;
-              messager.printMessage(Kind.ERROR,
-                  "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.",
-                  methodDescriptor.declaration().target(),
-                  methodDescriptor.declaration().mirror(),
-                  methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
-            }
-          }
-          if (!skipCreation) {
-            try {
-              factoryWriter.writeFactory(
-                  FactoryDescriptor.create(
-                      factoryName,
-                      Iterables.getOnlyElement(extending.build()),
-                      implementing.build(),
-                      publicType,
-                      ImmutableSet.copyOf(methodDescriptors),
-                      implementationMethodDescriptors.get(factoryName),
-                      allowSubclasses));
-            } catch (IOException e) {
-              messager.printMessage(Kind.ERROR, "failed: " + e);
-            }
-          }
-        });
+    indexedMethods
+        .asMap()
+        .forEach(
+            (factoryName, methodDescriptors) -> {
+              // The sets of classes that are mentioned in the `extending` and `implementing`
+              // elements, respectively, of the @AutoFactory annotations for this factory.
+              ImmutableSet.Builder<TypeMirror> extending = newTypeSetBuilder();
+              ImmutableSortedSet.Builder<TypeMirror> implementing = newTypeSetBuilder();
+              boolean publicType = false;
+              Boolean allowSubclasses = null;
+              boolean skipCreation = false;
+              for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
+                extending.add(methodDescriptor.declaration().extendingType().asType());
+                for (TypeElement implementingType :
+                    methodDescriptor.declaration().implementingTypes()) {
+                  implementing.add(implementingType.asType());
+                }
+                publicType |= methodDescriptor.publicMethod();
+                if (allowSubclasses == null) {
+                  allowSubclasses = methodDescriptor.declaration().allowSubclasses();
+                } else if (!allowSubclasses.equals(
+                    methodDescriptor.declaration().allowSubclasses())) {
+                  skipCreation = true;
+                  messager.printMessage(
+                      Kind.ERROR,
+                      "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.",
+                      methodDescriptor.declaration().target(),
+                      methodDescriptor.declaration().mirror(),
+                      methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
+                }
+              }
+              if (!skipCreation) {
+                try {
+                  factoryWriter.writeFactory(
+                      FactoryDescriptor.create(
+                          factoryName,
+                          Iterables.getOnlyElement(extending.build()),
+                          implementing.build(),
+                          publicType,
+                          ImmutableSet.copyOf(methodDescriptors),
+                          implementationMethodDescriptors.get(factoryName),
+                          allowSubclasses));
+                } catch (IOException e) {
+                  messager.printMessage(Kind.ERROR, "failed: " + e);
+                }
+              }
+            });
   }
 
   private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
@@ -180,8 +185,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         ElementFilter.methodsIn(elements.getAllMembers(supertype))) {
       if (implementationMethod.getModifiers().contains(Modifier.ABSTRACT)) {
         ExecutableType methodType =
-            Elements2.getExecutableElementAsMemberOf(
-                types, implementationMethod, supertype);
+            Elements2.getExecutableElementAsMemberOf(types, implementationMethod, supertype);
         ImmutableSet<Parameter> passedParameters =
             Parameter.forParameterList(
                 implementationMethod.getParameters(), methodType.getParameterTypes(), types);

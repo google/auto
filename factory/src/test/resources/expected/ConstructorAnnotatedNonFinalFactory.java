@@ -20,13 +20,14 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
 class ConstructorAnnotatedNonFinalFactory {
   private final Provider<Object> objProvider;
-  
-  @Inject ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
+
+  @Inject
+  ConstructorAnnotatedNonFinalFactory(Provider<Object> objProvider) {
     this.objProvider = checkNotNull(objProvider, 1);
   }
 
@@ -37,11 +38,11 @@ class ConstructorAnnotatedNonFinalFactory {
   ConstructorAnnotatedNonFinal create(String s) {
     return new ConstructorAnnotatedNonFinal(checkNotNull(s, 1));
   }
-  
+
   ConstructorAnnotatedNonFinal create(int i) {
     return new ConstructorAnnotatedNonFinal(checkNotNull(objProvider.get(), 1), i);
   }
-  
+
   ConstructorAnnotatedNonFinal create(char c) {
     return new ConstructorAnnotatedNonFinal(checkNotNull(objProvider.get(), 1), c);
   }

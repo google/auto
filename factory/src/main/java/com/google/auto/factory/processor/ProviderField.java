@@ -27,7 +27,9 @@ import javax.lang.model.element.AnnotationMirror;
 @AutoValue
 abstract class ProviderField {
   abstract String name();
+
   abstract Key key();
+
   abstract Optional<Equivalence.Wrapper<AnnotationMirror>> nullableWrapper();
 
   Optional<AnnotationMirror> nullable() {

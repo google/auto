@@ -28,7 +28,6 @@ final class MultipleProvidedParamsSameKey {
   private final Provider<String> providerOne;
   private final Provider<String> providerTwo;
 
-
   public MultipleProvidedParamsSameKey(
       @Provided String one,
       @Provided String two,

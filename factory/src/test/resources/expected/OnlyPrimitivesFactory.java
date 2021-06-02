@@ -19,11 +19,12 @@ import javax.annotation.processing.Generated;
 import javax.inject.Inject;
 
 @Generated(
-  value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-  comments = "https://github.com/google/auto/tree/master/factory"
-  )
+    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
+    comments = "https://github.com/google/auto/tree/master/factory"
+    )
 final class OnlyPrimitivesFactory {
-  @Inject OnlyPrimitivesFactory() {}
+  @Inject
+  OnlyPrimitivesFactory() {}
 
   OnlyPrimitives create(int i, long l) {
     return new OnlyPrimitives(i, l);

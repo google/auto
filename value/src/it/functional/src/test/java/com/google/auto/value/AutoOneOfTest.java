@@ -499,10 +499,7 @@ public class AutoOneOfTest {
     ArrayValue string = ArrayValue.ofString("foo");
     ArrayValue ints1 = ArrayValue.ofInts(new int[] {17, 23});
     ArrayValue ints2 = ArrayValue.ofInts(new int[] {17, 23});
-    new EqualsTester()
-        .addEqualityGroup(string)
-        .addEqualityGroup(ints1, ints2)
-        .testEquals();
+    new EqualsTester().addEqualityGroup(string).addEqualityGroup(ints1, ints2).testEquals();
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -563,7 +560,8 @@ public class AutoOneOfTest {
     private static final long serialVersionUID = 1L;
 
     public enum Kind {
-      EMPTY, STRING,
+      EMPTY,
+      STRING,
     }
 
     public abstract Kind getKind();

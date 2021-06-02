@@ -41,8 +41,7 @@ import org.junit.runners.JUnit4;
  */
 @RunWith(JUnit4.class)
 public class PropertyAnnotationsTest {
-  private static final String TEST_ANNOTATION =
-      "@PropertyAnnotationsTest.TestAnnotation";
+  private static final String TEST_ANNOTATION = "@PropertyAnnotationsTest.TestAnnotation";
   private static final String TEST_ARRAY_ANNOTATION =
       "@PropertyAnnotationsTest.TestArrayAnnotation";
 
@@ -449,10 +448,12 @@ public class PropertyAnnotationsTest {
     assertGeneratedMatches(
         getImports(PropertyAnnotationsTest.class),
         ImmutableList.of(
-            TEST_ARRAY_ANNOTATION + "(testEnums = {PropertyAnnotationsTest.TestEnum.A,"
+            TEST_ARRAY_ANNOTATION
+                + "(testEnums = {PropertyAnnotationsTest.TestEnum.A,"
                 + " PropertyAnnotationsTest.TestEnum.B})"),
         ImmutableList.of(
-            TEST_ARRAY_ANNOTATION + "(testEnums = {PropertyAnnotationsTest.TestEnum.A,"
+            TEST_ARRAY_ANNOTATION
+                + "(testEnums = {PropertyAnnotationsTest.TestEnum.A,"
                 + " PropertyAnnotationsTest.TestEnum.B})"));
   }
 
@@ -552,9 +553,7 @@ public class PropertyAnnotationsTest {
             .setImports(getImports(PropertyAnnotationsTest.class))
             .addFieldAnnotations("@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation")
             .addMethodAnnotations(
-                "@Deprecated",
-                "@PropertyAnnotationsTest.InheritedAnnotation",
-                "@Baz.MethodsOnly")
+                "@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation", "@Baz.MethodsOnly")
             .build();
 
     Compilation compilation =

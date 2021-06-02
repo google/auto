@@ -53,9 +53,7 @@ final class FactoryDescriptorGenerator {
   private final AutoFactoryDeclaration.Factory declarationFactory;
 
   FactoryDescriptorGenerator(
-      Messager messager,
-      Types types,
-      AutoFactoryDeclaration.Factory declarationFactory) {
+      Messager messager, Types types, AutoFactoryDeclaration.Factory declarationFactory) {
     this.messager = messager;
     this.types = types;
     this.declarationFactory = declarationFactory;
@@ -67,55 +65,63 @@ final class FactoryDescriptorGenerator {
     if (!declaration.isPresent()) {
       return ImmutableSet.of();
     }
-    return element.accept(new ElementKindVisitor6<ImmutableSet<FactoryMethodDescriptor>, Void>() {
-      @Override
-      protected ImmutableSet<FactoryMethodDescriptor> defaultAction(Element e, Void p) {
-        throw new AssertionError("@AutoFactory applied to an impossible element");
-      }
-
-      @Override
-      public ImmutableSet<FactoryMethodDescriptor> visitTypeAsClass(TypeElement type, Void p) {
-        if (type.getModifiers().contains(ABSTRACT)) {
-          // applied to an abstract factory
-          messager.printMessage(ERROR,
-              "Auto-factory doesn't support being applied to abstract classes.", type, mirror);
-          return ImmutableSet.of();
-        } else {
-          // applied to the type to be created
-          ImmutableSet<ExecutableElement> constructors = Elements2.getConstructors(type);
-          if (constructors.isEmpty()) {
-            return generateDescriptorForDefaultConstructor(declaration.get(), type);
-          } else {
-            return FluentIterable.from(constructors)
-                .transform(new Function<ExecutableElement, FactoryMethodDescriptor>() {
-                  @Override public FactoryMethodDescriptor apply(ExecutableElement constructor) {
-                    return generateDescriptorForConstructor(declaration.get(), constructor);
-                  }
-                })
-                .toSet();
+    return element.accept(
+        new ElementKindVisitor6<ImmutableSet<FactoryMethodDescriptor>, Void>() {
+          @Override
+          protected ImmutableSet<FactoryMethodDescriptor> defaultAction(Element e, Void p) {
+            throw new AssertionError("@AutoFactory applied to an impossible element");
           }
-        }
-      }
 
-      @Override
-      public ImmutableSet<FactoryMethodDescriptor> visitTypeAsInterface(TypeElement type, Void p) {
-        // applied to the factory interface
-        messager.printMessage(ERROR,
-            "Auto-factory doesn't support being applied to interfaces.", type, mirror);
-        return ImmutableSet.of();
-      }
+          @Override
+          public ImmutableSet<FactoryMethodDescriptor> visitTypeAsClass(TypeElement type, Void p) {
+            if (type.getModifiers().contains(ABSTRACT)) {
+              // applied to an abstract factory
+              messager.printMessage(
+                  ERROR,
+                  "Auto-factory doesn't support being applied to abstract classes.",
+                  type,
+                  mirror);
+              return ImmutableSet.of();
+            } else {
+              // applied to the type to be created
+              ImmutableSet<ExecutableElement> constructors = Elements2.getConstructors(type);
+              if (constructors.isEmpty()) {
+                return generateDescriptorForDefaultConstructor(declaration.get(), type);
+              } else {
+                return FluentIterable.from(constructors)
+                    .transform(
+                        new Function<ExecutableElement, FactoryMethodDescriptor>() {
+                          @Override
+                          public FactoryMethodDescriptor apply(ExecutableElement constructor) {
+                            return generateDescriptorForConstructor(declaration.get(), constructor);
+                          }
+                        })
+                    .toSet();
+              }
+            }
+          }
 
-      @Override
-      public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(
-          ExecutableElement e, Void p) {
-        // applied to a constructor of a type to be created
-        return ImmutableSet.of(generateDescriptorForConstructor(declaration.get(), e));
-      }
-    }, null);
+          @Override
+          public ImmutableSet<FactoryMethodDescriptor> visitTypeAsInterface(
+              TypeElement type, Void p) {
+            // applied to the factory interface
+            messager.printMessage(
+                ERROR, "Auto-factory doesn't support being applied to interfaces.", type, mirror);
+            return ImmutableSet.of();
+          }
+
+          @Override
+          public ImmutableSet<FactoryMethodDescriptor> visitExecutableAsConstructor(
+              ExecutableElement e, Void p) {
+            // applied to a constructor of a type to be created
+            return ImmutableSet.of(generateDescriptorForConstructor(declaration.get(), e));
+          }
+        },
+        null);
   }
 
-  FactoryMethodDescriptor generateDescriptorForConstructor(final AutoFactoryDeclaration declaration,
-      ExecutableElement constructor) {
+  FactoryMethodDescriptor generateDescriptorForConstructor(
+      final AutoFactoryDeclaration declaration, ExecutableElement constructor) {
     checkNotNull(constructor);
     checkArgument(constructor.getKind() == ElementKind.CONSTRUCTOR);
     TypeElement classElement = MoreElements.asType(constructor.getEnclosingElement());

@@ -129,10 +129,8 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
 
   private DeclaredType mirrorForKindType(TypeElement autoOneOfType) {
     // The annotation is guaranteed to be present by the contract of Processor#process
-    AnnotationMirror oneOfAnnotation =
-        getAnnotationMirror(autoOneOfType, AUTO_ONE_OF_NAME).get();
-    AnnotationValue kindValue =
-        AnnotationMirrors.getAnnotationValue(oneOfAnnotation, "value");
+    AnnotationMirror oneOfAnnotation = getAnnotationMirror(autoOneOfType, AUTO_ONE_OF_NAME).get();
+    AnnotationValue kindValue = AnnotationMirrors.getAnnotationValue(oneOfAnnotation, "value");
     Object value = kindValue.getValue();
     if (value instanceof TypeMirror) {
       TypeMirror kindType = (TypeMirror) value;
@@ -159,9 +157,7 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
     Map<String, String> transformedPropertyNames =
         propertyNames.stream().collect(toMap(this::transformName, s -> s));
     Map<String, Element> transformedEnumConstants =
-        kindElement
-            .getEnclosedElements()
-            .stream()
+        kindElement.getEnclosedElements().stream()
             .filter(e -> e.getKind().equals(ElementKind.ENUM_CONSTANT))
             .collect(toMap(e -> transformName(e.getSimpleName().toString()), e -> e));
 
@@ -212,8 +208,7 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
       TypeMirror kindMirror,
       ImmutableSet<ExecutableElement> abstractMethods) {
     Set<ExecutableElement> kindGetters =
-        abstractMethods
-            .stream()
+        abstractMethods.stream()
             .filter(e -> sameType(kindMirror, e.getReturnType()))
             .filter(e -> e.getParameters().isEmpty())
             .collect(toSet());
@@ -270,14 +265,15 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
       AutoOneOfTemplateVars vars,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       ExecutableElement kindGetter) {
-    vars.props = propertySet(
-        propertyMethodsAndTypes, ImmutableListMultimap.of(), ImmutableListMultimap.of());
+    vars.props =
+        propertySet(
+            propertyMethodsAndTypes, ImmutableListMultimap.of(), ImmutableListMultimap.of());
     vars.kindGetter = kindGetter.getSimpleName().toString();
     vars.kindType = TypeEncoder.encode(kindGetter.getReturnType());
     TypeElement javaIoSerializable = elementUtils().getTypeElement("java.io.Serializable");
     vars.serializable =
-        javaIoSerializable != null  // just in case
-        && typeUtils().isAssignable(type.asType(), javaIoSerializable.asType());
+        javaIoSerializable != null // just in case
+            && typeUtils().isAssignable(type.asType(), javaIoSerializable.asType());
   }
 
   @Override

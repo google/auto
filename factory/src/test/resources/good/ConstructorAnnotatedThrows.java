@@ -20,10 +20,17 @@ import com.google.auto.factory.Provided;
 import java.io.IOException;
 
 final class ConstructorAnnotatedThrows {
-  @AutoFactory ConstructorAnnotatedThrows() throws IOException, InterruptedException {}
+  @AutoFactory
+  ConstructorAnnotatedThrows() throws IOException, InterruptedException {}
+
   ConstructorAnnotatedThrows(Object obj) {}
-  @AutoFactory ConstructorAnnotatedThrows(String s) {}
-  @AutoFactory ConstructorAnnotatedThrows(@Provided Object obj, int i) throws IOException {}
-  @AutoFactory ConstructorAnnotatedThrows(@Provided Object obj, char c)
-      throws InterruptedException {}
+
+  @AutoFactory
+  ConstructorAnnotatedThrows(String s) {}
+
+  @AutoFactory
+  ConstructorAnnotatedThrows(@Provided Object obj, int i) throws IOException {}
+
+  @AutoFactory
+  ConstructorAnnotatedThrows(@Provided Object obj, char c) throws InterruptedException {}
 }

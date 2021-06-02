@@ -24,18 +24,18 @@ import com.google.auto.factory.Provided;
 final class MixedDepsImplementingInterfaces {
   @AutoFactory(implementing = {FromInt.class, MarkerA.class})
   MixedDepsImplementingInterfaces(@Provided String s, int i) {}
-  
+
   @AutoFactory(implementing = {FromObject.class, MarkerB.class})
   MixedDepsImplementingInterfaces(Object o) {}
 
   interface FromInt {
     MixedDepsImplementingInterfaces fromInt(int i);
   }
-  
+
   interface FromObject {
     MixedDepsImplementingInterfaces fromObject(Object o);
   }
-  
+
   interface MarkerA {}
 
   interface MarkerB {}

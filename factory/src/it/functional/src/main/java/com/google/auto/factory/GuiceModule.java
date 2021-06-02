@@ -18,7 +18,8 @@ package com.google.auto.factory;
 import com.google.inject.AbstractModule;
 
 public class GuiceModule extends AbstractModule {
-  @Override protected void configure() {
+  @Override
+  protected void configure() {
     bind(Dependency.class).to(DependencyImpl.class);
     bind(Dependency.class).annotatedWith(Qualifier.class).to(QualifiedDependencyImpl.class);
     bind(Integer.class).toInstance(1);

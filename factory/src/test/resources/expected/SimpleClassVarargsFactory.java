@@ -21,9 +21,10 @@ import javax.inject.Inject;
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
     comments = "https://github.com/google/auto/tree/master/factory"
-)
+    )
 final class SimpleClassVarargsFactory implements SimpleClassVarargs.InterfaceWithVarargs {
-  @Inject SimpleClassVarargsFactory() {}
+  @Inject
+  SimpleClassVarargsFactory() {}
 
   SimpleClassVarargs create(String... args) {
     return new SimpleClassVarargs(checkNotNull(args, 1));
