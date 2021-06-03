@@ -212,15 +212,36 @@ public final class MoreElements {
   }
 
   /**
-   * Returns {@code true} iff the given element has an {@link AnnotationMirror} whose
-   * {@linkplain AnnotationMirror#getAnnotationType() annotation type} has the same canonical name
-   * as that of {@code annotationClass}. This method is a safer alternative to calling
-   * {@link Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
+   * Returns {@code true} iff the given element has an {@link AnnotationMirror} whose {@linkplain
+   * AnnotationMirror#getAnnotationType() annotation type} has the same canonical name as that of
+   * {@code annotationClass}. This method is a safer alternative to calling {@link
+   * Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
    * annotation proxies.
    */
   public static boolean isAnnotationPresent(
       Element element, Class<? extends Annotation> annotationClass) {
     return getAnnotationMirror(element, annotationClass).isPresent();
+  }
+
+  /**
+   * Returns {@code true} iff the given element has an {@link AnnotationMirror} whose {@linkplain
+   * AnnotationMirror#getAnnotationType() annotation type} has the same fully qualified name as that
+   * of {@code annotation}. This method is a safer alternative to calling {@link
+   * Element#getAnnotation} and checking for {@code null} as it avoids any interaction with
+   * annotation proxies.
+   */
+  public static boolean isAnnotationPresent(Element element, TypeElement annotation) {
+    return getAnnotationMirror(element, annotation).isPresent();
+  }
+
+  /**
+   * Returns {@code true} iff the given element has an {@link AnnotationMirror} whose {@linkplain
+   * AnnotationMirror#getAnnotationType() annotation type} has {@code annotationName} as its
+   * canonical name. This method is a safer alternative to calling {@link Element#getAnnotation} and
+   * checking for {@code null} as it avoids any interaction with annotation proxies.
+   */
+  public static boolean isAnnotationPresent(Element element, String annotationName) {
+    return getAnnotationMirror(element, annotationName).isPresent();
   }
 
   /**
@@ -231,10 +252,36 @@ public final class MoreElements {
    */
   public static Optional<AnnotationMirror> getAnnotationMirror(
       Element element, Class<? extends Annotation> annotationClass) {
-    String annotationClassName = annotationClass.getCanonicalName();
+    return getAnnotationMirror(element, annotationClass.getCanonicalName());
+  }
+
+  /**
+   * Returns an {@link AnnotationMirror} for the annotation of type {@code annotation} on {@code
+   * element}, or {@link Optional#absent()} if no such annotation exists. This method is a safer
+   * alternative to calling {@link Element#getAnnotation} as it avoids any interaction with
+   * annotation proxies.
+   */
+  public static Optional<AnnotationMirror> getAnnotationMirror(
+      Element element, TypeElement annotation) {
+    for (AnnotationMirror elementAnnotation : element.getAnnotationMirrors()) {
+      if (elementAnnotation.getAnnotationType().asElement().equals(annotation)) {
+        return Optional.of(elementAnnotation);
+      }
+    }
+    return Optional.absent();
+  }
+
+  /**
+   * Returns an {@link AnnotationMirror} for the annotation whose type's canonical name is on {@code
+   * element}, or {@link Optional#absent()} if no such annotation exists. This method is a safer
+   * alternative to calling {@link Element#getAnnotation} as it avoids any interaction with
+   * annotation proxies.
+   */
+  public static Optional<AnnotationMirror> getAnnotationMirror(
+      Element element, String annotationName) {
     for (AnnotationMirror annotationMirror : element.getAnnotationMirrors()) {
       TypeElement annotationTypeElement = asType(annotationMirror.getAnnotationType().asElement());
-      if (annotationTypeElement.getQualifiedName().contentEquals(annotationClassName)) {
+      if (annotationTypeElement.getQualifiedName().contentEquals(annotationName)) {
         return Optional.of(annotationMirror);
       }
     }

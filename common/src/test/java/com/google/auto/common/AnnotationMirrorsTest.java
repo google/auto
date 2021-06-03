@@ -22,12 +22,17 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static org.junit.Assert.fail;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.EquivalenceTester;
+import com.google.common.truth.Correspondence;
 import com.google.testing.compile.CompilationRule;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.Map;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor6;
@@ -251,5 +256,54 @@ public class AnnotationMirrorsTest {
 
   private AnnotationMirror annotationOn(Class<?> clazz) {
     return getOnlyElement(elements.getTypeElement(clazz.getCanonicalName()).getAnnotationMirrors());
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface AnnotatingAnnotation {}
+
+  @AnnotatingAnnotation
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface AnnotatedAnnotation1 {}
+
+  @AnnotatingAnnotation
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface AnnotatedAnnotation2 {}
+
+  @Retention(RetentionPolicy.RUNTIME)
+  private @interface NotAnnotatedAnnotation {}
+
+  @AnnotatedAnnotation1
+  @NotAnnotatedAnnotation
+  @AnnotatedAnnotation2
+  private static final class AnnotatedClass {}
+
+  @Test
+  public void getAnnotatedAnnotations() {
+    TypeElement element = elements.getTypeElement(AnnotatedClass.class.getCanonicalName());
+
+    // Test Class API
+    getAnnotatedAnnotationsAsserts(
+        AnnotationMirrors.getAnnotatedAnnotations(element, AnnotatingAnnotation.class));
+
+    // Test String API
+    String annotatingAnnotationName = AnnotatingAnnotation.class.getCanonicalName();
+    getAnnotatedAnnotationsAsserts(
+        AnnotationMirrors.getAnnotatedAnnotations(element, annotatingAnnotationName));
+
+    // Test TypeElement API
+    TypeElement annotatingAnnotationElement = elements.getTypeElement(annotatingAnnotationName);
+    getAnnotatedAnnotationsAsserts(
+        AnnotationMirrors.getAnnotatedAnnotations(element, annotatingAnnotationElement));
+  }
+
+  private void getAnnotatedAnnotationsAsserts(
+      ImmutableSet<? extends AnnotationMirror> annotatedAnnotations) {
+    assertThat(annotatedAnnotations)
+        .comparingElementsUsing(
+            Correspondence.transforming(
+                (AnnotationMirror a) -> MoreTypes.asTypeElement(a.getAnnotationType()), "has type"))
+        .containsExactly(
+            elements.getTypeElement(AnnotatedAnnotation1.class.getCanonicalName()),
+            elements.getTypeElement(AnnotatedAnnotation2.class.getCanonicalName()));
   }
 }
