@@ -21,7 +21,6 @@ import static javax.lang.model.type.TypeKind.VOID;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -159,13 +158,7 @@ public class MoreTypesTest {
       ImmutableList<TypeMirror> equivalenceGroup =
           FluentIterable.from(
                   elements.getTypeElement(testClass.getCanonicalName()).getEnclosedElements())
-              .transform(
-                  new Function<Element, TypeMirror>() {
-                    @Override
-                    public TypeMirror apply(Element input) {
-                      return input.asType();
-                    }
-                  })
+              .transform(Element::asType)
               .toList();
       tester.addEquivalenceGroup(equivalenceGroup);
     }
@@ -239,13 +232,7 @@ public class MoreTypesTest {
         elements.getTypeElement(ReferencedTypesTestData.class.getCanonicalName());
     ImmutableMap<String, VariableElement> fieldIndex =
         FluentIterable.from(ElementFilter.fieldsIn(testDataElement.getEnclosedElements()))
-            .uniqueIndex(
-                new Function<VariableElement, String>() {
-                  @Override
-                  public String apply(VariableElement input) {
-                    return input.getSimpleName().toString();
-                  }
-                });
+            .uniqueIndex(input -> input.getSimpleName().toString());
 
     TypeElement objectElement = elements.getTypeElement(Object.class.getCanonicalName());
     TypeElement stringElement = elements.getTypeElement(String.class.getCanonicalName());
@@ -465,18 +452,20 @@ public class MoreTypesTest {
           return null;
         }
 
-        // JDK8 Compatibility:
-
+        @Override
         public <A extends Annotation> A[] getAnnotationsByType(Class<A> annotationType) {
           return null;
         }
 
+        @Override
         public <A extends Annotation> A getAnnotation(Class<A> annotationType) {
           return null;
         }
 
+        @Override
+        @SuppressWarnings("MutableMethodReturnType")
         public List<? extends AnnotationMirror> getAnnotationMirrors() {
-          return null;
+          return ImmutableList.of();
         }
       };
 

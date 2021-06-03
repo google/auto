@@ -38,9 +38,8 @@ public class PropertyNamesTest {
   @Test
   public void decapitalizeLikeJavaBeans() {
     NORMAL_CASES.forEach(
-        (input, output) -> {
-          expect.that(PropertyNames.decapitalizeLikeJavaBeans(input)).isEqualTo(output);
-        });
+        (input, output) ->
+            expect.that(PropertyNames.decapitalizeLikeJavaBeans(input)).isEqualTo(output));
     expect.that(PropertyNames.decapitalizeLikeJavaBeans(null)).isNull();
     expect.that(PropertyNames.decapitalizeLikeJavaBeans("HTMLPage")).isEqualTo("HTMLPage");
     expect.that(PropertyNames.decapitalizeLikeJavaBeans("OAuth")).isEqualTo("OAuth");
@@ -49,9 +48,8 @@ public class PropertyNamesTest {
   @Test
   public void decapitalizeNormally() {
     NORMAL_CASES.forEach(
-        (input, output) -> {
-          expect.that(PropertyNames.decapitalizeNormally(input)).isEqualTo(output);
-        });
+        (input, output) ->
+            expect.that(PropertyNames.decapitalizeNormally(input)).isEqualTo(output));
     expect.that(PropertyNames.decapitalizeNormally(null)).isNull();
     expect.that(PropertyNames.decapitalizeNormally("HTMLPage")).isEqualTo("hTMLPage");
     expect.that(PropertyNames.decapitalizeNormally("OAuth")).isEqualTo("oAuth");

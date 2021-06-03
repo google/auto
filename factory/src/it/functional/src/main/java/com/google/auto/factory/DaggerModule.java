@@ -16,45 +16,44 @@
 package com.google.auto.factory;
 
 import com.google.auto.factory.otherpackage.OtherPackage;
+import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
 
 @Module
-final class DaggerModule {
-  @Provides
-  Dependency provideDependency(DependencyImpl impl) {
-    return impl;
-  }
+abstract class DaggerModule {
+  private DaggerModule() {} // no instances
 
-  @Provides
+  @Binds
+  abstract Dependency provideDependency(DependencyImpl impl);
+
+  @Binds
   @Qualifier
-  Dependency provideQualifiedDependency(QualifiedDependencyImpl impl) {
-    return impl;
-  }
+  abstract Dependency provideQualifiedDependency(QualifiedDependencyImpl impl);
 
   @Provides
-  int providePrimitive() {
+  static int providePrimitive() {
     return 1;
   }
 
   @Provides
   @Qualifier
-  int provideQualifiedPrimitive() {
+  static int provideQualifiedPrimitive() {
     return 2;
   }
 
   @Provides
-  Number provideNumber() {
+  static Number provideNumber() {
     return 3;
   }
 
   @Provides
-  ReferencePackage provideReferencePackage(ReferencePackageFactory factory) {
+  static ReferencePackage provideReferencePackage(ReferencePackageFactory factory) {
     return factory.create(17);
   }
 
   @Provides
-  OtherPackage provideOtherPackage() {
+  static OtherPackage provideOtherPackage() {
     return new OtherPackage(null, 23);
   }
 }

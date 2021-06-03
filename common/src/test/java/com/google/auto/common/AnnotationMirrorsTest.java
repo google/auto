@@ -59,10 +59,10 @@ public class AnnotationMirrorsTest {
   @interface SimpleAnnotation {}
 
   @SimpleAnnotation
-  class SimplyAnnotated {}
+  static class SimplyAnnotated {}
 
   @SimpleAnnotation
-  class AlsoSimplyAnnotated {}
+  static class AlsoSimplyAnnotated {}
 
   enum SimpleEnum {
     BLAH,
@@ -87,45 +87,45 @@ public class AnnotationMirrorsTest {
   }
 
   @DefaultingOuter
-  class TestWithDefaultingOuterDefault {}
+  static class TestWithDefaultingOuterDefault {}
 
   @DefaultingOuter(BLAH)
-  class TestWithDefaultingOuterBlah {}
+  static class TestWithDefaultingOuterBlah {}
 
   @DefaultingOuter(FOO)
-  class TestWithDefaultingOuterFoo {}
+  static class TestWithDefaultingOuterFoo {}
 
   @interface AnnotatedOuter {
     DefaultingOuter value();
   }
 
   @AnnotatedOuter(@DefaultingOuter)
-  class TestDefaultNestedAnnotated {}
+  static class TestDefaultNestedAnnotated {}
 
   @AnnotatedOuter(@DefaultingOuter(BLAH))
-  class TestBlahNestedAnnotated {}
+  static class TestBlahNestedAnnotated {}
 
   @AnnotatedOuter(@DefaultingOuter(FOO))
-  class TestFooNestedAnnotated {}
+  static class TestFooNestedAnnotated {}
 
   @interface OuterWithValueArray {
     DefaultingOuter[] value() default {};
   }
 
   @OuterWithValueArray
-  class TestValueArrayWithDefault {}
+  static class TestValueArrayWithDefault {}
 
   @OuterWithValueArray({})
-  class TestValueArrayWithEmpty {}
+  static class TestValueArrayWithEmpty {}
 
   @OuterWithValueArray({@DefaultingOuter})
-  class TestValueArrayWithOneDefault {}
+  static class TestValueArrayWithOneDefault {}
 
   @OuterWithValueArray(@DefaultingOuter(BLAH))
-  class TestValueArrayWithOneBlah {}
+  static class TestValueArrayWithOneBlah {}
 
   @OuterWithValueArray(@DefaultingOuter(FOO))
-  class TestValueArrayWithOneFoo {}
+  static class TestValueArrayWithOneFoo {}
 
   @OuterWithValueArray({@DefaultingOuter(FOO), @DefaultingOuter})
   class TestValueArrayWithFooAndDefaultBlah {}
@@ -188,10 +188,10 @@ public class AnnotationMirrorsTest {
   }
 
   @Stringy
-  class StringyUnset {}
+  static class StringyUnset {}
 
   @Stringy("foo")
-  class StringySet {}
+  static class StringySet {}
 
   @Test
   public void testGetDefaultValuesUnset() {

@@ -16,10 +16,10 @@
 package com.google.auto.common;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Comparators.min;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 
 import com.google.common.base.Enums;
-import com.google.common.collect.Ordering;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -76,7 +76,7 @@ public enum Visibility {
     Visibility effectiveVisibility = PUBLIC;
     Element currentElement = element;
     while (currentElement != null) {
-      effectiveVisibility = Ordering.natural().min(effectiveVisibility, ofElement(currentElement));
+      effectiveVisibility = min(effectiveVisibility, ofElement(currentElement));
       currentElement = currentElement.getEnclosingElement();
     }
     return effectiveVisibility;

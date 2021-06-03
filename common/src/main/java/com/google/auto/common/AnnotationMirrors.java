@@ -94,6 +94,7 @@ public final class AnnotationMirrors {
   public static ImmutableMap<ExecutableElement, AnnotationValue> getAnnotationValuesWithDefaults(
       AnnotationMirror annotation) {
     ImmutableMap.Builder<ExecutableElement, AnnotationValue> values = ImmutableMap.builder();
+    @SuppressWarnings("GetElementValues")
     Map<? extends ExecutableElement, ? extends AnnotationValue> declaredValues =
         annotation.getElementValues();
     for (ExecutableElement method :

@@ -456,8 +456,8 @@ public class MemoizedTest {
     assertThat(memoizedHashCodeAndFinalEqualsMethod.equals(second)).isTrue();
     assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(0);
 
-    memoizedHashCodeAndFinalEqualsMethod.hashCode();
-    memoizedHashCodeAndFinalEqualsMethod.hashCode();
+    int unused1 = memoizedHashCodeAndFinalEqualsMethod.hashCode();
+    int unused2 = memoizedHashCodeAndFinalEqualsMethod.hashCode();
     assertThat(memoizedHashCodeAndFinalEqualsMethod.hashCodeCount).isEqualTo(1);
   }
 

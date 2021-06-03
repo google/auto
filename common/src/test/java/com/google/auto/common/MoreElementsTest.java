@@ -286,6 +286,7 @@ public class MoreElementsTest {
 
     abstract String foo();
 
+    @SuppressWarnings("unused")
     private void privateMethod() {}
   }
 
