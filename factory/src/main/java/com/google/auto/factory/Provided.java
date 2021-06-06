@@ -15,7 +15,7 @@
  */
 package com.google.auto.factory;
 
-import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.ElementType.*;
 
 import java.lang.annotation.Target;
 
@@ -25,5 +25,5 @@ import java.lang.annotation.Target;
  *
  * @author Gregory Kick
  */
-@Target(PARAMETER)
+@Target(PARAMETER, FIELD)
 public @interface Provided {}
