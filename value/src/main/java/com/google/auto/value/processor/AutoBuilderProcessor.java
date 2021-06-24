@@ -143,6 +143,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     vars.build = build(executable);
     vars.types = typeUtils();
     vars.toBuilderConstructor = false;
+    vars.toBuilderMethods = ImmutableList.of();
     defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), vars);
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoBuilderType.asType());

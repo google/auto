@@ -405,6 +405,30 @@ public final class AutoBuilderTest {
     }
   }
 
+  static <T> String concatList(ImmutableList<T> list) {
+    // We're avoiding streams for now so we compile this in Java 7 mode in CompileWithEclipseTest.
+    StringBuilder sb = new StringBuilder();
+    for (T element : list) {
+      sb.append(element);
+    }
+    return sb.toString();
+  }
+
+  @AutoBuilder(callMethod = "concatList")
+  interface ConcatListCaller<T> {
+    ImmutableList.Builder<T> listBuilder();
+
+    String call();
+  }
+
+  @Test
+  public void propertyBuilderWithoutSetter() {
+    ConcatListCaller<Integer> caller = new AutoBuilder_AutoBuilderTest_ConcatListCaller<>();
+    caller.listBuilder().add(1, 1, 2, 3, 5, 8);
+    String s = caller.call();
+    assertThat(s).isEqualTo("112358");
+  }
+
   static <K, V extends Number> Map<K, V> singletonMap(K key, V value) {
     return Collections.singletonMap(key, value);
   }

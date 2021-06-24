@@ -15,7 +15,6 @@
  */
 package com.google.auto.value.processor;
 
-import com.google.common.collect.ImmutableList;
 import com.google.escapevelocity.Template;
 
 /**
@@ -41,9 +40,6 @@ class AutoValueTemplateVars extends AutoValueOrBuilderTemplateVars {
    * followed by a space if they are not empty.
    */
   String modifiers;
-
-  /** Any {@code toBuilder()} methods, that is methods that return the builder type. */
-  ImmutableList<SimpleMethod> toBuilderMethods;
 
   private static final Template TEMPLATE = parsedTemplateForResource("autovalue.vm");
 

@@ -131,6 +131,13 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
   Boolean toBuilderConstructor;
 
   /**
+   * Any {@code toBuilder()} methods, that is methods that return the builder type. AutoBuilder does
+   * not currently support this, but it's included in these shared variables to simplify the
+   * template.
+   */
+  ImmutableList<SimpleMethod> toBuilderMethods;
+
+  /**
    * Whether to include identifiers in strings in the generated code. If false, exception messages
    * will not mention properties by name, and {@code toString()} will include neither property names
    * nor the name of the {@code @AutoValue} class.
