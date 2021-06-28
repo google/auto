@@ -16,6 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
 import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
@@ -35,7 +36,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -330,15 +330,12 @@ class BuilderSpec {
       vars.builderPropertyBuilders =
           ImmutableMap.copyOf(classifier.propertyNameToPropertyBuilder());
 
-      Set<Property> required = new LinkedHashSet<>(vars.props);
-      for (Property property : vars.props) {
-        if (property.isNullable()
-            || property.getOptional() != null
-            || vars.builderPropertyBuilders.containsKey(property.getName())) {
-          required.remove(property);
-        }
-      }
-      vars.builderRequiredProperties = ImmutableSet.copyOf(required);
+      vars.builderRequiredProperties =
+          vars.props.stream()
+              .filter(p -> !p.isNullable())
+              .filter(p -> p.getOptional() == null)
+              .filter(p -> !vars.builderPropertyBuilders.containsKey(p.getName()))
+              .collect(toImmutableSet());
     }
   }
 

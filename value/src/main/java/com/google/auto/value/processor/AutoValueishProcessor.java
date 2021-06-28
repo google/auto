@@ -19,6 +19,7 @@ import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_PACKAGE_NAME;
 import static com.google.auto.value.processor.ClassNames.COPY_ANNOTATIONS_NAME;
@@ -467,8 +468,9 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   /** Returns the spelling to be used in the generated code for the given list of annotations. */
   static ImmutableList<String> annotationStrings(List<? extends AnnotationMirror> annotations) {
     // TODO(b/68008628): use ImmutableList.toImmutableList() when that works.
-    return ImmutableList.copyOf(
-        annotations.stream().map(AnnotationOutput::sourceFormForAnnotation).collect(toList()));
+    return annotations.stream()
+        .map(AnnotationOutput::sourceFormForAnnotation)
+        .collect(toImmutableList());
   }
 
   /**

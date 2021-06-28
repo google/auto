@@ -16,6 +16,7 @@
  */
 package com.google.auto.common;
 
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.element.Modifier.STATIC;
 
@@ -482,9 +483,9 @@ public final class MoreElements {
         }
       }
     }
-    Set<ExecutableElement> methods = new LinkedHashSet<ExecutableElement>(methodMap.values());
-    methods.removeAll(overridden);
-    return ImmutableSet.copyOf(methods);
+    return methodMap.values().stream()
+        .filter(m -> !overridden.contains(m))
+        .collect(toImmutableSet());
   }
 
   // Add to `methods` the static and instance methods from `type`. This means all methods from

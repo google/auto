@@ -116,7 +116,7 @@ public class AutoAnnotationTest {
     assertThat(arrays.ints()).asList().containsExactly(2, 3, 5).inOrder();
     strings[0] = "Hyde";
     ints[0] = -1;
-    assertThat(ImmutableList.copyOf(arrays.strings())).containsExactly("Jekyll");
+    assertThat(arrays.strings()).asList().containsExactly("Jekyll");
     assertThat(arrays.ints()).asList().containsExactly(2, 3, 5).inOrder();
   }
 

@@ -16,12 +16,12 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
+import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.intersection;
 import static java.util.Comparator.naturalOrder;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 
 import com.google.auto.service.AutoService;
 import com.google.auto.value.extension.AutoValueExtension;
@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -100,10 +99,9 @@ public class AutoValueProcessor extends AutoValueishProcessor {
 
   @VisibleForTesting
   static ImmutableList<AutoValueExtension> extensionsFromLoader(ClassLoader loader) {
-    return ImmutableList.copyOf(
-        Iterables.filter(
-            SimpleServiceLoader.load(AutoValueExtension.class, loader),
-            ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION)));
+    return SimpleServiceLoader.load(AutoValueExtension.class, loader).stream()
+        .filter(ext -> !ext.getClass().getName().equals(OLD_MEMOIZE_EXTENSION))
+        .collect(toImmutableList());
   }
 
   @Override
@@ -428,9 +426,8 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       Optional<BuilderSpec.Builder> maybeBuilder) {
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
-    // We can't use ImmutableList.toImmutableList() for obscure Google-internal reasons.
     vars.toBuilderMethods =
-        ImmutableList.copyOf(toBuilderMethods.stream().map(SimpleMethod::new).collect(toList()));
+        toBuilderMethods.stream().map(SimpleMethod::new).collect(toImmutableList());
     vars.toBuilderConstructor = !vars.toBuilderMethods.isEmpty();
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
         propertyFieldAnnotationMap(type, propertyMethods);

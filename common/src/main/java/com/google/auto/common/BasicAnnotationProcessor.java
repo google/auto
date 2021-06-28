@@ -17,14 +17,13 @@ package com.google.auto.common;
 
 import static com.google.auto.common.MoreElements.asExecutable;
 import static com.google.auto.common.MoreElements.asPackage;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.common.SuperficialValidation.validateElement;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Multimaps.filterKeys;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -162,14 +161,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     checkState(steps != null);
     return steps.stream()
         .flatMap(step -> getSupportedAnnotationTypeElements(step).stream())
-        .collect(collectingAndThen(toList(), ImmutableSet::copyOf));
+        .collect(toImmutableSet());
   }
 
   private ImmutableSet<TypeElement> getSupportedAnnotationTypeElements(Step step) {
     return step.annotations().stream()
         .map(elements::getTypeElement)
         .filter(Objects::nonNull)
-        .collect(collectingAndThen(toList(), ImmutableSet::copyOf));
+        .collect(toImmutableSet());
   }
 
   /**
@@ -181,7 +180,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     checkState(steps != null);
     return steps.stream()
         .flatMap(step -> step.annotations().stream())
-        .collect(collectingAndThen(toList(), ImmutableSet::copyOf));
+        .collect(toImmutableSet());
   }
 
   @Override
@@ -478,10 +477,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       this.annotationsByName =
           processingStep.annotations().stream()
               .collect(
-                  collectingAndThen(
-                      toMap(
-                          Class::getCanonicalName, (Class<? extends Annotation> aClass) -> aClass),
-                      ImmutableMap::copyOf));
+                  toImmutableMap(
+                      Class::getCanonicalName, (Class<? extends Annotation> aClass) -> aClass));
     }
 
     @Override
