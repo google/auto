@@ -77,8 +77,9 @@ public class AutoAnnotationTest {
         .isAtLeast(8.0);
     Class<? extends Annotation> jspecifyNullable;
     try {
+      // We write this using .concat in order to hide it from rewriting rules.
       jspecifyNullable =
-          Class.forName("org.jspecify.nullness.Nullable").asSubclass(Annotation.class);
+          Class.forName("org".concat(".jspecify.nullness.Nullable")).asSubclass(Annotation.class);
     } catch (ClassNotFoundException e) {
       throw new AssumptionViolatedException("No JSpecify @Nullable available", e);
     }

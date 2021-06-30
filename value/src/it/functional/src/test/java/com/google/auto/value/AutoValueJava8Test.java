@@ -560,7 +560,7 @@ public class AutoValueJava8Test {
     }
   }
 
-  // Tests that we generate equals(@org.jspecify.nullness.Nullable x) if that annotation is
+  // Tests that we generate equals(@Nullable x) using JSpecify @Nullable if that annotation is
   // available and there is no other @Nullable type annotation mentioned in the @AutoValue class.
   // If there *are* other @Nullable type annotations, other test methods here will check that they
   // are used instead.
@@ -568,8 +568,9 @@ public class AutoValueJava8Test {
   public void testDefaultToJSpecifyNullable() throws ReflectiveOperationException {
     Class<? extends Annotation> jspecifyNullable;
     try {
+      // We write this using .concat in order to hide it from rewriting rules.
       jspecifyNullable =
-          Class.forName("org.jspecify.nullness.Nullable").asSubclass(Annotation.class);
+          Class.forName("org".concat(".jspecify.nullness.Nullable")).asSubclass(Annotation.class);
     } catch (ClassNotFoundException e) {
       throw new AssumptionViolatedException("No JSpecify @Nullable available", e);
     }

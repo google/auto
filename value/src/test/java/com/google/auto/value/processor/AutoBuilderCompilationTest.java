@@ -737,7 +737,7 @@ public final class AutoBuilderCompilationTest {
             "package foo.bar;",
             "",
             "import com.google.auto.value.AutoBuilder;",
-            "import org.jspecify.nullness.Nullable;",
+            "import org.checkerframework.checker.nullness.qual.Nullable;",
             "",
             "class Baz {",
             "  Baz(String thing) {}",
@@ -750,7 +750,7 @@ public final class AutoBuilderCompilationTest {
             "}");
     JavaFileObject nullableFileObject =
         JavaFileObjects.forSourceLines(
-            "org.jspecify.nullness.Nullable",
+            "org.checkerframework.checker.nullness.qual.Nullable",
             "package org.jspecify.nullness;",
             "",
             "import java.lang.annotation.ElementType;",
