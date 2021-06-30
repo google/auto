@@ -17,6 +17,7 @@ package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
 import com.google.common.base.Converter;
@@ -57,6 +58,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -403,7 +405,7 @@ public class OverridesTest {
       }
     }
     assertThat(found).isNotNull();
-    return found;
+    return requireNonNull(found);
   }
 
   // These skeletal parallels to the real collection classes ensure that the test is independent
@@ -488,7 +490,7 @@ public class OverridesTest {
       extends Converter<String, Range<T>> {
     @Override
     protected String doBackward(Range<T> b) {
-      return null;
+      return "";
     }
   }
 
@@ -519,7 +521,7 @@ public class OverridesTest {
     assertThat(addInAbstractStringList).isNull();
 
     ExecutableElement addInStringList = explicitOverrides.methodFromSuperclasses(xStringList, add);
-    assertThat(addInStringList.getEnclosingElement()).isEqualTo(xAbstractList);
+    assertThat(requireNonNull(addInStringList).getEnclosingElement()).isEqualTo(xAbstractList);
   }
 
   @Test
@@ -534,19 +536,21 @@ public class OverridesTest {
 
     ExecutableElement addInAbstractStringList =
         explicitOverrides.methodFromSuperinterfaces(xAbstractStringList, add);
-    assertThat(addInAbstractStringList.getEnclosingElement()).isEqualTo(xCollection);
+    assertThat(requireNonNull(addInAbstractStringList).getEnclosingElement())
+        .isEqualTo(xCollection);
 
     ExecutableElement addInNumberList =
         explicitOverrides.methodFromSuperinterfaces(xNumberList, add);
-    assertThat(addInNumberList.getEnclosingElement()).isEqualTo(xAbstractList);
+    assertThat(requireNonNull(addInNumberList).getEnclosingElement()).isEqualTo(xAbstractList);
 
     ExecutableElement addInList = explicitOverrides.methodFromSuperinterfaces(xList, add);
-    assertThat(addInList.getEnclosingElement()).isEqualTo(xCollection);
+    assertThat(requireNonNull(addInList).getEnclosingElement()).isEqualTo(xCollection);
   }
 
-  private void assertTypeListsEqual(List<TypeMirror> actual, List<TypeMirror> expected) {
-    assertThat(actual.size()).isEqualTo(expected.size());
-    for (int i = 0; i < actual.size(); i++) {
+  private void assertTypeListsEqual(@Nullable List<TypeMirror> actual, List<TypeMirror> expected) {
+   requireNonNull(actual);
+   assertThat(actual).hasSize(expected.size());
+   for (int i = 0; i < actual.size(); i++) {
       assertThat(typeUtils.isSameType(actual.get(i), expected.get(i))).isTrue();
     }
   }

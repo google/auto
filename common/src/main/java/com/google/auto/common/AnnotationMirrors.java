@@ -159,7 +159,11 @@ public final class AnnotationMirrors {
    */
   public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
       Element element, Class<? extends Annotation> annotationClass) {
-    return getAnnotatedAnnotations(element, annotationClass.getCanonicalName());
+    String name = annotationClass.getCanonicalName();
+    if (name == null) {
+      return ImmutableSet.of();
+    }
+    return getAnnotatedAnnotations(element, name);
   }
 
   /**

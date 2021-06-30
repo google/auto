@@ -253,7 +253,11 @@ public final class MoreElements {
    */
   public static Optional<AnnotationMirror> getAnnotationMirror(
       Element element, Class<? extends Annotation> annotationClass) {
-    return getAnnotationMirror(element, annotationClass.getCanonicalName());
+    String name = annotationClass.getCanonicalName();
+    if (name == null) {
+      return Optional.absent();
+    }
+    return getAnnotationMirror(element, name);
   }
 
   /**

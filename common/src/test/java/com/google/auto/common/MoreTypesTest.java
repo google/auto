@@ -16,6 +16,7 @@
 package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.type.TypeKind.NONE;
 import static javax.lang.model.type.TypeKind.VOID;
 import static org.junit.Assert.assertThrows;
@@ -49,6 +50,7 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -242,28 +244,27 @@ public class MoreTypesTest {
     TypeElement charSequenceElement =
         elements.getTypeElement(CharSequence.class.getCanonicalName());
 
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f1").asType()))
-        .containsExactly(objectElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f2").asType()))
-        .containsExactly(setElement, stringElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f3").asType()))
+    assertThat(referencedTypes(fieldIndex, "f1")).containsExactly(objectElement);
+    assertThat(referencedTypes(fieldIndex, "f2")).containsExactly(setElement, stringElement);
+    assertThat(referencedTypes(fieldIndex, "f3"))
         .containsExactly(mapElement, stringElement, objectElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f4").asType()))
-        .containsExactly(integerElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f5").asType()))
-        .containsExactly(setElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f6").asType()))
-        .containsExactly(setElement, charSequenceElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f7").asType()))
+    assertThat(referencedTypes(fieldIndex, "f4")).containsExactly(integerElement);
+    assertThat(referencedTypes(fieldIndex, "f5")).containsExactly(setElement);
+    assertThat(referencedTypes(fieldIndex, "f6")).containsExactly(setElement, charSequenceElement);
+    assertThat(referencedTypes(fieldIndex, "f7"))
         .containsExactly(mapElement, stringElement, setElement, charSequenceElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f8").asType()))
-        .containsExactly(stringElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f9").asType()))
-        .containsExactly(stringElement);
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f10").asType())).isEmpty();
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f11").asType())).isEmpty();
-    assertThat(MoreTypes.referencedTypes(fieldIndex.get("f12").asType()))
-        .containsExactly(setElement, stringElement);
+    assertThat(referencedTypes(fieldIndex, "f8")).containsExactly(stringElement);
+    assertThat(referencedTypes(fieldIndex, "f9")).containsExactly(stringElement);
+    assertThat(referencedTypes(fieldIndex, "f10")).isEmpty();
+    assertThat(referencedTypes(fieldIndex, "f11")).isEmpty();
+    assertThat(referencedTypes(fieldIndex, "f12")).containsExactly(setElement, stringElement);
+  }
+
+  private static ImmutableSet<TypeElement> referencedTypes(
+      ImmutableMap<String, VariableElement> fieldIndex, String fieldName) {
+    VariableElement field = fieldIndex.get(fieldName);
+    requireNonNull(field, fieldName);
+    return MoreTypes.referencedTypes(field.asType());
   }
 
   @SuppressWarnings("unused") // types used in compiler tests
@@ -438,27 +439,27 @@ public class MoreTypesTest {
         }
 
         @Override
-        public List<? extends TypeMirror> getTypeArguments() {
+        public ImmutableList<? extends TypeMirror> getTypeArguments() {
           return ImmutableList.of();
         }
 
         @Override
-        public TypeMirror getEnclosingType() {
+        public @Nullable TypeMirror getEnclosingType() {
           return null;
         }
 
         @Override
-        public Element asElement() {
+        public @Nullable Element asElement() {
           return null;
         }
 
         @Override
-        public <A extends Annotation> A[] getAnnotationsByType(Class<A> annotationType) {
+        public <A extends Annotation> A @Nullable [] getAnnotationsByType(Class<A> annotationType) {
           return null;
         }
 
         @Override
-        public <A extends Annotation> A getAnnotation(Class<A> annotationType) {
+        public <A extends Annotation> @Nullable A getAnnotation(Class<A> annotationType) {
           return null;
         }
 

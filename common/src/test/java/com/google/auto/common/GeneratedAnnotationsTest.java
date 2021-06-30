@@ -18,6 +18,7 @@ package com.google.auto.common;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -31,6 +32,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -44,6 +46,7 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -99,12 +102,12 @@ public class GeneratedAnnotationsTest {
    * Run {@link TestProcessor} in a compilation with the given {@code options}, and prevent the
    * compilation from accessing classes with the qualified names in {@code maskFromClasspath}.
    */
-  private String runProcessor(ImmutableList<String> options, String packageToMask)
+  private String runProcessor(ImmutableList<String> options, @Nullable String packageToMask)
       throws IOException {
     File tempDir = temporaryFolder.newFolder();
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     StandardJavaFileManager standardFileManager =
-        compiler.getStandardFileManager(/* diagnostics= */ null, /* locale= */ null, UTF_8);
+        compiler.getStandardFileManager(/* diagnosticListener= */ null, /* locale= */ null, UTF_8);
     standardFileManager.setLocation(StandardLocation.CLASS_OUTPUT, ImmutableList.of(tempDir));
     StandardJavaFileManager proxyFileManager =
         Reflection.newProxy(
@@ -142,18 +145,20 @@ public class GeneratedAnnotationsTest {
    */
   private static class FileManagerInvocationHandler implements InvocationHandler {
     private final StandardJavaFileManager fileManager;
-    private final String packageToMask;
+    private final @Nullable String packageToMask;
 
-    FileManagerInvocationHandler(StandardJavaFileManager fileManager, String packageToMask) {
+    FileManagerInvocationHandler(
+        StandardJavaFileManager fileManager, @Nullable String packageToMask) {
       this.fileManager = fileManager;
       this.packageToMask = packageToMask;
     }
 
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    public Object invoke(Object proxy, Method method, @Nullable Object @Nullable [] args)
+        throws Throwable {
       if (method.getName().equals("list")) {
-        String packageName = (String) args[1];
-        if (packageName.equals(packageToMask)) {
+        String packageName = (String) requireNonNull(args)[1];
+        if (Objects.equals(packageName, packageToMask)) {
           return ImmutableList.of();
         }
       }

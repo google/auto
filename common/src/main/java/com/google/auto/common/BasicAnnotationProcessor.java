@@ -24,6 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Multimaps.filterKeys;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -55,6 +56,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor8;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An abstract {@link Processor} implementation that defers processing of {@link Element}s to later
@@ -286,10 +288,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     // Look at the elements we've found and the new elements from this round and validate them.
     for (TypeElement annotationType : getSupportedAnnotationTypeElements()) {
-      Set<? extends Element> roundElements =
-          (annotationType == null)
-              ? ImmutableSet.of()
-              : roundEnv.getElementsAnnotatedWith(annotationType);
+      Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
       ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
       for (Element element : Sets.union(roundElements, prevRoundElements)) {
         ElementName elementName = ElementName.forAnnotatedElement(element);
@@ -478,7 +477,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
           processingStep.annotations().stream()
               .collect(
                   toImmutableMap(
-                      Class::getCanonicalName, (Class<? extends Annotation> aClass) -> aClass));
+                      c -> requireNonNull(c.getCanonicalName()),
+                      (Class<? extends Annotation> aClass) -> aClass));
     }
 
     @Override
@@ -499,8 +499,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       elements
           .asMap()
           .forEach(
-              (annotation, annotatedElements) ->
-                  builder.putAll(annotationsByName.get(annotation), annotatedElements));
+              (annotationName, annotatedElements) -> {
+                Class<? extends Annotation> annotation = annotationsByName.get(annotationName);
+                if (annotation != null) { // should not be null
+                  builder.putAll(annotation, annotatedElements);
+                }
+              });
       return builder.build();
     }
   }
@@ -558,7 +562,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       if (!(object instanceof ElementName)) {
         return false;
       }

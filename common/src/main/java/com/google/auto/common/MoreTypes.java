@@ -25,7 +25,6 @@ import static javax.lang.model.type.TypeKind.TYPEVAR;
 import static javax.lang.model.type.TypeKind.WILDCARD;
 
 import com.google.common.base.Equivalence;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -55,6 +54,7 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Utilities related to {@link TypeMirror} instances.
@@ -140,7 +140,7 @@ public final class MoreTypes {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (o instanceof ComparedElements) {
         ComparedElements that = (ComparedElements) o;
         int nArguments = aArguments.size();
@@ -297,7 +297,14 @@ public final class MoreTypes {
   }
 
   @SuppressWarnings("TypeEquals")
-  private static boolean equal(TypeMirror a, TypeMirror b, Set<ComparedElements> visiting) {
+  private static boolean equal(
+      @Nullable TypeMirror a, @Nullable TypeMirror b, Set<ComparedElements> visiting) {
+    if (a == b) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return false;
+    }
     // TypeMirror.equals is not guaranteed to return true for types that are equal, but we can
     // assume that if it does return true then the types are equal. This check also avoids getting
     // stuck in infinite recursion when Eclipse decrees that the upper bound of the second K in
@@ -305,13 +312,15 @@ public final class MoreTypes {
     // The javac implementation of ExecutableType, at least in some versions, does not take thrown
     // exceptions into account in its equals implementation, so avoid this optimization for
     // ExecutableType.
-    if (Objects.equal(a, b) && !(a instanceof ExecutableType)) {
+    @SuppressWarnings("TypesEquals")
+    boolean equal = a.equals(b);
+    if (equal && !(a instanceof ExecutableType)) {
       return true;
     }
     EqualVisitorParam p = new EqualVisitorParam();
     p.type = b;
     p.visiting = visiting;
-    return (a == b) || (a != null && b != null && a.accept(EqualVisitor.INSTANCE, p));
+    return a.accept(EqualVisitor.INSTANCE, p);
   }
 
   /**
@@ -321,7 +330,7 @@ public final class MoreTypes {
    * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby
    * the Eclipse compiler returns a value for static classes that is not NoType.
    */
-  private static TypeMirror enclosingType(DeclaredType t) {
+  private static @Nullable TypeMirror enclosingType(DeclaredType t) {
     TypeMirror enclosing = t.getEnclosingType();
     if (enclosing.getKind().equals(TypeKind.NONE)
         || t.asElement().getModifiers().contains(Modifier.STATIC)) {
@@ -461,17 +470,17 @@ public final class MoreTypes {
   }
 
   private static final class ReferencedTypes
-      extends SimpleTypeVisitor8<Void, ImmutableSet.Builder<TypeElement>> {
+      extends SimpleTypeVisitor8<@Nullable Void, ImmutableSet.Builder<TypeElement>> {
     private static final ReferencedTypes INSTANCE = new ReferencedTypes();
 
     @Override
-    public Void visitArray(ArrayType t, ImmutableSet.Builder<TypeElement> p) {
+    public @Nullable Void visitArray(ArrayType t, ImmutableSet.Builder<TypeElement> p) {
       t.getComponentType().accept(this, p);
       return null;
     }
 
     @Override
-    public Void visitDeclared(DeclaredType t, ImmutableSet.Builder<TypeElement> p) {
+    public @Nullable Void visitDeclared(DeclaredType t, ImmutableSet.Builder<TypeElement> p) {
       p.add(MoreElements.asType(t.asElement()));
       for (TypeMirror typeArgument : t.getTypeArguments()) {
         typeArgument.accept(this, p);
@@ -480,14 +489,14 @@ public final class MoreTypes {
     }
 
     @Override
-    public Void visitTypeVariable(TypeVariable t, ImmutableSet.Builder<TypeElement> p) {
+    public @Nullable Void visitTypeVariable(TypeVariable t, ImmutableSet.Builder<TypeElement> p) {
       t.getLowerBound().accept(this, p);
       t.getUpperBound().accept(this, p);
       return null;
     }
 
     @Override
-    public Void visitWildcard(WildcardType t, ImmutableSet.Builder<TypeElement> p) {
+    public @Nullable Void visitWildcard(WildcardType t, ImmutableSet.Builder<TypeElement> p) {
       TypeMirror extendsBound = t.getExtendsBound();
       if (extendsBound != null) {
         extendsBound.accept(this, p);

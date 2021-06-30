@@ -18,6 +18,7 @@ package com.google.auto.common;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -479,7 +480,7 @@ public class MoreElementsTest {
       }
     }
     assertWithMessage(methodName + Arrays.toString(parameterTypes)).that(found).isNotNull();
-    return found;
+    return requireNonNull(found);
   }
 
   private abstract static class AbstractAbstractList extends AbstractList<String> {}
