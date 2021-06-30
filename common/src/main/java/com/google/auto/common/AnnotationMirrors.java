@@ -18,6 +18,7 @@ package com.google.auto.common;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Collections.unmodifiableMap;
 
 import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableMap;
@@ -94,9 +95,10 @@ public final class AnnotationMirrors {
   public static ImmutableMap<ExecutableElement, AnnotationValue> getAnnotationValuesWithDefaults(
       AnnotationMirror annotation) {
     ImmutableMap.Builder<ExecutableElement, AnnotationValue> values = ImmutableMap.builder();
+    // Use unmodifiableMap to eliminate wildcards, which cause issues for our nullness checker.
     @SuppressWarnings("GetElementValues")
-    Map<? extends ExecutableElement, ? extends AnnotationValue> declaredValues =
-        annotation.getElementValues();
+    Map<ExecutableElement, AnnotationValue> declaredValues =
+        unmodifiableMap(annotation.getElementValues());
     for (ExecutableElement method :
         ElementFilter.methodsIn(annotation.getAnnotationType().asElement().getEnclosedElements())) {
       // Must iterate and put in this order, to ensure consistency in generated code.
