@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -111,8 +112,9 @@ abstract class AutoFactoryDeclaration {
           Mirrors.simplifyAnnotationValueMap(elements.getElementValuesWithDefaults(mirror));
       checkState(values.size() == 4);
 
-      // className value is a string, so we can just call toString
-      AnnotationValue classNameValue = values.get("className");
+      // className value is a string, so we can just call toString. We know values.get("className")
+      // is non-null because @AutoFactory has an annotation element of that name.
+      AnnotationValue classNameValue = requireNonNull(values.get("className"));
       String className = classNameValue.getValue().toString();
       if (!className.isEmpty() && !isValidIdentifier(className)) {
         messager.printMessage(

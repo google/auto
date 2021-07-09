@@ -26,6 +26,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementKindVisitor6;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class ProvidedChecker {
   private final Messager messager;
@@ -38,28 +39,29 @@ final class ProvidedChecker {
     checkArgument(
         isAnnotationPresent(element, Provided.class), "%s not annoated with @Provided", element);
     element.accept(
-        new ElementKindVisitor6<Void, Void>() {
+        new ElementKindVisitor6<@Nullable Void, @Nullable Void>() {
           @Override
-          protected Void defaultAction(Element e, Void p) {
+          protected @Nullable Void defaultAction(Element e, @Nullable Void p) {
             throw new AssertionError("Provided can only be applied to parameters");
           }
 
           @Override
-          public Void visitVariableAsParameter(final VariableElement providedParameter, Void p) {
+          public @Nullable Void visitVariableAsParameter(
+              VariableElement providedParameter, @Nullable Void p) {
             providedParameter
                 .getEnclosingElement()
                 .accept(
-                    new ElementKindVisitor6<Void, Void>() {
+                    new ElementKindVisitor6<@Nullable Void, @Nullable Void>() {
                       @Override
-                      protected Void defaultAction(Element e, Void p) {
+                      protected @Nullable Void defaultAction(Element e, @Nullable Void p) {
                         raiseError(
                             providedParameter, "@%s may only be applied to constructor parameters");
                         return null;
                       }
 
                       @Override
-                      public Void visitExecutableAsConstructor(
-                          ExecutableElement constructor, Void p) {
+                      public @Nullable Void visitExecutableAsConstructor(
+                          ExecutableElement constructor, @Nullable Void p) {
                         if (!(annotatedWithAutoFactory(constructor)
                             || annotatedWithAutoFactory(constructor.getEnclosingElement()))) {
                           raiseError(

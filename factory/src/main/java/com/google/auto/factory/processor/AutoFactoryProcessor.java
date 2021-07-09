@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -132,12 +133,17 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         .asMap()
         .forEach(
             (factoryName, methodDescriptors) -> {
+              if (methodDescriptors.isEmpty()) {
+                // This shouldn't happen, but check anyway to avoid an exception for
+                // methodDescriptors.iterator().next() below.
+                return;
+              }
               // The sets of classes that are mentioned in the `extending` and `implementing`
               // elements, respectively, of the @AutoFactory annotations for this factory.
               ImmutableSet.Builder<TypeMirror> extending = newTypeSetBuilder();
               ImmutableSortedSet.Builder<TypeMirror> implementing = newTypeSetBuilder();
               boolean publicType = false;
-              Boolean allowSubclasses = null;
+              Set<Boolean> allowSubclassesSet = new HashSet<>();
               boolean skipCreation = false;
               for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
                 extending.add(methodDescriptor.declaration().extendingType().asType());
@@ -146,10 +152,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                   implementing.add(implementingType.asType());
                 }
                 publicType |= methodDescriptor.publicMethod();
-                if (allowSubclasses == null) {
-                  allowSubclasses = methodDescriptor.declaration().allowSubclasses();
-                } else if (!allowSubclasses.equals(
-                    methodDescriptor.declaration().allowSubclasses())) {
+                allowSubclassesSet.add(methodDescriptor.declaration().allowSubclasses());
+                if (allowSubclassesSet.size() > 1) {
                   skipCreation = true;
                   messager.printMessage(
                       Kind.ERROR,
@@ -159,6 +163,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                       methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
                 }
               }
+              // The set can't be empty because we eliminated methodDescriptors.isEmpty() above.
+              boolean allowSubclasses = allowSubclassesSet.iterator().next();
               if (!skipCreation) {
                 try {
                   factoryWriter.writeFactory(

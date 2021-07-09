@@ -19,6 +19,7 @@ import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotatio
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -174,7 +175,7 @@ final class FactoryWriter {
             checkNotNull = false;
           }
         } else {
-          ProviderField provider = descriptor.providers().get(parameter.key());
+          ProviderField provider = requireNonNull(descriptor.providers().get(parameter.key()));
           argument = CodeBlock.of(provider.name());
           if (parameter.isProvider()) {
             // Providers are checked for nullness in the Factory's constructor.

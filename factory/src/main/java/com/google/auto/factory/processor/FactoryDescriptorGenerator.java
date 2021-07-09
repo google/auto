@@ -18,6 +18,7 @@ package com.google.auto.factory.processor;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.partitioningBy;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -128,10 +129,12 @@ final class FactoryDescriptorGenerator {
     Map<Boolean, List<VariableElement>> parameterMap =
         constructor.getParameters().stream()
             .collect(partitioningBy(parameter -> isAnnotationPresent(parameter, Provided.class)));
+    // The map returned by partitioningBy always has entries for both key values but our
+    // null-checker isn't yet smart enough to know that.
     ImmutableSet<Parameter> providedParameters =
-        Parameter.forParameterList(parameterMap.get(true), types);
+        Parameter.forParameterList(requireNonNull(parameterMap.get(true)), types);
     ImmutableSet<Parameter> passedParameters =
-        Parameter.forParameterList(parameterMap.get(false), types);
+        Parameter.forParameterList(requireNonNull(parameterMap.get(false)), types);
     return FactoryMethodDescriptor.builder(declaration)
         .name("create")
         .returnType(classElement.asType())

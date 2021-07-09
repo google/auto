@@ -62,7 +62,8 @@ abstract class FactoryDescriptor {
   abstract ImmutableMap<Key, ProviderField> providers();
 
   final AutoFactoryDeclaration declaration() {
-    return Iterables.getFirst(methodDescriptors(), null).declaration();
+    // There is always at least one method descriptor.
+    return methodDescriptors().iterator().next().declaration();
   }
 
   private static class UniqueNameSet {
