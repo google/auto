@@ -17,8 +17,10 @@ package com.google.auto.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.truth.Correspondence;
 import com.google.testing.compile.CompilationRule;
 import javax.lang.model.element.AnnotationMirror;
@@ -342,6 +344,66 @@ public final class AnnotationValuesTest {
   public void getChars() {
     AnnotationValue value = AnnotationMirrors.getAnnotationValue(annotationMirror, "charValues");
     assertThat(AnnotationValues.getChars(value)).containsExactly('b', 'c').inOrder();
+  }
+
+  @Test
+  public void toSourceString() {
+    ImmutableMap<String, String> inputs =
+        ImmutableMap.<String, String>builder()
+            .put("classValue", "com.google.auto.common.AnnotationValuesTest.InsideClassA.class")
+            .put(
+                "classValues",
+                "{com.google.auto.common.AnnotationValuesTest.InsideClassA.class,"
+                    + " com.google.auto.common.AnnotationValuesTest.InsideClassB.class}")
+            .put(
+                "genericClassValue",
+                "com.google.auto.common.AnnotationValuesTest.GenericClass.class")
+            .put(
+                "insideAnnotationValue",
+                "@com.google.auto.common.AnnotationValuesTest.InsideAnnotation(19)")
+            .put(
+                "insideAnnotationValues",
+                "{@com.google.auto.common.AnnotationValuesTest.InsideAnnotation(20),"
+                    + " @com.google.auto.common.AnnotationValuesTest.InsideAnnotation(21)}")
+            .put("stringValue", "\"hello\"")
+            .put("stringValues", "{\"it\\'s\", \"me\"}")
+            .put("enumValue", "com.google.auto.common.AnnotationValuesTest.Foo.BAR")
+            .put(
+                "enumValues",
+                "{com.google.auto.common.AnnotationValuesTest.Foo.BAZ,"
+                    + " com.google.auto.common.AnnotationValuesTest.Foo.BAH}")
+            .put("intValue", "5")
+            .put("intValues", "{1, 2}")
+            .put("longValue", "6L")
+            .put("longValues", "{3L, 4L}")
+            .put("byteValue", "7")
+            .put("byteValues", "{8, 9}")
+            .put("shortValue", "10")
+            .put("shortValues", "{11, 12}")
+            .put("floatValue", "13.0F")
+            .put("floatValues", "{14.0F, 15.0F}")
+            .put("doubleValue", "16.0")
+            .put("doubleValues", "{17.0, 18.0}")
+            .put("booleanValue", "true")
+            .put("booleanValues", "{true, false}")
+            .put("charValue", "'a'")
+            .put("charValues", "{'b', 'c'}")
+            .build();
+    inputs.forEach(
+        (name, expected) ->
+            assertThat(
+                    AnnotationValues.toString(
+                        AnnotationMirrors.getAnnotationValue(annotationMirror, name)))
+                .isEqualTo(expected));
+    assertThat(AnnotationMirrors.toString(annotationMirror))
+        .isEqualTo(
+            inputs.entrySet().stream()
+                .map(e -> e.getKey() + " = " + e.getValue())
+                .collect(
+                    joining(
+                        ", ",
+                        "@com.google.auto.common.AnnotationValuesTest.MultiValueAnnotation(",
+                        ")")));
   }
 
   private TypeElement getTypeElement(Class<?> clazz) {

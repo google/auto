@@ -191,5 +191,16 @@ public final class AnnotationMirrors {
         .collect(toImmutableSet());
   }
 
+  /**
+   * Returns a string representation of the given annotation mirror, suitable for inclusion in a
+   * Java source file to reproduce the annotation in source form.
+   *
+   * <p>Fully qualified names are used for types in annotations, class literals, and enum constants,
+   * ensuring that the source form will compile without requiring additional imports.
+   */
+  public static String toString(AnnotationMirror annotationMirror) {
+    return AnnotationOutput.toString(annotationMirror);
+  }
+
   private AnnotationMirrors() {}
 }

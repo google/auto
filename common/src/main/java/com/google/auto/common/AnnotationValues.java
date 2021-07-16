@@ -512,5 +512,22 @@ public final class AnnotationValues {
     return ANNOTATION_VALUES_VISITOR.visit(value);
   }
 
+  /**
+   * Returns a string representation of the given annotation value, suitable for inclusion in a Java
+   * source file as part of an annotation. For example, if {@code annotationValue} represents the
+   * string {@code unchecked} in the annotation {@code @SuppressWarnings("unchecked")}, this method
+   * will return the string {@code "unchecked"}, which you can then use as part of an annotation
+   * being generated.
+   *
+   * <p>For all annotation values other than nested annotations, the returned string can also be
+   * used to initialize a variable of the appropriate type.
+   *
+   * <p>Fully qualified names are used for types in annotations, class literals, and enum constants,
+   * ensuring that the source form will compile without requiring additional imports.
+   */
+  public static String toString(AnnotationValue annotationValue) {
+    return AnnotationOutput.toString(annotationValue);
+  }
+
   private AnnotationValues() {}
 }

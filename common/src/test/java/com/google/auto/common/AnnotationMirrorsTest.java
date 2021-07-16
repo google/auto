@@ -296,6 +296,73 @@ public class AnnotationMirrorsTest {
         AnnotationMirrors.getAnnotatedAnnotations(element, annotatingAnnotationElement));
   }
 
+  @Test
+  public void toSourceString() {
+    assertThat(AnnotationMirrors.toString(annotationOn(AlsoSimplyAnnotated.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.SimpleAnnotation");
+    assertThat(AnnotationMirrors.toString(annotationOn(SimplyAnnotated.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.SimpleAnnotation");
+    assertThat(AnnotationMirrors.toString(annotationOn(StringySet.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.Stringy(\"foo\")");
+    assertThat(AnnotationMirrors.toString(annotationOn(StringyUnset.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.Stringy");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestBlahNestedAnnotated.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.AnnotatedOuter(@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH))");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestClassBlah2.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.Outer(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH)");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestClassBlah.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.Outer(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH)");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestClassFoo.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.Outer(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO)");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestDefaultNestedAnnotated.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.AnnotatedOuter(@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter)");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestFooNestedAnnotated.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.AnnotatedOuter(@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO))");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithBlahFoo.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray({@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH),"
+                + " @com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO)})");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithDefault.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithEmpty.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray({})");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithFooAndDefaultBlah.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray({@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO),"
+                + " @com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter})");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithFooBlah2.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray({@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO),"
+                + " @com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH)})");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithFooBlah.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray({@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO),"
+                + " @com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH)})");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithOneBlah.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray(@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH))");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithOneDefault.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray(@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter)");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestValueArrayWithOneFoo.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.OuterWithValueArray(@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO))");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestWithDefaultingOuterBlah.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.BLAH)");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestWithDefaultingOuterDefault.class)))
+        .isEqualTo("@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter");
+    assertThat(AnnotationMirrors.toString(annotationOn(TestWithDefaultingOuterFoo.class)))
+        .isEqualTo(
+            "@com.google.auto.common.AnnotationMirrorsTest.DefaultingOuter(com.google.auto.common.AnnotationMirrorsTest.SimpleEnum.FOO)");
+  }
+
   private void getAnnotatedAnnotationsAsserts(
       ImmutableSet<? extends AnnotationMirror> annotatedAnnotations) {
     assertThat(annotatedAnnotations)
