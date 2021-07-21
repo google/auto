@@ -154,7 +154,7 @@ public abstract class Animal {
 
   abstract Builder toBuilder();
 
-  public Animal withName(String name) {
+  public final Animal withName(String name) {
     return toBuilder().setName(name).build();
   }
 
@@ -201,7 +201,7 @@ public abstract class Animal {
 
     abstract Animal autoBuild();  // not public
 
-    public Animal build() {
+    public final Animal build() {
       Animal animal = autoBuild();
       Preconditions.checkState(animal.numberOfLegs() >= 0, "Negative legs");
       return animal;
@@ -235,7 +235,7 @@ public abstract class Animal {
 
     abstract Animal autoBuild(); // not public
 
-    public Animal build() {
+    public final Animal build() {
       setName(name().toLowerCase());
       return autoBuild();
     }
@@ -279,7 +279,7 @@ public abstract class Animal {
 
     abstract Animal autoBuild(); // not public
 
-    public Animal build() {
+    public final Animal build() {
       if (!name().isPresent()) {
         setName(numberOfLegs() + "-legged creature");
       }
@@ -491,7 +491,7 @@ public abstract class Animal {
     public abstract Builder setNumberOfLegs(int value);
 
     abstract ImmutableSet.Builder<String> countriesBuilder();
-    public Builder addCountry(String value) {
+    public final Builder addCountry(String value) {
       countriesBuilder().add(value);
       return this;
     }
