@@ -75,6 +75,18 @@ final class AnnotationOutput {
     }
 
     @Override
+    public @Nullable Void visitByte(byte b, StringBuilder sb) {
+      sb.append("(byte) ").append(b);
+      return null;
+    }
+
+    @Override
+    public @Nullable Void visitShort(short s, StringBuilder sb) {
+      sb.append("(short) ").append(s);
+      return null;
+    }
+
+    @Override
     public @Nullable Void visitChar(char c, StringBuilder sb) {
       appendQuoted(sb, c);
       return null;
