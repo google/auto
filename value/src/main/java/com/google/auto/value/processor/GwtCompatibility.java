@@ -15,15 +15,9 @@
  */
 package com.google.auto.value.processor;
 
-import static java.util.stream.Collectors.joining;
-
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 
@@ -46,29 +40,7 @@ class GwtCompatibility {
     return gwtCompatibleAnnotation;
   }
 
-  // Get rid of the misconceived <? extends ExecutableElement, ? extends AnnotationValue>
-  // in the return type of getElementValues().
-  static Map<ExecutableElement, AnnotationValue> getElementValues(AnnotationMirror annotation) {
-    return Collections.<ExecutableElement, AnnotationValue>unmodifiableMap(
-        annotation.getElementValues());
-  }
-
   String gwtCompatibleAnnotationString() {
-    if (gwtCompatibleAnnotation.isPresent()) {
-      AnnotationMirror annotation = gwtCompatibleAnnotation.get();
-      TypeElement annotationElement = (TypeElement) annotation.getAnnotationType().asElement();
-      String annotationArguments;
-      if (annotation.getElementValues().isEmpty()) {
-        annotationArguments = "";
-      } else {
-        annotationArguments =
-            getElementValues(annotation).entrySet().stream()
-                .map(e -> e.getKey().getSimpleName() + " = " + e.getValue())
-                .collect(joining(", ", "(", ")"));
-      }
-      return "@" + annotationElement.getQualifiedName() + annotationArguments;
-    } else {
-      return "";
-    }
+    return gwtCompatibleAnnotation.map(AnnotationOutput::sourceFormForAnnotation).orElse("");
   }
 }

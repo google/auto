@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
+import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.value.processor.AutoValueishProcessor.GetterProperty;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.collect.ImmutableMap;
@@ -26,13 +27,10 @@ import com.google.escapevelocity.Template;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.zip.CRC32;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
@@ -60,13 +58,11 @@ class GwtSerialization {
     Optional<AnnotationMirror> optionalGwtCompatible = gwtCompatibility.gwtCompatibleAnnotation();
     if (optionalGwtCompatible.isPresent()) {
       AnnotationMirror gwtCompatible = optionalGwtCompatible.get();
-      for (Map.Entry<ExecutableElement, AnnotationValue> entry :
-          GwtCompatibility.getElementValues(gwtCompatible).entrySet()) {
-        if (entry.getKey().getSimpleName().contentEquals("serializable")
-            && entry.getValue().getValue().equals(true)) {
-          return true;
-        }
-      }
+      return AnnotationMirrors.getAnnotationValuesWithDefaults(gwtCompatible).entrySet().stream()
+          .anyMatch(
+              e ->
+                  e.getKey().getSimpleName().contentEquals("serializable")
+                      && e.getValue().getValue().equals(true));
     }
     return false;
   }
