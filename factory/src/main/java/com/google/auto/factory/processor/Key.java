@@ -97,7 +97,7 @@ abstract class Key {
   public final String toString() {
     String typeQualifiedName = MoreTypes.asTypeElement(type().get()).toString();
     return qualifier().isPresent()
-        ? qualifier().get() + "/" + typeQualifiedName
+        ? AnnotationMirrors.toString(qualifier().get()) + "/" + typeQualifiedName
         : typeQualifiedName;
   }
 }
