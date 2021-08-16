@@ -484,7 +484,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    */
   static String generatedClassName(TypeElement type, String prefix) {
     String name = type.getSimpleName().toString();
-    while (type.getEnclosingElement() instanceof TypeElement) {
+    while (MoreElements.isType(type.getEnclosingElement())) {
       type = MoreElements.asType(type.getEnclosingElement());
       name = type.getSimpleName() + "_" + name;
     }

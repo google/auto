@@ -117,7 +117,7 @@ abstract class Overrides {
         // can't be overridden.
         return false;
       }
-      if (!(overridden.getEnclosingElement() instanceof TypeElement)) {
+      if (!MoreElements.isType(overridden.getEnclosingElement())) {
         return false;
         // We don't know how this could happen but we avoid blowing up if it does.
       }

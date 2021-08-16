@@ -287,7 +287,7 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   private String generatedClassName(ExecutableElement method) {
     TypeElement type = MoreElements.asType(method.getEnclosingElement());
     String name = type.getSimpleName().toString();
-    while (type.getEnclosingElement() instanceof TypeElement) {
+    while (MoreElements.isType(type.getEnclosingElement())) {
       type = MoreElements.asType(type.getEnclosingElement());
       name = type.getSimpleName() + "_" + name;
     }
