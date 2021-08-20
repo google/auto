@@ -42,7 +42,7 @@
 
   <properties>
     <auto-service.version>1.0</auto-service.version>
-    <errorprone.version>2.8.1</errorprone.version>
+    <errorprone.version>2.9.0</errorprone.version>
   </properties>
 
   <dependencies>
