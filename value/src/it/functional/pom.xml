@@ -166,7 +166,7 @@
           <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-java</artifactId>
-            <version>1.0.7</version>
+            <version>1.1.0</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -221,7 +221,7 @@
               <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-java</artifactId>
-                <version>1.0.7</version>
+                <version>1.1.0</version>
               </dependency>
             </dependencies>
             <configuration>
