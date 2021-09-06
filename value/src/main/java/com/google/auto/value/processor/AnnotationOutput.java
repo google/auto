@@ -130,13 +130,13 @@ final class AnnotationOutput {
   private static class InitializerSourceFormVisitor extends SourceFormVisitor {
     private final ProcessingEnvironment processingEnv;
     private final String memberName;
-    private final Element context;
+    private final Element errorContext;
 
     InitializerSourceFormVisitor(
-        ProcessingEnvironment processingEnv, String memberName, Element context) {
+        ProcessingEnvironment processingEnv, String memberName, Element errorContext) {
       this.processingEnv = processingEnv;
       this.memberName = memberName;
-      this.context = context;
+      this.errorContext = errorContext;
     }
 
     @Override
@@ -148,7 +148,7 @@ final class AnnotationOutput {
               "@AutoAnnotation cannot yet supply a default value for annotation-valued member '"
                   + memberName
                   + "'",
-              context);
+              errorContext);
       sb.append("null");
       return null;
     }
@@ -209,9 +209,9 @@ final class AnnotationOutput {
       AnnotationValue annotationValue,
       ProcessingEnvironment processingEnv,
       String memberName,
-      Element context) {
+      Element errorContext) {
     SourceFormVisitor visitor =
-        new InitializerSourceFormVisitor(processingEnv, memberName, context);
+        new InitializerSourceFormVisitor(processingEnv, memberName, errorContext);
     StringBuilder sb = new StringBuilder();
     visitor.visit(annotationValue, sb);
     return sb.toString();

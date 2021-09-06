@@ -71,6 +71,39 @@ import java.lang.reflect.AnnotatedElement;
  * parameter corresponding to an array-valued annotation member, and the implementation of each such
  * member will also return a clone of the array.
  *
+ * <p>If your annotation has many elements, you may consider using {@code @AutoBuilder} to make it
+ * easier to construct instances. In that case, {@code default} values from the annotation will
+ * become default values for the parameters of the {@code @AutoAnnotation} method. For example:
+ *
+ * <pre>
+ * class Example {
+ *   {@code @interface} MyAnnotation {
+ *     String name() default "foo";
+ *     int number() default 23;
+ *   }
+ *
+ *   {@code @AutoAnnotation}
+ *   static MyAnnotation myAnnotation(String value) {
+ *     return new AutoAnnotation_Example_myAnnotation(value);
+ *   }
+ *
+ *   {@code @AutoBuilder(callMethod = "myAnnotation")}
+ *   interface MyAnnotationBuilder {
+ *     MyAnnotationBuilder name(String name);
+ *     MyAnnotationBuilder number(int number);
+ *     MyAnnotation build();
+ *   }
+ *
+ *   static MyAnnotationBuilder myAnnotationBuilder() {
+ *     return new AutoBuilder_Example_MyAnnotationBuilder();
+ *   }
+ * }
+ * </pre>
+ *
+ * Here, {@code myAnnotationBuilder().build()} is the same as {@code
+ * myAnnotationBuilder().name("foo").number(23).build()} because those are the defaults in the
+ * annotation definition.
+ *
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @Target(ElementType.METHOD)

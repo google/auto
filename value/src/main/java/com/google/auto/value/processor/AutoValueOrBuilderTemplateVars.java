@@ -109,7 +109,8 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
    *
    * <ul>
    *   <li>it is {@code @Nullable} (in which case it defaults to null);
-   *   <li>it is {@code Optional} (in which case it defaults to empty);
+   *   <li>it has a builder initializer (for example it is {@code Optional}, which will have an
+   *       initializer of {@code Optional.empty()});
    *   <li>it has a property-builder method (in which case it defaults to empty).
    * </ul>
    */

@@ -149,6 +149,12 @@ public final class AutoBuilderTest {
     return new AutoAnnotation_AutoBuilderTest_myAnnotation(value, truthiness);
   }
 
+  // This method has parameters for all the annotation elements.
+  @AutoAnnotation
+  static MyAnnotation myAnnotationAll(String value, int id, Truthiness truthiness) {
+    return new AutoAnnotation_AutoBuilderTest_myAnnotationAll(value, id, truthiness);
+  }
+
   @AutoBuilder(callMethod = "myAnnotation")
   interface MyAnnotationBuilder {
     MyAnnotationBuilder value(String x);
@@ -159,12 +165,28 @@ public final class AutoBuilderTest {
   }
 
   static MyAnnotationBuilder myAnnotationBuilder() {
-    return new AutoBuilder_AutoBuilderTest_MyAnnotationBuilder()
-        .truthiness(MyAnnotation.DEFAULT_TRUTHINESS);
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationBuilder();
+  }
+
+  @AutoBuilder(callMethod = "myAnnotationAll")
+  interface MyAnnotationAllBuilder {
+    MyAnnotationAllBuilder value(String x);
+
+    MyAnnotationAllBuilder id(int x);
+
+    MyAnnotationAllBuilder truthiness(Truthiness x);
+
+    MyAnnotation build();
+  }
+
+  static MyAnnotationAllBuilder myAnnotationAllBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationAllBuilder();
   }
 
   @Test
   public void simpleAutoAnnotation() {
+    // We haven't supplied a value for `truthiness`, so AutoBuilder should use the default one in
+    // the annotation.
     MyAnnotation annotation1 = myAnnotationBuilder().value("foo").build();
     assertThat(annotation1.value()).isEqualTo("foo");
     assertThat(annotation1.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
@@ -174,6 +196,15 @@ public final class AutoBuilderTest {
     assertThat(annotation2.value()).isEqualTo("bar");
     assertThat(annotation2.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
     assertThat(annotation2.truthiness()).isEqualTo(Truthiness.TRUTHY);
+
+    MyAnnotation annotation3 = myAnnotationAllBuilder().value("foo").build();
+    MyAnnotation annotation4 =
+        myAnnotationAllBuilder()
+            .value("foo")
+            .id(MyAnnotation.DEFAULT_ID)
+            .truthiness(MyAnnotation.DEFAULT_TRUTHINESS)
+            .build();
+    assertThat(annotation3).isEqualTo(annotation4);
   }
 
   static class Overload {

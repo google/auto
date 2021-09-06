@@ -20,6 +20,7 @@ import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
+import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
@@ -38,6 +39,7 @@ import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Ascii;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.lang.reflect.Field;
@@ -60,6 +62,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
@@ -134,7 +137,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     Map<String, String> propertyToGetterName =
         Maps.transformValues(classifier.builderGetters(), PropertyGetter::getName);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(executable, propertyToGetterName);
+    vars.props = propertySet(autoBuilderType, executable, propertyToGetterName);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
@@ -152,7 +155,15 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private ImmutableSet<Property> propertySet(
-      ExecutableElement executable, Map<String, String> propertyToGetterName) {
+      TypeElement autoBuilderType,
+      ExecutableElement executable,
+      Map<String, String> propertyToGetterName) {
+    boolean autoAnnotation =
+        MoreElements.getAnnotationMirror(executable, AUTO_ANNOTATION_NAME).isPresent();
+    ImmutableMap<String, String> builderInitializers =
+        autoAnnotation
+            ? autoAnnotationInitializers(autoBuilderType, executable)
+            : ImmutableMap.of();
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
@@ -161,18 +172,58 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     fixReservedIdentifiers(identifiers);
     return executable.getParameters().stream()
         .map(
-            v ->
-                newProperty(
-                    v, identifiers.get(v), propertyToGetterName.get(v.getSimpleName().toString())))
+            v -> {
+              String name = v.getSimpleName().toString();
+              return newProperty(
+                  v,
+                  identifiers.get(v),
+                  propertyToGetterName.get(name),
+                  Optional.ofNullable(builderInitializers.get(name)));
+            })
         .collect(toImmutableSet());
   }
 
-  private Property newProperty(VariableElement var, String identifier, String getterName) {
+  private Property newProperty(
+      VariableElement var,
+      String identifier,
+      String getterName,
+      Optional<String> builderInitializer) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
     Optional<String> nullableAnnotation = nullableAnnotationFor(var, var.asType());
     return new Property(
-        name, identifier, TypeEncoder.encode(type), type, nullableAnnotation, getterName);
+        name,
+        identifier,
+        TypeEncoder.encode(type),
+        type,
+        nullableAnnotation,
+        getterName,
+        builderInitializer);
+  }
+
+  private ImmutableMap<String, String> autoAnnotationInitializers(
+      TypeElement autoBuilderType, ExecutableElement autoAnnotationMethod) {
+    // We expect the return type of an @AutoAnnotation method to be an annotation type. If it isn't,
+    // AutoAnnotation will presumably complain, so we don't need to complain further.
+    TypeMirror returnType = autoAnnotationMethod.getReturnType();
+    if (!returnType.getKind().equals(TypeKind.DECLARED)) {
+      return ImmutableMap.of();
+    }
+    // This might not actually be an annotation (if the code is wrong), but if that's the case we
+    // just won't see any contained ExecutableElement where getDefaultValue() returns something.
+    TypeElement annotation = MoreTypes.asTypeElement(returnType);
+    ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+    for (ExecutableElement method : methodsIn(annotation.getEnclosedElements())) {
+      AnnotationValue defaultValue = method.getDefaultValue();
+      if (defaultValue != null) {
+        String memberName = method.getSimpleName().toString();
+        builder.put(
+            memberName,
+            AnnotationOutput.sourceFormForInitializer(
+                defaultValue, processingEnv, memberName, autoBuilderType));
+      }
+    }
+    return builder.build();
   }
 
   private ExecutableElement findExecutable(

@@ -40,7 +40,7 @@ class ${builderName}${builderFormalTypes} ##
 
   #if ($p.kind.primitive)
 
-  private $types.boxedClass($p.typeMirror).simpleName $p;
+  private $types.boxedClass($p.typeMirror).simpleName $p $p.builderInitializer;
 
   #else
 
@@ -54,7 +54,7 @@ class ${builderName}${builderFormalTypes} ##
 
     #end
 
-  private $p.type $p #if ($p.optional && !$p.nullable) = $p.optional.empty #end ;
+  private $p.type $p $p.builderInitializer;
 
   #end
 #end

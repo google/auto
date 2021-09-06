@@ -160,6 +160,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     private final Optional<String> nullableAnnotation;
     private final Optionalish optional;
     private final String getter;
+    private final String builderInitializer; // empty, or with initial ` = `.
 
     Property(
         String name,
@@ -167,14 +168,38 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         String type,
         TypeMirror typeMirror,
         Optional<String> nullableAnnotation,
-        String getter) {
+        String getter,
+        Optional<String> maybeBuilderInitializer) {
       this.name = name;
       this.identifier = identifier;
       this.type = type;
       this.typeMirror = typeMirror;
       this.nullableAnnotation = nullableAnnotation;
       this.optional = Optionalish.createIfOptional(typeMirror);
+      this.builderInitializer =
+          maybeBuilderInitializer.isPresent()
+              ? " = " + maybeBuilderInitializer.get()
+              : builderInitializer();
       this.getter = getter;
+    }
+
+    /**
+     * Returns the appropriate initializer for a builder property. Builder properties are never
+     * primitive; if the built property is an {@code int} the builder property will be an {@code
+     * Integer}. So the default value for a builder property will be null unless there is an
+     * initializer. The caller of the constructor may have supplied an initializer, but otherwise we
+     * supply one only if this property is an {@code Optional} and is not {@code @Nullable}. In that
+     * case the initializer sets it to {@code Optional.empty()}.
+     */
+    private String builderInitializer() {
+      if (nullableAnnotation.isPresent()) {
+        return "";
+      }
+      Optionalish optional = Optionalish.createIfOptional(typeMirror);
+      if (optional == null) {
+        return "";
+      }
+      return " = " + optional.getEmpty();
     }
 
     /**
@@ -216,6 +241,14 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
      */
     public Optionalish getOptional() {
       return optional;
+    }
+
+    /**
+     * Returns a string to be used as an initializer for a builder field for this property,
+     * including the leading {@code =}, or an empty string if there is no explicit initializer.
+     */
+    public String getBuilderInitializer() {
+      return builderInitializer;
     }
 
     /**
@@ -266,7 +299,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           type,
           method.getReturnType(),
           nullableAnnotation,
-          method.getSimpleName().toString());
+          method.getSimpleName().toString(),
+          Optional.empty());
       this.method = method;
       this.fieldAnnotations = fieldAnnotations;
       this.methodAnnotations = methodAnnotations;
