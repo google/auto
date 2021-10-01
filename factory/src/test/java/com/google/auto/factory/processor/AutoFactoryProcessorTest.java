@@ -508,6 +508,22 @@ public class AutoFactoryProcessorTest {
         .hasSourceEquivalentTo(loadExpectedFile("expected/DefaultPackageFactory.java"));
   }
 
+  @Test
+  public void generics() {
+    JavaFileObject file = JavaFileObjects.forResource("good/Generics.java");
+    Compilation compilation = javac.compile(file);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.Generics_FooImplFactory")
+        .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_FooImplFactory.java"));
+    assertThat(compilation)
+        .generatedSourceFile("tests.Generics_ExplicitFooImplFactory")
+        .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_ExplicitFooImplFactory.java"));
+    assertThat(compilation)
+        .generatedSourceFile("tests.Generics_FooImplWithClassFactory")
+        .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_FooImplWithClassFactory.java"));
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     if (isJavaxAnnotationProcessingGeneratedAvailable()) {
       return JavaFileObjects.forResource(resourceName);

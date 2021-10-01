@@ -29,6 +29,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.AnnotationValues;
+import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
@@ -59,6 +60,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -338,7 +340,26 @@ final class FactoryWriter {
     for (ProviderField provider : descriptor.providers().values()) {
       typeVariables.addAll(getReferencedTypeParameterNames(provider.key().type().get()));
     }
+    // If a parent type has a type parameter, like FooFactory<T>, then the generated factory needs
+    // to have the same parameter, like FooImplFactory<T> extends FooFactory<T>. This is a little
+    // approximate, at least in the case where there is more than one parent type that has a type
+    // parameter. But that should be pretty rare, so let's keep it simple for now.
+    typeVariables.addAll(typeVariablesFrom(descriptor.extendingType()));
+    for (TypeMirror implementing : descriptor.implementingTypes()) {
+      typeVariables.addAll(typeVariablesFrom(implementing));
+    }
     return typeVariables.build();
+  }
+
+  private static List<TypeVariableName> typeVariablesFrom(TypeMirror type) {
+    if (type.getKind().equals(TypeKind.DECLARED)) {
+      DeclaredType declaredType = MoreTypes.asDeclared(type);
+      return declaredType.getTypeArguments().stream()
+          .filter(t -> t.getKind().equals(TypeKind.TYPEVAR))
+          .map(t -> TypeVariableName.get(MoreTypes.asTypeVariable(t)))
+          .collect(toList());
+    }
+    return ImmutableList.of();
   }
 
   private static ImmutableSet<TypeVariableName> getMethodTypeVariables(
