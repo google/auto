@@ -3052,6 +3052,63 @@ public class AutoValueCompilationTest {
   }
 
   @Test
+  public void methodAnnotationsCopiedInLexicographicalOrder() {
+    JavaFileObject bazFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import com.package1.Annotation1;",
+            "import com.package2.Annotation0;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz extends Parent {",
+            "  @Annotation0",
+            "  @Annotation1",
+            "  @Override",
+            "  public abstract String foo();",
+            "}");
+    JavaFileObject parentFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Parent",
+            "package foo.bar;",
+            "",
+            "public abstract class Parent {",
+            "  public abstract String foo();",
+            "}");
+    JavaFileObject annotation1FileObject =
+        JavaFileObjects.forSourceLines(
+            "com.package1.Annotation1",
+            "package com.package1;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target({ElementType.FIELD, ElementType.METHOD})",
+            "public @interface Annotation1 {}");
+    JavaFileObject annotation0FileObject =
+        JavaFileObjects.forSourceLines(
+            "com.package2.Annotation0",
+            "package com.package2;",
+            "",
+            "public @interface Annotation0 {}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(bazFileObject, parentFileObject, annotation1FileObject, annotation0FileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .containsMatch(
+            "(?s:@Annotation1\\s+@Annotation0\\s+@Override\\s+public String foo\\(\\))");
+    // @Annotation1 precedes @Annotation 0 because
+    // @com.package2.Annotation1 precedes @com.package1.Annotation0
+  }
+
+  @Test
   public void nonVisibleProtectedAnnotationFromOtherPackage() {
     JavaFileObject bazFileObject =
         JavaFileObjects.forSourceLines(

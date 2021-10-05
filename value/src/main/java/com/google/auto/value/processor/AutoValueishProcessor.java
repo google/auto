@@ -501,9 +501,9 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
   /** Returns the spelling to be used in the generated code for the given list of annotations. */
   static ImmutableList<String> annotationStrings(List<? extends AnnotationMirror> annotations) {
-    // TODO(b/68008628): use ImmutableList.toImmutableList() when that works.
     return annotations.stream()
         .map(AnnotationOutput::sourceFormForAnnotation)
+        .sorted() // ensures deterministic order
         .collect(toImmutableList());
   }
 
@@ -623,8 +623,9 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     List<? extends AnnotationMirror> elementAnnotations = element.getAnnotationMirrors();
     OptionalInt nullableAnnotationIndex = nullableAnnotationIndex(elementAnnotations);
     if (nullableAnnotationIndex.isPresent()) {
-      ImmutableList<String> annotations = annotationStrings(elementAnnotations);
-      return Optional.of(annotations.get(nullableAnnotationIndex.getAsInt()) + " ");
+      AnnotationMirror annotation = elementAnnotations.get(nullableAnnotationIndex.getAsInt());
+      String annotationString = AnnotationOutput.sourceFormForAnnotation(annotation);
+      return Optional.of(annotationString + " ");
     } else {
       return Optional.empty();
     }

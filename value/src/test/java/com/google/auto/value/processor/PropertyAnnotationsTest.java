@@ -510,11 +510,14 @@ public class PropertyAnnotationsTest {
                 "@PropertyAnnotationsTest.InheritedAnnotation")
             .build();
 
+    // Annotations are in lexicographical order of FQN:
+    // @com.google.auto.value.processor.PropertyAnnotationsTest.InheritedAnnotation precedes
+    // @java.lang.Deprecated
     JavaFileObject outputFile =
         new OutputFileBuilder()
             .setImports(imports)
-            .addMethodAnnotations("@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation")
-            .addFieldAnnotations("@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation")
+            .addMethodAnnotations("@PropertyAnnotationsTest.InheritedAnnotation", "@Deprecated")
+            .addFieldAnnotations("@PropertyAnnotationsTest.InheritedAnnotation", "@Deprecated")
             .build();
 
     Compilation compilation =
@@ -548,12 +551,16 @@ public class PropertyAnnotationsTest {
             .addInnerTypes("@Target(ElementType.METHOD) @interface MethodsOnly {}")
             .build();
 
+    // Annotations are in lexicographical order of FQN:
+    // @com.google.auto.value.processor.PropertyAnnotationsTest.InheritedAnnotation precedes
+    // @foo.bar.Baz.MethodsOnly precedes
+    // @java.lang.Deprecated
     JavaFileObject outputFile =
         new OutputFileBuilder()
             .setImports(getImports(PropertyAnnotationsTest.class))
-            .addFieldAnnotations("@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation")
+            .addFieldAnnotations("@PropertyAnnotationsTest.InheritedAnnotation", "@Deprecated")
             .addMethodAnnotations(
-                "@Deprecated", "@PropertyAnnotationsTest.InheritedAnnotation", "@Baz.MethodsOnly")
+                "@PropertyAnnotationsTest.InheritedAnnotation", "@Baz.MethodsOnly", "@Deprecated")
             .build();
 
     Compilation compilation =
