@@ -79,8 +79,8 @@ import org.junit.runners.model.Statement;
 @RunWith(Parameterized.class)
 public class OverridesTest {
   @Parameterized.Parameters(name = "{0}")
-  public static ImmutableList<CompilerType> data() {
-    return ImmutableList.of(CompilerType.JAVAC, CompilerType.ECJ);
+  public static CompilerType[] data() {
+    return CompilerType.values();
   }
 
   @Rule public CompilationRule compilation = new CompilationRule();
@@ -133,12 +133,16 @@ public class OverridesTest {
       void m(String x);
 
       void n();
+
+      Number number();
     }
 
     interface Two {
       void m();
 
       void m(int x);
+
+      Integer number();
     }
 
     static class Parent {
@@ -156,6 +160,11 @@ public class OverridesTest {
 
       @Override
       public void n() {}
+
+      @Override
+      public Number number() {
+        return 0;
+      }
     }
 
     static class ChildOfOneAndTwo implements One, Two {
@@ -170,6 +179,11 @@ public class OverridesTest {
 
       @Override
       public void n() {}
+
+      @Override
+      public Integer number() {
+        return 0;
+      }
     }
 
     static class ChildOfParentAndOne extends Parent implements One {
@@ -181,6 +195,11 @@ public class OverridesTest {
 
       @Override
       public void n() {}
+
+      @Override
+      public Number number() {
+        return 0;
+      }
     }
 
     static class ChildOfParentAndOneAndTwo extends Parent implements One, Two {
@@ -192,6 +211,11 @@ public class OverridesTest {
 
       @Override
       public void n() {}
+
+      @Override
+      public Integer number() {
+        return 0;
+      }
     }
 
     abstract static class AbstractChildOfOne implements One {}
@@ -199,6 +223,8 @@ public class OverridesTest {
     abstract static class AbstractChildOfOneAndTwo implements One, Two {}
 
     abstract static class AbstractChildOfParentAndOneAndTwo extends Parent implements One, Two {}
+
+    interface ExtendingOneAndTwo extends One, Two {}
   }
 
   static class MoreTypesForInheritance {

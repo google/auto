@@ -388,40 +388,6 @@ public class MoreElementsTest {
         .inOrder();
   }
 
-  static class Injectable {}
-
-  public static class MenuManager {
-    public interface ParentComponent extends MenuItemA.ParentComponent, MenuItemB.ParentComponent {}
-  }
-
-  public static class MenuItemA {
-    public interface ParentComponent {
-      Injectable injectable();
-    }
-  }
-
-  public static class MenuItemB {
-    public interface ParentComponent {
-      Injectable injectable();
-    }
-  }
-
-  public static class Main {
-    public interface ParentComponent extends MenuManager.ParentComponent {}
-  }
-
-  // Example from https://github.com/williamlian/daggerbug
-  @Test
-  public void getLocalAndInheritedMethods_DaggerBug() {
-    TypeElement main = elements.getTypeElement(Main.ParentComponent.class.getCanonicalName());
-    Set<ExecutableElement> methods =
-        MoreElements.getLocalAndInheritedMethods(main, compilation.getTypes(), elements);
-    assertThat(methods).hasSize(1);
-    ExecutableElement method = methods.iterator().next();
-    assertThat(method.getSimpleName().toString()).isEqualTo("injectable");
-    assertThat(method.getParameters()).isEmpty();
-  }
-
   private Set<ExecutableElement> visibleMethodsFromObject() {
     Types types = compilation.getTypes();
     TypeMirror intMirror = types.getPrimitiveType(TypeKind.INT);
