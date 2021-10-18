@@ -608,7 +608,7 @@ variant as just described.
 ### Copying to the generated class
 
 If you want to copy annotations from your `@AutoValue`-annotated class to the
-generated `AutoValue_...` implemention, annotate your class with
+generated `AutoValue_...` implementation, annotate your class with
 [`@AutoValue.CopyAnnotations`].
 
 For example, if `Example.java` is:
