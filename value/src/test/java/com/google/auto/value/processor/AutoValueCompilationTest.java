@@ -21,6 +21,7 @@ import static com.google.testing.compile.CompilationSubject.compilations;
 import static com.google.testing.compile.Compiler.javac;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Expect;
@@ -2913,8 +2914,6 @@ public class AutoValueCompilationTest {
             "foo.bar.Bar",
             "package foo.bar;",
             "",
-            "import com.google.auto.value.AutoValue;",
-            "",
             "@" + Foo.class.getCanonicalName(),
             "public abstract class Bar {",
             "  public abstract BarFoo barFoo();",
@@ -2925,6 +2924,73 @@ public class AutoValueCompilationTest {
             .withOptions("-Xlint:-processing", "-implicit:none")
             .compile(bazFileObject, barFileObject);
     assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  @Test
+  public void referencingGeneratedClassInAnnotation() {
+    // Test that ensures that a type that does not exist can be referenced by a copied annotation
+    // as long as it later does come into existence. The BarFoo type referenced here does not exist
+    // when the AutoValueProcessor runs on the first round, but the FooProcessor then generates it.
+    // That generation provokes a further round of annotation processing and AutoValueProcessor
+    // should succeed then.
+    // We test the three places that a class reference could appear: as the value of a Class
+    // element, as the value of a Class[] element, in a nested annotation.
+    JavaFileObject barFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Bar",
+            "package foo.bar;",
+            "",
+            "@" + Foo.class.getCanonicalName(),
+            "public abstract class Bar {",
+            "}");
+    JavaFileObject referenceClassFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.ReferenceClass",
+            "package foo.bar;",
+            "",
+            "@interface ReferenceClass {",
+            "  Class<?> value() default Void.class;",
+            "  Class<?>[] values() default {};",
+            "  Nested nested() default @Nested;",
+            "  @interface Nested {",
+            "    Class<?>[] values() default {};",
+            "  }",
+            "}");
+    ImmutableList<String> annotations = ImmutableList.of(
+        "@ReferenceClass(BarFoo.class)",
+        "@ReferenceClass(values = {Void.class, BarFoo.class})",
+        "@ReferenceClass(nested = @ReferenceClass.Nested(values = {Void.class, BarFoo.class}))");
+    for (String annotation : annotations) {
+      JavaFileObject bazFileObject =
+          JavaFileObjects.forSourceLines(
+              "foo.bar.Baz",
+              "package foo.bar;",
+              "",
+              "import com.google.auto.value.AutoValue;",
+              "",
+              "@AutoValue",
+              "@AutoValue.CopyAnnotations",
+              annotation,
+              "public abstract class Baz {",
+              "  public abstract int foo();",
+              "",
+              "  public static Baz create(int foo) {",
+              "    return new AutoValue_Baz(foo);",
+              "  }",
+              "}");
+      Compilation compilation =
+          javac()
+              .withProcessors(new AutoValueProcessor(), new FooProcessor())
+              .withOptions("-Xlint:-processing", "-implicit:none")
+              .compile(bazFileObject, barFileObject, referenceClassFileObject);
+      expect.about(compilations()).that(compilation).succeededWithoutWarnings();
+      if (compilation.status().equals(Compilation.Status.SUCCESS)) {
+        expect.about(compilations()).that(compilation)
+            .generatedSourceFile("foo.bar.AutoValue_Baz")
+            .contentsAsUtf8String()
+            .contains(annotation);
+      }
+    }
   }
 
   @Test

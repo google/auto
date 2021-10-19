@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import com.google.auto.common.MoreTypes;
+import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import java.util.List;
@@ -24,8 +26,10 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.tools.Diagnostic;
@@ -222,9 +226,57 @@ final class AnnotationOutput {
    * Java source file to reproduce the annotation in source form.
    */
   static String sourceFormForAnnotation(AnnotationMirror annotationMirror) {
+    // If a value in the annotation is a reference to a class constant and that class constant is
+    // undefined, javac unhelpfully converts it into a string "<error>" and visits that instead. We
+    // want to catch this case and defer processing to allow the class to be defined by another
+    // annotation processor. So we look for annotation elements whose type is Class but whose
+    // reported value is a string. Unfortunately we can't extract the ErrorType corresponding to the
+    // missing class portably. With javac, the AttributeValue is a
+    // com.sun.tools.javac.code.Attribute.UnresolvedClass, which has a public field classType that
+    // is the ErrorType we need, but obviously that's nonportable and fragile.
+    validateClassValues(annotationMirror);
     StringBuilder sb = new StringBuilder();
     new AnnotationSourceFormVisitor().visitAnnotation(annotationMirror, sb);
     return sb.toString();
+  }
+
+  /**
+   * Throws an exception if this annotation contains a value for a Class element that is not
+   * actually a type. The assumption is that the value is the string {@code "<error>"} which javac
+   * presents when a Class value is an undefined type.
+   */
+  private static void validateClassValues(AnnotationMirror annotationMirror) {
+    // A class literal can appear in three places:
+    // * for an element of type Class, for example @SomeAnnotation(Foo.class);
+    // * for an element of type Class[], for example @SomeAnnotation({Foo.class, Bar.class});
+    // * inside a nested annotation, for example @SomeAnnotation(@Nested(Foo.class)).
+    // These three possibilities are the three branches of the if/else chain below.
+    annotationMirror
+        .getElementValues()
+        .forEach(
+            (method, value) -> {
+              TypeMirror type = method.getReturnType();
+              if (isJavaLangClass(type) && !(value.getValue() instanceof TypeMirror)) {
+                throw new MissingTypeException(null);
+              } else if (type.getKind().equals(TypeKind.ARRAY)
+                  && isJavaLangClass(MoreTypes.asArray(type).getComponentType())
+                  && value.getValue() instanceof List<?>) {
+                @SuppressWarnings("unchecked") // a List can only be a List<AnnotationValue> here
+                List<AnnotationValue> values = (List<AnnotationValue>) value.getValue();
+                if (values.stream().anyMatch(av -> !(av.getValue() instanceof TypeMirror))) {
+                  throw new MissingTypeException(null);
+                }
+              } else if (type.getKind().equals(TypeKind.DECLARED)
+                  && MoreTypes.asElement(type).getKind().equals(ElementKind.ANNOTATION_TYPE)
+                  && value.getValue() instanceof AnnotationMirror) {
+                validateClassValues((AnnotationMirror) value.getValue());
+              }
+            });
+  }
+
+  private static boolean isJavaLangClass(TypeMirror type) {
+    return type.getKind().equals(TypeKind.DECLARED)
+        && MoreTypes.asTypeElement(type).getQualifiedName().contentEquals("java.lang.Class");
   }
 
   private static StringBuilder appendQuoted(StringBuilder sb, String s) {
