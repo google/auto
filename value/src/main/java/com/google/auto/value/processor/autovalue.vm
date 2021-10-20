@@ -75,15 +75,11 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
     ## the constructor is called from the extension code.
 
     #if ($identifiers)
-
     if ($p == null) {
       throw new NullPointerException("Null $p.name");
     }
     #else
-      ## Just throw NullPointerException with no message if it's null.
-      ## The Object cast has no effect on the code but silences an ErrorProne warning.
-
-    ((`java.lang.Object`) ${p}).getClass();
+    `java.util.Objects`.requireNonNull($p);
     #end
 
   #end
