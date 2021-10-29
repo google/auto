@@ -280,7 +280,7 @@ public abstract class Animal {
     abstract Animal autoBuild(); // not public
 
     public final Animal build() {
-      if (!name().isPresent()) {
+      if (name().isEmpty()) {
         setName(numberOfLegs() + "-legged creature");
       }
       return autoBuild();
