@@ -144,4 +144,21 @@ public class AutoServiceProcessorTest {
         .contentsAsUtf8String()
         .isEqualTo("test.EnclosingGeneric$GenericServiceProvider\n");
   }
+
+  @Test
+  public void missing() {
+    Compilation compilation =
+            Compiler.javac()
+                    .withProcessors(new AutoServiceProcessor())
+                    .withOptions("-Averify=true")
+                    .compile(
+                            JavaFileObjects.forResource("test/GenericServiceProviderWithMissingServiceClass.java")
+                    );
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+            .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.GenericService")
+            .contentsAsUtf8String()
+            .isEqualTo("test.EnclosingGeneric$GenericServiceProvider\n");
+  }
+
 }
