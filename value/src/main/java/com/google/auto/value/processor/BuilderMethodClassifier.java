@@ -386,14 +386,17 @@ abstract class BuilderMethodClassifier<E extends Element> {
       DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
       ExecutableType methodMirror =
           MoreTypes.asExecutable(typeUtils.asMemberOf(builderTypeMirror, method));
-      if (TYPE_EQUIVALENCE.equivalent(methodMirror.getReturnType(), builderType.asType())) {
+      TypeMirror returnType = methodMirror.getReturnType();
+      if (typeUtils.isSubtype(builderType.asType(), returnType)
+          && !MoreTypes.isTypeOf(Object.class, returnType)) {
+        // We allow the return type to be a supertype (other than Object), to support step builders.
         TypeMirror parameterType = Iterables.getOnlyElement(methodMirror.getParameterTypes());
         propertyNameToSetters.put(
             propertyName, new PropertySetter(method, parameterType, function.get()));
       } else {
         errorReporter.reportError(
             method,
-            "[%sBuilderRet] Setter methods must return %s",
+            "[%sBuilderRet] Setter methods must return %s or a supertype",
             autoWhat(),
             builderType.asType());
       }

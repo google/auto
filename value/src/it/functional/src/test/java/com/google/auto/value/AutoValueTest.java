@@ -3623,4 +3623,48 @@ public class AutoValueTest {
     } catch (IllegalStateException expected) {
     }
   }
+
+  @AutoValue
+  public abstract static class Stepped {
+    public abstract String one();
+
+    public abstract int two();
+
+    public abstract double three();
+
+    public interface StepOne<T> {
+      StepTwo setOne(T x);
+    }
+
+    public interface StepTwo {
+      StepThree setTwo(int x);
+    }
+
+    public interface StepThree {
+      Stepped setThreeAndBuild(double x);
+    }
+
+    public static StepOne<String> builder() {
+      return new AutoValue_AutoValueTest_Stepped.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder implements StepOne<String>, StepTwo, StepThree {
+      abstract Builder setThree(double x);
+      abstract Stepped build();
+
+      @Override
+      public Stepped setThreeAndBuild(double x) {
+        return setThree(x).build();
+      }
+    }
+  }
+
+  @Test
+  public void stepBuilder() {
+    Stepped stepped = Stepped.builder().setOne("one").setTwo(2).setThreeAndBuild(3.0);
+    assertThat(stepped.one()).isEqualTo("one");
+    assertThat(stepped.two()).isEqualTo(2);
+    assertThat(stepped.three()).isEqualTo(3.0);
+  }
 }

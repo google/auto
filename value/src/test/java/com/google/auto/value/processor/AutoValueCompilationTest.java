@@ -1851,6 +1851,8 @@ public class AutoValueCompilationTest {
 
   @Test
   public void autoValueBuilderSetterReturnType() {
+    // We do allow the return type of a setter to be a supertype of the builder type, to support
+    // step builders. But we don't allow it to be Object.
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1864,7 +1866,7 @@ public class AutoValueCompilationTest {
             "",
             "  @AutoValue.Builder",
             "  public interface Builder {",
-            "    void blim(int x);",
+            "    Object blim(int x);",
             "    Baz build();",
             "  }",
             "}");
@@ -1875,7 +1877,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .hadErrorContaining("Setter methods must return foo.bar.Baz.Builder")
         .inFile(javaFileObject)
-        .onLineContaining("void blim(int x)");
+        .onLineContaining("Object blim(int x)");
   }
 
   @Test

@@ -724,7 +724,7 @@ public final class AutoBuilderCompilationTest {
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
-            "[AutoBuilderBuilderRet] Setter methods must return foo.bar.Baz.Builder")
+            "[AutoBuilderBuilderRet] Setter methods must return foo.bar.Baz.Builder or a supertype")
         .inFile(javaFileObject)
         .onLineContaining("two(int x)");
   }
