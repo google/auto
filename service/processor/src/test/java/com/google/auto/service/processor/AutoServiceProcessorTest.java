@@ -23,6 +23,7 @@ import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.StandardLocation;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -145,7 +146,7 @@ public class AutoServiceProcessorTest {
         .isEqualTo("test.EnclosingGeneric$GenericServiceProvider\n");
   }
 
-  @Test
+  @Test @Ignore
   public void missing() {
     Compilation compilation =
             Compiler.javac()
