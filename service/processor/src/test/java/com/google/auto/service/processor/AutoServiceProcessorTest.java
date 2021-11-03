@@ -17,6 +17,7 @@ package com.google.auto.service.processor;
 
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
 import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.io.Resources;
 import com.google.testing.compile.Compilation;
@@ -143,5 +144,19 @@ public class AutoServiceProcessorTest {
         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.GenericService")
         .contentsAsUtf8String()
         .isEqualTo("test.EnclosingGeneric$GenericServiceProvider\n");
+  }
+
+  @Test
+  public void missing() {
+    AutoServiceProcessor processor = new AutoServiceProcessor();
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(processor)
+            .withOptions("-Averify=true")
+            .compile(
+                JavaFileObjects.forResource(
+                    "test/GenericServiceProviderWithMissingServiceClass.java"));
+    assertThat(compilation).failed();
+    assertThat(processor.exceptionStacks()).isEmpty();
   }
 }

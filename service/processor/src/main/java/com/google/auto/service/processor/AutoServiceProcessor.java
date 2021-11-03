@@ -25,12 +25,15 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -67,6 +70,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
   @VisibleForTesting
   static final String MISSING_SERVICES_ERROR = "No service interfaces provided for element!";
+
+  private final List<String> exceptionStacks = Collections.synchronizedList(new ArrayList<>());
 
   /**
    * Maps the class names of service provider interfaces to the
@@ -109,9 +114,15 @@ public class AutoServiceProcessor extends AbstractProcessor {
       processImpl(annotations, roundEnv);
     } catch (RuntimeException e) {
       // We don't allow exceptions of any kind to propagate to the compiler
-      fatalError(getStackTraceAsString(e));
+      String trace = getStackTraceAsString(e);
+      exceptionStacks.add(trace);
+      fatalError(trace);
     }
     return false;
+  }
+
+  ImmutableList<String> exceptionStacks() {
+    return ImmutableList.copyOf(exceptionStacks);
   }
 
   private void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -291,7 +302,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
   private ImmutableSet<DeclaredType> getValueFieldOfClasses(AnnotationMirror annotationMirror) {
     return getAnnotationValue(annotationMirror, "value")
         .accept(
-            new SimpleAnnotationValueVisitor8<ImmutableSet<DeclaredType>, Void>() {
+            new SimpleAnnotationValueVisitor8<ImmutableSet<DeclaredType>, Void>(ImmutableSet.of()) {
               @Override
               public ImmutableSet<DeclaredType> visitType(TypeMirror typeMirror, Void v) {
                 // TODO(ronshapiro): class literals may not always be declared types, i.e.
