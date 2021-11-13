@@ -75,16 +75,14 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
     ## the constructor is called from the extension code.
 
     #if ($identifiers)
-    if ($p == null) {
-      throw new NullPointerException("Null $p.name");
-    }
+        this.$p = `java.util.Objects`.requireNonNull($p, "Null $p");
     #else
-    `java.util.Objects`.requireNonNull($p);
+        this.$p = `java.util.Objects`.requireNonNull($p);
     #end
 
-  #end
-
+  #else
     this.$p = $p;
+  #end
 #end
   }
 
