@@ -72,9 +72,7 @@ final class $className implements $annotationName, `java.io.Serializable` {
 #foreach ($p in $params.keySet())
 
   #if ($members[$p].kind == "ARRAY")
-    if ($p == null) {
-        throw new NullPointerException("Null $p");
-    }
+    `java.util.Objects`.requireNonNull($p, "Null $p");
     #if ($params[$p].kind == "ARRAY")
 
     this.$p = #cloneArray(${p});
@@ -94,12 +92,10 @@ final class $className implements $annotationName, `java.io.Serializable` {
     this.$p = ${p}.toArray(new ${members[$p].componentType}[0]);
 
     #end
+  #elseif (!$members[$p].kind.primitive)
+    this.$p = `java.util.Objects`.requireNonNull($p, "Null $p");
   #else
-    #if (!$members[$p].kind.primitive)
-        this.$p = `java.util.Objects`.requireNonNull($p, "Null $p");
-    #else
-        this.$p = $p;
-    #end
+    this.$p = $p;
   #end
 #end
 
