@@ -24,12 +24,11 @@
     <version>HEAD-SNAPSHOT</version>
   </parent>
 
-  <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-annotations</artifactId>
   <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Annotations</name>
   <description>
-    Immutable value-type code generation for Java 1.6+.
+    Immutable value-type code generation for Java 1.7+.
   </description>
   <url>https://github.com/google/auto/tree/master/value</url>
 
