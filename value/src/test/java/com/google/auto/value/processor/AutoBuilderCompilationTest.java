@@ -115,7 +115,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
@@ -148,7 +147,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
@@ -192,7 +190,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(built, builder);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation).generatedSourceFile("foo.bar.AutoBuilder_Builder");
@@ -214,7 +211,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -242,7 +238,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -271,7 +266,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -299,7 +293,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -328,7 +321,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -355,7 +347,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -386,7 +377,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -418,7 +408,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -451,7 +440,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -489,7 +477,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -519,7 +506,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -553,7 +539,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -584,7 +569,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -618,7 +602,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -650,7 +633,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -686,7 +668,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -719,7 +700,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -761,7 +741,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject, nullableFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -794,7 +773,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -827,7 +805,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
@@ -862,7 +839,6 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
             .compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)

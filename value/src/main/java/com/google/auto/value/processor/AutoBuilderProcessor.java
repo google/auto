@@ -98,12 +98,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
 
   @Override
   void processType(TypeElement autoBuilderType) {
-    if (!processingEnv.getOptions().containsKey(ALLOW_OPTION)) {
-      errorReporter()
-          .abortWithError(
-              autoBuilderType,
-              "Compile with -A%s to enable this UNSUPPORTED AND UNSTABLE prototype",
-              ALLOW_OPTION);
+    if (processingEnv.getOptions().containsKey(ALLOW_OPTION)) {
+      errorReporter().reportWarning(autoBuilderType, "The -A%s option is obsolete", ALLOW_OPTION);
     }
     if (autoBuilderType.getKind() != ElementKind.CLASS
         && autoBuilderType.getKind() != ElementKind.INTERFACE) {

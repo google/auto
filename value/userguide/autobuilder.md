@@ -13,9 +13,6 @@ corresponding to the getter methods in the `@AutoValue` class, an `@AutoBuilder`
 has setter methods corresponding to the parameters of a constructor or static
 method. Apart from that, the two are very similar.
 
-AutoBuilder is **unstable** and it is possible that its API
-may change. We do not recommend depending on it for production code yet.
-
 ## Example: calling a constructor
 
 Here is a simple example:
