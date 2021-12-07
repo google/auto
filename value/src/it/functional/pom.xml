@@ -176,7 +176,6 @@
             <arg>-Xlint:all</arg>
             <arg>-encoding</arg>
             <arg>utf8</arg>
-            <arg>-Acom.google.auto.value.AutoBuilderIsUnstable</arg>
           </compilerArgs>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>

@@ -127,8 +127,7 @@ public class CompileWithEclipseTest {
             version,
             "-target",
             version,
-            "-warn:-warningToken,-intfAnnotation",
-            "-Acom.google.auto.value.AutoBuilderIsUnstable");
+            "-warn:-warningToken,-intfAnnotation");
     JavaCompiler.CompilationTask task =
         compiler.getTask(null, fileManager, null, options, null, sourceFileObjects);
     // Explicitly supply an empty list of extensions for AutoValueProcessor, because otherwise this
