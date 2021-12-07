@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.intersection;
 import static java.util.Comparator.naturalOrder;
@@ -45,7 +46,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
@@ -79,21 +79,24 @@ public class AutoValueProcessor extends AutoValueishProcessor {
 
   @VisibleForTesting
   AutoValueProcessor(ClassLoader loaderForExtensions) {
-    super(AUTO_VALUE_NAME);
-    this.extensions = null;
-    this.loaderForExtensions = loaderForExtensions;
+    this(ImmutableList.of(), loaderForExtensions);
   }
 
   @VisibleForTesting
-  public AutoValueProcessor(Iterable<? extends AutoValueExtension> extensions) {
-    super(AUTO_VALUE_NAME);
-    this.extensions = ImmutableList.copyOf(extensions);
-    this.loaderForExtensions = null;
+  public AutoValueProcessor(Iterable<? extends AutoValueExtension> testExtensions) {
+    this(testExtensions, null);
+  }
+
+  private AutoValueProcessor(
+      Iterable<? extends AutoValueExtension> testExtensions, ClassLoader loaderForExtensions) {
+    super(AUTO_VALUE_NAME, /* appliesToInterfaces= */ false);
+    this.extensions = ImmutableList.copyOf(testExtensions);
+    this.loaderForExtensions = loaderForExtensions;
   }
 
   // Depending on how this AutoValueProcessor was constructed, we might already have a list of
-  // extensions when init() is run, or, if `extensions` is null, we have a ClassLoader that will be
-  // used to get the list using the ServiceLoader API.
+  // extensions when init() is run, or, if `loaderForExtensions` is not null, it is a ClassLoader
+  // that will be used to get the list using the ServiceLoader API.
   private ImmutableList<AutoValueExtension> extensions;
   private final ClassLoader loaderForExtensions;
 
@@ -108,7 +111,8 @@ public class AutoValueProcessor extends AutoValueishProcessor {
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
 
-    if (extensions == null) {
+    if (loaderForExtensions != null) {
+      checkState(extensions.isEmpty());
       try {
         extensions = extensionsFromLoader(loaderForExtensions);
       } catch (RuntimeException | Error e) {
@@ -165,10 +169,6 @@ public class AutoValueProcessor extends AutoValueishProcessor {
 
   @Override
   void processType(TypeElement type) {
-    if (type.getKind() != ElementKind.CLASS) {
-      errorReporter()
-          .abortWithError(type, "[AutoValueNotClass] @AutoValue only applies to classes");
-    }
     if (ancestorIsAutoValue(type)) {
       errorReporter()
           .abortWithError(type, "[AutoValueExtend] One @AutoValue class may not extend another");
@@ -180,7 +180,6 @@ public class AutoValueProcessor extends AutoValueishProcessor {
               "[AutoValueImplAnnotation] @AutoValue may not be used to implement an annotation"
                   + " interface; try using @AutoAnnotation instead");
     }
-    checkModifiersIfNested(type);
 
     // We are going to classify the methods of the @AutoValue class into several categories.
     // This covers the methods in the class itself and the ones it inherits from supertypes.

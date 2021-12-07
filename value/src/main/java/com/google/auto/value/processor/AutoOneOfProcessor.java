@@ -60,7 +60,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 public class AutoOneOfProcessor extends AutoValueishProcessor {
   public AutoOneOfProcessor() {
-    super(AUTO_ONE_OF_NAME);
+    super(AUTO_ONE_OF_NAME, /* appliesToInterfaces= */ false);
   }
 
   @Override
@@ -75,13 +75,6 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
 
   @Override
   void processType(TypeElement autoOneOfType) {
-    if (autoOneOfType.getKind() != ElementKind.CLASS) {
-      errorReporter()
-          .abortWithError(
-              autoOneOfType,
-              "[AutoOneOfNotClass] @" + AUTO_ONE_OF_NAME + " only applies to classes");
-    }
-    checkModifiersIfNested(autoOneOfType);
     DeclaredType kindMirror = mirrorForKindType(autoOneOfType);
 
     // We are going to classify the methods of the @AutoOneOf class into several categories.

@@ -556,6 +556,27 @@ public class AutoValueCompilationTest {
   }
 
   @Test
+  public void autoValueMustBeClass() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public interface Baz {",
+            "  String buh();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoValue only applies to classes")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Baz");
+  }
+
+  @Test
   public void autoValueMustBeStatic() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
@@ -633,6 +654,52 @@ public class AutoValueCompilationTest {
         .hadErrorContaining("@AutoValue class must not be nested in a private class")
         .inFile(javaFileObject)
         .onLineContaining("class Nested");
+  }
+
+  @Test
+  public void autoValueMustHaveNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  Baz(int buh) {}",
+            "",
+            "  public abstract int buh();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoValue class must have a non-private no-arg constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Baz");
+  }
+
+  @Test
+  public void autoValueMustHaveVisibleNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  private Baz() {}",
+            "",
+            "  public abstract int buh();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoValue class must have a non-private no-arg constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Baz");
   }
 
   @Test
@@ -1446,6 +1513,42 @@ public class AutoValueCompilationTest {
         .hadErrorContaining("@AutoValue.Builder cannot be applied to a non-static class")
         .inFile(javaFileObject)
         .onLineContaining("abstract class Builder");
+  }
+
+  @Test
+  public void autoValueBuilderMustHaveNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Example",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "class Example {",
+            "  @AutoValue",
+            "  abstract static class Baz {",
+            "    abstract int foo();",
+            "",
+            "    static Builder builder() {",
+            "      return new AutoValue_Example_Baz.Builder();",
+            "    }",
+            "",
+            "    @AutoValue.Builder",
+            "    abstract static class Builder {",
+            "      Builder(int defaultFoo) {}",
+            "      abstract Builder foo(int x);",
+            "      abstract Baz build();",
+            "    }",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoValue.Builder class must have a non-private no-arg constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Builder");
   }
 
   @Test

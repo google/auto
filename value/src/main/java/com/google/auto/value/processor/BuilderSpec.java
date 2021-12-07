@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
+import static com.google.auto.value.processor.AutoValueishProcessor.hasVisibleNoArgConstructor;
 import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.common.collect.Sets.immutableEnumSet;
@@ -86,16 +87,9 @@ class BuilderSpec {
     Optional<TypeElement> builderTypeElement = Optional.empty();
     for (TypeElement containedClass : typesIn(autoValueClass.getEnclosedElements())) {
       if (hasAnnotationMirror(containedClass, AUTO_VALUE_BUILDER_NAME)) {
-        if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
-          errorReporter.reportError(
-              containedClass,
-              "[AutoValueBuilderClass] @AutoValue.Builder can only apply to a class or an"
-                  + " interface");
-        } else if (!containedClass.getModifiers().contains(Modifier.STATIC)) {
-          errorReporter.reportError(
-              containedClass,
-              "[AutoValueInnerBuilder] @AutoValue.Builder cannot be applied to a non-static class");
-        } else if (builderTypeElement.isPresent()) {
+        findBuilderError(containedClass)
+            .ifPresent(error -> errorReporter.reportError(containedClass, "%s", error));
+        if (builderTypeElement.isPresent()) {
           errorReporter.reportError(
               containedClass,
               "[AutoValueTwoBuilders] %s already has a Builder: %s",
@@ -112,6 +106,24 @@ class BuilderSpec {
     } else {
       return Optional.empty();
     }
+  }
+
+  /** Finds why this {@code @AutoValue.Builder} class is bad, if it is bad. */
+  private Optional<String> findBuilderError(TypeElement builderTypeElement) {
+    if (!CLASS_OR_INTERFACE.contains(builderTypeElement.getKind())) {
+      return Optional.of(
+          "[AutoValueBuilderClass] @AutoValue.Builder can only apply to a class or an"
+              + " interface");
+    } else if (!builderTypeElement.getModifiers().contains(Modifier.STATIC)) {
+      return Optional.of(
+          "[AutoValueInnerBuilder] @AutoValue.Builder cannot be applied to a non-static class");
+    } else if (builderTypeElement.getKind().equals(ElementKind.CLASS)
+        && !hasVisibleNoArgConstructor(builderTypeElement)) {
+      return Optional.of(
+          "[AutoValueBuilderConstructor] @AutoValue.Builder class must have a non-private no-arg"
+              + " constructor");
+    }
+    return Optional.empty();
   }
 
   /** Representation of an {@code AutoValue.Builder} class or interface. */

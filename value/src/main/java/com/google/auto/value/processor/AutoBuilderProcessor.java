@@ -80,7 +80,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   private static final String ALLOW_OPTION = "com.google.auto.value.AutoBuilderIsUnstable";
 
   public AutoBuilderProcessor() {
-    super(AUTO_BUILDER_NAME);
+    super(AUTO_BUILDER_NAME, /* appliesToInterfaces= */ true);
   }
 
   @Override
@@ -101,14 +101,6 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     if (processingEnv.getOptions().containsKey(ALLOW_OPTION)) {
       errorReporter().reportWarning(autoBuilderType, "The -A%s option is obsolete", ALLOW_OPTION);
     }
-    if (autoBuilderType.getKind() != ElementKind.CLASS
-        && autoBuilderType.getKind() != ElementKind.INTERFACE) {
-      errorReporter()
-          .abortWithError(
-              autoBuilderType,
-              "[AutoBuilderWrongType] @AutoBuilder only applies to classes and interfaces");
-    }
-    checkModifiersIfNested(autoBuilderType);
     // The annotation is guaranteed to be present by the contract of Processor#process
     AnnotationMirror autoBuilderAnnotation =
         getAnnotationMirror(autoBuilderType, AUTO_BUILDER_NAME).get();
@@ -125,7 +117,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     Optional<BuilderMethodClassifier<VariableElement>> maybeClassifier =
         BuilderMethodClassifierForAutoBuilder.classify(
             methods, errorReporter(), processingEnv, executable, builtType, autoBuilderType);
-    if (!maybeClassifier.isPresent()) {
+    if (!maybeClassifier.isPresent() || errorReporter().errorCount() > 0) {
       // We've already output one or more error messages.
       return;
     }

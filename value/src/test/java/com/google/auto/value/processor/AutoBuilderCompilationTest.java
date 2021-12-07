@@ -247,6 +247,66 @@ public final class AutoBuilderCompilationTest {
   }
 
   @Test
+  public void autoBuilderClassMustHaveNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  @AutoBuilder",
+            "  abstract static class Builder {",
+            "    Builder(int bogus) {}",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderConstructor] @AutoBuilder class must have a non-private no-arg"
+                + " constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Builder");
+  }
+
+  @Test
+  public void autoBuilderClassMustHaveVisibleNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  @AutoBuilder",
+            "  abstract static class Builder {",
+            "    private Builder() {}",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderConstructor] @AutoBuilder class must have a non-private no-arg"
+                + " constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Builder");
+  }
+
+  @Test
   public void autoBuilderNestedInPrivate() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
