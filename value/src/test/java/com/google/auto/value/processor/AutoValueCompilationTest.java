@@ -577,6 +577,29 @@ public class AutoValueCompilationTest {
   }
 
   @Test
+  public void autoValueMustNotBeFinal() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public final class Baz {",
+            "  public Baz create() {",
+            "    return new AutoValue_Baz();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoValue class must not be final")
+        .inFile(javaFileObject)
+        .onLineContaining("class Baz");
+  }
+
+  @Test
   public void autoValueMustBeStatic() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
@@ -603,7 +626,7 @@ public class AutoValueCompilationTest {
   }
 
   @Test
-  public void autoValueMustBeNotBePrivate() {
+  public void autoValueMustNotBePrivate() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",

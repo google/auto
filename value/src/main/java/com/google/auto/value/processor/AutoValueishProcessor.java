@@ -417,7 +417,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   /**
    * Validations common to all the subclasses. An {@code @AutoFoo} type must be a class, or possibly
    * an interface for {@code @AutoBuilder}. If it is a class then it must have a non-private no-arg
-   * constructor.
+   * constructor. And, since we'll be generating a subclass, it can't be final.
    */
   private void validateType(TypeElement type) {
     ElementKind kind = type.getKind();
@@ -438,6 +438,13 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       errorReporter.reportError(
           type,
           "[%sConstructor] @%s class must have a non-private no-arg constructor",
+          simpleAnnotationName,
+          simpleAnnotationName);
+    }
+    if (type.getModifiers().contains(Modifier.FINAL)) {
+      errorReporter.abortWithError(
+          type,
+          "[%sFinal] @%s class must not be final",
           simpleAnnotationName,
           simpleAnnotationName);
     }
