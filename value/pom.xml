@@ -19,7 +19,7 @@
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-parent</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.9</version>
   <name>AutoValue Parent</name>
   <description>
     Immutable value-type code generation for Java 7+.
@@ -38,7 +38,7 @@
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>auto-value-1.9</tag>
   </scm>
 
   <issueManagement>
