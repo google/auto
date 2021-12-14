@@ -20,11 +20,11 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>1.9</version>
+    <version>HEAD-SNAPSHOT</version>
   </parent>
 
   <artifactId>auto-value-annotations</artifactId>
-  <version>1.9</version>
+  <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Annotations</name>
   <description>
     Immutable value-type code generation for Java 1.7+.
@@ -39,7 +39,7 @@
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
-    <tag>auto-value-1.9</tag>
+    <tag>HEAD</tag>
   </scm>
   <build>
     <sourceDirectory>../src/main/java</sourceDirectory>
