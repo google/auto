@@ -14,13 +14,12 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-parent</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>1.9</version>
   <name>AutoValue Parent</name>
   <description>
     Immutable value-type code generation for Java 7+.
@@ -39,7 +38,7 @@
     <url>http://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>auto-value-1.9</tag>
   </scm>
 
   <issueManagement>
@@ -218,6 +217,9 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>3.3.1</version>
+            <configuration>
+              <failOnError>false</failOnError>
+            </configuration>
             <executions>
               <execution>
                 <id>attach-javadocs</id>
