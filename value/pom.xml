@@ -59,6 +59,21 @@
     <url>http://www.google.com</url>
   </organization>
 
+  <developers>
+    <developer>
+      <id>eamonnmcmanus</id>
+      <name>Éamonn McManus</name>
+      <email>emcmanus@google.com</email>
+      <organization>Google</organization>
+      <organizationUrl>http://www.google.com</organizationUrl>
+      <roles>
+        <role>owner</role>
+        <role>developer</role>
+      </roles>
+      <timezone>-8</timezone>
+    </developer>
+  </developers>
+
   <modules>
     <module>annotations</module>
     <module>processor</module>
