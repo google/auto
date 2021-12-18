@@ -10,7 +10,9 @@ AutoWhat‽
 
 AutoFactory generates factories that can be used on their own or with [JSR-330](http://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](http://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation. Any combination of parameters can either be passed through factory methods or provided to the factory at construction time. They can implement interfaces or extend abstract classes. They're what you would have written, but without the bugs.
 
-Save time.  Save code.  Save sanity.
+[Dagger](https://dagger.dev/) users: Dagger's own
+[assisted injection](https://dagger.dev/dev-guide/assisted-injection.html) is
+now usually preferred to AutoFactory.
 
 Example
 -------
