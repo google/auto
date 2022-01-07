@@ -149,14 +149,15 @@ Gradle users can declare the dependencies in their `build.gradle` script:
 
 ```groovy
 dependencies {
-  compileOnlyApi      "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
+  compileOnly         "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
   annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
 }
 ```
 
-Note: If you are using a version of Gradle prior to 6.7, use `compile` or (for
-Android or java-library projects) `api` instead of `compileOnlyApi`. If you are
-using a version prior to 4.6, you must apply an annotation processing plugin
+Note: For java-library projects, use `compileOnlyApi` (or `api` for Gradle
+versions prior to 6.7) instead of `compileOnly`. For Android projects, use `api`
+instead of `compileOnly`. If you are using a version prior to 4.6, you must
+apply an annotation processing plugin
 [as described in these instructions][tbroyer-apt].
 
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
