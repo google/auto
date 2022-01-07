@@ -411,6 +411,8 @@ public class AutoValueJava8Test {
 
       Builder nullable(@Nullable String s);
 
+      Optional<String> nullable();
+
       NullablePropertyWithBuilder build();
     }
   }
@@ -437,6 +439,9 @@ public class AutoValueJava8Test {
         assertThrows(
             IllegalStateException.class, () -> NullablePropertyWithBuilder.builder().build());
     assertThat(e).hasMessageThat().contains("notNullable");
+
+    NullablePropertyWithBuilder.Builder builder = NullablePropertyWithBuilder.builder();
+    assertThat(builder.nullable()).isEmpty();
   }
 
   @AutoValue
@@ -496,6 +501,8 @@ public class AutoValueJava8Test {
     public interface Builder {
       Builder optional(@Nullable String s);
 
+      Optional<String> optional();
+
       NullableOptionalPropertyWithNullableBuilder build();
     }
   }
@@ -513,6 +520,10 @@ public class AutoValueJava8Test {
     NullableOptionalPropertyWithNullableBuilder instance3 =
         NullableOptionalPropertyWithNullableBuilder.builder().optional("haruspex").build();
     assertThat(instance3.optional()).hasValue("haruspex");
+
+    NullableOptionalPropertyWithNullableBuilder.Builder builder =
+        NullableOptionalPropertyWithNullableBuilder.builder();
+    assertThat(builder.optional()).isNull();
   }
 
   @AutoValue

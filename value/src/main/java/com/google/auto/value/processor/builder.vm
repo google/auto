@@ -37,14 +37,7 @@ class ${builderName}${builderFormalTypes} ##
     ${builderTypeName}${builderActualTypes} {
 
 #foreach ($p in $props)
-
-  #if ($p.kind.primitive)
-
-  private $types.boxedClass($p.typeMirror).simpleName $p $p.builderInitializer;
-
-  #else
-
-    #if ($builderPropertyBuilders[$p.name])
+  #if ($builderPropertyBuilders[$p.name])
     ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
     ## private ImmutableList.Builder<String> stringsBuilder$;
     ## private ImmutableList<String> strings;
@@ -56,7 +49,10 @@ class ${builderName}${builderFormalTypes} ##
 
   private $p.type $p $p.builderInitializer;
 
-  #end
+#end
+
+#foreach ($decl in $builderRequiredProperties.fieldDeclarations)
+  $decl
 #end
 
   ${builderName}() {
@@ -70,6 +66,10 @@ class ${builderName}${builderFormalTypes} ##
 
     this.$p = source.${p.getter}();
 
+  #end
+
+  #foreach ($init in $builderRequiredProperties.initToAllSet)
+    $init
   #end
 
   }
@@ -112,6 +112,9 @@ class ${builderName}${builderFormalTypes} ##
     #end
 
     this.$p = ${setter.copy($p)};
+
+    $builderRequiredProperties.markAsSet($p)
+
     return this;
   }
 
@@ -177,21 +180,25 @@ class ${builderName}${builderFormalTypes} ##
 
   @`java.lang.Override`
   ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
-    #if ($builderGetters[$p.name].optional)
+    #set ($missingPropertyCondition = $builderRequiredProperties.missingRequiredProperty($p))
 
+    #if ($builderGetters[$p.name].optional)
+      #if ($missingPropertyCondition)
+    if ($missingPropertyCondition) {
+      return $builderGetters[$p.name].optional.empty;
+    }
+      #elseif ($p.nullable)
     if ($p == null) {
       return $builderGetters[$p.name].optional.empty;
-    } else {
-      return ${builderGetters[$p.name].optional.rawType}.of($p);
     }
+      #end
+    return ${builderGetters[$p.name].optional.rawType}.of($p);
 
     #else
-      #if ($builderRequiredProperties.contains($p))
-
-    if ($p == null) {
+      #if ($missingPropertyCondition)
+    if ($missingPropertyCondition) {
       throw new IllegalStateException(#if ($identifiers)"Property \"$p.name\" has not been set"#end);
     }
-
       #end
 
       #if ($propertyBuilder)
@@ -234,29 +241,22 @@ class ${builderName}${builderFormalTypes} ##
   #end
 #end
 
-#if (!$builderRequiredProperties.empty)
-    if (#foreach ($p in $builderRequiredProperties)##
-        this.$p == null##
-          #if ($foreach.hasNext)
-
-        || #end
-        #end) {
+#if (!$builderRequiredProperties.properties.empty)
+    if ($builderRequiredProperties.anyMissing) {
 
   #if ($identifiers)  ## build a friendly message showing all missing properties
-    #if ($builderRequiredProperties.size() == 1)
+    #if ($builderRequiredProperties.properties.size() == 1)
 
-    `java.lang.String` missing = " $builderRequiredProperties.iterator().next()";
+    `java.lang.String` missing = " $builderRequiredProperties.properties.iterator().next()";
 
     #else
 
     `java.lang.StringBuilder` missing = new `java.lang.StringBuilder`();
 
-      #foreach ($p in $builderRequiredProperties)
-
-    if (this.$p == null) {
+      #foreach ($p in $builderRequiredProperties.properties)
+    if ($builderRequiredProperties.missingRequiredProperty($p)) {
       missing.append(" $p.name");
     }
-
       #end
     #end
 

@@ -132,7 +132,6 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
     vars.builtType = TypeEncoder.encode(builtType);
     vars.build = build(executable);
-    vars.types = typeUtils();
     vars.toBuilderConstructor = false;
     vars.toBuilderMethods = ImmutableList.of();
     defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), vars);

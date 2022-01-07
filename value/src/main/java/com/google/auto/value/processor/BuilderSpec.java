@@ -342,12 +342,13 @@ class BuilderSpec {
       vars.builderPropertyBuilders =
           ImmutableMap.copyOf(classifier.propertyNameToPropertyBuilder());
 
-      vars.builderRequiredProperties =
+      ImmutableSet<Property> requiredProperties =
           vars.props.stream()
               .filter(p -> !p.isNullable())
               .filter(p -> p.getBuilderInitializer().isEmpty())
               .filter(p -> !vars.builderPropertyBuilders.containsKey(p.getName()))
               .collect(toImmutableSet());
+      vars.builderRequiredProperties = new BuilderRequiredProperties(requiredProperties);
     }
   }
 

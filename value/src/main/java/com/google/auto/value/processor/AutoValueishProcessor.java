@@ -154,7 +154,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   }
 
   /**
-   * A property of an {@code @AutoValue} or {@code @AutoOneOf} class, defined by one of its abstract
+   * A property of an {@code @AutoValue} (etc) class, defined by one of its abstract
    * methods. An instance of this class is made available to the Velocity template engine for each
    * property. The public methods of this class define JavaBeans-style properties that are
    * accessible from templates. For example {@link #getType()} means we can write {@code $p.type}
@@ -231,7 +231,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       return name;
     }
 
-    public TypeMirror getTypeMirror() {
+    TypeMirror getTypeMirror() {
       return typeMirror;
     }
 

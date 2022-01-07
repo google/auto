@@ -22,8 +22,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.util.Types;
 
 /**
  * Variables to substitute into the autovalue.vm or builder.vm template.
@@ -114,7 +112,7 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
    *   <li>it has a property-builder method (in which case it defaults to empty).
    * </ul>
    */
-  ImmutableSet<Property> builderRequiredProperties = ImmutableSet.of();
+  BuilderRequiredProperties builderRequiredProperties = BuilderRequiredProperties.EMPTY;
 
   /**
    * A map from property names to information about the associated property getter. A property
@@ -150,7 +148,4 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
    * subclasses)
    */
   Boolean isFinal = false;
-
-  /** The type utilities returned by {@link ProcessingEnvironment#getTypeUtils()}. */
-  Types types;
 }

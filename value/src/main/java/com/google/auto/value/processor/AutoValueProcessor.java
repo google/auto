@@ -243,7 +243,6 @@ public class AutoValueProcessor extends AutoValueishProcessor {
 
     String finalSubclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type, 0));
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
-    vars.types = processingEnv.getTypeUtils();
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     defineSharedVarsForType(type, methods, vars);
     defineVarsForType(type, vars, toBuilderMethods, propertyMethodsAndTypes, builder);
