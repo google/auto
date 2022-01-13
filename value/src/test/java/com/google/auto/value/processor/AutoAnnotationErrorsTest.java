@@ -62,29 +62,6 @@ public class AutoAnnotationErrorsTest {
   }
 
   @Test
-  public void testNotStatic() {
-    JavaFileObject testSource =
-        JavaFileObjects.forSourceLines(
-            "com.foo.Test",
-            "package com.foo;",
-            "",
-            "import com.example.TestAnnotation;",
-            "import com.google.auto.value.AutoAnnotation;",
-            "",
-            "class Test {",
-            "  @AutoAnnotation TestAnnotation newTestAnnotation(int value) {",
-            "    return new AutoAnnotation_Test_newTestAnnotation(value);",
-            "  }",
-            "}");
-    Compilation compilation =
-        javac().withProcessors(new AutoAnnotationProcessor()).compile(TEST_ANNOTATION, testSource);
-    assertThat(compilation)
-        .hadErrorContaining("must be static")
-        .inFile(testSource)
-        .onLineContaining("TestAnnotation newTestAnnotation(int value)");
-  }
-
-  @Test
   public void testDoesNotReturnAnnotation() {
     JavaFileObject testSource =
         JavaFileObjects.forSourceLines(

@@ -315,6 +315,28 @@ public class Names {
 }
 ```
 
+In Java the method will usually be static. In Kotlin, which doesn't have static
+methods as such, a normal function can be used:
+
+```kotlin
+public class Names {
+  @AutoAnnotation public fun named(value: String): Named {
+    return AutoAnnotation_Names_named(value);
+  }
+}
+```
+
+Kotlin also allows you to instantiate annotations directly, so you may not need
+AutoAnnotation:
+
+```kotlin
+public class Names {
+  public fun named(value: String): Named {
+    return Named(value = value)
+  }
+}
+```
+
 For more details, see the [`AutoAnnotation`
 javadoc](http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 

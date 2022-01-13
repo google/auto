@@ -52,7 +52,6 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
@@ -153,14 +152,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private void processMethod(ExecutableElement method) {
-    if (!method.getModifiers().contains(Modifier.STATIC)) {
-      throw abortWithError(method, "@AutoAnnotation method must be static");
-    }
-
     TypeElement annotationElement = getAnnotationReturnType(method);
 
-    Set<Class<?>> wrapperTypesUsedInCollections = wrapperTypesUsedInCollections(method);
-
+    ImmutableSet<Class<?>> wrapperTypesUsedInCollections = wrapperTypesUsedInCollections(method);
     ImmutableMap<String, ExecutableElement> memberMethods = getMemberMethods(annotationElement);
     TypeElement methodClass = MoreElements.asType(method.getEnclosingElement());
     String pkg = TypeSimplifier.packageNameOf(methodClass);
