@@ -123,7 +123,8 @@ class ${builderName}${builderFormalTypes} ##
   #if ($propertyBuilder)
 
   @`java.lang.Override`
-  ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder($propertyBuilder.propertyBuilderMethodParameters) {
+  ${propertyBuilder.access}$propertyBuilder.builderType ##
+      ${propertyBuilder.methodName}($propertyBuilder.propertyBuilderMethodParameters) {
     if (${propertyBuilder.name} == null) {
 
       ## This is the first time someone has asked for the builder. If the property it sets already

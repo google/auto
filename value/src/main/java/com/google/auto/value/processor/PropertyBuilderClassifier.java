@@ -117,6 +117,11 @@ class PropertyBuilderClassifier {
       return propertyBuilderMethod;
     }
 
+    /** The name of the property builder method. */
+    public String getMethodName() {
+      return propertyBuilderMethod.getSimpleName().toString();
+    }
+
     /** The property builder method parameters, for example {@code Comparator<T> comparator} */
     public String getPropertyBuilderMethodParameters() {
       return propertyBuilderMethod.getParameters().stream()

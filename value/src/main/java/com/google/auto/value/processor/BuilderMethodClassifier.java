@@ -244,8 +244,15 @@ abstract class BuilderMethodClassifier<E extends Element> {
     TypeMirror returnType = builderMethodReturnType(method);
 
     if (methodName.endsWith("Builder")) {
-      String property = methodName.substring(0, methodName.length() - "Builder".length());
-      if (rewrittenPropertyTypes.containsKey(property)) {
+      String prefix = methodName.substring(0, methodName.length() - "Builder".length());
+      String property =
+          rewrittenPropertyTypes.containsKey(prefix)
+              ? prefix
+              : rewrittenPropertyTypes.keySet().stream()
+                  .filter(p -> PropertyNames.decapitalizeNormally(p).equals(prefix))
+                  .findFirst()
+                  .orElse(null);
+      if (property != null) {
         PropertyBuilderClassifier propertyBuilderClassifier =
             new PropertyBuilderClassifier(
                 errorReporter,

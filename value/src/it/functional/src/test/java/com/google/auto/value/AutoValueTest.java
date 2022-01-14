@@ -2103,7 +2103,7 @@ public class AutoValueTest {
     @Nullable
     public abstract int[] getInts();
 
-    public abstract String getOAuth();
+    public abstract ImmutableList<String> getOAuths();
 
     public abstract int getNoGetter();
 
@@ -2121,7 +2121,9 @@ public class AutoValueTest {
 
       public abstract Builder<T> setNoGetter(int x);
 
-      public abstract Builder<T> setOAuth(String x);
+      public abstract Builder<T> setOAuths(List<String> x);
+
+      public abstract ImmutableList.Builder<String> oAuthsBuilder();
 
       abstract ImmutableList<T> getList();
 
@@ -2156,14 +2158,22 @@ public class AutoValueTest {
     assertThat(builder.getList()).isSameInstanceAs(names);
     builder.setT(name);
     assertThat(builder.getInts()).isNull();
-    builder.setOAuth("OAuth");
+    builder.setOAuths(ImmutableList.of("OAuth"));
 
     BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
     assertThat(instance.getList()).isSameInstanceAs(names);
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
-    assertThat(instance.getOAuth()).isEqualTo("OAuth");
+    assertThat(instance.getOAuths()).containsExactly("OAuth");
+
+    builder =
+        BuilderWithPrefixedGetters.<String>builder()
+            .setList(names)
+            .setT(name)
+            .setNoGetter(noGetter);
+    builder.oAuthsBuilder().add("foo", "bar");
+    assertThat(builder.build().getOAuths()).containsExactly("foo", "bar").inOrder();
   }
 
   @AutoValue
