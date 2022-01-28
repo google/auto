@@ -205,7 +205,7 @@ class ${builderName}${builderFormalTypes} ##
       #if ($propertyBuilder)
 
     if (${propertyBuilder.name} != null) {
-      return ${propertyBuilder.name}.build();
+      return ${propertyBuilder.name}.${propertyBuilder.build}();
     }
     if ($p == null) {
       ${propertyBuilder.beforeInitDefault}
@@ -233,7 +233,7 @@ class ${builderName}${builderFormalTypes} ##
   #if ($propertyBuilder)
 
     if (${propertyBuilder.name} != null) {
-      this.$p = ${propertyBuilder.name}.build();
+      this.$p = ${propertyBuilder.name}.${propertyBuilder.build}();
     } else if (this.$p == null) {
       ${propertyBuilder.beforeInitDefault}
       this.$p = ${propertyBuilder.initDefault};
