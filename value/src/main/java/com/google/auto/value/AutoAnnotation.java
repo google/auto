@@ -106,6 +106,6 @@ import java.lang.reflect.AnnotatedElement;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
+@Retention(RetentionPolicy.CLASS)
 @Target(ElementType.METHOD)
-@Retention(RetentionPolicy.SOURCE)
 public @interface AutoAnnotation {}
