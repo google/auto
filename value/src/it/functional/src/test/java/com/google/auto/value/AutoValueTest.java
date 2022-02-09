@@ -1414,6 +1414,29 @@ public class AutoValueTest {
     abstract int foo();
   }
 
+  // We use Double.doubleToLongBits in equals and hashCode, so that better be qualified correctly if
+  // someone has unwisely declared their own Float or Double class.
+  @SuppressWarnings("JavaLangClash")
+  @AutoValue
+  public abstract static class RedeclareFloatAndDouble {
+    public abstract float aFloat();
+    public abstract double aDouble();
+
+    public static RedeclareFloatAndDouble of(float aFloat, double aDouble) {
+      return new AutoValue_AutoValueTest_RedeclareFloatAndDouble(aFloat, aDouble);
+    }
+
+    static class Float {}
+    static class Double {}
+  }
+
+  @SuppressWarnings("TruthSelfEquals")
+  @Test
+  public void testRedeclareFloatAndDouble() {
+    RedeclareFloatAndDouble iEqualMyself = RedeclareFloatAndDouble.of(Float.NaN, Double.NaN);
+    assertThat(iEqualMyself).isEqualTo(iEqualMyself);
+  }
+
   @AutoValue
   abstract static class AbstractChild extends AbstractParent {
     // The main point of this test is to ensure that we don't try to copy this @Override into the
