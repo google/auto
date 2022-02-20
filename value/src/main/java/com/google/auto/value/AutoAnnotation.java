@@ -71,9 +71,9 @@ import java.lang.reflect.AnnotatedElement;
  * parameter corresponding to an array-valued annotation member, and the implementation of each such
  * member will also return a clone of the array.
  *
- * <p>If your annotation has many elements, you may consider using {@code @AutoBuilder} to make it
- * easier to construct instances. In that case, {@code default} values from the annotation will
- * become default values for the parameters of the {@code @AutoAnnotation} method. For example:
+ * <p>If your annotation has many elements, you may consider using {@code @AutoBuilder} instead of
+ * {@code @AutoAnnotation} to make it easier to construct instances. In that case, {@code default}
+ * values from the annotation will become default values for the values in the builder. For example:
  *
  * <pre>
  * class Example {
@@ -82,12 +82,7 @@ import java.lang.reflect.AnnotatedElement;
  *     int number() default 23;
  *   }
  *
- *   {@code @AutoAnnotation}
- *   static MyAnnotation myAnnotation(String value) {
- *     return new AutoAnnotation_Example_myAnnotation(value);
- *   }
- *
- *   {@code @AutoBuilder(callMethod = "myAnnotation")}
+ *   {@code @AutoBuilder(ofClass = MyAnnotation.class)}
  *   interface MyAnnotationBuilder {
  *     MyAnnotationBuilder name(String name);
  *     MyAnnotationBuilder number(int number);

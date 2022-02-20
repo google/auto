@@ -44,7 +44,7 @@ Person p = new Person("Priz", 6);
 
 But it doesn't require you to know what order the constructor parameters are in.
 
-Here, `setName` and `setId` are _setter methods_. Calling
+Here, `setName` and `setId` are *setter methods*. Calling
 `builder.setName("Priz")` records the value `"Priz"` for the parameter `name`,
 and likewise with `setId`.
 
@@ -112,7 +112,7 @@ class Outer {
 
 If `ofClass` is specified, then `build()` will call a constructor or static
 method of that class. Otherwise it will call a constructor or static method of
-the class _containing_ the `@AutoBuilder` class.
+the class *containing* the `@AutoBuilder` class.
 
 If `callMethod` is specified, then `build()` will call a static method with that
 name. Otherwise `build()` will call a constructor.
@@ -262,7 +262,7 @@ class CheckedSet<E> implements Set<E> {
 
 Parameters that are annotated `@Nullable` are null by default. Parameters of
 type `Optional`, `OptionalInt`, `OptionalLong`, and `OptionalDouble` are empty
-by default. Every other parameter is _required_, meaning that the build method
+by default. Every other parameter is *required*, meaning that the build method
 will throw `IllegalStateException` if any are omitted.
 
 To establish default values for parameters, set them in the `builder()` method
@@ -294,7 +294,7 @@ class Foo {
 }
 ```
 
-Trying to set a parameter that is _not_ annotated `@Nullable` to `null` will
+Trying to set a parameter that is *not* annotated `@Nullable` to `null` will
 produce a `NullPointerException`.
 
 `@Nullable` here is any annotation with that name, such as
@@ -303,7 +303,7 @@ produce a `NullPointerException`.
 
 ## Getters
 
-The `@AutoBuilder` class or interface can also have _getter_ methods. A getter
+The `@AutoBuilder` class or interface can also have *getter* methods. A getter
 method returns the value that has been set for a certain parameter. Its return
 type can be either the same as the parameter type, or an `Optional` wrapping
 that type. Calling the getter before any value has been set will throw an
@@ -341,6 +341,13 @@ nickname if necessary.
 The builder in the example is an abstract class rather than an interface. An
 abstract class allows us to distinguish between public methods for users of the
 builder to call, and package-private methods that the builder's own logic uses.
+
+## Building annotation instances
+
+AutoBuilder can build instances of annotation interfaces. When the annotation
+has no elements (methods in the annotation), or only one, then AutoAnnotation is
+simpler to use. But when there are several elements, a builder is helpful. See
+[here](howto.md#annotation) for examples of both.
 
 ## Naming conventions
 
@@ -383,7 +390,8 @@ public abstract class FooBuilder {
 
 If an `@AutoBuilder` is designed to call a static method that is not a factory
 method, the word "call" is better than "build" in the name of the type
-(`FooCaller`), the static method (`fooCaller()`), and the "build" method (`call()`).
+(`FooCaller`), the static method (`fooCaller()`), and the "build" method
+(`call()`).
 
 ```
 @AutoBuilder(callMethod = "log", ofClass = MyLogger.class)
@@ -415,11 +423,11 @@ parameters.
 ## When parameter names are unavailable
 
 AutoBuilder depends on knowing the names of parameters. But parameter names are
-not always available in Java. They _are_ available in these cases, at least:
+not always available in Java. They *are* available in these cases, at least:
 
 *   In code that is being compiled at the same time as the `@AutoBuilder` class
     or interface.
-*   In _records_ (from Java 16 onwards).
+*   In *records* (from Java 16 onwards).
 *   In the constructors of Kotlin data classes.
 *   In code that was compiled with the [`-parameters`] option.
 

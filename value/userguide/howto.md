@@ -337,6 +337,36 @@ public class Names {
 }
 ```
 
+If your annotation has several elements, you may prefer to use `@AutoBuilder`:
+
+```java
+public @interface Named {
+  String value();
+  int priority() default 0;
+  int size() default 0;
+}
+
+public class Names {
+  @AutoBuilder(ofClass = Named.class)
+  public interface NamedBuilder {
+    NamedBuilder value(String x);
+    NamedBuilder priority(int x);
+    NamedBuilder size(int x);
+    Named build();
+  }
+
+  public static NamedBuilder namedBuilder() {
+    return new AutoBuilder_Names_namedBuilder();
+  }
+
+  ...
+    Named named1 = namedBuilder().value("O'Cruiskeen").priority(17).size(23).build();
+    Named named2 = namedBuilder().value("O'Cruiskeen").build();
+    // priority and size get their default values
+  ...
+}
+```
+
 For more details, see the [`AutoAnnotation`
 javadoc](http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 
