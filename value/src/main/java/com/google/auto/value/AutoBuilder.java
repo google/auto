@@ -22,7 +22,6 @@ import java.lang.annotation.Target;
 
 /**
  * Specifies that the annotated interface or abstract class should be implemented as a builder.
- * This is still unstable; uses outside Google may break.
  *
  * <p>A simple example:
  *
