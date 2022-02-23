@@ -114,7 +114,9 @@ public final class SerializableAutoValueExtension extends AutoValueExtension {
               .collect(toImmutableList());
 
       TypeName classTypeName =
-          getClassTypeName(ClassName.get(context.packageName(), className), typeVariableNames);
+          getClassTypeName(
+              ClassName.get(context.packageName(), context.finalAutoValueClassName()),
+              typeVariableNames);
       this.proxyGenerator =
           new ProxyGenerator(
               classTypeName, typeVariableNames, propertyMirrors, buildSerializersMap());
