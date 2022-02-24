@@ -31,6 +31,14 @@ AutoValue provides an easier way to create immutable value classes, with a lot
 less code and less room for error, while **not restricting your freedom** to
 code almost any aspect of your class exactly the way you want it.
 
+**Note**: If you are using Kotlin then its
+[data classes](https://kotlinlang.org/docs/data-classes.html) are usually more
+appropriate than AutoValue. Likewise, if you are using a version of Java that
+has [records](https://docs.oracle.com/en/java/javase/16/language/records.html),
+then those are usually more appropriate. You can still use
+[AutoBuilder](userguide/autobuilder.md)--> to make builders for data classes or
+records.
+
 This page will walk you through how to use AutoValue. Looking for a little more
 persuasion? Please see [Why AutoValue?](why.md).
 
@@ -279,4 +287,4 @@ How do I...
 *   ... [create a **pretty string** representation?](howto.md#toprettystring)
 
 
-<!-- TODO(kevinb): should the above be only a selected subset? -->
+<!-- TODO(kevinb): should the above be only a selected subset?

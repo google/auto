@@ -1,8 +1,10 @@
 # Why use AutoValue?
 
 
-AutoValue is the only solution to the value class problem in Java having all of
-the following characteristics:
+In versions of Java preceding
+[records](https://docs.oracle.com/en/java/javase/16/language/records.html),
+AutoValue is the only solution to the value class problem having all of the
+following characteristics:
 
 *   **API-invisible** (callers cannot become dependent on your choice to use it)
 *   No runtime dependencies
