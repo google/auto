@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreStreams.toImmutableList;
@@ -78,6 +79,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 public class AutoBuilderProcessor extends AutoValueishProcessor {
   private static final String ALLOW_OPTION = "com.google.auto.value.AutoBuilderIsUnstable";
+  private static final String AUTO_ANNOTATION_CLASS_PREFIX = "AutoBuilderAnnotation_";
 
   public AutoBuilderProcessor() {
     super(AUTO_BUILDER_NAME, /* appliesToInterfaces= */ true);
@@ -96,6 +98,55 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     javaLangVoid = elementUtils().getTypeElement("java.lang.Void").asType();
   }
 
+  // The handling of @AutoBuilder to generate annotation implementations needs some explanation.
+  // Suppose we have this:
+  //
+  //   public class Annotations {
+  //     @interface MyAnnot {...}
+  //
+  //     @AutoBuilder(ofClass = MyAnnot.class)
+  //     public interface MyAnnotBuilder {
+  //       ...
+  //       MyAnnot build();
+  //     }
+  //
+  //     public static MyAnnotBuilder myAnnotBuilder() {
+  //       return new AutoBuilder_Annotations_MyAnnotBuilder();
+  //     }
+  //   }
+  //
+  // Then we will detect that the ofClass type is an annotation. Since annotations can have neither
+  // constructors nor static methods, we know this isn't a regular @AutoBuilder. We want to
+  // generate an implementation of the MyAnnot annotation, and we know we can do that if we have a
+  // suitable @AutoAnnotation method. So we generate:
+  //
+  //   class AutoBuilderAnnotation_Annotations_MyAnnotBuilder {
+  //     @AutoAnnotation
+  //     static MyAnnot newAnnotation(...) {
+  //       return new AutoAnnotation_AutoBuilderAnnotation_Annotations_MyAnnotBuilder_newAnnotation(
+  //           ...);
+  //     }
+  //   }
+  //
+  // We also "defer" MyAnnotBuilder so that it will be considered again on the next round. At that
+  // point the method AutoBuilderAnnotation_Annotations_MyAnnotBuilder.newAnnotation will exist, and
+  // we just need to tweak the handling of MyAnnotBuilder so that it behaves as if it were:
+  //
+  //   @AutoBuilder(
+  //       callMethod = newAnnotation,
+  //       ofClass = AutoBuilderAnnotation_Annotations_MyAnnotBuilder.class)
+  //   interface MyAnnotBuilder {...}
+  //
+  // Using AutoAnnotation and AutoBuilder together you'd write
+  //
+  // @AutoAnnotation static MyAnnot newAnnotation(...) { ... }
+  // 
+  // @AutoBuilder(callMethod = "newAnnotation", ofClass = Some.class)
+  // interface MyAnnotBuilder { ... }
+  //
+  // If you set ofClass to an annotation class, AutoBuilder generates the @AutoAnnotation method for
+  // you and then acts as if your @AutoBuilder annotation pointed to it.
+
   @Override
   void processType(TypeElement autoBuilderType) {
     if (processingEnv.getOptions().containsKey(ALLOW_OPTION)) {
@@ -107,6 +158,14 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     TypeElement ofClass = getOfClass(autoBuilderType, autoBuilderAnnotation);
     checkModifiersIfNested(ofClass, autoBuilderType, "AutoBuilder ofClass");
     String callMethod = findCallMethodValue(autoBuilderAnnotation);
+    if (ofClass.getKind() == ElementKind.ANNOTATION_TYPE) {
+      buildAnnotation(autoBuilderType, ofClass, callMethod);
+    } else {
+      processType(autoBuilderType, ofClass, callMethod);
+    }
+  }
+
+  private void processType(TypeElement autoBuilderType, TypeElement ofClass, String callMethod) {
     ImmutableSet<ExecutableElement> methods =
         abstractMethodsIn(
             getLocalAndInheritedMethods(autoBuilderType, typeUtils(), elementUtils()));
@@ -114,9 +173,17 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     BuilderSpec builderSpec = new BuilderSpec(ofClass, processingEnv, errorReporter());
     BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
     TypeMirror builtType = builtType(executable);
+    ImmutableMap<String, String> propertyInitializers =
+        propertyInitializers(autoBuilderType, executable);
     Optional<BuilderMethodClassifier<VariableElement>> maybeClassifier =
         BuilderMethodClassifierForAutoBuilder.classify(
-            methods, errorReporter(), processingEnv, executable, builtType, autoBuilderType);
+            methods,
+            errorReporter(),
+            processingEnv,
+            executable,
+            builtType,
+            autoBuilderType,
+            propertyInitializers.keySet());
     if (!maybeClassifier.isPresent() || errorReporter().errorCount() > 0) {
       // We've already output one or more error messages.
       return;
@@ -125,7 +192,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     Map<String, String> propertyToGetterName =
         Maps.transformValues(classifier.builderGetters(), PropertyGetter::getName);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(autoBuilderType, executable, propertyToGetterName);
+    vars.props = propertySet(executable, propertyToGetterName, propertyInitializers);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
@@ -142,15 +209,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private ImmutableSet<Property> propertySet(
-      TypeElement autoBuilderType,
       ExecutableElement executable,
-      Map<String, String> propertyToGetterName) {
-    boolean autoAnnotation =
-        MoreElements.getAnnotationMirror(executable, AUTO_ANNOTATION_NAME).isPresent();
-    ImmutableMap<String, String> builderInitializers =
-        autoAnnotation
-            ? autoAnnotationInitializers(autoBuilderType, executable)
-            : ImmutableMap.of();
+      Map<String, String> propertyToGetterName,
+      ImmutableMap<String, String> builderInitializers) {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
@@ -188,11 +249,16 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         builderInitializer);
   }
 
-  private ImmutableMap<String, String> autoAnnotationInitializers(
-      TypeElement autoBuilderType, ExecutableElement autoAnnotationMethod) {
+  private ImmutableMap<String, String> propertyInitializers(
+      TypeElement autoBuilderType, ExecutableElement executable) {
+    boolean autoAnnotation =
+        MoreElements.getAnnotationMirror(executable, AUTO_ANNOTATION_NAME).isPresent();
+    if (!autoAnnotation) {
+      return ImmutableMap.of();
+    }
     // We expect the return type of an @AutoAnnotation method to be an annotation type. If it isn't,
     // AutoAnnotation will presumably complain, so we don't need to complain further.
-    TypeMirror returnType = autoAnnotationMethod.getReturnType();
+    TypeMirror returnType = executable.getReturnType();
     if (!returnType.getKind().equals(TypeKind.DECLARED)) {
       return ImmutableMap.of();
     }
@@ -451,5 +517,64 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
     // TODO(b/183005059): implement
     return Optional.empty();
+  }
+
+  private void buildAnnotation(
+      TypeElement autoBuilderType, TypeElement annotationType, String callMethod) {
+    if (!callMethod.isEmpty()) {
+      errorReporter()
+          .abortWithError(
+              autoBuilderType,
+              "[AutoBuilderAnnotationMethod] @AutoBuilder for an annotation must have an empty"
+                  + " callMethod, not \"%s\"",
+              callMethod);
+    }
+    String autoAnnotationClassName =
+        generatedClassName(autoBuilderType, AUTO_ANNOTATION_CLASS_PREFIX);
+    TypeElement autoAnnotationClass = elementUtils().getTypeElement(autoAnnotationClassName);
+    if (autoAnnotationClass != null) {
+      processType(autoBuilderType, autoAnnotationClass, "newAnnotation");
+      return;
+    }
+    AutoBuilderAnnotationTemplateVars vars = new AutoBuilderAnnotationTemplateVars();
+    vars.autoBuilderType = TypeEncoder.encode(autoBuilderType.asType());
+    vars.props = annotationBuilderPropertySet(annotationType);
+    vars.pkg = TypeSimplifier.packageNameOf(autoBuilderType);
+    vars.generated =
+        generatedAnnotation(elementUtils(), processingEnv.getSourceVersion())
+            .map(annotation -> TypeEncoder.encode(annotation.asType()))
+            .orElse("");
+    vars.className = TypeSimplifier.simpleNameOf(autoAnnotationClassName);
+    vars.annotationType = TypeEncoder.encode(annotationType.asType());
+    String text = vars.toText();
+    text = TypeEncoder.decode(text, processingEnv, vars.pkg, /* baseType= */ javaLangVoid);
+    text = Reformatter.fixup(text);
+    writeSourceFile(autoAnnotationClassName, text, autoBuilderType);
+    addDeferredType(autoBuilderType);
+  }
+
+  private ImmutableSet<Property> annotationBuilderPropertySet(TypeElement annotationType) {
+    // Translate the annotation elements into fake Property instances. We're really only interested
+    // in the name and type, so we can use them to declare a parameter of the generated
+    // @AutoAnnotation method. We'll generate a parameter for every element, even elements that
+    // don't have setters in the builder. The generated builder implementation will pass the default
+    // value from the annotation to those parameters.
+    return methodsIn(annotationType.getEnclosedElements()).stream()
+        .filter(m -> m.getParameters().isEmpty() && !m.getModifiers().contains(Modifier.STATIC))
+        .map(AutoBuilderProcessor::annotationBuilderProperty)
+        .collect(toImmutableSet());
+  }
+
+  private static Property annotationBuilderProperty(ExecutableElement annotationMethod) {
+    String name = annotationMethod.getSimpleName().toString();
+    TypeMirror type = annotationMethod.getReturnType();
+    return new Property(
+        name,
+        name,
+        TypeEncoder.encode(type),
+        type,
+        /* nullableAnnotation= */ Optional.empty(),
+        /* getter= */ "",
+        /* maybeBuilderInitializer= */ Optional.empty());
   }
 }

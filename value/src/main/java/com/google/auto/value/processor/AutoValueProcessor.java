@@ -178,7 +178,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
           .abortWithError(
               type,
               "[AutoValueImplAnnotation] @AutoValue may not be used to implement an annotation"
-                  + " interface; try using @AutoAnnotation instead");
+                  + " interface; try using @AutoAnnotation or @AutoBuilder instead");
     }
 
     // We are going to classify the methods of the @AutoValue class into several categories.

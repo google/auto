@@ -41,7 +41,13 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
       ImmutableMap<String, TypeMirror> rewrittenPropertyTypes) {
-    super(errorReporter, processingEnv, builtType, builderType, rewrittenPropertyTypes);
+    super(
+        errorReporter,
+        processingEnv,
+        builtType,
+        builderType,
+        rewrittenPropertyTypes,
+        ImmutableSet.of());
     this.errorReporter = errorReporter;
     this.getterToPropertyName = getterToPropertyName;
     this.getterNameToGetter =

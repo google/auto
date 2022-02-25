@@ -342,6 +342,13 @@ The builder in the example is an abstract class rather than an interface. An
 abstract class allows us to distinguish between public methods for users of the
 builder to call, and package-private methods that the builder's own logic uses.
 
+## Building annotation instances
+
+AutoBuilder can build instances of annotation interfaces. When the annotation
+has no elements (methods in the annotation), or only one, then AutoAnnotation is
+simpler to use. But when there are several elements, a builder is helpful. See
+[here](howto.md#annotation) for examples of both.
+
 ## Naming conventions
 
 A setter method for the parameter `foo` can be called either `setFoo` or `foo`.

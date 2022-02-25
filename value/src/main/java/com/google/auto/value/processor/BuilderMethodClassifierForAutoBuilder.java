@@ -25,6 +25,7 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +52,15 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       TypeMirror builtType,
       TypeElement builderType,
       ImmutableBiMap<VariableElement, String> paramToPropertyName,
-      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes) {
-    super(errorReporter, processingEnv, builtType, builderType, rewrittenPropertyTypes);
+      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
+      ImmutableSet<String> propertiesWithDefaults) {
+    super(
+        errorReporter,
+        processingEnv,
+        builtType,
+        builderType,
+        rewrittenPropertyTypes,
+        propertiesWithDefaults);
     this.executable = executable;
     this.paramToPropertyName = paramToPropertyName;
   }
@@ -66,6 +74,8 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
    * @param executable the constructor or static method that AutoBuilder will call.
    * @param builtType the type to be built.
    * @param builderType the builder class or interface within {@code ofClass}.
+   * @param propertiesWithDefaults properties that have a default value, so it is not an error for
+   *     them not to have a setter.
    * @return an {@code Optional} that contains the results of the classification if it was
    *     successful or nothing if it was not.
    */
@@ -75,7 +85,8 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       ProcessingEnvironment processingEnv,
       ExecutableElement executable,
       TypeMirror builtType,
-      TypeElement builderType) {
+      TypeElement builderType,
+      ImmutableSet<String> propertiesWithDefaults) {
     ImmutableBiMap<VariableElement, String> paramToPropertyName =
         executable.getParameters().stream()
             .collect(toImmutableBiMap(v -> v, v -> v.getSimpleName().toString()));
@@ -89,7 +100,8 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
             builtType,
             builderType,
             paramToPropertyName,
-            rewrittenPropertyTypes);
+            rewrittenPropertyTypes,
+            propertiesWithDefaults);
     if (classifier.classifyMethods(methods, false)) {
       return Optional.of(classifier);
     } else {

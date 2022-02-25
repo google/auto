@@ -207,6 +207,63 @@ public final class AutoBuilderTest {
     assertThat(annotation3).isEqualTo(annotation4);
   }
 
+  @AutoBuilder(ofClass = MyAnnotation.class)
+  public interface MyAnnotationSimpleBuilder {
+    MyAnnotationSimpleBuilder value(String x);
+    MyAnnotationSimpleBuilder id(int x);
+    MyAnnotationSimpleBuilder truthiness(Truthiness x);
+    MyAnnotation build();
+  }
+
+  public static MyAnnotationSimpleBuilder myAnnotationSimpleBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationSimpleBuilder();
+  }
+
+  @Test
+  public void buildWithoutAutoAnnotation() {
+    // We don't set a value for `id` or `truthiness`, so AutoBuilder should use the default ones in
+    // the annotation.
+    MyAnnotation annotation1 = myAnnotationSimpleBuilder().value("foo").build();
+    assertThat(annotation1.value()).isEqualTo("foo");
+    assertThat(annotation1.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation1.truthiness()).isEqualTo(MyAnnotation.DEFAULT_TRUTHINESS);
+
+    // Now we set `truthiness` but still not `id`.
+    MyAnnotation annotation2 =
+        myAnnotationSimpleBuilder().value("bar").truthiness(Truthiness.TRUTHY).build();
+    assertThat(annotation2.value()).isEqualTo("bar");
+    assertThat(annotation2.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation2.truthiness()).isEqualTo(Truthiness.TRUTHY);
+
+    // All three elements set explicitly.
+    MyAnnotation annotation3 =
+        myAnnotationSimpleBuilder().value("foo").id(23).truthiness(Truthiness.TRUTHY).build();
+    assertThat(annotation3.value()).isEqualTo("foo");
+    assertThat(annotation3.id()).isEqualTo(23);
+    assertThat(annotation3.truthiness()).isEqualTo(Truthiness.TRUTHY);
+  }
+
+  // This builder doesn't have a setter for the `truthiness` element, so the annotations it builds
+  // should always get the default value.
+  @AutoBuilder(ofClass = MyAnnotation.class)
+  public interface MyAnnotationSimplerBuilder {
+    MyAnnotationSimplerBuilder value(String x);
+    MyAnnotationSimplerBuilder id(int x);
+    MyAnnotation build();
+  }
+
+  public static MyAnnotationSimplerBuilder myAnnotationSimplerBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationSimplerBuilder();
+  }
+
+  @Test
+  public void buildWithoutAutoAnnotation_noSetterForElement() {
+    MyAnnotation annotation = myAnnotationSimplerBuilder().value("foo").id(23).build();
+    assertThat(annotation.value()).isEqualTo("foo");
+    assertThat(annotation.id()).isEqualTo(23);
+    assertThat(annotation.truthiness()).isEqualTo(MyAnnotation.DEFAULT_TRUTHINESS);
+  }
+
   static class Overload {
     final int anInt;
     final String aString;

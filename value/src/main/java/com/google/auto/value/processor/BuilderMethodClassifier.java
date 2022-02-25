@@ -69,6 +69,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
   private final Elements elementUtils;
   private final TypeMirror builtType;
   private final TypeElement builderType;
+  private final ImmutableSet<String> propertiesWithDefaults;
 
   /**
    * Property types, rewritten to refer to type variables in the builder. For example, suppose you
@@ -101,13 +102,15 @@ abstract class BuilderMethodClassifier<E extends Element> {
       ProcessingEnvironment processingEnv,
       TypeMirror builtType,
       TypeElement builderType,
-      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes) {
+      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
+      ImmutableSet<String> propertiesWithDefaults) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.builtType = builtType;
     this.builderType = builderType;
     this.rewrittenPropertyTypes = rewrittenPropertyTypes;
+    this.propertiesWithDefaults = propertiesWithDefaults;
     this.eclipseHack = new EclipseHack(processingEnv);
   }
 
@@ -193,7 +196,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
               propertyBuilder.getBuilderTypeMirror(),
               propertyType);
         }
-      } else if (!hasSetter) {
+      } else if (!hasSetter && !propertiesWithDefaults.contains(property)) {
         // We have neither barBuilder() nor setBar(Bar), so we should complain.
         String setterName = settersPrefixed ? prefixWithSet(property) : property;
         errorReporter.reportError(

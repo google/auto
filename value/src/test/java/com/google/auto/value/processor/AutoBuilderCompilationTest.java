@@ -910,4 +910,35 @@ public final class AutoBuilderCompilationTest {
         .inFile(javaFileObject)
         .onLineContaining("interface Builder<E>");
   }
+
+  @Test
+  public void annotationWithCallMethod() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "class Baz {",
+            "  @interface MyAnnot {",
+            "    boolean broken();",
+            "  }",
+            "",
+            "  @AutoBuilder(callMethod = \"annotationType\", ofClass = MyAnnot.class)",
+            "  interface Builder {",
+            "    abstract Builder broken(boolean x);",
+            "    abstract MyAnnot build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderAnnotationMethod] @AutoBuilder for an annotation must have an empty"
+                + " callMethod, not \"annotationType\"")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
 }
