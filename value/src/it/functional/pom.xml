@@ -161,7 +161,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.10.0</version>
+        <version>3.10.1</version>
         <dependencies>
           <dependency>
             <groupId>org.codehaus.plexus</groupId>
@@ -215,7 +215,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.10.0</version>
+            <version>3.10.1</version>
             <dependencies>
               <dependency>
                 <groupId>org.codehaus.plexus</groupId>
