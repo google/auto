@@ -49,7 +49,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
@@ -351,10 +350,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     // element.getEnclosedElements() does NOT return parameter elements
-    if (element instanceof ExecutableElement) {
-      for (Element parameterElement : asExecutable(element).getParameters()) {
-        findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
-      }
+    switch (element.getKind()) {
+      case METHOD:
+      case CONSTRUCTOR:
+        for (Element parameterElement : asExecutable(element).getParameters()) {
+          findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
+        }
+        break;
+      default: // do nothing
     }
     for (TypeElement annotationType : annotationTypes) {
       if (isAnnotationPresent(element, annotationType)) {
