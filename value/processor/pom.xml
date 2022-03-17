@@ -78,6 +78,11 @@
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+      <version>9.2</version>
+    </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>com.google.auto.value</groupId>
@@ -211,8 +216,9 @@
         <artifactId>maven-invoker-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.immutables.tools</groupId>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -229,26 +235,34 @@
               <relocations>
                 <relocation>
                   <pattern>org.objectweb</pattern>
-                  <shadedPattern>autovalue.shaded.org.objectweb$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.google</pattern>
-                  <shadedPattern>autovalue.shaded.com.google$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.com.google</shadedPattern>
                   <excludes>
                     <exclude>com.google.auto.value.**</exclude>
                   </excludes>
                 </relocation>
                 <relocation>
                   <pattern>com.squareup.javapoet</pattern>
-                  <shadedPattern>autovalue.shaded.com.squareup.javapoet$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.com.squareup.javapoet</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>net.ltgt.gradle.incap</pattern>
-                  <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.checkerframework</pattern>
-                  <shadedPattern>autovalue.shaded.org.checkerframework$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.org.checkerframework</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>kotlin</pattern>
+                  <shadedPattern>autovalue.shaded.kotlin</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>kotlinx</pattern>
+                  <shadedPattern>autovalue.shaded.kotlinx</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
