@@ -79,6 +79,11 @@
       <artifactId>javapoet</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-metadata-jvm</artifactId>
+      <version>0.4.2</version>
+    </dependency>
+    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>9.2</version>
@@ -232,6 +237,10 @@
                   <exclude>com.google.code.findbugs:jsr305</exclude>
                 </excludes>
               </artifactSet>
+              <transformers>
+                <!-- Needed to avoid "No MetadataExtensions instances found in the classpath" from Kotlin reflection. -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
               <relocations>
                 <relocation>
                   <pattern>org.objectweb</pattern>

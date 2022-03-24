@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.joining;
 import com.google.auto.common.MoreElements;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -38,12 +39,13 @@ class Executable {
   private final ExecutableElement executableElement;
 
   private final ImmutableList<VariableElement> parameters;
-
+  private final ImmutableSet<String> optionalParameters;
   private final ImmutableList<TypeParameterElement> typeParameters;
 
-  Executable(ExecutableElement executableElement) {
+  private Executable(ExecutableElement executableElement, ImmutableSet<String> optionalParameters) {
     this.executableElement = executableElement;
     this.parameters = ImmutableList.copyOf(executableElement.getParameters());
+    this.optionalParameters = optionalParameters;
 
     switch (executableElement.getKind()) {
       case CONSTRUCTOR:
@@ -64,6 +66,15 @@ class Executable {
     }
   }
 
+  static Executable of(ExecutableElement executableElement) {
+    return of(executableElement, ImmutableSet.of());
+  }
+
+  static Executable of(
+      ExecutableElement executableElement, ImmutableSet<String> optionalParameters) {
+    return new Executable(executableElement, optionalParameters);
+  }
+
   ExecutableElement executableElement() {
     return executableElement;
   }
@@ -74,6 +85,14 @@ class Executable {
 
   ImmutableList<String> parameterNames() {
     return parameters.stream().map(v -> v.getSimpleName().toString()).collect(toImmutableList());
+  }
+
+  boolean isOptional(String parameterName) {
+    return optionalParameters.contains(parameterName);
+  }
+
+  int optionalParameterCount() {
+    return optionalParameters.size();
   }
 
   ImmutableList<TypeParameterElement> typeParameters() {

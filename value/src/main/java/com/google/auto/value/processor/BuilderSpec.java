@@ -346,9 +346,11 @@ class BuilderSpec {
           vars.props.stream()
               .filter(p -> !p.isNullable())
               .filter(p -> p.getBuilderInitializer().isEmpty())
+              .filter(p -> !p.hasDefault())
               .filter(p -> !vars.builderPropertyBuilders.containsKey(p.getName()))
               .collect(toImmutableSet());
-      vars.builderRequiredProperties = new BuilderRequiredProperties(requiredProperties);
+      vars.builderRequiredProperties =
+          BuilderRequiredProperties.of(vars.props, requiredProperties);
     }
   }
 

@@ -19,10 +19,13 @@ import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
+import static com.google.auto.common.MoreTypes.asTypeElement;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
+import static com.google.auto.value.processor.ClassNames.KOTLIN_METADATA_NAME;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
@@ -41,7 +44,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -63,6 +72,13 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.tools.JavaFileObject;
+import kotlinx.metadata.Flag;
+import kotlinx.metadata.KmClass;
+import kotlinx.metadata.KmConstructor;
+import kotlinx.metadata.KmValueParameter;
+import kotlinx.metadata.jvm.KotlinClassHeader;
+import kotlinx.metadata.jvm.KotlinClassMetadata;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
@@ -196,7 +212,11 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
     vars.builtType = TypeEncoder.encode(builtType);
-    vars.build = executable.invoke();
+    Optional<String> forwardingClassName = maybeForwardingClass(autoBuilderType, executable);
+    vars.build =
+        forwardingClassName
+            .map(n -> TypeSimplifier.simpleNameOf(n) + ".of")
+            .orElseGet(executable::invoke);
     vars.toBuilderConstructor = false;
     vars.toBuilderMethods = ImmutableList.of();
     defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), vars);
@@ -204,6 +224,55 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoBuilderType.asType());
     text = Reformatter.fixup(text);
     writeSourceFile(generatedClassName, text, autoBuilderType);
+    forwardingClassName.ifPresent(
+        n -> generateForwardingClass(n, executable, builtType, autoBuilderType));
+  }
+
+  /**
+   * Generates a class that will call the synthetic Kotlin constructor that is used to specify which
+   * optional parameters are defaulted. Because it is synthetic, it can't be called from Java source
+   * code. Instead, Java source code calls the {@code of} method in the class we generate here.
+   */
+  private void generateForwardingClass(
+      String forwardingClassName,
+      Executable executable,
+      TypeMirror builtType,
+      TypeElement autoBuilderType) {
+    // The synthetic constructor has the same parameters as the user-written constructor, plus as
+    // many `int` bitmasks as are needed to have one bit for each of those parameters, plus a dummy
+    // parameter of type kotlin.jvm.internal.DefaultConstructorMarker to avoid confusion with a
+    // constructor that might have its own `int` parameters where the bitmasks are.
+    // This ABI is not publicly specified (as far as we know) but JetBrains has confirmed orally
+    // that it unlikely to change, and if it does it will be in a backward-compatible way.
+    ImmutableList.Builder<TypeMirror> constructorParameters = ImmutableList.builder();
+    executable.parameters().stream()
+        .map(Element::asType)
+        .map(typeUtils()::erasure)
+        .forEach(constructorParameters::add);
+    int bitmaskCount = (executable.optionalParameterCount() + 31) / 32;
+    constructorParameters.addAll(
+        Collections.nCopies(bitmaskCount, typeUtils().getPrimitiveType(TypeKind.INT)));
+    String marker = "kot".concat("lin.jvm.internal.DefaultConstructorMarker"); // defeat shading
+    constructorParameters.add(elementUtils().getTypeElement(marker).asType());
+    byte[] classBytes =
+        ForwardingClassGenerator.makeConstructorForwarder(
+            forwardingClassName, builtType, constructorParameters.build());
+    try {
+      JavaFileObject trampoline =
+          processingEnv.getFiler().createClassFile(forwardingClassName, autoBuilderType);
+      try (OutputStream out = trampoline.openOutputStream()) {
+        out.write(classBytes);
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private Optional<String> maybeForwardingClass(
+      TypeElement autoBuilderType, Executable executable) {
+    return executable.optionalParameterCount() == 0
+        ? Optional.empty()
+        : Optional.of(generatedClassName(autoBuilderType, "AutoBuilderBridge_"));
   }
 
   private ImmutableSet<Property> propertySet(
@@ -224,7 +293,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                   v,
                   identifiers.get(v),
                   propertyToGetterName.get(name),
-                  Optional.ofNullable(builderInitializers.get(name)));
+                  Optional.ofNullable(builderInitializers.get(name)),
+                  executable.isOptional(name));
             })
         .collect(toImmutableSet());
   }
@@ -233,7 +303,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       VariableElement var,
       String identifier,
       String getterName,
-      Optional<String> builderInitializer) {
+      Optional<String> builderInitializer,
+      boolean hasDefault) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
     Optional<String> nullableAnnotation = nullableAnnotationFor(var, var.asType());
@@ -244,7 +315,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         type,
         nullableAnnotation,
         getterName,
-        builderInitializer);
+        builderInitializer,
+        hasDefault);
   }
 
   private ImmutableMap<String, String> propertyInitializers(
@@ -305,16 +377,19 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
 
   private ImmutableList<Executable> findRelevantExecutables(
       TypeElement ofClass, String callMethod, TypeElement autoBuilderType) {
+    Optional<AnnotationMirror> kotlinMetadata = kotlinMetadataAnnotation(ofClass);
     List<? extends Element> elements = ofClass.getEnclosedElements();
-    Stream<ExecutableElement> relevantExecutables =
+    Stream<Executable> relevantExecutables =
         callMethod.isEmpty()
-            ? constructorsIn(elements).stream()
+            ? kotlinMetadata
+                .map(a -> kotlinConstructorsIn(a, ofClass).stream())
+                .orElseGet(() -> constructorsIn(elements).stream().map(Executable::of))
             : methodsIn(elements).stream()
                 .filter(m -> m.getSimpleName().contentEquals(callMethod))
-                .filter(m -> m.getModifiers().contains(Modifier.STATIC));
+                .filter(m -> m.getModifiers().contains(Modifier.STATIC))
+                .map(Executable::of);
     return relevantExecutables
-        .filter(c -> visibleFrom(c, getPackage(autoBuilderType)))
-        .map(Executable::new)
+        .filter(e -> visibleFrom(e.executableElement(), getPackage(autoBuilderType)))
         .collect(toImmutableList());
   }
 
@@ -418,6 +493,92 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       default:
         return false;
     }
+  }
+
+  private Optional<AnnotationMirror> kotlinMetadataAnnotation(Element element) {
+    // It would be MUCH simpler if we could just use ofClass.getAnnotation(Metadata.class).
+    // However that would be unsound. We want to shade the Kotlin runtime, including
+    // kotlin.Metadata, so as not to interfere with other things on the annotation classpath that
+    // might have a different version of the runtime. That means that if we referenced
+    // kotlin.Metadata.class here we would actually be referencing
+    // autovalue.shaded.kotlin.Metadata.class. Obviously the Kotlin class doesn't have that
+    // annotation.
+    return element.getAnnotationMirrors().stream()
+        .filter(
+            a ->
+                asTypeElement(a.getAnnotationType())
+                    .getQualifiedName()
+                    .contentEquals(KOTLIN_METADATA_NAME))
+        .<AnnotationMirror>map(a -> a) // get rid of that stupid wildcard
+        .findFirst();
+  }
+
+  /**
+   * Use Kotlin reflection to build {@link Executable} instances for the constructors in {@code
+   * ofClass} that include information about which parameters have default values.
+   */
+  private ImmutableList<Executable> kotlinConstructorsIn(
+      AnnotationMirror metadata, TypeElement ofClass) {
+    ImmutableMap<String, AnnotationValue> annotationValues =
+        AnnotationMirrors.getAnnotationValuesWithDefaults(metadata).entrySet().stream()
+            .map(e -> new SimpleEntry<>(e.getKey().getSimpleName().toString(), e.getValue()))
+            .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    // We match the KmConstructor instances with the ExecutableElement instances based on the
+    // parameter names. We could possibly just assume that the constructors are in the same order.
+    Map<ImmutableSet<String>, ExecutableElement> map =
+        constructorsIn(ofClass.getEnclosedElements()).stream()
+            .collect(toMap(c -> parameterNames(c), c -> c, (a, b) -> a, LinkedHashMap::new));
+    ImmutableMap<ImmutableSet<String>, ExecutableElement> paramNamesToConstructor =
+        ImmutableMap.copyOf(map);
+    KotlinClassHeader header =
+        new KotlinClassHeader(
+            (Integer) annotationValues.get("k").getValue(),
+            intArrayValue(annotationValues.get("mv")),
+            stringArrayValue(annotationValues.get("d1")),
+            stringArrayValue(annotationValues.get("d2")),
+            (String) annotationValues.get("xs").getValue(),
+            (String) annotationValues.get("pn").getValue(),
+            (Integer) annotationValues.get("xi").getValue());
+    KotlinClassMetadata.Class classMetadata =
+        (KotlinClassMetadata.Class) KotlinClassMetadata.read(header);
+    KmClass kmClass = classMetadata.toKmClass();
+    ImmutableList.Builder<Executable> kotlinConstructorsBuilder = ImmutableList.builder();
+    for (KmConstructor constructor : kmClass.getConstructors()) {
+      ImmutableSet.Builder<String> allBuilder = ImmutableSet.builder();
+      ImmutableSet.Builder<String> optionalBuilder = ImmutableSet.builder();
+      for (KmValueParameter param : constructor.getValueParameters()) {
+        String name = param.getName();
+        allBuilder.add(name);
+        if (Flag.ValueParameter.DECLARES_DEFAULT_VALUE.invoke(param.getFlags())) {
+          optionalBuilder.add(name);
+        }
+      }
+      ImmutableSet<String> optional = optionalBuilder.build();
+      ImmutableSet<String> all = allBuilder.build();
+      ExecutableElement javaConstructor = paramNamesToConstructor.get(all);
+      if (javaConstructor != null) {
+        kotlinConstructorsBuilder.add(Executable.of(javaConstructor, optional));
+      }
+    }
+    return kotlinConstructorsBuilder.build();
+  }
+
+  private static int[] intArrayValue(AnnotationValue value) {
+    @SuppressWarnings("unchecked")
+    List<AnnotationValue> list = (List<AnnotationValue>) value.getValue();
+    return list.stream().mapToInt(v -> (int) v.getValue()).toArray();
+  }
+
+  private static String[] stringArrayValue(AnnotationValue value) {
+    @SuppressWarnings("unchecked")
+    List<AnnotationValue> list = (List<AnnotationValue>) value.getValue();
+    return list.stream().map(AnnotationValue::getValue).toArray(String[]::new);
+  }
+
+  private static ImmutableSet<String> parameterNames(ExecutableElement executableElement) {
+    return executableElement.getParameters().stream()
+        .map(v -> v.getSimpleName().toString())
+        .collect(toImmutableSet());
   }
 
   private static final ElementKind ELEMENT_KIND_RECORD = elementKindRecord();
@@ -539,6 +700,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         type,
         /* nullableAnnotation= */ Optional.empty(),
         /* getter= */ "",
-        /* maybeBuilderInitializer= */ Optional.empty());
+        /* maybeBuilderInitializer= */ Optional.empty(),
+        /* hasDefault= */ false);
   }
 }

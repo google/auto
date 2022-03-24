@@ -16,7 +16,9 @@
 package com.google.auto.value;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -41,6 +43,7 @@ public final class AutoBuilderKotlinTest {
     KotlinData x = KotlinDataBuilder.builder().setInt(23).setString("skidoo").build();
     assertThat(x.getInt()).isEqualTo(23);
     assertThat(x.getString()).isEqualTo("skidoo");
+    assertThrows(IllegalStateException.class, () -> KotlinDataBuilder.builder().build());
   }
 
   @AutoBuilder(ofClass = KotlinDataWithNullable.class)
@@ -76,24 +79,105 @@ public final class AutoBuilderKotlinTest {
 
     abstract KotlinDataWithDefaultsBuilder setAnInt(int x);
 
+    abstract int getAnInt();
+
+    abstract ImmutableList.Builder<String> anImmutableListBuilder();
+
+    abstract KotlinDataWithDefaultsBuilder setNotDefaulted(long x);
+
+    abstract long getNotDefaulted();
+
     abstract KotlinDataWithDefaultsBuilder setAString(String x);
+
+    abstract String getAString();
 
     abstract KotlinDataWithDefaults build();
   }
 
   @Test
-  public void kotlinWithDefaults() {
-    // AutoBuilder doesn't currently try to give the builder the same defaults as the Kotlin class,
-    // but we do at least check that the presence of defaults doesn't throw AutoBuilder off.
-    // When a constructor has default parameters, the Kotlin compiler generates an extra constructor
-    // with two extra parameters: an int bitmask saying which parameters were defaulted, and a
-    // DefaultConstructorMarker parameter to avoid clashing with another constructor that might have
-    // an extra int parameter for some other reason. If AutoBuilder found this constructor it might
-    // be confused, but fortunately the constructor is marked synthetic, and javax.lang.model
-    // doesn't show synthetic elements.
-    KotlinDataWithDefaults x =
-        KotlinDataWithDefaultsBuilder.builder().setAString("answer").setAnInt(42).build();
+  public void kotlinWithDefaults_explicit() {
+    KotlinDataWithDefaultsBuilder builder =
+        KotlinDataWithDefaultsBuilder.builder()
+            .setAString("answer")
+            .setNotDefaulted(100L)
+            .setAnInt(42);
+    builder.anImmutableListBuilder().add("bar");
+    KotlinDataWithDefaults x = builder.build();
     assertThat(x.getAString()).isEqualTo("answer");
+    assertThat(x.getAnImmutableList()).containsExactly("bar");
+    assertThat(x.getNotDefaulted()).isEqualTo(100L);
     assertThat(x.getAnInt()).isEqualTo(42);
+  }
+
+  @Test
+  public void kotlinWithDefaults_defaulted() {
+    KotlinDataWithDefaults x =
+        KotlinDataWithDefaultsBuilder.builder().setNotDefaulted(100L).build();
+    assertThat(x.getAnInt()).isEqualTo(23);
+    assertThat(x.getAnImmutableList()).containsExactly("foo");
+    assertThat(x.getAString()).isEqualTo("skidoo");
+    assertThat(x.getNotDefaulted()).isEqualTo(100L);
+  }
+
+  @Test
+  public void kotlinWithDefaults_getter() {
+    KotlinDataWithDefaultsBuilder builder = KotlinDataWithDefaultsBuilder.builder();
+    assertThrows(IllegalStateException.class, builder::getAnInt);
+    builder.setAnInt(42);
+    assertThat(builder.getAnInt()).isEqualTo(42);
+    assertThrows(IllegalStateException.class, builder::getNotDefaulted);
+    builder.setNotDefaulted(100L);
+    assertThat(builder.getNotDefaulted()).isEqualTo(100L);
+    assertThrows(IllegalStateException.class, builder::getAString);
+    builder.setAString("answer");
+    assertThat(builder.getAString()).isEqualTo("answer");
+  }
+
+  @AutoBuilder(ofClass = KotlinDataEightDefaults.class)
+  interface KotlinDataEightDefaultsBuilder {
+    static KotlinDataEightDefaultsBuilder builder() {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataEightDefaultsBuilder();
+    }
+
+    KotlinDataEightDefaultsBuilder a1(int x);
+
+    KotlinDataEightDefaultsBuilder a2(int x);
+
+    KotlinDataEightDefaultsBuilder a3(int x);
+
+    KotlinDataEightDefaultsBuilder a4(int x);
+
+    KotlinDataEightDefaultsBuilder a5(int x);
+
+    KotlinDataEightDefaultsBuilder a6(int x);
+
+    KotlinDataEightDefaultsBuilder a7(int x);
+
+    KotlinDataEightDefaultsBuilder a8(int x);
+
+    KotlinDataEightDefaults build();
+  }
+
+  // We test a class that has exactly 8 default parameters because we will use a byte for the
+  // bitmask in that case and it is possible that we might have an issue with sign extension when
+  // bit 7 of that bitmask is set.
+  @Test
+  public void kotlinEightDefaults() {
+    KotlinDataEightDefaults allDefaulted = KotlinDataEightDefaultsBuilder.builder().build();
+    assertThat(allDefaulted.getA1()).isEqualTo(1);
+    assertThat(allDefaulted.getA8()).isEqualTo(8);
+    KotlinDataEightDefaults noneDefaulted =
+        KotlinDataEightDefaultsBuilder.builder()
+            .a1(-1)
+            .a2(-2)
+            .a3(-3)
+            .a4(-4)
+            .a5(-5)
+            .a6(-6)
+            .a7(-7)
+            .a8(-8)
+            .build();
+    assertThat(noneDefaulted.getA1()).isEqualTo(-1);
+    assertThat(noneDefaulted.getA8()).isEqualTo(-8);
   }
 }
