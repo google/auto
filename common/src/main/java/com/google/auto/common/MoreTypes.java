@@ -312,9 +312,7 @@ public final class MoreTypes {
     // The javac implementation of ExecutableType, at least in some versions, does not take thrown
     // exceptions into account in its equals implementation, so avoid this optimization for
     // ExecutableType.
-    @SuppressWarnings("TypesEquals")
-    boolean equal = a.equals(b);
-    if (equal && !(a instanceof ExecutableType)) {
+    if (a.equals(b) && !(a.getKind() == TypeKind.EXECUTABLE)) {
       return true;
     }
     EqualVisitorParam p = new EqualVisitorParam();
@@ -341,10 +339,9 @@ public final class MoreTypes {
 
   private static boolean equalLists(
       List<? extends TypeMirror> a, List<? extends TypeMirror> b, Set<ComparedElements> visiting) {
-    int size = a.size();
-    if (size != b.size()) {
+    if (a.size() != b.size())
       return false;
-    }
+
     // Use iterators in case the Lists aren't RandomAccess
     Iterator<? extends TypeMirror> aIterator = a.iterator();
     Iterator<? extends TypeMirror> bIterator = b.iterator();
