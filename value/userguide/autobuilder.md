@@ -61,7 +61,7 @@ AutoBuilder can help.
 Given this trivial Kotlin data class:
 
 ```
-class KotlinData(val int: Int, val string: String?)
+class KotlinData(val int: Int, val string: String?, val id: Long = -1L)
 ```
 
 You might make a builder for it like this:
@@ -75,6 +75,7 @@ public abstract class KotlinDataBuilder {
 
   public abstract setInt(int x);
   public abstract setString(@Nullable String x);
+  public abstract setId(long x);
   public abstract KotlinData build();
 }
 ```
@@ -82,6 +83,35 @@ public abstract class KotlinDataBuilder {
 The Kotlin type `String?` corresponds to `@Nullable String` in the AutoBuilder
 class, where `@Nullable` is any annotation with that name, such as
 `org.jetbrains.annotations.Nullable`.
+
+The `id` parameter has a default value of `-1L`, which means that if `setId` is
+not called then the `id` field of the built `KotlinData` will be `-1L`.
+
+If you are using [kapt](https://kotlinlang.org/docs/kapt.html) then you can also
+define the builder in the data class itself:
+
+```
+class KotlinData(val int: Int, val string: String?, val id: Long = -1L) {
+  @AutoBuilder // we don't need ofClass: by default it is the containing class
+  interface Builder {
+    fun setInt(x: Int): Builder
+    fun setString(x: String?): Builder
+    fun setId(x: Long): Builder
+    fun build(): KotlinData
+  }
+
+  companion object {
+    @JvmStatic fun builder(): Builder = AutoBuilder_KotlinData_Builder()
+  }
+}
+```
+
+This example uses an interface rather than an abstract class for the builder,
+but both are possible. Java code would then construct instances like this:
+
+```
+  KotlinData k = KotlinData.builder().setInt(23).build();
+```
 
 ## The generated subclass
 
@@ -262,6 +292,7 @@ class CheckedSet<E> implements Set<E> {
 
 Parameters that are annotated `@Nullable` are null by default. Parameters of
 type `Optional`, `OptionalInt`, `OptionalLong`, and `OptionalDouble` are empty
+by default. Kotlin constructor parameters with default values get those values
 by default. Every other parameter is _required_, meaning that the build method
 will throw `IllegalStateException` if any are omitted.
 
