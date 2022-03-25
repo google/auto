@@ -139,24 +139,32 @@ public final class MoreTypes {
       this.bArguments = bArguments;
     }
 
+    protected boolean canEqual(Object o) {
+      return o instanceof ComparedElements;
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o instanceof ComparedElements) {
-        ComparedElements that = (ComparedElements) o;
-        int nArguments = aArguments.size();
-        if (!this.a.equals(that.a) || !this.b.equals(that.b) || nArguments != bArguments.size()) {
-          // The arguments must be the same size, but we check anyway.
-          return false;
-        }
-        for (int i = 0; i < nArguments; i++) {
-          if (aArguments.get(i) != bArguments.get(i)) {
-            return false;
-          }
-        }
-        return true;
-      } else {
+      if ( !(o instanceof ComparedElements) ) return false;
+      ComparedElements that = (ComparedElements) o;
+      if ( !that.canEqual(this) ) return false;
+
+      int nArguments = this.aArguments.size();
+      if ( nArguments != that.aArguments.size() ) return false;
+      // The arguments must be the same size, but we check anyway.
+      if ( nArguments != this.bArguments.size() || nArguments != that.bArguments.size() ) return false;
+
+      if ( !this.a.equals(that.a) || !this.b.equals(that.b) )
         return false;
+
+      for (int i = 0; i < nArguments; i++) {
+        if ( !this.aArguments.get(i).toString().equals( that.aArguments.get(i).toString() ) )
+          return false;
+        if ( !this.bArguments.get(i).toString().equals( that.bArguments.get(i).toString() ) )
+          return false;
       }
+
+      return true;
     }
 
     @Override
