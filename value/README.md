@@ -28,5 +28,5 @@ For more information, consult the
 appropriate than AutoValue. Likewise, if you are using a version of Java that
 has [records](https://docs.oracle.com/en/java/javase/16/language/records.html),
 then those are usually more appropriate. You can still use
-[AutoBuilder](userguide/autobuilder.md) to make builders for data classes or
-records.
+[AutoBuilder](userguide/autobuilder.md)
+to make builders for data classes or records.
