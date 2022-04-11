@@ -314,7 +314,7 @@ public final class MoreTypes {
     // ExecutableType.
     @SuppressWarnings("TypesEquals")
     boolean equal = a.equals(b);
-    if (equal && !(a instanceof ExecutableType)) {
+    if (equal && a.getKind() != TypeKind.EXECUTABLE) {
       return true;
     }
     EqualVisitorParam p = new EqualVisitorParam();
