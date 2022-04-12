@@ -141,22 +141,44 @@ public final class MoreTypes {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o instanceof ComparedElements) {
-        ComparedElements that = (ComparedElements) o;
-        int nArguments = aArguments.size();
-        if (!this.a.equals(that.a) || !this.b.equals(that.b) || nArguments != bArguments.size()) {
-          // The arguments must be the same size, but we check anyway.
-          return false;
-        }
-        for (int i = 0; i < nArguments; i++) {
-          if (aArguments.get(i) != bArguments.get(i)) {
-            return false;
-          }
-        }
-        return true;
-      } else {
+      if (!(o instanceof ComparedElements)) {
         return false;
       }
+      ComparedElements that = (ComparedElements) o;
+
+      int nArguments = this.aArguments.size();
+      if (nArguments != that.aArguments.size()) {
+        return false;
+      }
+      // The arguments must be the same size, but we check anyway.
+      if (nArguments != this.bArguments.size() || nArguments != that.bArguments.size()) {
+        return false;
+      }
+
+      if (!this.a.equals(that.a) || !this.b.equals(that.b)) {
+        return false;
+      }
+
+      /*
+       * The purpose here is just to avoid the infinite recursion that we would otherwise have
+       * if Enum<E extends Enum<E>> is compared against itself, for example. If we are able to
+       * see that the inner Enum<E> is the same object as the outer one then we don't need a
+       * recursive call to compare the "a" Enum<E> against the "b" Enum<E>. The same-object check
+       * may not be completely justified, but it relies on the practical assumption that the
+       * compiler is not going to conjure up an infinite regress of objects to represent this
+       * recursive type. Other comparison methods like comparing their toString() are expensive
+       * and not warranted.
+       */
+      for (int i = 0; i < nArguments; i++) {
+        if (this.aArguments.get(i) != that.aArguments.get(i)) {
+          return false;
+        }
+        if (this.bArguments.get(i) != that.bArguments.get(i)) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     @Override
@@ -314,7 +336,7 @@ public final class MoreTypes {
     // ExecutableType.
     @SuppressWarnings("TypesEquals")
     boolean equal = a.equals(b);
-    if (equal && !(a instanceof ExecutableType)) {
+    if (equal && a.getKind() != TypeKind.EXECUTABLE) {
       return true;
     }
     EqualVisitorParam p = new EqualVisitorParam();
