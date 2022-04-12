@@ -73,9 +73,9 @@ public abstract class KotlinDataBuilder {
     return new AutoBuilder_KotlinDataBuilder();
   }
 
-  public abstract setInt(int x);
-  public abstract setString(@Nullable String x);
-  public abstract setId(long x);
+  public abstract KotlinDataBuilder setInt(int x);
+  public abstract KotlinDataBuilder setString(@Nullable String x);
+  public abstract KotlinDataBuilder setId(long x);
   public abstract KotlinData build();
 }
 ```
