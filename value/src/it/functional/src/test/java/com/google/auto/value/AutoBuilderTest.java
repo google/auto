@@ -484,7 +484,7 @@ public final class AutoBuilderTest {
     assertThat(builder3.build()).isEqualTo(expected);
 
     ListContainer.Builder builder4 = ListContainer.builder();
-    builder4.listBuilder();
+    ImmutableList.Builder<String> unused = builder4.listBuilder();
     try {
       builder4.setList(ImmutableList.of("one", "two", "three"));
       fail();
