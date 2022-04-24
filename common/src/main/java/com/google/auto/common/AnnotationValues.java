@@ -152,6 +152,11 @@ public final class AnnotationValues {
               },
               null);
         }
+
+        @Override
+        public String toString() {
+          return "AnnotationValues.equivalence()";
+        }
       };
 
   /**
