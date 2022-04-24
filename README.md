@@ -4,7 +4,7 @@
 
 A collection of source code generators for [Java][java].
 
-## Auto‽
+## Auto
 
 [Java][java] is full of code that is mechanical, repetitive, typically untested
 and sometimes the source of subtle bugs. _Sounds like a job for robots!_
