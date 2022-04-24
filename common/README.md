@@ -14,7 +14,7 @@ annotation processing environment.
     and free from distortion from upstream compilation errors
 *   Visibility - utilities for working with Elements' visibility levels (public,
     protected, etc.)
-*   BasicAnnotationProcessor/ProcessingStep - simple types that
+*   BasicAnnotationProcessor/Step - simple types that
     -   implement a validating annotation processor
     -   defer invalid elements until later
     -   break processor actions into multiple steps (which may each handle
