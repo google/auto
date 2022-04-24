@@ -538,9 +538,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     /**
-     * An {@link ElementName} for an annotated element. If {@code element} is a package, uses the
-     * fully qualified name of the package. If it's a type, uses its fully qualified name.
-     * Otherwise, uses the fully-qualified name of the nearest enclosing type.
+     * An {@link ElementName} for an annotated element.
+     *
+     * <p>Packages declared and annotated in {@code package-info.java}, and type elements are tracked
+     * directly. All other elements are tracked via their nearest enclosing type.
+     *
+     * <p>If {@code element} is a package, uses the fully qualified name of the package.
+     * If it's a type, uses its fully qualified name. Otherwise, uses the fully-qualified name
+     * of the nearest enclosing type.
      */
     static ElementName forAnnotatedElement(Element element) {
       return element.getKind() == PACKAGE
