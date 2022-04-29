@@ -42,12 +42,12 @@ public class MoreTypesIsTypeOfTest {
 
   @Rule public CompilationRule compilationRule = new CompilationRule();
 
-  private Elements eltUtils;
+  private Elements elementUtils;
   private Types typeUtils;
 
   @Before
   public void setUp() {
-    this.eltUtils = compilationRule.getElements();
+    this.elementUtils = compilationRule.getElements();
     this.typeUtils = compilationRule.getTypes();
   }
 
@@ -179,8 +179,8 @@ public class MoreTypesIsTypeOfTest {
     }
   }
 
-  // Utility method(s) for this test.
+  /* Utility method(s) */
   private TypeElement getTypeElementFor(Class<?> clazz) {
-    return eltUtils.getTypeElement(clazz.getCanonicalName());
+    return elementUtils.getTypeElement(clazz.getCanonicalName());
   }
 }
