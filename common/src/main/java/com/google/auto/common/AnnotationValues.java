@@ -152,6 +152,11 @@ public final class AnnotationValues {
               },
               null);
         }
+
+        @Override
+        public String toString() {
+          return "AnnotationValues.equivalence()";
+        }
       };
 
   /**
@@ -348,7 +353,7 @@ public final class AnnotationValues {
 
     @Override
     public ImmutableList<T> defaultAction(Object o, Void unused) {
-      throw new IllegalStateException("Expected an array, got instead: " + o);
+      throw new IllegalArgumentException("Expected an array, got instead: " + o);
     }
 
     @Override
