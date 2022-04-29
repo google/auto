@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.testing.compile.CompilationRule;
 import java.util.List;
 import java.util.SortedMap;
@@ -74,24 +75,24 @@ public class MoreTypesIsTypeOfTest {
             new PrimitiveTypeInfo(Boolean.TYPE, Boolean.class, TypeKind.BOOLEAN),
             new PrimitiveTypeInfo(Character.TYPE, Character.class, TypeKind.CHAR));
 
-    for (int ki = 0; ki < 2; ki++) { // ki = 0: primitives, ki = 1: boxed primitives
+    for (boolean isBoxedI : new boolean[] {false, true}) {
       for (int i = 0; i < primitivesTypeInfo.size(); i++) { // For the Class<?> arg
         Class<?> clazz =
-            (ki == 0)
-                ? primitivesTypeInfo.get(i).CLASS_TYPE
-                : primitivesTypeInfo.get(i).BOXED_CLASS_TYPE;
+            isBoxedI
+                ? primitivesTypeInfo.get(i).BOXED_CLASS_TYPE
+                : primitivesTypeInfo.get(i).CLASS_TYPE;
 
-        for (int kj = 0; kj < 2; kj++) { // kj = 0: primitives, kj = 1: boxed primitives
+        for (boolean isBoxedJ : new boolean[] {false, true}) {
           for (int j = 0; j < primitivesTypeInfo.size(); j++) { // For the TypeMirror arg
             TypeKind typeKind = primitivesTypeInfo.get(j).TYPE_KIND;
             TypeMirror typeMirror =
-                (kj == 0)
-                    ? typeUtils.getPrimitiveType(typeKind)
-                    : typeUtils.boxedClass(typeUtils.getPrimitiveType(typeKind)).asType();
+                isBoxedJ
+                    ? typeUtils.boxedClass(typeUtils.getPrimitiveType(typeKind)).asType()
+                    : typeUtils.getPrimitiveType(typeKind);
 
             String message =
                 "Mirror:\t" + typeMirror.toString() + "\nClass:\t" + clazz.getCanonicalName();
-            if (ki == kj && i == j) {
+            if (isBoxedI == isBoxedJ && i == j) {
               assertWithMessage(message).that(MoreTypes.isTypeOf(clazz, typeMirror)).isTrue();
             } else {
               assertWithMessage(message).that(MoreTypes.isTypeOf(clazz, typeMirror)).isFalse();
@@ -168,9 +169,9 @@ public class MoreTypesIsTypeOfTest {
 
   @Test
   public void isTypeOf_fail() {
-    assertFalse(
-        MoreTypes.isType(getTypeElementFor(TestType.class).getEnclosedElements().get(0).asType()));
-    TypeMirror methodType = getTypeElementFor(TestType.class).getEnclosedElements().get(0).asType();
+    TypeMirror methodType =
+        Iterables.getOnlyElement(getTypeElementFor(TestType.class).getEnclosedElements()).asType();
+    assertFalse(MoreTypes.isType(methodType));
     try {
       MoreTypes.isTypeOf(List.class, methodType);
       fail();
