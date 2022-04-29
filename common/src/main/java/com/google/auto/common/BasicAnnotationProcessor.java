@@ -179,9 +179,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   @Override
   public final ImmutableSet<String> getSupportedAnnotationTypes() {
     checkState(steps != null);
-    return steps.stream()
-        .flatMap(step -> step.annotations().stream())
-        .collect(toImmutableSet());
+    return steps.stream().flatMap(step -> step.annotations().stream()).collect(toImmutableSet());
   }
 
   @Override
@@ -538,14 +536,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     /**
-     * An {@link ElementName} for an annotated element.
+     * An {@link ElementName} for an annotated element. If {@code element} is a package, uses the
+     * fully qualified name of the package. If it's a type, uses its fully qualified name.
+     * Otherwise, uses the fully-qualified name of the nearest enclosing type.
      *
-     * <p>Packages declared and annotated in {@code package-info.java}, and type elements are tracked
-     * directly. All other elements are tracked via their nearest enclosing type.
-     *
-     * <p>If {@code element} is a package, uses the fully qualified name of the package.
-     * If it's a type, uses its fully qualified name. Otherwise, uses the fully-qualified name
-     * of the nearest enclosing type.
+     * <p>A package can be annotated if it has a {@code package-info.java} with annotations on the
+     * package declaration.
      */
     static ElementName forAnnotatedElement(Element element) {
       return element.getKind() == PACKAGE
