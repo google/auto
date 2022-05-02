@@ -15,198 +15,172 @@
  */
 package com.google.auto.common;
 
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.testing.compile.CompilationRule;
-import javax.lang.model.element.Element;
+import java.util.List;
+import java.util.SortedMap;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * Tests {@link MoreTypes#isTypeOf}.
- */
+/** Tests {@link MoreTypes#isTypeOf(Class, TypeMirror)}. */
 @RunWith(JUnit4.class)
 public class MoreTypesIsTypeOfTest {
 
   @Rule public CompilationRule compilationRule = new CompilationRule();
 
-  private Elements elements;
+  private Elements elementUtils;
+  private Types typeUtils;
 
   @Before
   public void setUp() {
-    this.elements = compilationRule.getElements();
+    this.elementUtils = compilationRule.getElements();
+    this.typeUtils = compilationRule.getTypes();
   }
-
-  private interface TestType {}
 
   @Test
-  public void isTypeOf_declaredType() {
-    assertTrue(MoreTypes.isType(typeElementFor(TestType.class).asType()));
-    assertWithMessage("mirror represents the TestType")
-        .that(MoreTypes.isTypeOf(TestType.class, typeElementFor(TestType.class).asType()))
-        .isTrue();
-    assertWithMessage("mirror does not represent a String")
-        .that(MoreTypes.isTypeOf(String.class, typeElementFor(TestType.class).asType()))
-        .isFalse();
+  public void isTypeOf_primitiveAndBoxedPrimitiveTypes() {
+    class PrimitiveTypeInfo {
+      final Class<?> CLASS_TYPE;
+      final Class<?> BOXED_CLASS_TYPE;
+      final TypeKind TYPE_KIND;
+
+      PrimitiveTypeInfo(Class<?> classType, Class<?> boxedClassType, TypeKind typeKind) {
+        this.CLASS_TYPE = classType;
+        this.BOXED_CLASS_TYPE = boxedClassType;
+        this.TYPE_KIND = typeKind;
+      }
+    }
+    final List<PrimitiveTypeInfo> primitivesTypeInfo =
+        ImmutableList.of(
+            new PrimitiveTypeInfo(Byte.TYPE, Byte.class, TypeKind.BYTE),
+            new PrimitiveTypeInfo(Short.TYPE, Short.class, TypeKind.SHORT),
+            new PrimitiveTypeInfo(Integer.TYPE, Integer.class, TypeKind.INT),
+            new PrimitiveTypeInfo(Long.TYPE, Long.class, TypeKind.LONG),
+            new PrimitiveTypeInfo(Float.TYPE, Float.class, TypeKind.FLOAT),
+            new PrimitiveTypeInfo(Double.TYPE, Double.class, TypeKind.DOUBLE),
+            new PrimitiveTypeInfo(Boolean.TYPE, Boolean.class, TypeKind.BOOLEAN),
+            new PrimitiveTypeInfo(Character.TYPE, Character.class, TypeKind.CHAR));
+
+    for (boolean isBoxedI : new boolean[] {false, true}) {
+      for (int i = 0; i < primitivesTypeInfo.size(); i++) { // For the Class<?> arg
+        Class<?> clazz =
+            isBoxedI
+                ? primitivesTypeInfo.get(i).BOXED_CLASS_TYPE
+                : primitivesTypeInfo.get(i).CLASS_TYPE;
+
+        for (boolean isBoxedJ : new boolean[] {false, true}) {
+          for (int j = 0; j < primitivesTypeInfo.size(); j++) { // For the TypeMirror arg
+            TypeKind typeKind = primitivesTypeInfo.get(j).TYPE_KIND;
+            TypeMirror typeMirror =
+                isBoxedJ
+                    ? typeUtils.boxedClass(typeUtils.getPrimitiveType(typeKind)).asType()
+                    : typeUtils.getPrimitiveType(typeKind);
+
+            String message =
+                "Mirror:\t" + typeMirror.toString() + "\nClass:\t" + clazz.getCanonicalName();
+            if (isBoxedI == isBoxedJ && i == j) {
+              assertWithMessage(message).that(MoreTypes.isTypeOf(clazz, typeMirror)).isTrue();
+            } else {
+              assertWithMessage(message).that(MoreTypes.isTypeOf(clazz, typeMirror)).isFalse();
+            }
+          }
+        }
+      }
+    }
   }
 
-  private interface ArrayType {
-    String[] array();
+  @Test
+  public void isTypeOf_voidAndPseudoVoidTypes() {
+    TypeMirror voidType = typeUtils.getNoType(TypeKind.VOID);
+    TypeMirror pseudoVoidType = getTypeElementFor(Void.class).asType();
+
+    assertWithMessage("Mirror:\t" + voidType + "\nClass:\t" + Void.TYPE.getCanonicalName())
+        .that(MoreTypes.isTypeOf(Void.TYPE, voidType))
+        .isTrue();
+    assertWithMessage("Mirror:\t" + pseudoVoidType + "\nClass:\t" + Void.TYPE.getCanonicalName())
+        .that(MoreTypes.isTypeOf(Void.TYPE, pseudoVoidType))
+        .isFalse();
+
+    assertWithMessage("Mirror:\t" + voidType + "\nClass:\t" + Void.class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(Void.class, voidType))
+        .isFalse();
+    assertWithMessage("Mirror:\t" + pseudoVoidType + "\nClass:\t" + Void.class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(Void.class, pseudoVoidType))
+        .isTrue();
   }
 
   @Test
   public void isTypeOf_arrayType() {
-    assertTrue(MoreTypes.isType(typeElementFor(ArrayType.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(ArrayType.class));
-    assertWithMessage("array mirror represents an array Class object")
+    TypeMirror type = typeUtils.getArrayType(getTypeElementFor(String.class).asType());
+    assertWithMessage("Mirror:\t" + type + "\nClass:\t" + String[].class.getCanonicalName())
         .that(MoreTypes.isTypeOf(String[].class, type))
+        .isTrue();
+    assertWithMessage("Mirror:\t" + type + "\nClass:\t" + Integer[].class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(Integer[].class, type))
+        .isFalse();
+    assertWithMessage("Mirror:\t" + type + "\nClass:\t" + int[].class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(int[].class, type))
+        .isFalse();
+
+    type = typeUtils.getArrayType(typeUtils.getPrimitiveType(TypeKind.INT));
+    assertWithMessage("Mirror:\t" + type + "\nClass:\t" + String[].class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(String[].class, type))
+        .isFalse();
+    assertWithMessage("Mirror:\t" + type + "\nClass:\t" + Integer[].class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(Integer[].class, type))
+        .isFalse();
+    assertWithMessage("Mirror:\t" + type + "\nClass:\t" + int[].class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(int[].class, type))
         .isTrue();
   }
 
-  private interface PrimitiveBoolean {
-    boolean method();
+  private interface TestType {
+    @SuppressWarnings("unused")
+    <T extends SortedMap<Number, String>> T method0();
   }
 
   @Test
-  public void isTypeOf_primitiveBoolean() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveBoolean.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveBoolean.class));
-    assertWithMessage("mirror of a boolean").that(MoreTypes.isTypeOf(Boolean.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveByte {
-    byte method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveByte() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveByte.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveByte.class));
-    assertWithMessage("mirror of a byte").that(MoreTypes.isTypeOf(Byte.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveChar {
-    char method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveChar() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveChar.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveChar.class));
-    assertWithMessage("mirror of a char").that(MoreTypes.isTypeOf(Character.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveDouble {
-    double method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveDouble() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveDouble.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveDouble.class));
-    assertWithMessage("mirror of a double").that(MoreTypes.isTypeOf(Double.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveFloat {
-    float method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveFloat() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveFloat.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveFloat.class));
-    assertWithMessage("mirror of a float").that(MoreTypes.isTypeOf(Float.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveInt {
-    int method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveInt() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveInt.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveInt.class));
-    assertWithMessage("mirror of a int").that(MoreTypes.isTypeOf(Integer.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveLong {
-    long method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveLong() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveLong.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveLong.class));
-    assertWithMessage("mirror of a long").that(MoreTypes.isTypeOf(Long.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveShort {
-    short method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveShort() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveShort.class).asType()));
-    TypeMirror type = extractReturnTypeFromHolder(typeElementFor(PrimitiveShort.class));
-    assertWithMessage("mirror of a short").that(MoreTypes.isTypeOf(Short.TYPE, type)).isTrue();
-  }
-
-  private interface PrimitiveVoid {
-    void method();
-  }
-
-  @Test
-  public void isTypeOf_primitiveVoid() {
-    assertTrue(MoreTypes.isType(typeElementFor(PrimitiveVoid.class).asType()));
-    TypeMirror primitive = extractReturnTypeFromHolder(typeElementFor(PrimitiveVoid.class));
-    assertWithMessage("mirror of a void").that(MoreTypes.isTypeOf(Void.TYPE, primitive)).isTrue();
-  }
-
-  private interface DeclaredVoid {
-    Void method();
-  }
-
-  @Test
-  public void isTypeOf_declaredVoid() {
-    assertTrue(MoreTypes.isType(typeElementFor(DeclaredVoid.class).asType()));
-    TypeMirror declared = extractReturnTypeFromHolder(typeElementFor(DeclaredVoid.class));
-    assertWithMessage("mirror of a void").that(MoreTypes.isTypeOf(Void.class, declared)).isTrue();
+  public void isTypeOf_declaredType() {
+    TypeMirror TestTypeTypeMirror = getTypeElementFor(TestType.class).asType();
+    assertTrue(MoreTypes.isType(TestTypeTypeMirror));
+    assertWithMessage(
+            "Mirror:\t" + TestTypeTypeMirror + "\nClass:\t" + TestType.class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(TestType.class, TestTypeTypeMirror))
+        .isTrue();
+    assertWithMessage(
+            "Mirror:\t" + TestTypeTypeMirror + "\nClass:\t" + String.class.getCanonicalName())
+        .that(MoreTypes.isTypeOf(String.class, TestTypeTypeMirror))
+        .isFalse();
   }
 
   @Test
   public void isTypeOf_fail() {
-    assertFalse(
-        MoreTypes.isType(
-            getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType()));
-    TypeMirror method =
-        getOnlyElement(typeElementFor(DeclaredVoid.class).getEnclosedElements()).asType();
+    TypeMirror methodType =
+        Iterables.getOnlyElement(getTypeElementFor(TestType.class).getEnclosedElements()).asType();
+    assertFalse(MoreTypes.isType(methodType));
     try {
-      MoreTypes.isTypeOf(String.class, method);
+      MoreTypes.isTypeOf(List.class, methodType);
       fail();
     } catch (IllegalArgumentException expected) {
     }
   }
 
-  // Utility methods for this test.
-
-  private TypeMirror extractReturnTypeFromHolder(TypeElement typeElement) {
-    Element element = Iterables.getOnlyElement(typeElement.getEnclosedElements());
-    TypeMirror arrayType = MoreElements.asExecutable(element).getReturnType();
-    return arrayType;
-  }
-
-  private TypeElement typeElementFor(Class<?> clazz) {
-    return elements.getTypeElement(clazz.getCanonicalName());
+  /* Utility method(s) */
+  private TypeElement getTypeElementFor(Class<?> clazz) {
+    return elementUtils.getTypeElement(clazz.getCanonicalName());
   }
 }
