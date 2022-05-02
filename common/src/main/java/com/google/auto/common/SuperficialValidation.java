@@ -41,8 +41,8 @@ import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.SimpleTypeVisitor8;
 
 /**
- * A utility class that traverses {@link Element} instances and ensures that all type information
- * is present and resolvable.
+ * A utility class that traverses {@link Element} instances and ensures that all type information is
+ * present and resolvable.
  *
  * @author Gregory Kick
  */
@@ -213,7 +213,7 @@ public final class SuperficialValidation {
       new SimpleAnnotationValueVisitor8<Boolean, TypeMirror>() {
         @Override
         protected Boolean defaultAction(Object o, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(o.getClass(), expectedType);
+          return MoreTypes.isExactTypeOf(o.getClass(), expectedType);
         }
 
         @Override
@@ -254,42 +254,42 @@ public final class SuperficialValidation {
 
         @Override
         public Boolean visitBoolean(boolean b, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Boolean.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Boolean.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitByte(byte b, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Byte.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Byte.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitChar(char c, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Character.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Character.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitDouble(double d, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Double.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Double.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitFloat(float f, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Float.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Float.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitInt(int i, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Integer.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Integer.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitLong(long l, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Long.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Long.TYPE, expectedType);
         }
 
         @Override
         public Boolean visitShort(short s, TypeMirror expectedType) {
-          return MoreTypes.isTypeOf(Short.TYPE, expectedType);
+          return MoreTypes.isExactTypeOf(Short.TYPE, expectedType);
         }
       };
 
