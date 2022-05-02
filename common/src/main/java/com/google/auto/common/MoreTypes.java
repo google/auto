@@ -26,6 +26,7 @@ import static javax.lang.model.type.TypeKind.WILDCARD;
 
 import com.google.common.base.Equivalence;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.HashSet;
@@ -88,13 +89,13 @@ public final class MoreTypes {
    * may be preferred in a number of cases:
    *
    * <ul>
-   * <li>If you don't have an instance of {@code Types}.
-   * <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
-   *     of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
-   * <li>If you want distinct type variables to be considered equal if they have the same names
-   *     and bounds.
-   * <li>If you want wildcard types to compare equal if they have the same bounds. {@code
-   *     Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
+   *   <li>If you don't have an instance of {@code Types}.
+   *   <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
+   *       of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
+   *   <li>If you want distinct type variables to be considered equal if they have the same names
+   *       and bounds.
+   *   <li>If you want wildcard types to compare equal if they have the same bounds. {@code
+   *       Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
    * </ul>
    */
   public static Equivalence<TypeMirror> equivalence() {
@@ -347,10 +348,10 @@ public final class MoreTypes {
 
   /**
    * Returns the type of the innermost enclosing instance, or null if there is none. This is the
-   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than
-   * NoType for a static type. We need this because of
-   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby
-   * the Eclipse compiler returns a value for static classes that is not NoType.
+   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than NoType
+   * for a static type. We need this because of <a
+   * href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby the Eclipse
+   * compiler returns a value for static classes that is not NoType.
    */
   private static @Nullable TypeMirror enclosingType(DeclaredType t) {
     TypeMirror enclosing = t.getEnclosingType();
@@ -836,42 +837,121 @@ public final class MoreTypes {
   }
 
   /**
-   * Returns true if the raw type underlying the given {@link TypeMirror} represents the same raw
-   * type as the given {@link Class} and throws an IllegalArgumentException if the {@link
-   * TypeMirror} does not represent a type that can be referenced by a {@link Class}
+   * Returns {@code true} iff the raw type underlying the given {@link Class} represents the raw
+   * type of the given {@link TypeMirror} and throws an {@link IllegalArgumentException} if the
+   * {@link TypeMirror} does not represent a type that can be referenced by a {@link Class}.
+   *
+   * <p>Note: The representation need not be exact. For example, {@linkplain java.util.ArrayList}
+   * represents {@linkplain List}.
    */
   public static boolean isTypeOf(final Class<?> clazz, TypeMirror type) {
-    checkNotNull(clazz);
-    return type.accept(new IsTypeOf(clazz), null);
+    return type.accept(new isTypeOf(clazz), null);
   }
 
-  private static final class IsTypeOf extends SimpleTypeVisitor8<Boolean, Void> {
+  private static final class isTypeOf extends SimpleTypeVisitor8<Boolean, Void> {
     private final Class<?> clazz;
 
-    IsTypeOf(Class<?> clazz) {
-      this.clazz = clazz;
+    isTypeOf(Class<?> clazz) {
+      this.clazz = Preconditions.checkNotNull(clazz);
     }
 
     @Override
-    protected Boolean defaultAction(TypeMirror type, Void ignored) {
-      throw new IllegalArgumentException(type + " cannot be represented as a Class<?>.");
+    protected Boolean defaultAction(TypeMirror type, Void ignore) {
+      return isExactTypeOf(clazz, type);
     }
 
     @Override
-    public Boolean visitNoType(NoType noType, Void p) {
-      if (noType.getKind().equals(TypeKind.VOID)) {
-        return clazz.equals(Void.TYPE);
+    public Boolean visitArray(ArrayType array, Void ignore) {
+      return clazz.isArray() && isTypeOf(clazz.getComponentType(), array.getComponentType());
+    }
+
+    @Override
+    public Boolean visitDeclared(DeclaredType type, Void ignore) {
+      return isDeclaredTypeOf(clazz, type);
+    }
+
+    @Override
+    public Boolean visitTypeVariable(TypeVariable type, Void ignore) {
+      TypeMirror upperBoundType = type.getUpperBound();
+      if (upperBoundType.getKind() != TypeKind.INTERSECTION) {
+        return isTypeOf(clazz, upperBoundType);
       }
-      throw new IllegalArgumentException(noType + " cannot be represented as a Class<?>.");
-    }
 
-    @Override
-    public Boolean visitError(ErrorType errorType, Void p) {
+      for (TypeMirror UBType : ((IntersectionType) upperBoundType).getBounds()) {
+        if (isTypeOf(clazz, UBType)) {
+          return true;
+        }
+      }
+
       return false;
     }
 
     @Override
-    public Boolean visitPrimitive(PrimitiveType type, Void p) {
+    public Boolean visitWildcard(WildcardType type, Void ignore) {
+      TypeMirror upperBoundType = type.getExtendsBound();
+      return upperBoundType == null || isTypeOf(clazz, upperBoundType);
+    }
+  }
+
+  private static boolean isDeclaredTypeOf(final Class<?> clazz, DeclaredType declaredType) {
+    if (isExactTypeOf(clazz, declaredType)) {
+      return true;
+    }
+
+    TypeElement typeElement = MoreElements.asType(declaredType.asElement());
+
+    for (TypeMirror i : typeElement.getInterfaces()) {
+      if (isDeclaredTypeOf(clazz, MoreTypes.asDeclared(i))) {
+        return true;
+      }
+    }
+
+    /* For interfaces (including annotation types),
+     * and java.lang.Object, TypeElement#getSuperclass() returns
+     * NoType with the NONE kind.
+     */
+    TypeMirror superClassType = typeElement.getSuperclass();
+    return (superClassType.getKind() != TypeKind.NONE)
+        && isDeclaredTypeOf(clazz, MoreTypes.asDeclared(superClassType));
+  }
+
+  /**
+   * Returns {@code true} iff the raw type underlying the given {@link TypeMirror} represents the
+   * same raw type as the given {@link Class} and throws an {@link IllegalArgumentException} if the
+   * {@link TypeMirror} does not represent a type that can be referenced by a {@link Class}
+   */
+  public static boolean isExactTypeOf(final Class<?> clazz, TypeMirror type) {
+    return type.accept(new isExactTypeOf(clazz), null);
+  }
+
+  private static final class isExactTypeOf extends SimpleTypeVisitor8<Boolean, Void> {
+    private final Class<?> clazz;
+
+    isExactTypeOf(Class<?> clazz) {
+      this.clazz = Preconditions.checkNotNull(clazz);
+    }
+
+    @Override
+    protected Boolean defaultAction(TypeMirror type, Void ignore) {
+      throw new IllegalArgumentException(type + " cannot be represented as a Class<?>.");
+    }
+
+    @Override
+    public Boolean visitNoType(NoType noType, Void ignore) {
+      if (noType.getKind() == TypeKind.VOID) {
+        return clazz.equals(Void.TYPE);
+      }
+
+      throw new IllegalArgumentException(noType + " cannot be represented as a Class<?>.");
+    }
+
+    @Override
+    public Boolean visitError(ErrorType errorType, Void ignore) {
+      return false;
+    }
+
+    @Override
+    public Boolean visitPrimitive(PrimitiveType type, Void ignore) {
       switch (type.getKind()) {
         case BOOLEAN:
           return clazz.equals(Boolean.TYPE);
@@ -895,12 +975,12 @@ public final class MoreTypes {
     }
 
     @Override
-    public Boolean visitArray(ArrayType array, Void p) {
-      return clazz.isArray() && isTypeOf(clazz.getComponentType(), array.getComponentType());
+    public Boolean visitArray(ArrayType array, Void ignore) {
+      return clazz.isArray() && isExactTypeOf(clazz.getComponentType(), array.getComponentType());
     }
 
     @Override
-    public Boolean visitDeclared(DeclaredType type, Void ignored) {
+    public Boolean visitDeclared(DeclaredType type, Void ignore) {
       TypeElement typeElement = MoreElements.asType(type.asElement());
       return typeElement.getQualifiedName().contentEquals(clazz.getCanonicalName());
     }
@@ -946,8 +1026,8 @@ public final class MoreTypes {
   /**
    * Resolves a {@link VariableElement} parameter to a method or constructor based on the given
    * container, or a member of a class. For parameters to a method or constructor, the variable's
-   * enclosing element must be a supertype of the container type. For example, given a
-   * {@code container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
+   * enclosing element must be a supertype of the container type. For example, given a {@code
+   * container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
    * parameter in the {@code Set.add(E e)} method, this will return a TypeMirror for {@code String}.
    */
   public static TypeMirror asMemberOf(
