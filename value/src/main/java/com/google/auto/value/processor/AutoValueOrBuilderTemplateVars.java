@@ -124,15 +124,14 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
 
   /**
    * True if the generated builder should have a second constructor with a parameter of the built
-   * class. The constructor produces a new builder that starts off with the values from the
+   * type. The constructor produces a new builder that starts off with the values from the
    * parameter.
    */
   Boolean toBuilderConstructor;
 
   /**
    * Any {@code toBuilder()} methods, that is methods that return the builder type. AutoBuilder does
-   * not currently support this, but it's included in these shared variables to simplify the
-   * template.
+   * not support this, but it's included in these shared variables to simplify the template.
    */
   ImmutableList<SimpleMethod> toBuilderMethods;
 

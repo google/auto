@@ -280,8 +280,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     /**
      * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
      * or {@code @AutoBuilder} class. For property {@code foo}, this will be {@code foo} or {@code
-     * getFoo} or {@code isFoo}. For AutoValue, this will also be the name of a getter method in a
-     * builder; in the case of AutoBuilder it will only be that and may be null.
+     * getFoo} or {@code isFoo}. For AutoBuilder, the getter in question is the one that will be
+     * called on the built type to derive the value of the property, in the copy constructor.
      */
     public String getGetter() {
       return getter;

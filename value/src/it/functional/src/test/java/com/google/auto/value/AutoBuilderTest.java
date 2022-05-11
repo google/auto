@@ -210,8 +210,11 @@ public final class AutoBuilderTest {
   @AutoBuilder(ofClass = MyAnnotation.class)
   public interface MyAnnotationSimpleBuilder {
     MyAnnotationSimpleBuilder value(String x);
+
     MyAnnotationSimpleBuilder id(int x);
+
     MyAnnotationSimpleBuilder truthiness(Truthiness x);
+
     MyAnnotation build();
   }
 
@@ -248,7 +251,9 @@ public final class AutoBuilderTest {
   @AutoBuilder(ofClass = MyAnnotation.class)
   public interface MyAnnotationSimplerBuilder {
     MyAnnotationSimplerBuilder value(String x);
+
     MyAnnotationSimplerBuilder id(int x);
+
     MyAnnotation build();
   }
 
@@ -664,5 +669,48 @@ public final class AutoBuilderTest {
     builder.setFirst(1.0);
     assertThat(builder.getFirst()).isEqualTo(1.0);
     assertThat(builder.build()).containsExactly(1.0, 2).inOrder();
+  }
+
+  static class NumberHolder<T extends Number> {
+    private final T number;
+
+    NumberHolder(T number) {
+      this.number = number;
+    }
+
+    T getNumber() {
+      return number;
+    }
+  }
+
+  static <T extends Number> NumberHolder<T> buildNumberHolder(T number) {
+    return new NumberHolder<>(number);
+  }
+
+  @AutoBuilder(callMethod = "buildNumberHolder")
+  interface NumberHolderBuilder<T extends Number> {
+    NumberHolderBuilder<T> setNumber(T number);
+
+    NumberHolder<T> build();
+  }
+
+  static <T extends Number> NumberHolderBuilder<T> numberHolderBuilder() {
+    return new AutoBuilder_AutoBuilderTest_NumberHolderBuilder<>();
+  }
+
+  static <T extends Number> NumberHolderBuilder<T> numberHolderBuilder(
+      NumberHolder<T> numberHolder) {
+    return new AutoBuilder_AutoBuilderTest_NumberHolderBuilder<>(numberHolder);
+  }
+
+  @Test
+  public void builderFromInstance() {
+    NumberHolder<Integer> instance1 =
+        AutoBuilderTest.<Integer>numberHolderBuilder().setNumber(23).build();
+    assertThat(instance1.getNumber()).isEqualTo(23);
+    NumberHolder<Integer> instance2 = numberHolderBuilder(instance1).build();
+    assertThat(instance2.getNumber()).isEqualTo(23);
+    NumberHolder<Integer> instance3 = numberHolderBuilder(instance2).setNumber(17).build();
+    assertThat(instance3.getNumber()).isEqualTo(17);
   }
 }

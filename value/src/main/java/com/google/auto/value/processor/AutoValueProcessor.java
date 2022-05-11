@@ -492,7 +492,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     if (Collections.disjoint(a, b)) {
       return a;
     } else {
-      return ImmutableSet.copyOf(difference(a, b));
+      return difference(a, b).immutableCopy();
     }
   }
 }

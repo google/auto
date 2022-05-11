@@ -60,7 +60,8 @@ class ${builderName}${builderFormalTypes} ##
 
 #if ($toBuilderConstructor)
 
-  private ${builderName}(${origClass}${actualTypes} source) {
+  #if (!$autoBuilder) private #end##
+  ${builderName}($builtType source) {
 
   #foreach ($p in $props)
 
@@ -128,13 +129,13 @@ class ${builderName}${builderFormalTypes} ##
     if (${propertyBuilder.name} == null) {
 
       ## This is the first time someone has asked for the builder. If the property it sets already
-      ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
-      ## there is also a setter for this property) then we copy that value into the builder.
+      ## has a value (because it came from the copy constructor, or because there is also a setter
+      ## for this property) then we copy that value into the builder.
       ## Otherwise the builder starts out empty.
       ## If we have neither a setter nor a toBuilder() method, then the builder always starts
       ## off empty.
 
-      #if ($builderSetters[$p.name].empty && $toBuilderMethods.empty)
+      #if ($builderSetters[$p.name].empty && !$toBuilderConstructor)
 
       ${propertyBuilder.name} = ${propertyBuilder.initializer};
       $builderRequiredProperties.markAsSet($p)
@@ -179,23 +180,24 @@ class ${builderName}${builderFormalTypes} ##
 
   ## Getter
 
-  #if ($builderGetters[$p.name])
+  #set ($builderGetter = $builderGetters[$p.name])
+  #if ($builderGetter)
 
   @`java.lang.Override`
-  ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
+  ${p.nullableAnnotation}${builderGetter.access}$builderGetter.type ${builderGetter.name}() {
     #set ($noValueToGetCondition = $builderRequiredProperties.noValueToGet($p))
 
     #if ($builderGetters[$p.name].optional)
       #if ($noValueToGetCondition)
     if ($noValueToGetCondition) {
-      return $builderGetters[$p.name].optional.empty;
+      return $builderGetter.optional.empty;
     }
       #elseif ($p.nullable)
     if ($p == null) {
-      return $builderGetters[$p.name].optional.empty;
+      return $builderGetter.optional.empty;
     }
       #end
-    return ${builderGetters[$p.name].optional.rawType}.of($p);
+    return ${builderGetter.optional.rawType}.of($p);
 
     #else
       #if ($noValueToGetCondition)

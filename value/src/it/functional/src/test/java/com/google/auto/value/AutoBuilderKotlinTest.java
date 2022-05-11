@@ -117,6 +117,13 @@ public final class AutoBuilderKotlinTest {
     assertThat(x.getAnImmutableList()).containsExactly("foo");
     assertThat(x.getAString()).isEqualTo("skidoo");
     assertThat(x.getNotDefaulted()).isEqualTo(100L);
+    KotlinDataWithDefaults copy =
+        new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithDefaultsBuilder(x).build();
+    assertThat(copy).isEqualTo(x);
+    assertThat(copy).isNotSameInstanceAs(x);
+    KotlinDataWithDefaults modified =
+        new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithDefaultsBuilder(x).setAnInt(17).build();
+    assertThat(modified.getAnInt()).isEqualTo(17);
   }
 
   @Test

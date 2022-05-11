@@ -390,8 +390,7 @@ class BuilderSpec {
       this.optional = optional;
     }
 
-    // Not accessed from templates so doesn't have to be public.
-    String getName() {
+    public String getName() {
       return name;
     }
 

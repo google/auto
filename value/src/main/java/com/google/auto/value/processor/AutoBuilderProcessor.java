@@ -37,13 +37,11 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
-import com.google.auto.value.processor.BuilderSpec.PropertyGetter;
 import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -56,6 +54,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -203,8 +202,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       return;
     }
     BuilderMethodClassifier<VariableElement> classifier = maybeClassifier.get();
-    Map<String, String> propertyToGetterName =
-        Maps.transformValues(classifier.builderGetters(), PropertyGetter::getName);
+    ImmutableMap<String, String> propertyToGetterName =
+        propertyToGetterName(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
     vars.props = propertySet(executable, propertyToGetterName, propertyInitializers);
     builder.defineVars(vars, classifier);
@@ -217,7 +216,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         forwardingClassName
             .map(n -> TypeSimplifier.simpleNameOf(n) + ".of")
             .orElseGet(executable::invoke);
-    vars.toBuilderConstructor = false;
+    vars.toBuilderConstructor = !propertyToGetterName.isEmpty();
     vars.toBuilderMethods = ImmutableList.of();
     defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), vars);
     String text = vars.toText();
@@ -348,6 +347,72 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       }
     }
     return builder.build();
+  }
+
+  /**
+   * Returns a map from property names to the corresponding getters in the built type. The built
+   * type is the return type of the given {@code executable}, and the property names are the names
+   * of its parameters. If the return type is a {@link DeclaredType} {@code Foo} and if every
+   * property name {@code bar} matches a method {@code bar()} or {@code getBar()} in {@code Foo},
+   * then the method returns a map where {@code bar} maps to {@code bar} or {@code getBar}. If these
+   * conditions are not met then the method returns an empty map.
+   *
+   * <p>The method name match is case-insensitive, so we will also accept {@code baR()} or {@code
+   * getbar()}. For a property of type {@code boolean}, we also accept {@code isBar()} (or {@code
+   * isbar()} etc).
+   *
+   * <p>The return type of each getter method must match the type of the corresponding parameter
+   * exactly. This will always be true for our principal use cases, Java records and Kotlin data
+   * classes. For other use cases, we may in the future accept getters where we know how to convert,
+   * for example if the getter has type {@code ImmutableList<Baz>} and the parameter has type
+   * {@code Baz[]}. We already have similar logic for the parameter types of builder setters.
+   */
+  private ImmutableMap<String, String> propertyToGetterName(
+      Executable executable, TypeElement autoBuilderType) {
+    TypeMirror builtType = executable.builtType();
+    if (builtType.getKind() != TypeKind.DECLARED) {
+      return ImmutableMap.of();
+    }
+    TypeElement type = MoreTypes.asTypeElement(builtType);
+    Map<String, ExecutableElement> noArgInstanceMethods =
+        MoreElements.getLocalAndInheritedMethods(type, typeUtils(), elementUtils()).stream()
+            .filter(m -> m.getParameters().isEmpty())
+            .filter(m -> !m.getModifiers().contains(Modifier.STATIC))
+            .filter(m -> visibleFrom(autoBuilderType, getPackage(autoBuilderType)))
+            .collect(
+                toMap(
+                    m -> m.getSimpleName().toString(),
+                    m -> m,
+                    (a, b) -> a,
+                    () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)));
+    ImmutableMap<String, String> propertyToGetterName =
+        executable.parameters().stream()
+            .map(
+                param -> {
+                  String name = param.getSimpleName().toString();
+                  // Parameter name is `bar`; we look for `bar()` and `getBar()` (or `getbar()` etc)
+                  // in that order. If `bar` is boolean we also look for `isBar()`.
+                  ExecutableElement getter = noArgInstanceMethods.get(name);
+                  if (getter == null) {
+                    getter = noArgInstanceMethods.get("get" + name);
+                    if (getter == null && param.asType().getKind() == TypeKind.BOOLEAN) {
+                      getter = noArgInstanceMethods.get("is" + name);
+                    }
+                  }
+                  if (getter != null
+                      && !MoreTypes.equivalence()
+                          .equivalent(getter.getReturnType(), param.asType())) {
+                    getter = null;
+                  }
+                  return new SimpleEntry<>(name, getter);
+                })
+            .filter(entry -> entry.getValue() != null)
+            .collect(
+                toImmutableMap(
+                    Map.Entry::getKey, entry -> entry.getValue().getSimpleName().toString()));
+    return (propertyToGetterName.size() == executable.parameters().size())
+        ? propertyToGetterName
+        : ImmutableMap.of();
   }
 
   private Executable findExecutable(
