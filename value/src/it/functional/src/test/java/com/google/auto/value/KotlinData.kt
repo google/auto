@@ -39,3 +39,10 @@ data class KotlinDataEightDefaults(
   val a7: Int = 7,
   val a8: Int = 8,
 )
+
+data class KotlinDataSomeDefaults(
+  val requiredInt: Int,
+  val requiredString: String,
+  val optionalInt: Int = 23,
+  val optionalString: String = "Skidoo"
+)

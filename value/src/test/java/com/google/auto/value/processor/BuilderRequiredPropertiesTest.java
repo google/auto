@@ -84,9 +84,9 @@ public final class BuilderRequiredPropertiesTest {
   public void initToAllSet() {
     assertThat(initToAllSet(0)).isEmpty();
     assertThat(initToAllSet(1)).containsExactly("set$0 = (byte) 1;");
-    assertThat(initToAllSet(8)).containsExactly("set$0 = (byte) -1;");
+    assertThat(initToAllSet(8)).containsExactly("set$0 = (byte) 0xff;");
     assertThat(initToAllSet(9)).containsExactly("set$0 = (short) 0x1ff;");
-    assertThat(initToAllSet(16)).containsExactly("set$0 = (short) -1;");
+    assertThat(initToAllSet(16)).containsExactly("set$0 = (short) 0xffff;");
     assertThat(initToAllSet(17)).containsExactly("set$0 = 0x1_ffff;");
     assertThat(initToAllSet(31)).containsExactly("set$0 = 0x7fff_ffff;");
     assertThat(initToAllSet(32)).containsExactly("set$0 = -1;");
@@ -95,7 +95,7 @@ public final class BuilderRequiredPropertiesTest {
     assertThat(initToAllSet(64)).containsExactly("set$0 = -1;", "set$1 = -1;");
     assertThat(initToAllSet(144))
         .containsExactly(
-            "set$0 = -1;", "set$1 = -1;", "set$2 = -1;", "set$3 = -1;", "set$4 = (short) -1;");
+            "set$0 = -1;", "set$1 = -1;", "set$2 = -1;", "set$3 = -1;", "set$4 = (short) 0xffff;");
   }
 
   private ImmutableList<String> initToAllSet(int size) {

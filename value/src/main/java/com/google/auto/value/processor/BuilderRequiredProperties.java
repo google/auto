@@ -65,9 +65,8 @@ public abstract class BuilderRequiredProperties {
   // special Kotlin constructor that handles default parameters. Kotlin uses bitmasks for that too:
   // they have one bit per parameter, optional or not, but only the bits for optional parameters
   // matter. We isolate those bits with `&` operations similar to what was described for primitive
-  // properties.  We also need the all-ones bitmask to implement a toBuilder() builder, which starts
-  // out with all properties set. That's currently an AutoValue-only feature, so we don't need to
-  // worry about Kotlin optional parameters there (yet).
+  // properties.  We also need the all-ones bitmask to implement a "copy constructor" builder, which
+  // starts out with all properties set.
 
   /** All required properties. */
   final ImmutableSet<Property> requiredProperties;
@@ -103,15 +102,23 @@ public abstract class BuilderRequiredProperties {
   private static class BitmaskField {
     final Class<?> type;
     final String name;
+
+    /**
+     * The source representation of the value this field has when all properties have been given a
+     * value.
+     */
+    final String allSetBitmask;
+
     /**
      * The source representation of the value this field has when all required properties have been
      * given a value.
      */
     final String allRequiredBitmask;
 
-    BitmaskField(Class<?> type, String name, String allRequiredBitmask) {
+    BitmaskField(Class<?> type, String name, String allSetBitmask, String allRequiredBitmask) {
       this.type = type;
       this.name = name;
+      this.allSetBitmask = allSetBitmask;
       this.allRequiredBitmask = allRequiredBitmask;
     }
   }
@@ -142,9 +149,11 @@ public abstract class BuilderRequiredProperties {
                   int remainingBits = trackedCount - bitBase;
                   Class<?> type = classForBits(remainingBits);
                   String name = "set$" + i;
+                  String allSetBitmask =
+                      (remainingBits >= 32) ? "-1" : hex((1 << remainingBits) - 1);
                   String allRequiredBitmask =
                       allRequiredBitmask(trackedProperties, bitBase, remainingBits);
-                  return new BitmaskField(type, name, allRequiredBitmask);
+                  return new BitmaskField(type, name, allSetBitmask, allRequiredBitmask);
                 })
             .collect(toImmutableList());
   }
@@ -173,7 +182,7 @@ public abstract class BuilderRequiredProperties {
    */
   public ImmutableList<String> getInitToAllSet() {
     return bitmaskFields.stream()
-        .map(field -> field.name + " = " + cast(field.type, field.allRequiredBitmask) + ";")
+        .map(field -> field.name + " = " + cast(field.type, field.allSetBitmask) + ";")
         .collect(toImmutableList());
   }
 

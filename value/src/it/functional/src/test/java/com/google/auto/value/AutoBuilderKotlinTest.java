@@ -187,4 +187,57 @@ public final class AutoBuilderKotlinTest {
     assertThat(noneDefaulted.getA1()).isEqualTo(-1);
     assertThat(noneDefaulted.getA8()).isEqualTo(-8);
   }
+
+  @AutoBuilder(ofClass = KotlinDataSomeDefaults.class)
+  interface KotlinDataSomeDefaultsBuilder {
+    static KotlinDataSomeDefaultsBuilder builder() {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataSomeDefaultsBuilder();
+    }
+
+    static KotlinDataSomeDefaultsBuilder fromInstance(KotlinDataSomeDefaults instance) {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataSomeDefaultsBuilder(instance);
+    }
+
+    KotlinDataSomeDefaultsBuilder requiredInt(int x);
+
+    KotlinDataSomeDefaultsBuilder requiredString(String x);
+
+    KotlinDataSomeDefaultsBuilder optionalInt(int x);
+
+    KotlinDataSomeDefaultsBuilder optionalString(String x);
+
+    KotlinDataSomeDefaults build();
+  }
+
+  @Test
+  public void kotlinSomeDefaults_someDefaulted() {
+    KotlinDataSomeDefaults someDefaulted =
+        KotlinDataSomeDefaultsBuilder.builder().requiredInt(12).requiredString("Monkeys").build();
+    assertThat(someDefaulted.getOptionalInt()).isEqualTo(23);
+    assertThat(someDefaulted.getOptionalString()).isEqualTo("Skidoo");
+    assertThat(KotlinDataSomeDefaultsBuilder.fromInstance(someDefaulted).build())
+        .isEqualTo(someDefaulted);
+  }
+
+  @Test
+  public void kotlinSomeDefaults_noneDefaulted() {
+    KotlinDataSomeDefaults noneDefaulted =
+        KotlinDataSomeDefaultsBuilder.builder()
+            .requiredInt(12)
+            .requiredString("Monkeys")
+            .optionalInt(3)
+            .optionalString("Oranges")
+            .build();
+    KotlinDataSomeDefaults copy = KotlinDataSomeDefaultsBuilder.fromInstance(noneDefaulted).build();
+    assertThat(copy).isEqualTo(noneDefaulted);
+  }
+
+  @Test
+  public void kotlinSomeDefaults_missingRequired() {
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class, () -> KotlinDataSomeDefaultsBuilder.builder().build());
+    assertThat(e).hasMessageThat().contains("requiredInt");
+    assertThat(e).hasMessageThat().contains("requiredString");
+  }
 }
