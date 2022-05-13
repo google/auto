@@ -51,7 +51,7 @@ and likewise with `setId`.
 There is also a `build()` method. Calling that method invokes the `Person`
 constructor with the parameters that were previously set.
 
-## Example: calling a Kotlin constructor
+## <a name="kotlin"></a> Example: calling a Kotlin constructor
 
 Kotlin has named arguments and default arguments for constructors and functions,
 which means there is not much need for anything like AutoBuilder there. But if
@@ -100,6 +100,8 @@ class KotlinData(val int: Int, val string: String?, val id: Long = -1L) {
     fun build(): KotlinData
   }
 
+  fun toBuilder(): Builder = AutoBuilder_KotlinData_Builder(this)
+
   companion object {
     @JvmStatic fun builder(): Builder = AutoBuilder_KotlinData_Builder()
   }
@@ -112,6 +114,10 @@ but both are possible. Java code would then construct instances like this:
 ```
   KotlinData k = KotlinData.builder().setInt(23).build();
 ```
+
+The example also implements a `toBuilder()` method to get a builder that starts
+out with values from the given instance. See [below](#to_builder) for more
+details on that.
 
 ## The generated subclass
 
@@ -226,6 +232,44 @@ public class LogUtil {
     Caller setParams(Object... params);
     void call(); // calls: LogUtil.log(severity, message, params)
   }
+```
+
+## <a name="to_builder"></a> Making a builder from a built instance
+
+It is not always possible to map back from the result of a constructor or method
+call to a builder that might have produced it. But in one important case, it
+*is* possible. That's when every parameter in the constructor or method
+corresponds to a "getter method" in the built type. This will always be true
+when building a Java record or a Kotlin data class (provided its getters are
+visible to the builder). In this case, the generated builder class will have a
+second constructor that takes an object of the built type as a parameter and
+produces a builder that starts out with values from that object. That can then
+be used to produce a new object that may differ from the first one in just one
+or two properties. (This is very similar to AutoValue's
+[`toBuilder()`](builders-howto.md#to_builder) feature.)
+
+If the constructor or method has a parameter `String bar` then the built type
+must have a visible method `String bar()` or `String getBar()`. (Java records
+have the first and Kotlin data classes have the second.) If there is a
+similar corresponding method for every parameter then the second constructor is
+generated.
+
+If you are able to change the built type, the most convenient way to use this is
+to add a `toBuilder()` instance method that calls `new AutoBuilder_Foo(this)`.
+We saw this in the [Kotlin example](#kotlin) earlier. Otherwise, you can have
+a second static `builder` method, like this:
+
+```
+@AutoBuilder(ofClass = Person.class)
+abstract class PersonBuilder {
+  static PersonBuilder personBuilder() {
+    return new AutoBuilder_PersonBuilder();
+  }
+  static PersonBuilder personBuilder(Person person) {
+    return new AutoBuilder_PersonBuilder(person);
+  }
+  ...
+}
 ```
 
 ## Overloaded constructors or methods
@@ -444,11 +488,6 @@ because they are the same as for `@AutoValue.Builder`. They include:
 
 *   [Special treatment of collections](builders-howto.md#collection)
 *   [Handling of nested builders](builders-howto.md#nested_builders)
-
-There is currently no equivalent of AutoValue's
-[`toBuilder()`](builders-howto.md#to_builder). Unlike AutoValue, there is not
-generally a mapping back from the result of the constructor or method to its
-parameters.
 
 ## When parameter names are unavailable
 
