@@ -146,11 +146,6 @@
         <artifactId>junit</artifactId>
         <version>4.13.2</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.velocity</groupId>
-        <artifactId>velocity</artifactId>
-        <version>1.7</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
