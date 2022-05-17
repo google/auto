@@ -315,6 +315,53 @@ public final class AutoBuilderCompilationTest {
   }
 
   @Test
+  public void autoBuilderMissingBuildMethod() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Baz {",
+            "  private final int anInt;",
+            "  private final String aString;",
+            "",
+            "  public Baz(int anInt, String aString) {",
+            "    this.anInt = anInt;",
+            "    this.aString = aString;",
+            "  }",
+            "",
+            "  public int anInt() {",
+            "    return anInt;",
+            "  }",
+            "",
+            "  public String aString() {",
+            "    return aString;",
+            "  }",
+            "",
+            "  public static Builder builder() {",
+            "    return new AutoBuilder_Baz_Builder();",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Builder setAnInt(int x);",
+            "    Builder setAString(String x);",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoValueBuilderBuild] Builder must have a single no-argument method, typically"
+                + " called build(), that returns foo.bar.Baz")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Builder");
+  }
+
+  @Test
   public void autoBuilderNestedInPrivate() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(

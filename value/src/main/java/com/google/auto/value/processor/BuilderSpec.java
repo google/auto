@@ -327,6 +327,7 @@ class BuilderSpec {
               autoValueClass,
               typeParamsString());
         }
+        errorReporter.abortIfAnyError();
         return;
       }
       this.buildMethod = Iterables.getOnlyElement(buildMethods);
