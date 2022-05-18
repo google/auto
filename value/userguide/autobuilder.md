@@ -17,7 +17,7 @@ method. Apart from that, the two are very similar.
 
 Here is a simple example:
 
-```
+```java
 @AutoBuilder(ofClass = Person.class)
 abstract class PersonBuilder {
   static PersonBuilder personBuilder() {
@@ -32,13 +32,13 @@ abstract class PersonBuilder {
 
 It might be used like this:
 
-```
+```java
 Person p = PersonBuilder.personBuilder().setName("Priz").setId(6).build();
 ```
 
 That would have the same effect as this:
 
-```
+```java
 Person p = new Person("Priz", 6);
 ```
 
@@ -60,13 +60,13 @@ AutoBuilder can help.
 
 Given this trivial Kotlin data class:
 
-```
+```kotlin
 class KotlinData(val int: Int, val string: String?, val id: Long = -1L)
 ```
 
 You might make a builder for it like this:
 
-```
+```java
 @AutoBuilder(ofClass = KotlinData.class)
 public abstract class KotlinDataBuilder {
   public static KotlinDataBuilder kotlinDataBuilder() {
@@ -90,7 +90,7 @@ not called then the `id` field of the built `KotlinData` will be `-1L`.
 If you are using [kapt](https://kotlinlang.org/docs/kapt.html) then you can also
 define the builder in the data class itself:
 
-```
+```kotlin
 class KotlinData(val int: Int, val string: String?, val id: Long = -1L) {
   @AutoBuilder // we don't need ofClass: by default it is the containing class
   interface Builder {
@@ -111,8 +111,8 @@ class KotlinData(val int: Int, val string: String?, val id: Long = -1L) {
 This example uses an interface rather than an abstract class for the builder,
 but both are possible. Java code would then construct instances like this:
 
-```
-  KotlinData k = KotlinData.builder().setInt(23).build();
+```java
+KotlinData k = KotlinData.builder().setInt(23).build();
 ```
 
 The example also implements a `toBuilder()` method to get a builder that starts
@@ -130,7 +130,7 @@ will typically be the only reference to the generated class.
 If the `@AutoBuilder` type is nested then the name of the generated class
 reflects that nesting. For example:
 
-```
+```java
 class Outer {
   static class Inner {
     @AutoBuilder
@@ -159,7 +159,7 @@ it is nested then it must be static.
 
 ### Both `callMethod` and `ofClass`
 
-```
+```java
 @AutoBuilder(callMethod = "of", ofClass = LocalTime.class)
 interface LocalTimeBuilder {
   ...
@@ -169,7 +169,7 @@ interface LocalTimeBuilder {
 
 ### Only `ofClass`
 
-```
+```java
 @AutoBuilder(ofClass = Thread.class)
 interface ThreadBuilder {
   ...
@@ -179,7 +179,7 @@ interface ThreadBuilder {
 
 ### Only `callMethod`
 
-```
+```java
 class Foo {
   static String concat(String first, String middle, String last) {...}
 
@@ -196,7 +196,7 @@ Notice in this example that the static method returns `String`. The implicit
 
 ### Neither `callMethod` nor `ofClass`
 
-```
+```java
 class Person {
   Person(String name, int id) {...}
 
@@ -221,7 +221,7 @@ the return type just described and that does not correspond to a parameter name.
 The following example uses the name `call()` since that more accurately reflects
 what it does:
 
-```
+```java
 public class LogUtil {
   public static void log(Level severity, String message, Object... params) {...}
 
@@ -259,7 +259,7 @@ to add a `toBuilder()` instance method that calls `new AutoBuilder_Foo(this)`.
 We saw this in the [Kotlin example](#kotlin) earlier. Otherwise, you can have
 a second static `builder` method, like this:
 
-```
+```java
 @AutoBuilder(ofClass = Person.class)
 abstract class PersonBuilder {
   static PersonBuilder personBuilder() {
@@ -286,7 +286,7 @@ one such method or constructor.
 If the builder calls the constructor of a generic type, then it must have the
 same type parameters as that type, as in this example:
 
-```
+```java
 class NumberPair<T extends Number> {
   NumberPair(T first, T second) {...}
 
@@ -302,7 +302,7 @@ class NumberPair<T extends Number> {
 If the builder calls a static method with type parameters, then it must have the
 same type parameters, as in this example:
 
-```
+```java
 class Utils {
   static <K extends Number, V> Map<K, V> singletonNumberMap(K key, V value) {...}
 
@@ -320,7 +320,7 @@ separately from any that its containing class might have. A builder that calls a
 constructor like that must have the type parameters of the class followed by the
 type parameters of the constructor:
 
-```
+```java
 class CheckedSet<E> implements Set<E> {
   <T extends E> CheckedSet(Class<T> type) {...}
 
@@ -343,7 +343,7 @@ will throw `IllegalStateException` if any are omitted.
 To establish default values for parameters, set them in the `builder()` method
 before returning the builder.
 
-```
+```java
 class Foo {
   Foo(String bar, @Nullable String baz, String buh) {...}
 
@@ -387,7 +387,7 @@ exception in the first case or return an empty `Optional` in the second.
 In this example, the `nickname` parameter defaults to the same value as the
 `name` parameter but can also be set to a different value:
 
-```
+```java
 public class Named {
   Named(String name, String nickname) {...}
 
@@ -442,7 +442,7 @@ If class `Foo` has a nested `@AutoBuilder` that builds instances of `Foo`, then
 conventionally that type is called `Builder`, and instances of it are obtained
 by calling a static `Foo.builder()` method:
 
-```
+```java
 Foo foo1 = Foo.builder().setBar(bar).setBaz(baz).build();
 Foo.Builder fooBuilder = Foo.builder();
 ```
@@ -452,7 +452,7 @@ typically be called `FooBuilder` and it will have a static `fooBuilder()` method
 that returns an instance of `FooBuilder`. That way callers can statically import
 `FooBuilder.fooBuilder` and just write `fooBuilder()` in their code.
 
-```
+```java
 @AutoBuilder(ofClass = Foo.class)
 public abstract class FooBuilder {
   public static FooBuilder fooBuilder() {
@@ -467,7 +467,7 @@ If an `@AutoBuilder` is designed to call a static method that is not a factory
 method, the word "call" is better than "build" in the name of the type
 (`FooCaller`), the static method (`fooCaller()`), and the "build" method (`call()`).
 
-```
+```java
 @AutoBuilder(callMethod = "log", ofClass = MyLogger.class)
 public abstract class LogCaller {
   public static LogCaller logCaller() {
@@ -513,7 +513,7 @@ are available.
 Here's an example of fixing a problem this way. The code here typically will not
 compile, since parameter names of JDK methods are not available:
 
-```
+```java
 import java.time.LocalTime;
 
 public class TimeUtils {
@@ -544,7 +544,7 @@ have the real names.
 
 Introducing a static method fixes the problem:
 
-```
+```java
 import java.time.LocalTime;
 
 public class TimeUtils {
