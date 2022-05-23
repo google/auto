@@ -104,3 +104,5 @@ exposing yourself to initialization-order problems.
 *   ... [create a "step builder"?](builders-howto.md#step)
 *   ... [create a builder for something other than an
     `@AutoValue`?](builders-howto.md#autobuilder)
+*   ... [use a different build method for a
+    property?](builders-howto.md#build_method)
