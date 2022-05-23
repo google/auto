@@ -251,13 +251,13 @@ non-[nullable](howto.md#nullable) property, `IllegalStateException` is thrown.
 Getters should generally only be used within the `Builder` as shown, so they are
 not public.
 
-As an alternative to returning the same type as the property accessor method,
-the builder getter can return an Optional wrapping of that type. This can be
-used if you want to supply a default, but only if the property has not been set.
-(The [usual way](#default) of supplying defaults means that the property always
-appears to have been set.) For example, suppose you wanted the default name of
-your Animal to be something like "4-legged creature", where 4 is the
-`numberOfLegs()` property. You might write this:
+<p id="optional-getter">As an alternative to returning the same type as the
+property accessor method, the builder getter can return an Optional wrapping of
+that type. This can be used if you want to supply a default, but only if the
+property has not been set. (The [usual way](#default) of supplying defaults
+means that the property always appears to have been set.) For example, suppose
+you wanted the default name of your Animal to be something like "4-legged
+creature", where 4 is the `numberOfLegs()` property. You might write this:
 
 ```java
 @AutoValue
