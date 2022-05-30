@@ -195,7 +195,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-invoker-plugin</artifactId>
-        <version>3.2.2</version>
+        <version>3.3.0</version>
         <configuration>
           <addTestClassPath>true</addTestClassPath>
           <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
