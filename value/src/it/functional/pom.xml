@@ -105,7 +105,7 @@
     <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>ecj</artifactId>
-      <version>3.25.0</version>
+      <version>3.30.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.escapevelocity</groupId>
