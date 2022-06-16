@@ -104,12 +104,6 @@
       <version>${truth.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.jdt</groupId>
-      <artifactId>ecj</artifactId>
-      <version>3.25.0</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -123,6 +117,7 @@
           <compilerArgument>-Xlint:all</compilerArgument>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
+          <testExcludes combine.children="append" />
         </configuration>
         <dependencies>
           <dependency>
@@ -139,4 +134,41 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>test-with-ecj</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <dependencies>
+        <!-- test dependencies -->
+        <dependency>
+          <groupId>org.eclipse.jdt</groupId>
+          <artifactId>ecj</artifactId>
+          <version>3.30.0</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>test-without-ecj</id>
+      <activation>
+        <jdk>(,11)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <testExcludes>
+                <exclude>**/OverridesTest.java</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

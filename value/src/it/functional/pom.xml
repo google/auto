@@ -33,7 +33,6 @@
   <name>Auto-Value Functional Integration Test</name>
   <properties>
     <kotlin.version>1.7.0</kotlin.version>
-    <exclude.tests>this-matches-nothing</exclude.tests>
   </properties>
   <dependencies>
     <dependency>
@@ -101,11 +100,6 @@
       <artifactId>mockito-core</artifactId>
       <version>4.6.1</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jdt</groupId>
-      <artifactId>ecj</artifactId>
-      <version>3.25.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.escapevelocity</groupId>
@@ -179,9 +173,7 @@
           </compilerArgs>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
-          <testExcludes>
-            <exclude>${exclude.tests}</exclude>
-          </testExcludes>
+          <testExcludes combine.children="append" />
         </configuration>
       </plugin>
       <plugin>
@@ -198,7 +190,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>${test.jvm.flags}</argLine>
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
           </systemPropertyVariables>
@@ -233,32 +224,84 @@
               </compilerArgs>
               <showWarnings>true</showWarnings>
               <showDeprecation>true</showDeprecation>
+              <testExcludes combine.children="append" />
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>test-with-ecj</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <dependencies>
+        <!-- test dependencies -->
+        <dependency>
+          <groupId>org.eclipse.jdt</groupId>
+          <artifactId>ecj</artifactId>
+          <version>3.30.0</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>test-without-ecj</id>
+      <activation>
+        <jdk>(,11)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
               <testExcludes>
-                <exclude>${exclude.tests}</exclude>
+                <exclude>**/CompileWithEclipseTest.java</exclude>
               </testExcludes>
             </configuration>
           </plugin>
         </plugins>
       </build>
     </profile>
+
     <profile>
       <id>exclude-java8-tests</id>
       <activation>
         <jdk>(,1.7]</jdk>
       </activation>
-      <properties>
-        <exclude.tests>**/AutoValueJava8Test.java</exclude.tests>
-      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <testExcludes>
+                <exclude>**/AutoValueJava8Test.java</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
+
     <profile>
       <id>open-modules</id>
       <activation>
         <jdk>[9,)</jdk>
       </activation>
-      <properties>
-        <test.jvm.flags>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</test.jvm.flags>
-      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
+
     <profile>
       <!-- Before JDK 11, parameter names from already-compiled classes are not reliably available
            to the compiler even when they are present in class files. Since our Kotlin test file
@@ -268,9 +311,18 @@
       <activation>
         <jdk>(,11)</jdk>
       </activation>
-      <properties>
-        <exclude.tests>**/AutoBuilderKotlinTest.java</exclude.tests>
-      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <testExcludes>
+                <exclude>**/AutoBuilderKotlinTest.java</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>
