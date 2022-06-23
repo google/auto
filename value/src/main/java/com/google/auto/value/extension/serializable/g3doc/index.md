@@ -98,4 +98,4 @@ un-serializable types with [SerializerExtensions].
 [`AutoValue`]: https://github.com/google/auto/tree/master/value
 [`SerializableAutoValue`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/SerializableAutoValue.java
 [`SerializableAutoValueExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/extension/SerializableAutoValueExtension.java
-[SerializerExtensions]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/userguide/serializer-extension.md
+[SerializerExtensions]: serializer-extension
