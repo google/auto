@@ -60,7 +60,7 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.gwt</groupId>
+      <groupId>org.gwtproject</groupId>
       <artifactId>gwt-user</artifactId>
       <version>2.10.0</version>
     </dependency>
