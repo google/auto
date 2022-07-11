@@ -34,8 +34,10 @@ import com.google.testing.compile.JavaFileObjects;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import javax.annotation.processing.Filer;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
@@ -106,6 +108,52 @@ public class BasicAnnotationProcessorTest {
             @Override
             public ImmutableSet<String> annotations() {
               return ImmutableSet.of(ENCLOSING_CLASS_NAME + ".AnAnnotation");
+            }
+          });
+    }
+
+    ImmutableList<ImmutableSetMultimap<String, Element>> processArguments() {
+      return processArguments.build();
+    }
+  }
+
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  public @interface OneMethodAtATime {}
+
+  private static class OneMethodAtATimeProcessor extends BaseAnnotationProcessor {
+
+    int rejectedRounds;
+    final ImmutableList.Builder<ImmutableSetMultimap<String, Element>> processArguments =
+        ImmutableList.builder();
+
+    @Override
+    protected Iterable<? extends Step> steps() {
+      return ImmutableSet.of(
+          new Step() {
+            @Override
+            public ImmutableSet<? extends Element> process(
+                ImmutableSetMultimap<String, Element> elementsByAnnotation) {
+              processArguments.add(ImmutableSetMultimap.copyOf(elementsByAnnotation));
+              int numberOfAnnotatedElements = elementsByAnnotation.values().size();
+              if (numberOfAnnotatedElements == 0) {
+                return ImmutableSet.of();
+              }
+
+              generateClass(
+                  processingEnv.getFiler(),
+                  "GeneratedByOneMethodAtATimeProcessor_"
+                      + elementsByAnnotation.values().iterator().next().getSimpleName());
+              if (numberOfAnnotatedElements > 1) {
+                rejectedRounds++;
+              }
+              return ImmutableSet.copyOf(
+                  elementsByAnnotation.values().asList().subList(1, numberOfAnnotatedElements));
+            }
+
+            @Override
+            public ImmutableSet<String> annotations() {
+              return ImmutableSet.of(ENCLOSING_CLASS_NAME + ".OneMethodAtATime");
             }
           });
     }
@@ -405,6 +453,42 @@ public class BasicAnnotationProcessorTest {
         (actual, expected) ->
             ImmutableSetMultimap.copyOf(transformValues(actual, Object::toString)).equals(expected),
         "is equivalent comparing multimap values by `toString()` to");
+  }
+
+  @Test
+  public void properlyDefersProcessing_rejectsExecutableElement() {
+    JavaFileObject classAFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassA",
+            "package test;",
+            "",
+            "public class ClassA {",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  public void method0() {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  public void method1() {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  public void method2() {}",
+            "}");
+    OneMethodAtATimeProcessor oneMethodAtATimeProcessor = new OneMethodAtATimeProcessor();
+    assertAbout(javaSources())
+        .that(ImmutableList.of(classAFileObject))
+        .processedWith(oneMethodAtATimeProcessor)
+        .compilesWithoutError();
+    assertThat(oneMethodAtATimeProcessor.rejectedRounds).isEqualTo(2);
+
+    assertThat(oneMethodAtATimeProcessor.processArguments())
+        .comparingElementsUsing(setMultimapValuesByString())
+        .containsExactly(
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "method0()",
+                OneMethodAtATime.class.getCanonicalName(), "method1()",
+                OneMethodAtATime.class.getCanonicalName(), "method2()"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "method1()",
+                OneMethodAtATime.class.getCanonicalName(), "method2()"),
+            ImmutableSetMultimap.of(OneMethodAtATime.class.getCanonicalName(), "method2()"))
+        .inOrder();
   }
 
   @Test
