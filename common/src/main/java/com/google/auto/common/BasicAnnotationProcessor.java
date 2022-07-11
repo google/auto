@@ -50,6 +50,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
@@ -241,7 +242,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
                 "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
             missingElement.get());
       } else {
-        messager.printMessage(ERROR, processingErrorMessage(missingElementName.name()));
+        messager.printMessage(ERROR, processingErrorMessage(missingElementName.getCanonicalName()));
       }
     }
   }
@@ -293,6 +294,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         boolean isValidElement =
             validElementNames.contains(elementName)
                 || (!deferredElementNames.contains(elementName)
+                    // For every element that is not module/package, to be well-informed its
+                    // enclosing-type in its entirety should be well-informed. Since modules
+                    // don't get annotated (and not supported here) they can be ignored.
                     && validateElement(
                         element.getKind().equals(PACKAGE) ? element : getEnclosingType(element)));
         if (isValidElement) {
@@ -359,7 +363,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       default: // do nothing
     }
     for (TypeElement annotationType : annotationTypes) {
-      if (isAnnotationPresent(element, annotationType)) {
+      if (MoreElements.isAnnotationPresent(element, annotationType)) {
         annotatedElements.put(annotationType, element);
       }
     }
@@ -506,73 +510,236 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /**
-   * A package or type name.
+   * An {@link ElementName} for an annotated element.
    *
-   * <p>It's unfortunate that we have to track types and packages separately, but since there are
+   * <p>Instead of saving elements, an {@code ElementName} is saved since
+   *
+   * <ol>
+   *   <li>There is no guarantee that any particular element will always be represented by the same
+   *       object. (Reference: {@link Element})
+   *   <li>Since an implementation may choose to have a single object implement multiple Element
+   *       sub-interfaces. (Reference: {@link Element})
+   *   <li>and possibly other issues (such as reconstruction of AST after each round, and direct
+   *       manipulations of AST by tools like lombok) may make the saved element reference
+   *       unreliable.
+   * </ol>
+   */
+  private abstract static class ElementName {
+
+    private ElementName() {}
+
+    /** An {@link ElementName} for an annotated element. */
+    static ElementName forAnnotatedElement(Element element) {
+      switch (element.getKind()) {
+        case PACKAGE:
+          return new PackageElementName(MoreElements.asPackage(element).getQualifiedName());
+        case CLASS:
+        case ENUM:
+        case INTERFACE:
+        case ANNOTATION_TYPE:
+          return new TypeElementName(MoreElements.asType(element).getQualifiedName());
+        case FIELD:
+        case ENUM_CONSTANT:
+        case CONSTRUCTOR:
+        case METHOD:
+          return new DirectlyEnclosedByTypeElementElementName(
+              element.getSimpleName(), getEnclosingType(element).getQualifiedName());
+        case PARAMETER:
+          return new ParameterElementName(
+              element.getSimpleName(),
+              element.getEnclosingElement().getSimpleName(),
+              getEnclosingType(element).getQualifiedName());
+        default:
+          throw new IllegalArgumentException(
+              String.format(
+                  "%s does not support element type %s.",
+                  ElementName.class.getCanonicalName(), element.getKind()));
+      }
+    }
+
+    /**
+     * Returns the {@link Element} corresponding to the name information saved in {@link
+     * ElementName}. {@link Optional#empty()} ()} if non exists.
+     */
+    abstract Optional<? extends Element> getElement(Elements eltUtils);
+
+    abstract String getCanonicalName();
+  }
+
+  /* It's unfortunate that we have to track types and packages separately, but since there are
    * two different methods to look them up in {@link Elements}, we end up with a lot of parallel
    * logic. :(
-   *
-   * <p>Packages declared (and annotated) in {@code package-info.java} are tracked as deferred
-   * packages, type elements are tracked directly, and all other elements are tracked via their
-   * nearest enclosing type.
    */
-  private static final class ElementName {
-    private enum Kind {
-      PACKAGE_NAME,
-      TYPE_NAME,
+  private static final class PackageElementName extends ElementName {
+    private final Name qualifiedName;
+
+    private PackageElementName(Name qualifiedName) {
+      this.qualifiedName = qualifiedName;
     }
 
-    private final Kind kind;
-    private final String name;
-
-    private ElementName(Kind kind, Name name) {
-      this.kind = checkNotNull(kind);
-      this.name = name.toString();
+    @Override
+    Optional<? extends Element> getElement(Elements eltUtils) {
+      return Optional.ofNullable(eltUtils.getPackageElement(qualifiedName));
     }
 
-    /**
-     * An {@link ElementName} for an annotated element. If {@code element} is a package, uses the
-     * fully qualified name of the package. If it's a type, uses its fully qualified name.
-     * Otherwise, uses the fully-qualified name of the nearest enclosing type.
-     *
-     * <p>A package can be annotated if it has a {@code package-info.java} with annotations on the
-     * package declaration.
-     */
-    static ElementName forAnnotatedElement(Element element) {
-      return element.getKind() == PACKAGE
-          ? new ElementName(Kind.PACKAGE_NAME, asPackage(element).getQualifiedName())
-          : new ElementName(Kind.TYPE_NAME, getEnclosingType(element).getQualifiedName());
-    }
-
-    /** The fully-qualified name of the element. */
-    String name() {
-      return name;
-    }
-
-    /**
-     * The {@link Element} whose fully-qualified name is {@link #name()}. Empty if the relevant
-     * method on {@link Elements} returns {@code null}.
-     */
-    Optional<? extends Element> getElement(Elements elements) {
-      return Optional.ofNullable(
-          kind == Kind.PACKAGE_NAME
-              ? elements.getPackageElement(name)
-              : elements.getTypeElement(name));
+    @Override
+    String getCanonicalName() {
+      return qualifiedName.toString();
     }
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!(object instanceof ElementName)) {
+      if (!(object instanceof PackageElementName)) {
         return false;
       }
 
-      ElementName that = (ElementName) object;
-      return this.kind == that.kind && this.name.equals(that.name);
+      PackageElementName that = (PackageElementName) object;
+      return this.qualifiedName.equals(that.qualifiedName);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(kind, name);
+      return Objects.hash(qualifiedName);
+    }
+  }
+
+  private static final class TypeElementName extends ElementName {
+    private final Name qualifiedName;
+
+    private TypeElementName(Name qualifiedName) {
+      this.qualifiedName = qualifiedName;
+    }
+
+    @Override
+    Optional<? extends Element> getElement(Elements eltUtils) {
+      return Optional.ofNullable(eltUtils.getTypeElement(qualifiedName));
+    }
+
+    @Override
+    String getCanonicalName() {
+      return qualifiedName.toString();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (!(object instanceof TypeElementName)) {
+        return false;
+      }
+
+      TypeElementName that = (TypeElementName) object;
+      return this.qualifiedName.equals(that.qualifiedName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(qualifiedName);
+    }
+  }
+
+  private static final class DirectlyEnclosedByTypeElementElementName extends ElementName {
+    private final Name simpleName;
+    private final Name enclosingTypeElementQualifiedName;
+
+    private DirectlyEnclosedByTypeElementElementName(
+        Name simpleName, Name enclosingTypeElementQualifiedName) {
+      this.simpleName = simpleName;
+      this.enclosingTypeElementQualifiedName = enclosingTypeElementQualifiedName;
+    }
+
+    @Override
+    Optional<? extends Element> getElement(Elements eltUtils) {
+      TypeElement enclosingTypeElement = eltUtils.getTypeElement(enclosingTypeElementQualifiedName);
+      if (enclosingTypeElement == null) {
+        return Optional.empty();
+      }
+
+      return enclosingTypeElement.getEnclosedElements().stream()
+              .filter(element -> element.getSimpleName().equals(simpleName))
+              .findAny();
+    }
+
+    @Override
+    String getCanonicalName() {
+      return enclosingTypeElementQualifiedName + "#" + simpleName;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (!(object instanceof DirectlyEnclosedByTypeElementElementName)) {
+        return false;
+      }
+
+      DirectlyEnclosedByTypeElementElementName that =
+          (DirectlyEnclosedByTypeElementElementName) object;
+      return this.enclosingTypeElementQualifiedName.equals(that.enclosingTypeElementQualifiedName)
+          && this.simpleName.equals(that.simpleName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(enclosingTypeElementQualifiedName, simpleName);
+    }
+  }
+
+  private static final class ParameterElementName extends ElementName {
+    private final Name simpleName;
+    private final Name enclosingExecutableElementSimpleName;
+    private final Name enclosingTypeElementQualifiedName;
+
+    private ParameterElementName(
+        Name simpleName,
+        Name enclosingExecutableElementSimpleName,
+        Name enclosingTypeElementQualifiedName) {
+      this.simpleName = simpleName;
+      this.enclosingExecutableElementSimpleName = enclosingExecutableElementSimpleName;
+      this.enclosingTypeElementQualifiedName = enclosingTypeElementQualifiedName;
+    }
+
+    @Override
+    Optional<? extends Element> getElement(Elements eltUtils) {
+      TypeElement enclosingTypeElement = eltUtils.getTypeElement(enclosingTypeElementQualifiedName);
+      if (enclosingTypeElement == null) {
+        return Optional.empty();
+      }
+
+      Optional<ExecutableElement> optionalEnclosingExecElement =
+              enclosingTypeElement.getEnclosedElements().stream()
+                  .filter(e -> e.getSimpleName().equals(enclosingExecutableElementSimpleName))
+                  .findAny()
+                  .map(MoreElements::asExecutable);
+      if (!optionalEnclosingExecElement.isPresent()) {
+        return Optional.empty();
+      }
+
+      return optionalEnclosingExecElement.get().getParameters().stream()
+              .filter(paramElement -> paramElement.getSimpleName().equals(simpleName))
+              .findAny();
+    }
+
+    @Override
+    String getCanonicalName() {
+      return String.format(
+          "Parameter %s of %s#%s()",
+          simpleName, enclosingTypeElementQualifiedName, enclosingExecutableElementSimpleName);
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (!(object instanceof ParameterElementName)) {
+        return false;
+      }
+
+      ParameterElementName that = (ParameterElementName) object;
+      return this.enclosingTypeElementQualifiedName.equals(that.enclosingTypeElementQualifiedName)
+          && this.enclosingExecutableElementSimpleName.equals(
+              that.enclosingExecutableElementSimpleName)
+          && this.simpleName.equals(that.simpleName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          enclosingTypeElementQualifiedName, enclosingExecutableElementSimpleName, simpleName);
     }
   }
 }
