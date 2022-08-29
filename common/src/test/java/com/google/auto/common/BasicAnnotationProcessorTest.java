@@ -38,9 +38,13 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import javax.annotation.processing.Filer;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
@@ -149,6 +153,64 @@ public class BasicAnnotationProcessorTest {
               }
               return ImmutableSet.copyOf(
                   elementsByAnnotation.values().asList().subList(1, numberOfAnnotatedElements));
+            }
+
+            @Override
+            public ImmutableSet<String> annotations() {
+              return ImmutableSet.of(ENCLOSING_CLASS_NAME + ".OneMethodAtATime");
+            }
+          });
+    }
+
+    ImmutableList<ImmutableSetMultimap<String, Element>> processArguments() {
+      return processArguments.build();
+    }
+  }
+
+  private static class OneOverloadedMethodAtATimeProcessor extends BaseAnnotationProcessor {
+
+    int rejectedRounds;
+    final ImmutableList.Builder<ImmutableSetMultimap<String, Element>> processArguments =
+        ImmutableList.builder();
+
+    @Override
+    protected Iterable<? extends Step> steps() {
+      return ImmutableSet.of(
+          new Step() {
+            @Override
+            public ImmutableSet<? extends Element> process(
+                ImmutableSetMultimap<String, Element> elementsByAnnotation) {
+              processArguments.add(ImmutableSetMultimap.copyOf(elementsByAnnotation));
+
+              List<Element> annotatedElements = new ArrayList<>(elementsByAnnotation.values());
+              int numberOfAnnotatedElements = annotatedElements.size();
+              if (numberOfAnnotatedElements == 0) {
+                return ImmutableSet.of();
+              }
+              if (numberOfAnnotatedElements > 1) {
+                rejectedRounds++;
+              }
+
+              Name NameOfToBeProcessedElement;
+              ImmutableSet<? extends Element> rejectedElements;
+              if (numberOfAnnotatedElements > 2) {
+                // Skip the first Element
+                NameOfToBeProcessedElement = annotatedElements.get(1).getSimpleName();
+                annotatedElements.remove(1);
+                rejectedElements = ImmutableSet.copyOf(annotatedElements);
+              } else {
+                NameOfToBeProcessedElement = annotatedElements.get(0).getSimpleName();
+                annotatedElements.remove(0);
+                rejectedElements = ImmutableSet.copyOf(annotatedElements);
+              }
+
+              generateClass(
+                  processingEnv.getFiler(),
+                  String.format(
+                      "GeneratedByOneMethodAtATimeProcessor_%d_%s",
+                      numberOfAnnotatedElements > 1 ? rejectedRounds : rejectedRounds + 1,
+                      Objects.requireNonNull(NameOfToBeProcessedElement)));
+              return Objects.requireNonNull(rejectedElements);
             }
 
             @Override
@@ -488,6 +550,44 @@ public class BasicAnnotationProcessorTest {
                 OneMethodAtATime.class.getCanonicalName(), "method1()",
                 OneMethodAtATime.class.getCanonicalName(), "method2()"),
             ImmutableSetMultimap.of(OneMethodAtATime.class.getCanonicalName(), "method2()"))
+        .inOrder();
+  }
+
+  @Test
+  public void properlyDefersProcessing_handlesOverloadedExecutableElements() {
+    JavaFileObject classAFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassA",
+            "package test;",
+            "",
+            "public class ClassA {",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  public void overloadedMethod(int x) {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  public void overloadedMethod(float x) {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  public void overloadedMethod(double x) {}",
+            "}");
+    OneOverloadedMethodAtATimeProcessor oneOverloadedMethodAtATimeProcessor =
+        new OneOverloadedMethodAtATimeProcessor();
+    assertAbout(javaSources())
+        .that(ImmutableList.of(classAFileObject))
+        .processedWith(oneOverloadedMethodAtATimeProcessor)
+        .compilesWithoutError();
+    assertThat(oneOverloadedMethodAtATimeProcessor.rejectedRounds).isEqualTo(2);
+
+    assertThat(oneOverloadedMethodAtATimeProcessor.processArguments())
+        .comparingElementsUsing(setMultimapValuesByString())
+        .containsExactly(
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(int)",
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(float)",
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(double)"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(int)",
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(double)"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(double)"))
         .inOrder();
   }
 
