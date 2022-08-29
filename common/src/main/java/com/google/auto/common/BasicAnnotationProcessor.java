@@ -21,14 +21,13 @@ import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.common.SuperficialValidation.validateElement;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Multimaps.filterKeys;
 import static java.util.Objects.requireNonNull;
-import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import com.google.auto.common.Overrides.ExplicitOverrides;
 import com.google.common.base.Ascii;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -37,6 +36,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import java.lang.annotation.Annotation;
@@ -44,19 +44,24 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ErrorType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor8;
+import javax.lang.model.util.Types;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -105,20 +110,23 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * body), then the well-formedness check will not defer processing {@code A}, but a processing step
  * can reject {@code A}.
  */
+@SuppressWarnings("Guava")
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   private final Set<ElementName> deferredElementNames = new LinkedHashSet<>();
   private final SetMultimap<Step, ElementName> elementsDeferredBySteps =
       LinkedHashMultimap.create();
 
-  private Elements elements;
+  private Elements elementUtils;
+  private Types typeUtils;
   private Messager messager;
   private ImmutableList<? extends Step> steps;
 
   @Override
   public final synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
-    this.elements = processingEnv.getElementUtils();
+    this.elementUtils = processingEnv.getElementUtils();
+    this.typeUtils = processingEnv.getTypeUtils();
     this.messager = processingEnv.getMessager();
     this.steps = ImmutableList.copyOf(steps());
   }
@@ -169,7 +177,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   private ImmutableSet<TypeElement> getSupportedAnnotationTypeElements(Step step) {
     return step.annotations().stream()
-        .map(elements::getTypeElement)
+        .map(elementUtils::getTypeElement)
         .filter(Objects::nonNull)
         .collect(toImmutableSet());
   }
@@ -186,7 +194,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    checkState(elements != null);
+    checkState(elementUtils != null);
     checkState(messager != null);
     checkState(steps != null);
 
@@ -227,14 +235,17 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         Set<? extends Element> rejectedElements =
             step.process(toClassNameKeyedMultimap(stepElements));
         elementsDeferredBySteps.replaceValues(
-            step, transform(rejectedElements, ElementName::forAnnotatedElement));
+            step,
+            transform(
+                rejectedElements,
+                (element) -> ElementName.forAnnotatedElement(element, typeUtils)));
       }
     }
   }
 
   private void reportMissingElements(Set<ElementName> missingElementNames) {
     for (ElementName missingElementName : missingElementNames) {
-      Optional<? extends Element> missingElement = missingElementName.getElement(elements);
+      Optional<? extends Element> missingElement = missingElementName.getElement(elementUtils);
       if (missingElement.isPresent()) {
         messager.printMessage(
             ERROR,
@@ -242,7 +253,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
                 "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
             missingElement.get());
       } else {
-        messager.printMessage(ERROR, processingErrorMessage(missingElementName.getCanonicalName()));
+        messager.printMessage(ERROR, processingErrorMessage(missingElementName.getName()));
       }
     }
   }
@@ -266,7 +277,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsByAnnotationBuilder =
         ImmutableSetMultimap.builder();
     for (ElementName deferredElementName : prevDeferredElementNames) {
-      Optional<? extends Element> deferredElement = deferredElementName.getElement(elements);
+      Optional<? extends Element> deferredElement = deferredElementName.getElement(elementUtils);
       if (deferredElement.isPresent()) {
         findAnnotatedElements(
             deferredElement.get(),
@@ -290,7 +301,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
       ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
       for (Element element : Sets.union(roundElements, prevRoundElements)) {
-        ElementName elementName = ElementName.forAnnotatedElement(element);
+        ElementName elementName = ElementName.forAnnotatedElement(element, typeUtils);
         boolean isValidElement =
             validElementNames.contains(elementName)
                 || (!deferredElementNames.contains(elementName)
@@ -298,7 +309,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
                     // enclosing-type in its entirety should be well-informed. Since modules
                     // don't get annotated (and not supported here) they can be ignored.
                     && validateElement(
-                        element.getKind().equals(PACKAGE) ? element : getEnclosingType(element)));
+                        element.getKind() == ElementKind.PACKAGE
+                            ? element
+                            : getEnclosingType(element)));
         if (isValidElement) {
           validElements.put(annotationType, element);
           validElementNames.add(elementName);
@@ -316,7 +329,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap.Builder<TypeElement, Element> deferredElements =
         ImmutableSetMultimap.builder();
     for (ElementName elementName : annotatedElements) {
-      Optional<? extends Element> element = elementName.getElement(elements);
+      Optional<? extends Element> element = elementName.getElement(elementUtils);
       if (element.isPresent()) {
         findAnnotatedElements(element.get(), annotationTypes, deferredElements);
       }
@@ -526,29 +539,34 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    */
   private abstract static class ElementName {
 
-    private ElementName() {}
+    private ElementName(Element element) {
+      Objects.requireNonNull(element);
+      if (!isAcceptableElementKind(element)) {
+        throw new IllegalArgumentException(
+            String.format(
+                "%s does not support element of kind %s.",
+                this.getClass().getCanonicalName(), element.getKind()));
+      }
+    }
 
     /** An {@link ElementName} for an annotated element. */
-    static ElementName forAnnotatedElement(Element element) {
+    static ElementName forAnnotatedElement(Element element, Types typeUtils) {
       switch (element.getKind()) {
         case PACKAGE:
-          return new PackageElementName(MoreElements.asPackage(element).getQualifiedName());
+          return new PackageElementName(element);
         case CLASS:
         case ENUM:
         case INTERFACE:
         case ANNOTATION_TYPE:
-          return new TypeElementName(MoreElements.asType(element).getQualifiedName());
+          return new TypeElementName(element);
         case FIELD:
         case ENUM_CONSTANT:
+          return new FieldElementName(element);
         case CONSTRUCTOR:
         case METHOD:
-          return new DirectlyEnclosedByTypeElementElementName(
-              element.getSimpleName(), getEnclosingType(element).getQualifiedName());
+          return new ExecutableElementName(element, typeUtils);
         case PARAMETER:
-          return new ParameterElementName(
-              element.getSimpleName(),
-              element.getEnclosingElement().getSimpleName(),
-              getEnclosingType(element).getQualifiedName());
+          return new ParameterElementName(element, typeUtils);
         default:
           throw new IllegalArgumentException(
               String.format(
@@ -557,13 +575,15 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       }
     }
 
+    protected abstract boolean isAcceptableElementKind(Element element);
+
     /**
      * Returns the {@link Element} corresponding to the name information saved in {@link
      * ElementName}. {@link Optional#empty()} ()} if non exists.
      */
     abstract Optional<? extends Element> getElement(Elements eltUtils);
 
-    abstract String getCanonicalName();
+    abstract String getName();
   }
 
   /* It's unfortunate that we have to track types and packages separately, but since there are
@@ -573,8 +593,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   private static final class PackageElementName extends ElementName {
     private final Name qualifiedName;
 
-    private PackageElementName(Name qualifiedName) {
-      this.qualifiedName = qualifiedName;
+    private PackageElementName(Element element) {
+      super(element);
+      this.qualifiedName = MoreElements.asPackage(element).getQualifiedName();
+    }
+
+    @Override
+    protected boolean isAcceptableElementKind(Element element) {
+      return element.getKind() == ElementKind.PACKAGE;
     }
 
     @Override
@@ -583,7 +609,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     @Override
-    String getCanonicalName() {
+    String getName() {
       return qualifiedName.toString();
     }
 
@@ -606,17 +632,23 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   private static final class TypeElementName extends ElementName {
     private final Name qualifiedName;
 
-    private TypeElementName(Name qualifiedName) {
-      this.qualifiedName = qualifiedName;
+    private TypeElementName(Element element) {
+      super(element);
+      this.qualifiedName = MoreElements.asType(element).getQualifiedName();
     }
 
     @Override
-    Optional<? extends Element> getElement(Elements eltUtils) {
+    protected boolean isAcceptableElementKind(Element element) {
+      return MoreElements.isType(element);
+    }
+
+    @Override
+    Optional<TypeElement> getElement(Elements eltUtils) {
       return Optional.ofNullable(eltUtils.getTypeElement(qualifiedName));
     }
 
     @Override
-    String getCanonicalName() {
+    String getName() {
       return qualifiedName.toString();
     }
 
@@ -636,91 +668,211 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class DirectlyEnclosedByTypeElementElementName extends ElementName {
+  /** Represents FIELD and ENUM_CONSTANT */
+  private static final class FieldElementName extends ElementName {
+    private final TypeElementName enclosingTypeElementName;
     private final Name simpleName;
-    private final Name enclosingTypeElementQualifiedName;
 
-    private DirectlyEnclosedByTypeElementElementName(
-        Name simpleName, Name enclosingTypeElementQualifiedName) {
-      this.simpleName = simpleName;
-      this.enclosingTypeElementQualifiedName = enclosingTypeElementQualifiedName;
+    private FieldElementName(Element element) {
+      super(element);
+      this.enclosingTypeElementName = new TypeElementName(getEnclosingType(element));
+      this.simpleName = element.getSimpleName();
     }
 
     @Override
-    Optional<? extends Element> getElement(Elements eltUtils) {
-      TypeElement enclosingTypeElement = eltUtils.getTypeElement(enclosingTypeElementQualifiedName);
-      if (enclosingTypeElement == null) {
+    protected boolean isAcceptableElementKind(Element element) {
+      return element.getKind().isField();
+    }
+
+    @Override
+    Optional<VariableElement> getElement(Elements eltUtils) {
+      Optional<TypeElement> optionalEnclosingTypeElement =
+          enclosingTypeElementName.getElement(eltUtils);
+      if (!optionalEnclosingTypeElement.isPresent()) {
         return Optional.empty();
       }
 
-      return enclosingTypeElement.getEnclosedElements().stream()
-              .filter(element -> element.getSimpleName().equals(simpleName))
-              .findAny();
+      return Optional.of(
+          (VariableElement)
+              optionalEnclosingTypeElement.get().getEnclosedElements().stream()
+                  .filter(
+                      element ->
+                          isAcceptableElementKind(element)
+                              && simpleName.equals(element.getSimpleName()))
+                  .collect(MoreCollectors.onlyElement()));
     }
 
     @Override
-    String getCanonicalName() {
-      return enclosingTypeElementQualifiedName + "#" + simpleName;
+    String getName() {
+      return enclosingTypeElementName.getName() + "#" + simpleName;
     }
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!(object instanceof DirectlyEnclosedByTypeElementElementName)) {
+      if (!(object instanceof FieldElementName)) {
         return false;
       }
 
-      DirectlyEnclosedByTypeElementElementName that =
-          (DirectlyEnclosedByTypeElementElementName) object;
-      return this.enclosingTypeElementQualifiedName.equals(that.enclosingTypeElementQualifiedName)
-          && this.simpleName.equals(that.simpleName);
+      FieldElementName that = (FieldElementName) object;
+      return this.simpleName.equals(that.simpleName)
+          && this.enclosingTypeElementName.equals(that.enclosingTypeElementName);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(enclosingTypeElementQualifiedName, simpleName);
+      return Objects.hash(simpleName, enclosingTypeElementName);
+    }
+  }
+
+  /** Represents METHOD and CONSTRUCTOR. */
+  private static final class ExecutableElementName extends ElementName {
+    private final TypeElementName enclosingTypeElementName;
+    private final Name simpleName;
+    private final ImmutableList<TypeMirror> erasedParametersTypes;
+
+    private final Types typeUtils;
+    // Used for retrieving the erasedParametersTypes
+    private final ExplicitOverrides explicitOverrides;
+
+    private ExecutableElementName(Element element, Types typeUtils) {
+      super(element);
+      ExecutableElement execElement = (ExecutableElement) element;
+      TypeElement enclosingTypeElement = getEnclosingType(execElement);
+      this.enclosingTypeElementName = new TypeElementName(enclosingTypeElement);
+      /* For retrieving the element through getElement():
+       * 1. Since the enclosing type element is known there is no ambiguity in terms of
+       * Overridden methods.
+       * 2. As for Overloaded executable elements, according to
+       * 2.1. JLS 8.4.2:
+       * "The signature of a method m1 is a subsignature of the signature of a method m2 if either:
+       * * m2 has the same signature as m1, or
+       * * the signature of m1 is the same as the erasure (§4.6) of the signature of m2."
+       * Therefore, an ordered erased parameters types is stored.
+       * 2.2. JLS 8.4.9:
+       * "There is no required relationship between the return types or between the throws clauses
+       * of two methods with the same name, unless their signatures are override-equivalent."
+       * Therefore, checking for simple name and erased parameter types is enough to identify the
+       * represented executable element.
+       */
+      this.simpleName = element.getSimpleName();
+      this.typeUtils = Objects.requireNonNull(typeUtils);
+      this.explicitOverrides = new ExplicitOverrides(typeUtils);
+      this.erasedParametersTypes =
+          // It might return null, if the method is not found in enclosingTypeElement
+          Objects.requireNonNull(
+              explicitOverrides.erasedParameterTypes(execElement, enclosingTypeElement));
+    }
+
+    @Override
+    protected boolean isAcceptableElementKind(Element element) {
+      return element.getKind() == ElementKind.CONSTRUCTOR
+          || element.getKind() == ElementKind.METHOD;
+    }
+
+    /* Executable element can be identified using the enclosing type element,
+     * simple name, and an ordered erased parameter types as described in the
+     * constructor.
+     */
+    @Override
+    Optional<ExecutableElement> getElement(Elements eltUtils) {
+      Optional<TypeElement> optionalEnclosingTypeElement =
+          enclosingTypeElementName.getElement(eltUtils);
+      if (!optionalEnclosingTypeElement.isPresent()) {
+        return Optional.empty();
+      }
+      TypeElement enclosingTypeElement = optionalEnclosingTypeElement.get();
+
+      return Optional.of(
+          (ExecutableElement)
+              enclosingTypeElement.getEnclosedElements().stream()
+                  .filter(
+                      element ->
+                          isAcceptableElementKind(element)
+                              && simpleName.equals(element.getSimpleName())
+                              && hasSameErasedParametersType(
+                                  Objects.requireNonNull(
+                                      explicitOverrides.erasedParameterTypes(
+                                          (ExecutableElement) element, enclosingTypeElement))))
+                  .collect(MoreCollectors.onlyElement()));
+    }
+
+    private boolean hasSameErasedParametersType(
+        ImmutableList<TypeMirror> execElementErasedParametersTypes) {
+      // TypeMirror needs to be compared using Types
+      if (erasedParametersTypes.size() != execElementErasedParametersTypes.size()) {
+        return false;
+      }
+      for (int i = 0; i < erasedParametersTypes.size(); i++) {
+        if (!typeUtils.isSameType(
+            erasedParametersTypes.get(i), execElementErasedParametersTypes.get(i))) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    @Override
+    String getName() {
+      return String.format(
+          "%s#%s(%s)",
+          enclosingTypeElementName.getName(),
+          simpleName,
+          erasedParametersTypes.stream().map(Objects::toString).collect(Collectors.joining(", ")));
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (!(object instanceof ExecutableElementName)) {
+        return false;
+      }
+
+      ExecutableElementName that = (ExecutableElementName) object;
+      return this.simpleName.equals(that.simpleName)
+          && this.hasSameErasedParametersType(that.erasedParametersTypes)
+          && this.enclosingTypeElementName.equals(that.enclosingTypeElementName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(simpleName, erasedParametersTypes, enclosingTypeElementName);
     }
   }
 
   private static final class ParameterElementName extends ElementName {
+    private final ExecutableElementName enclosingExecutableElementName;
     private final Name simpleName;
-    private final Name enclosingExecutableElementSimpleName;
-    private final Name enclosingTypeElementQualifiedName;
 
-    private ParameterElementName(
-        Name simpleName,
-        Name enclosingExecutableElementSimpleName,
-        Name enclosingTypeElementQualifiedName) {
-      this.simpleName = simpleName;
-      this.enclosingExecutableElementSimpleName = enclosingExecutableElementSimpleName;
-      this.enclosingTypeElementQualifiedName = enclosingTypeElementQualifiedName;
+    private ParameterElementName(Element element, Types typeUtils) {
+      super(element);
+      this.enclosingExecutableElementName =
+          new ExecutableElementName(element.getEnclosingElement(), typeUtils);
+      this.simpleName = element.getSimpleName();
     }
 
     @Override
-    Optional<? extends Element> getElement(Elements eltUtils) {
-      TypeElement enclosingTypeElement = eltUtils.getTypeElement(enclosingTypeElementQualifiedName);
-      if (enclosingTypeElement == null) {
-        return Optional.empty();
-      }
-
-      Optional<ExecutableElement> optionalEnclosingExecElement =
-              enclosingTypeElement.getEnclosedElements().stream()
-                  .filter(e -> e.getSimpleName().equals(enclosingExecutableElementSimpleName))
-                  .findAny()
-                  .map(MoreElements::asExecutable);
-      if (!optionalEnclosingExecElement.isPresent()) {
-        return Optional.empty();
-      }
-
-      return optionalEnclosingExecElement.get().getParameters().stream()
-              .filter(paramElement -> paramElement.getSimpleName().equals(simpleName))
-              .findAny();
+    protected boolean isAcceptableElementKind(Element element) {
+      return element.getKind() == ElementKind.PARAMETER;
     }
 
     @Override
-    String getCanonicalName() {
+    Optional<? extends VariableElement> getElement(Elements eltUtils) {
+      Optional<ExecutableElement> optionalEnclosingExecutableElement =
+          enclosingExecutableElementName.getElement(eltUtils);
+      if (!optionalEnclosingExecutableElement.isPresent()) {
+        return Optional.empty();
+      }
+
+      return Optional.of(
+          optionalEnclosingExecutableElement.get().getParameters().stream()
+              .filter(paramElement -> simpleName.equals(paramElement.getSimpleName()))
+              .collect(MoreCollectors.onlyElement()));
+    }
+
+    @Override
+    String getName() {
       return String.format(
-          "Parameter %s of %s#%s()",
-          simpleName, enclosingTypeElementQualifiedName, enclosingExecutableElementSimpleName);
+          "Parameter %s of %s", simpleName, enclosingExecutableElementName.getName());
     }
 
     @Override
@@ -730,16 +882,13 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       }
 
       ParameterElementName that = (ParameterElementName) object;
-      return this.enclosingTypeElementQualifiedName.equals(that.enclosingTypeElementQualifiedName)
-          && this.enclosingExecutableElementSimpleName.equals(
-              that.enclosingExecutableElementSimpleName)
-          && this.simpleName.equals(that.simpleName);
+      return this.simpleName.equals(that.simpleName)
+          && this.enclosingExecutableElementName.equals(that.enclosingExecutableElementName);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(
-          enclosingTypeElementQualifiedName, enclosingExecutableElementSimpleName, simpleName);
+      return Objects.hash(simpleName, enclosingExecutableElementName);
     }
   }
 }
