@@ -79,7 +79,7 @@ public class BasicAnnotationProcessorTest {
 
     @Override
     protected Iterable<? extends Step> steps() {
-      return ImmutableSet.of(
+      return ImmutableList.of(
           new Step() {
             @Override
             public ImmutableSet<? extends Element> process(
@@ -126,7 +126,7 @@ public class BasicAnnotationProcessorTest {
   public static class GeneratesCodeProcessor extends BaseAnnotationProcessor {
     @Override
     protected Iterable<? extends Step> steps() {
-      return ImmutableSet.of(
+      return ImmutableList.of(
           new Step() {
             @Override
             public ImmutableSet<? extends Element> process(
@@ -150,7 +150,7 @@ public class BasicAnnotationProcessorTest {
 
     @Override
     protected Iterable<? extends Step> steps() {
-      return ImmutableSet.of(
+      return ImmutableList.of(
           new Step() {
             @Override
             public ImmutableSet<Element> process(
@@ -177,7 +177,7 @@ public class BasicAnnotationProcessorTest {
 
     @Override
     protected Iterable<? extends Step> steps() {
-      return ImmutableSet.of(
+      return ImmutableList.of(
           new Step() {
             @Override
             public ImmutableSet<Element> process(
@@ -202,7 +202,7 @@ public class BasicAnnotationProcessorTest {
 
     @Override
     protected Iterable<? extends Step> steps() {
-      return ImmutableSet.of(
+      return ImmutableList.of(
           new Step() {
             @Override
             public ImmutableSet<Element> process(
