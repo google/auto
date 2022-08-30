@@ -211,6 +211,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
     vars.builtType = TypeEncoder.encode(builtType);
+    vars.builderAnnotations = copiedClassAnnotations(autoBuilderType);
     Optional<String> forwardingClassName = maybeForwardingClass(autoBuilderType, executable);
     vars.build =
         forwardingClassName

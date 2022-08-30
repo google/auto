@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.math.BigInteger;
 import java.time.LocalTime;
 import java.util.AbstractSet;
@@ -130,6 +132,7 @@ public final class AutoBuilderTest {
     TRUTHY
   }
 
+  @Retention(RetentionPolicy.RUNTIME)
   @interface MyAnnotation {
     String value();
 
@@ -712,5 +715,40 @@ public final class AutoBuilderTest {
     assertThat(instance2.getNumber()).isEqualTo(23);
     NumberHolder<Integer> instance3 = numberHolderBuilder(instance2).setNumber(17).build();
     assertThat(instance3.getNumber()).isEqualTo(17);
+  }
+
+  @AutoBuilder(callMethod = "of", ofClass = Simple.class)
+  @MyAnnotation("thing")
+  interface AnnotatedSimpleStaticBuilder1 {
+    AnnotatedSimpleStaticBuilder1 anInt(int x);
+
+    AnnotatedSimpleStaticBuilder1 aString(String x);
+
+    Simple build();
+  }
+
+  @Test
+  public void builderAnnotationsNotCopiedByDefault() {
+    assertThat(AutoBuilder_AutoBuilderTest_AnnotatedSimpleStaticBuilder1.class.getAnnotations())
+        .asList()
+        .isEmpty();
+  }
+
+  @AutoBuilder(callMethod = "of", ofClass = Simple.class)
+  @AutoValue.CopyAnnotations
+  @MyAnnotation("thing")
+  interface AnnotatedSimpleStaticBuilder2 {
+    AnnotatedSimpleStaticBuilder2 anInt(int x);
+
+    AnnotatedSimpleStaticBuilder2 aString(String x);
+
+    Simple build();
+  }
+
+  @Test
+  public void builderAnnotationsCopiedIfRequested() {
+    assertThat(AutoBuilder_AutoBuilderTest_AnnotatedSimpleStaticBuilder2.class.getAnnotations())
+        .asList()
+        .contains(myAnnotationBuilder().value("thing").build());
   }
 }
