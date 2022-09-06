@@ -29,7 +29,6 @@ import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.common.base.Ascii;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +41,7 @@ import com.google.common.collect.Sets;
 import java.lang.annotation.Annotation;
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
@@ -555,11 +555,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     /**
-     * The {@link Element} whose fully-qualified name is {@link #name()}. Absent if the relevant
+     * The {@link Element} whose fully-qualified name is {@link #name()}. Empty if the relevant
      * method on {@link Elements} returns {@code null}.
      */
     Optional<? extends Element> getElement(Elements elements) {
-      return Optional.fromNullable(
+      return Optional.ofNullable(
           kind == Kind.PACKAGE_NAME
               ? elements.getPackageElement(name)
               : elements.getTypeElement(name));
