@@ -22,7 +22,6 @@ import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.common.SuperficialValidation.validateElement;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Multimaps.filterKeys;
 import static java.util.Objects.requireNonNull;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -110,7 +109,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * body), then the well-formedness check will not defer processing {@code A}, but a processing step
  * can reject {@code A}.
  */
-@SuppressWarnings("Guava")
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   private final Set<ElementName> deferredElementNames = new LinkedHashSet<>();
@@ -236,9 +234,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
             step.process(toClassNameKeyedMultimap(stepElements));
         elementsDeferredBySteps.replaceValues(
             step,
-            transform(
-                rejectedElements,
-                (element) -> ElementName.forAnnotatedElement(element, typeUtils)));
+            rejectedElements.stream()
+                .map(element -> ElementName.forAnnotatedElement(element, typeUtils))
+                .collect(Collectors.toList()));
       }
     }
   }
@@ -302,12 +300,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
       for (Element element : Sets.union(roundElements, prevRoundElements)) {
         ElementName elementName = ElementName.forAnnotatedElement(element, typeUtils);
+        // For every element that is not module/package, to be well-formed its
+        // enclosing-type in its entirety should be well-formed. Since modules
+        // don't get annotated (and not supported here) they can be ignored.
         boolean isValidElement =
             validElementNames.contains(elementName)
                 || (!deferredElementNames.contains(elementName)
-                    // For every element that is not module/package, to be well-informed its
-                    // enclosing-type in its entirety should be well-informed. Since modules
-                    // don't get annotated (and not supported here) they can be ignored.
                     && validateElement(
                         element.getKind() == ElementKind.PACKAGE
                             ? element
@@ -525,17 +523,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   /**
    * An {@link ElementName} for an annotated element.
    *
-   * <p>Instead of saving elements, an {@code ElementName} is saved since
-   *
-   * <ol>
-   *   <li>There is no guarantee that any particular element will always be represented by the same
-   *       object. (Reference: {@link Element})
-   *   <li>Since an implementation may choose to have a single object implement multiple Element
-   *       sub-interfaces. (Reference: {@link Element})
-   *   <li>and possibly other issues (such as reconstruction of AST after each round, and direct
-   *       manipulations of AST by tools like lombok) may make the saved element reference
-   *       unreliable.
-   * </ol>
+   * <p>Instead of saving elements, an {@code ElementName} is saved since there is no guarantee that
+   * any particular element will always be represented by the same object. (Reference: {@link
+   * Element}) For example, Eclipse compiler used different Element instances per round.
    */
   private abstract static class ElementName {
 
@@ -579,9 +569,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     /**
      * Returns the {@link Element} corresponding to the name information saved in {@link
-     * ElementName}. {@link Optional#empty()} ()} if non exists.
+     * ElementName}. {@link Optional#empty()} ()} if none exists.
      */
-    abstract Optional<? extends Element> getElement(Elements eltUtils);
+    abstract Optional<? extends Element> getElement(Elements elementUtils);
 
     abstract String getName();
   }
@@ -604,8 +594,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     @Override
-    Optional<? extends Element> getElement(Elements eltUtils) {
-      return Optional.ofNullable(eltUtils.getPackageElement(qualifiedName));
+    Optional<PackageElement> getElement(Elements elementUtils) {
+      return Optional.ofNullable(elementUtils.getPackageElement(qualifiedName));
     }
 
     @Override
@@ -625,7 +615,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public int hashCode() {
-      return Objects.hash(qualifiedName);
+      return qualifiedName.hashCode();
     }
   }
 
@@ -643,8 +633,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     @Override
-    Optional<TypeElement> getElement(Elements eltUtils) {
-      return Optional.ofNullable(eltUtils.getTypeElement(qualifiedName));
+    Optional<TypeElement> getElement(Elements elementUtils) {
+      return Optional.ofNullable(elementUtils.getTypeElement(qualifiedName));
     }
 
     @Override
@@ -664,7 +654,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public int hashCode() {
-      return Objects.hash(qualifiedName);
+      return qualifiedName.hashCode();
     }
   }
 
@@ -685,9 +675,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     @Override
-    Optional<VariableElement> getElement(Elements eltUtils) {
+    Optional<VariableElement> getElement(Elements elementUtils) {
       Optional<TypeElement> optionalEnclosingTypeElement =
-          enclosingTypeElementName.getElement(eltUtils);
+          enclosingTypeElementName.getElement(elementUtils);
       if (!optionalEnclosingTypeElement.isPresent()) {
         return Optional.empty();
       }
@@ -774,9 +764,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
      * constructor.
      */
     @Override
-    Optional<ExecutableElement> getElement(Elements eltUtils) {
+    Optional<ExecutableElement> getElement(Elements elementUtils) {
       Optional<TypeElement> optionalEnclosingTypeElement =
-          enclosingTypeElementName.getElement(eltUtils);
+          enclosingTypeElementName.getElement(elementUtils);
       if (!optionalEnclosingTypeElement.isPresent()) {
         return Optional.empty();
       }
@@ -856,9 +846,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     @Override
-    Optional<? extends VariableElement> getElement(Elements eltUtils) {
+    Optional<? extends VariableElement> getElement(Elements elementUtils) {
       Optional<ExecutableElement> optionalEnclosingExecutableElement =
-          enclosingExecutableElementName.getElement(eltUtils);
+          enclosingExecutableElementName.getElement(elementUtils);
       if (!optionalEnclosingExecutableElement.isPresent()) {
         return Optional.empty();
       }
