@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -295,8 +296,8 @@ abstract class Overrides {
 
       @Override
       public TypeMirror visitTypeVariable(TypeVariable t, Void p) {
-        Element element = typeUtils.asElement(t);
-        if (element instanceof TypeParameterElement) {
+        Element element = t.asElement();
+        if (element.getKind() == ElementKind.TYPE_PARAMETER) {
           TypeParameterElement e = (TypeParameterElement) element;
           if (typeBindings.containsKey(e)) {
             return visit(typeBindings.get(e));

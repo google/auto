@@ -17,6 +17,7 @@ package com.google.auto.common;
 
 import static com.google.auto.common.MoreElements.asExecutable;
 import static com.google.auto.common.MoreElements.asPackage;
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.common.SuperficialValidation.validateElement;
@@ -362,12 +363,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         annotatedElements.put(annotationType, element);
       }
     }
-  }
-
-  private static boolean isAnnotationPresent(Element element, TypeElement annotationType) {
-    return element.getAnnotationMirrors().stream()
-        .anyMatch(
-            mirror -> MoreTypes.asTypeElement(mirror.getAnnotationType()).equals(annotationType));
   }
 
   /**
