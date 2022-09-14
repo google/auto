@@ -15,17 +15,6 @@
  */
 package com.google.auto.common;
 
-import static com.google.auto.common.MoreElements.asExecutable;
-import static com.google.auto.common.MoreElements.asPackage;
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
-import static com.google.auto.common.SuperficialValidation.validateElement;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Multimaps.filterKeys;
-import static java.util.Objects.requireNonNull;
-import static javax.tools.Diagnostic.Kind.ERROR;
-
 import com.google.auto.common.Overrides.ExplicitOverrides;
 import com.google.common.base.Ascii;
 import com.google.common.base.Predicates;
@@ -38,12 +27,8 @@ import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import java.lang.annotation.Annotation;
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -61,7 +46,22 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor8;
 import javax.lang.model.util.Types;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.lang.annotation.Annotation;
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static com.google.auto.common.MoreElements.asExecutable;
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
+import static com.google.auto.common.SuperficialValidation.validateElement;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Multimaps.filterKeys;
+import static java.util.Objects.requireNonNull;
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * An abstract {@link Processor} implementation that defers processing of {@link Element}s to later
@@ -327,10 +327,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap.Builder<TypeElement, Element> deferredElements =
         ImmutableSetMultimap.builder();
     for (ElementName elementName : annotatedElements) {
-      Optional<? extends Element> element = elementName.getElement(elementUtils);
-      if (element.isPresent()) {
-        findAnnotatedElements(element.get(), annotationTypes, deferredElements);
-      }
+      elementName
+          .getElement(elementUtils)
+          .ifPresent(element -> findAnnotatedElements(element, annotationTypes, deferredElements));
     }
     return deferredElements.build();
   }
@@ -374,7 +373,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       default: // do nothing
     }
     for (TypeElement annotationType : annotationTypes) {
-      if (MoreElements.isAnnotationPresent(element, annotationType)) {
+      if (isAnnotationPresent(element, annotationType)) {
         annotatedElements.put(annotationType, element);
       }
     }
@@ -676,20 +675,17 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<VariableElement> getElement(Elements elementUtils) {
-      Optional<TypeElement> optionalEnclosingTypeElement =
-          enclosingTypeElementName.getElement(elementUtils);
-      if (!optionalEnclosingTypeElement.isPresent()) {
-        return Optional.empty();
-      }
-
-      return Optional.of(
-          (VariableElement)
-              optionalEnclosingTypeElement.get().getEnclosedElements().stream()
-                  .filter(
-                      element ->
-                          isAcceptableElementKind(element)
-                              && simpleName.equals(element.getSimpleName()))
-                  .collect(MoreCollectors.onlyElement()));
+      return enclosingTypeElementName
+          .getElement(elementUtils)
+          .map(
+              typeElement ->
+                  (VariableElement)
+                      typeElement.getEnclosedElements().stream()
+                          .filter(
+                              element ->
+                                  isAcceptableElementKind(element)
+                                      && simpleName.equals(element.getSimpleName()))
+                          .collect(MoreCollectors.onlyElement()));
     }
 
     @Override
@@ -765,25 +761,22 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
      */
     @Override
     Optional<ExecutableElement> getElement(Elements elementUtils) {
-      Optional<TypeElement> optionalEnclosingTypeElement =
-          enclosingTypeElementName.getElement(elementUtils);
-      if (!optionalEnclosingTypeElement.isPresent()) {
-        return Optional.empty();
-      }
-      TypeElement enclosingTypeElement = optionalEnclosingTypeElement.get();
-
-      return Optional.of(
-          (ExecutableElement)
-              enclosingTypeElement.getEnclosedElements().stream()
-                  .filter(
-                      element ->
-                          isAcceptableElementKind(element)
-                              && simpleName.equals(element.getSimpleName())
-                              && hasSameErasedParametersType(
-                                  Objects.requireNonNull(
-                                      explicitOverrides.erasedParameterTypes(
-                                          (ExecutableElement) element, enclosingTypeElement))))
-                  .collect(MoreCollectors.onlyElement()));
+      return enclosingTypeElementName
+          .getElement(elementUtils)
+          .map(
+              enclosingTypeElement ->
+                  (ExecutableElement)
+                      enclosingTypeElement.getEnclosedElements().stream()
+                          .filter(
+                              element ->
+                                  isAcceptableElementKind(element)
+                                      && simpleName.equals(element.getSimpleName())
+                                      && hasSameErasedParametersType(
+                                          Objects.requireNonNull(
+                                              explicitOverrides.erasedParameterTypes(
+                                                  (ExecutableElement) element,
+                                                  enclosingTypeElement))))
+                          .collect(MoreCollectors.onlyElement()));
     }
 
     private boolean hasSameErasedParametersType(
@@ -847,16 +840,13 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<? extends VariableElement> getElement(Elements elementUtils) {
-      Optional<ExecutableElement> optionalEnclosingExecutableElement =
-          enclosingExecutableElementName.getElement(elementUtils);
-      if (!optionalEnclosingExecutableElement.isPresent()) {
-        return Optional.empty();
-      }
-
-      return Optional.of(
-          optionalEnclosingExecutableElement.get().getParameters().stream()
-              .filter(paramElement -> simpleName.equals(paramElement.getSimpleName()))
-              .collect(MoreCollectors.onlyElement()));
+      return enclosingExecutableElementName
+          .getElement(elementUtils)
+          .map(
+              enclosingExecutableElement ->
+                  enclosingExecutableElement.getParameters().stream()
+                      .filter(paramElement -> simpleName.equals(paramElement.getSimpleName()))
+                      .collect(MoreCollectors.onlyElement()));
     }
 
     @Override
