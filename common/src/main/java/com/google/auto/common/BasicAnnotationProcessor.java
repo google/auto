@@ -379,33 +379,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  /**
-   * Returns the nearest enclosing {@link TypeElement} to the current element, throwing an {@link
-   * IllegalArgumentException} if the provided {@link Element} is a {@link PackageElement} or is
-   * otherwise not enclosed by a type.
-   */
-  // TODO(user) move to MoreElements and make public.
-  private static TypeElement getEnclosingType(Element element) {
-    return element.accept(
-        new SimpleElementVisitor8<TypeElement, Void>() {
-          @Override
-          protected TypeElement defaultAction(Element e, Void p) {
-            return e.getEnclosingElement().accept(this, p);
-          }
-
-          @Override
-          public TypeElement visitType(TypeElement e, Void p) {
-            return e;
-          }
-
-          @Override
-          public TypeElement visitPackage(PackageElement e, Void p) {
-            throw new IllegalArgumentException();
-          }
-        },
-        null);
-  }
-
   private static ImmutableSetMultimap<String, Element> toClassNameKeyedMultimap(
       SetMultimap<TypeElement, Element> elements) {
     ImmutableSetMultimap.Builder<String, Element> builder = ImmutableSetMultimap.builder();

@@ -82,6 +82,22 @@ public final class MoreElements {
   }
 
   /**
+   * Returns the nearest enclosing {@link TypeElement} to the current element, throwing an {@link
+   * IllegalArgumentException} if the provided {@link Element} is not enclosed by a type.
+   */
+  public static TypeElement getEnclosingType(Element element) {
+    Element enclosingTypeElement = element;
+    while (enclosingTypeElement != null && !isType(enclosingTypeElement)) {
+      enclosingTypeElement = enclosingTypeElement.getEnclosingElement();
+    }
+
+    if (enclosingTypeElement == null) {
+      throw new IllegalArgumentException(element + " is not enclosed in any TypeElement.");
+    }
+    return asType(enclosingTypeElement);
+  }
+
+  /**
    * Returns the given {@link Element} instance as {@link PackageElement}.
    *
    * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
