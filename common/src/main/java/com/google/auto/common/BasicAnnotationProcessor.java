@@ -118,8 +118,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
-  private final Set<ElementName> deferredElementNames = new LinkedHashSet<>();
-  private final SetMultimap<Step, ElementName> elementsDeferredBySteps =
+  private final Set<ElementBluePrint> deferredElementBluePrints = new LinkedHashSet<>();
+  private final SetMultimap<Step, ElementBluePrint> elementsDeferredBySteps =
       LinkedHashMultimap.create();
 
   private Elements elementUtils;
@@ -210,8 +210,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       postRound(roundEnv);
       if (!roundEnv.errorRaised()) {
         reportMissingElements(
-            ImmutableSet.<ElementName>builder()
-                .addAll(deferredElementNames)
+            ImmutableSet.<ElementBluePrint>builder()
+                .addAll(deferredElementBluePrints)
                 .addAll(elementsDeferredBySteps.values())
                 .build());
       }
@@ -242,15 +242,15 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         elementsDeferredBySteps.replaceValues(
             step,
             rejectedElements.stream()
-                .map(element -> ElementName.forAnnotatedElement(element, typeUtils, messager))
+                .map(element -> ElementBluePrint.forAnnotatedElement(element, typeUtils, messager))
                 .collect(Collectors.toList()));
       }
     }
   }
 
-  private void reportMissingElements(Set<ElementName> missingElementNames) {
-    for (ElementName missingElementName : missingElementNames) {
-      Optional<? extends Element> missingElement = missingElementName.getElement(elementUtils);
+  private void reportMissingElements(Set<ElementBluePrint> missingElementBluePrints) {
+    for (ElementBluePrint missingElementBluePrint : missingElementBluePrints) {
+      Optional<? extends Element> missingElement = missingElementBluePrint.getElement(elementUtils);
       if (missingElement.isPresent()) {
         messager.printMessage(
             ERROR,
@@ -258,7 +258,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
                 "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
             missingElement.get());
       } else {
-        messager.printMessage(ERROR, processingErrorMessage(missingElementName.toString));
+        messager.printMessage(ERROR, processingErrorMessage(missingElementBluePrint.toString));
       }
     }
   }
@@ -276,20 +276,22 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * found for a deferred element, defers it again.
    */
   private ImmutableSetMultimap<TypeElement, Element> validElements(RoundEnvironment roundEnv) {
-    ImmutableSet<ElementName> prevDeferredElementNames = ImmutableSet.copyOf(deferredElementNames);
-    deferredElementNames.clear();
+    ImmutableSet<ElementBluePrint> prevDeferredElementBluePrints =
+        ImmutableSet.copyOf(deferredElementBluePrints);
+    deferredElementBluePrints.clear();
 
     ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsByAnnotationBuilder =
         ImmutableSetMultimap.builder();
-    for (ElementName deferredElementName : prevDeferredElementNames) {
-      Optional<? extends Element> deferredElement = deferredElementName.getElement(elementUtils);
+    for (ElementBluePrint deferredElementBluePrint : prevDeferredElementBluePrints) {
+      Optional<? extends Element> deferredElement =
+          deferredElementBluePrint.getElement(elementUtils);
       if (deferredElement.isPresent()) {
         findAnnotatedElements(
             deferredElement.get(),
             getSupportedAnnotationTypeElements(),
             deferredElementsByAnnotationBuilder);
       } else {
-        deferredElementNames.add(deferredElementName);
+        deferredElementBluePrints.add(deferredElementBluePrint);
       }
     }
 
@@ -299,27 +301,28 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap.Builder<TypeElement, Element> validElements =
         ImmutableSetMultimap.builder();
 
-    Set<ElementName> validElementNames = new LinkedHashSet<>();
+    Set<ElementBluePrint> validElementBluePrints = new LinkedHashSet<>();
 
     // Look at the elements we've found and the new elements from this round and validate them.
     for (TypeElement annotationType : getSupportedAnnotationTypeElements()) {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
       ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
       for (Element element : Sets.union(roundElements, prevRoundElements)) {
-        ElementName elementName = ElementName.forAnnotatedElement(element, typeUtils, messager);
+        ElementBluePrint elementBluePrint =
+            ElementBluePrint.forAnnotatedElement(element, typeUtils, messager);
         // For every element that is not module/package, to be well-formed its
         // enclosing-type in its entirety should be well-formed. Since modules
         // don't get annotated (and not supported here) they can be ignored.
         boolean isValidElement =
-            validElementNames.contains(elementName)
-                || (!deferredElementNames.contains(elementName)
+            validElementBluePrints.contains(elementBluePrint)
+                || (!deferredElementBluePrints.contains(elementBluePrint)
                     && validateElement(
                         element.getKind() == PACKAGE ? element : getEnclosingType(element)));
         if (isValidElement) {
           validElements.put(annotationType, element);
-          validElementNames.add(elementName);
+          validElementBluePrints.add(elementBluePrint);
         } else {
-          deferredElementNames.add(elementName);
+          deferredElementBluePrints.add(elementBluePrint);
         }
       }
     }
@@ -328,11 +331,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   private ImmutableSetMultimap<TypeElement, Element> indexByAnnotation(
-      Set<ElementName> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
+      Set<ElementBluePrint> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
     ImmutableSetMultimap.Builder<TypeElement, Element> deferredElements =
         ImmutableSetMultimap.builder();
-    for (ElementName elementName : annotatedElements) {
-      elementName
+    for (ElementBluePrint elementBluePrint : annotatedElements) {
+      elementBluePrint
           .getElement(elementUtils)
           .ifPresent(element -> findAnnotatedElements(element, annotationTypes, deferredElements));
     }
@@ -502,16 +505,16 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /**
-   * An {@link ElementName} for an annotated element.
+   * An {@link ElementBluePrint} for an annotated element.
    *
-   * <p>Instead of saving elements, an {@code ElementName} is saved since there is no guarantee that
-   * any particular element will always be represented by the same object. (Reference: {@link
+   * <p>Instead of saving elements, an {@code ElementBluePrint} is saved since there is no guarantee
+   * that any particular element will always be represented by the same object. (Reference: {@link
    * Element}) For example, Eclipse compiler uses different Element instances per round.
    */
-  private abstract static class ElementName {
+  private abstract static class ElementBluePrint {
     public final String toString;
 
-    private ElementName(Element element) {
+    private ElementBluePrint(Element element) {
       this.toString = element.toString();
     }
 
@@ -523,32 +526,32 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
        */
       switch (element.getKind().name()) {
         case "PACKAGE":
-          return new PackageElementName(element);
+          return new PackageElementBluePrint(element);
         case "CLASS":
         case "ENUM":
         case "INTERFACE":
         case "ANNOTATION_TYPE":
         case "RECORD":
-          return new TypeElementName(element);
+          return new TypeElementBluePrint(element);
         case "TYPE_PARAMETER":
-          return new TypeParameterElementName(element);
+          return new TypeParameterElementBluePrint(element);
         case "FIELD":
         case "ENUM_CONSTANT":
-          return new FieldElementName(element);
+          return new FieldElementBluePrint(element);
         case "RECORD_COMPONENT":
-          return new RecordComponentElementName(element);
+          return new RecordComponentElementBluePrint(element);
         case "CONSTRUCTOR":
         case "METHOD":
-          return new ExecutableElementName(element, typeUtils);
+          return new ExecutableElementBluePrint(element, typeUtils);
         case "PARAMETER":
-          return new ParameterElementName(element, typeUtils);
+          return new ParameterElementBluePrint(element, typeUtils);
         default:
           messenger.printMessage(
               WARNING,
               String.format(
                   "%s does not support element type %s.",
-                  ElementName.class.getCanonicalName(), element.getKind()));
-          return new UnsupportedElementName(element);
+                  ElementBluePrint.class.getCanonicalName(), element.getKind()));
+          return new UnsupportedElementBluePrint(element);
       }
     }
 
@@ -556,11 +559,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof ElementName)) {
+      } else if (!(object instanceof ElementBluePrint)) {
         return false;
       }
 
-      ElementName that = (ElementName) object;
+      ElementBluePrint that = (ElementBluePrint) object;
       return this.toString.equals(that.toString);
     }
 
@@ -575,7 +578,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     /**
      * Returns the {@link Element} corresponding to the name information saved in {@link
-     * ElementName}. {@link Optional#empty()} ()} if none exists.
+     * ElementBluePrint}. {@link Optional#empty()} ()} if none exists.
      */
     abstract Optional<? extends Element> getElement(Elements elementUtils);
   }
@@ -584,10 +587,10 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * Save the Element reference and returns it when inquired, with the hope that the same object
    * still represent that element.
    */
-  private static final class UnsupportedElementName extends ElementName {
+  private static final class UnsupportedElementBluePrint extends ElementBluePrint {
     private final Element element;
 
-    private UnsupportedElementName(Element element) {
+    private UnsupportedElementBluePrint(Element element) {
       super(element);
       this.element = element;
     }
@@ -602,8 +605,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * two different methods to look them up in {@link Elements}, we end up with a lot of parallel
    * logic. :(
    */
-  private static final class PackageElementName extends ElementName {
-    private PackageElementName(Element element) {
+  private static final class PackageElementBluePrint extends ElementBluePrint {
+    private PackageElementBluePrint(Element element) {
       super(element);
     }
 
@@ -618,8 +621,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class TypeElementName extends ElementName {
-    private TypeElementName(Element element) {
+  private static final class TypeElementBluePrint extends ElementBluePrint {
+    private TypeElementBluePrint(Element element) {
       super(element);
     }
 
@@ -634,12 +637,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class TypeParameterElementName extends ElementName {
-    private final TypeElementName enclosingTypeElementName;
+  private static final class TypeParameterElementBluePrint extends ElementBluePrint {
+    private final TypeElementBluePrint enclosingTypeElementBluePrint;
 
-    private TypeParameterElementName(Element element) {
+    private TypeParameterElementBluePrint(Element element) {
       super(element);
-      this.enclosingTypeElementName = new TypeElementName(element.getEnclosingElement());
+      this.enclosingTypeElementBluePrint = new TypeElementBluePrint(element.getEnclosingElement());
     }
 
     @Override
@@ -649,11 +652,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<? extends TypeParameterElement> getElement(Elements elementUtils) {
-      return enclosingTypeElementName
+      return enclosingTypeElementBluePrint
           .getElement(elementUtils)
           .map(
-              enclosingTypeElementName ->
-                  enclosingTypeElementName.getTypeParameters().stream()
+              enclosingTypeElementBluePrint ->
+                  enclosingTypeElementBluePrint.getTypeParameters().stream()
                       .filter(typeParamElement -> toString.equals(typeParamElement.toString()))
                       .collect(MoreCollectors.onlyElement()));
     }
@@ -662,35 +665,35 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof TypeParameterElementName)) {
+      } else if (!(object instanceof TypeParameterElementBluePrint)) {
         return false;
       }
 
-      TypeParameterElementName that = (TypeParameterElementName) object;
+      TypeParameterElementBluePrint that = (TypeParameterElementBluePrint) object;
       return this.toString.equals(that.toString)
-          && this.enclosingTypeElementName.equals(that.enclosingTypeElementName);
+          && this.enclosingTypeElementBluePrint.equals(that.enclosingTypeElementBluePrint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(toString, enclosingTypeElementName);
+      return Objects.hash(toString, enclosingTypeElementBluePrint);
     }
   }
 
   /** Represents FIELD, ENUM_CONSTANT, and RECORD_COMPONENT */
-  private abstract static class FieldOrRecordComponentElementName extends ElementName {
-    private final TypeElementName enclosingTypeElementName;
+  private abstract static class FieldOrRecordComponentElementBluePrint extends ElementBluePrint {
+    private final TypeElementBluePrint enclosingTypeElementBluePrint;
     private final ElementKind elementKind;
 
-    private FieldOrRecordComponentElementName(Element element) {
+    private FieldOrRecordComponentElementBluePrint(Element element) {
       super(element); // toString is its simple name.
-      this.enclosingTypeElementName = new TypeElementName(getEnclosingType(element));
+      this.enclosingTypeElementBluePrint = new TypeElementBluePrint(getEnclosingType(element));
       this.elementKind = element.getKind();
     }
 
     @Override
     Optional<VariableElement> getElement(Elements elementUtils) {
-      return enclosingTypeElementName
+      return enclosingTypeElementBluePrint
           .getElement(elementUtils)
           .map(
               typeElement ->
@@ -705,11 +708,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!super.equals(object) || !(object instanceof FieldOrRecordComponentElementName)) {
+      if (!super.equals(object) || !(object instanceof FieldOrRecordComponentElementBluePrint)) {
         return false;
       }
       // To distinguish between a field and record_component
-      FieldOrRecordComponentElementName that = (FieldOrRecordComponentElementName) object;
+      FieldOrRecordComponentElementBluePrint that = (FieldOrRecordComponentElementBluePrint) object;
       return this.elementKind == that.elementKind;
     }
 
@@ -719,9 +722,10 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class RecordComponentElementName extends FieldOrRecordComponentElementName {
+  private static final class RecordComponentElementBluePrint
+      extends FieldOrRecordComponentElementBluePrint {
 
-    private RecordComponentElementName(Element element) {
+    private RecordComponentElementBluePrint(Element element) {
       super(element);
     }
 
@@ -731,9 +735,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class FieldElementName extends FieldOrRecordComponentElementName {
+  private static final class FieldElementBluePrint extends FieldOrRecordComponentElementBluePrint {
 
-    private FieldElementName(Element element) {
+    private FieldElementBluePrint(Element element) {
       super(element);
     }
 
@@ -752,8 +756,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * both have the same toString {@code <C>m(C)} but are valid cases for overloading methods.
    * Moreover, the needed enclosing type-element information is not included in the toString.
    */
-  private static final class ExecutableElementName extends ElementName {
-    private final TypeElementName enclosingTypeElementName;
+  private static final class ExecutableElementBluePrint extends ElementBluePrint {
+    private final TypeElementBluePrint enclosingTypeElementBluePrint;
     /* Considering the following strategy for retrieving the element, the simple name is saved
      * since comparing the toString as a subtitle for comparing a simple name is not reliable when
      * at least one parameter references ERROR (possibly not generated yet).
@@ -767,11 +771,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     private final Types typeUtils;
 
-    private ExecutableElementName(Element element, Types typeUtils) {
+    private ExecutableElementBluePrint(Element element, Types typeUtils) {
       super(element);
       ExecutableElement execElement = (ExecutableElement) element;
       TypeElement enclosingTypeElement = getEnclosingType(execElement);
-      this.enclosingTypeElementName = new TypeElementName(enclosingTypeElement);
+      this.enclosingTypeElementBluePrint = new TypeElementBluePrint(enclosingTypeElement);
       /* For retrieving the element through getElement():
        * 1. Since the enclosing type element is known there is no ambiguity in terms of
        * Overridden methods.
@@ -810,7 +814,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
      */
     @Override
     Optional<ExecutableElement> getElement(Elements elementUtils) {
-      return enclosingTypeElementName
+      return enclosingTypeElementBluePrint
           .getElement(elementUtils)
           .map(
               enclosingTypeElement ->
@@ -843,28 +847,28 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!super.equals(object) || !(object instanceof ExecutableElementName)) {
+      if (!super.equals(object) || !(object instanceof ExecutableElementBluePrint)) {
         return false;
       }
       // For rare cases where toString is the same. Therefore, simple name is the same here.
-      ExecutableElementName that = (ExecutableElementName) object;
+      ExecutableElementBluePrint that = (ExecutableElementBluePrint) object;
       return this.hasSameErasedParametersType(that.erasedParametersTypes)
-          && this.enclosingTypeElementName.equals(that.enclosingTypeElementName);
+          && this.enclosingTypeElementBluePrint.equals(that.enclosingTypeElementBluePrint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(simpleName, erasedParametersTypes, enclosingTypeElementName);
+      return Objects.hash(simpleName, erasedParametersTypes, enclosingTypeElementBluePrint);
     }
   }
 
-  private static final class ParameterElementName extends ElementName {
-    private final ExecutableElementName enclosingExecutableElementName;
+  private static final class ParameterElementBluePrint extends ElementBluePrint {
+    private final ExecutableElementBluePrint enclosingExecutableElementBluePrint;
 
-    private ParameterElementName(Element element, Types typeUtils) {
+    private ParameterElementBluePrint(Element element, Types typeUtils) {
       super(element);
-      this.enclosingExecutableElementName =
-          new ExecutableElementName(element.getEnclosingElement(), typeUtils);
+      this.enclosingExecutableElementBluePrint =
+          new ExecutableElementBluePrint(element.getEnclosingElement(), typeUtils);
     }
 
     @Override
@@ -874,7 +878,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<? extends VariableElement> getElement(Elements elementUtils) {
-      return enclosingExecutableElementName
+      return enclosingExecutableElementBluePrint
           .getElement(elementUtils)
           .map(
               enclosingExecutableElement ->
@@ -887,18 +891,19 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof ParameterElementName)) {
+      } else if (!(object instanceof ParameterElementBluePrint)) {
         return false;
       }
 
-      ParameterElementName that = (ParameterElementName) object;
+      ParameterElementBluePrint that = (ParameterElementBluePrint) object;
       return this.toString.equals(that.toString)
-          && this.enclosingExecutableElementName.equals(that.enclosingExecutableElementName);
+          && this.enclosingExecutableElementBluePrint.equals(
+              that.enclosingExecutableElementBluePrint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(toString, enclosingExecutableElementName);
+      return Objects.hash(toString, enclosingExecutableElementBluePrint);
     }
   }
 }
