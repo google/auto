@@ -16,6 +16,7 @@
 package com.google.auto.common;
 
 import static com.google.auto.common.MoreElements.asExecutable;
+import static com.google.auto.common.MoreElements.asType;
 import static com.google.auto.common.MoreElements.getEnclosingType;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreElements.isType;
@@ -25,7 +26,13 @@ import static com.google.auto.common.SuperficialValidation.validateElement;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Multimaps.filterKeys;
 import static java.util.Objects.requireNonNull;
+import static javax.lang.model.element.ElementKind.CONSTRUCTOR;
+import static javax.lang.model.element.ElementKind.METHOD;
+import static javax.lang.model.element.ElementKind.PACKAGE;
+import static javax.lang.model.element.ElementKind.PARAMETER;
+import static javax.lang.model.element.ElementKind.TYPE_PARAMETER;
 import static javax.tools.Diagnostic.Kind.ERROR;
+import static javax.tools.Diagnostic.Kind.WARNING;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.Predicates;
@@ -55,6 +62,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.TypeMirror;
@@ -234,7 +242,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         elementsDeferredBySteps.replaceValues(
             step,
             rejectedElements.stream()
-                .map(element -> ElementName.forAnnotatedElement(element, typeUtils))
+                .map(element -> ElementName.forAnnotatedElement(element, typeUtils, messager))
                 .collect(Collectors.toList()));
       }
     }
@@ -298,7 +306,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
       ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
       for (Element element : Sets.union(roundElements, prevRoundElements)) {
-        ElementName elementName = ElementName.forAnnotatedElement(element, typeUtils);
+        ElementName elementName = ElementName.forAnnotatedElement(element, typeUtils, messager);
         // For every element that is not module/package, to be well-formed its
         // enclosing-type in its entirety should be well-formed. Since modules
         // don't get annotated (and not supported here) they can be ignored.
@@ -306,9 +314,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
             validElementNames.contains(elementName)
                 || (!deferredElementNames.contains(elementName)
                     && validateElement(
-                        element.getKind() == ElementKind.PACKAGE
-                            ? element
-                            : getEnclosingType(element)));
+                        element.getKind() == PACKAGE ? element : getEnclosingType(element)));
         if (isValidElement) {
           validElements.put(annotationType, element);
           validElementNames.add(elementName);
@@ -361,16 +367,20 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       }
     }
 
-    // element.getEnclosedElements() does NOT return parameter elements
-    switch (element.getKind()) {
-      case METHOD:
-      case CONSTRUCTOR:
-        for (Element parameterElement : asExecutable(element).getParameters()) {
-          findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
-        }
-        break;
-      default: // do nothing
+    // element.getEnclosedElements() does NOT return parameter or type parameter elements
+    if (isType(element)) {
+      for (Element typeParameterElement : asType(element).getTypeParameters()) {
+        findAnnotatedElements(typeParameterElement, annotationTypes, annotatedElements);
+      }
+    } else if (element.getKind() == METHOD || element.getKind() == CONSTRUCTOR) {
+      for (Element parameterElement : asExecutable(element).getParameters()) {
+        findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
+      }
+      for (Element typeParameterElement : asExecutable(element).getTypeParameters()) {
+        findAnnotatedElements(typeParameterElement, annotationTypes, annotatedElements);
+      }
     }
+
     for (TypeElement annotationType : annotationTypes) {
       if (isAnnotationPresent(element, annotationType)) {
         annotatedElements.put(annotationType, element);
@@ -505,10 +515,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       this.toString = element.toString();
     }
 
-    /** An {@link ElementName} for an annotated element. */
-    static ElementName forAnnotatedElement(Element element, Types typeUtils) {
-      /* Name of the ElementKind constants are used instead to accommodate for
-       * RECORD and RECORD_COMPONENT kinds which are introduced in Java 16.
+    /** An {@link ElementBluePrint} for an annotated element. */
+    static ElementBluePrint forAnnotatedElement(
+        Element element, Types typeUtils, Messager messenger) {
+      /* The name of the ElementKind constants is used instead to accommodate for RECORD
+       * and RECORD_COMPONENT kinds, which are introduced in Java 16.
        */
       switch (element.getKind().name()) {
         case "PACKAGE":
@@ -519,6 +530,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         case "ANNOTATION_TYPE":
         case "RECORD":
           return new TypeElementName(element);
+        case "TYPE_PARAMETER":
+          return new TypeParameterElementName(element);
         case "FIELD":
         case "ENUM_CONSTANT":
           return new FieldElementName(element);
@@ -530,10 +543,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         case "PARAMETER":
           return new ParameterElementName(element, typeUtils);
         default:
-          throw new IllegalArgumentException(
+          messenger.printMessage(
+              WARNING,
               String.format(
                   "%s does not support element type %s.",
                   ElementName.class.getCanonicalName(), element.getKind()));
+          return new UnsupportedElementName(element);
       }
     }
 
@@ -554,13 +569,33 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       return toString.hashCode();
     }
 
-    protected abstract boolean isAcceptableElementKind(Element element);
+    protected boolean isAcceptableElementKind(Element element) {
+      return false;
+    }
 
     /**
      * Returns the {@link Element} corresponding to the name information saved in {@link
      * ElementName}. {@link Optional#empty()} ()} if none exists.
      */
     abstract Optional<? extends Element> getElement(Elements elementUtils);
+  }
+
+  /**
+   * Save the Element reference and returns it when inquired, with the hope that the same object
+   * still represent that element.
+   */
+  private static final class UnsupportedElementName extends ElementName {
+    private final Element element;
+
+    private UnsupportedElementName(Element element) {
+      super(element);
+      this.element = element;
+    }
+
+    @Override
+    Optional<? extends Element> getElement(Elements elementUtils) {
+      return Optional.of(element);
+    }
   }
 
   /* It's unfortunate that we have to track types and packages separately, but since there are
@@ -574,7 +609,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     protected boolean isAcceptableElementKind(Element element) {
-      return element.getKind() == ElementKind.PACKAGE;
+      return element.getKind() == PACKAGE;
     }
 
     @Override
@@ -596,6 +631,49 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     @Override
     Optional<TypeElement> getElement(Elements elementUtils) {
       return Optional.ofNullable(elementUtils.getTypeElement(toString));
+    }
+  }
+
+  private static final class TypeParameterElementName extends ElementName {
+    private final TypeElementName enclosingTypeElementName;
+
+    private TypeParameterElementName(Element element) {
+      super(element);
+      this.enclosingTypeElementName = new TypeElementName(element.getEnclosingElement());
+    }
+
+    @Override
+    protected boolean isAcceptableElementKind(Element element) {
+      return element.getKind() == TYPE_PARAMETER;
+    }
+
+    @Override
+    Optional<? extends TypeParameterElement> getElement(Elements elementUtils) {
+      return enclosingTypeElementName
+          .getElement(elementUtils)
+          .map(
+              enclosingTypeElementName ->
+                  enclosingTypeElementName.getTypeParameters().stream()
+                      .filter(typeParamElement -> toString.equals(typeParamElement.toString()))
+                      .collect(MoreCollectors.onlyElement()));
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (this == object) {
+        return true;
+      } else if (!(object instanceof TypeParameterElementName)) {
+        return false;
+      }
+
+      TypeParameterElementName that = (TypeParameterElementName) object;
+      return this.toString.equals(that.toString)
+          && this.enclosingTypeElementName.equals(that.enclosingTypeElementName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(toString, enclosingTypeElementName);
     }
   }
 
@@ -723,8 +801,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     protected boolean isAcceptableElementKind(Element element) {
-      return element.getKind() == ElementKind.CONSTRUCTOR
-          || element.getKind() == ElementKind.METHOD;
+      return element.getKind() == CONSTRUCTOR || element.getKind() == METHOD;
     }
 
     /* Executable element can be identified using the enclosing type element,
@@ -792,7 +869,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     protected boolean isAcceptableElementKind(Element element) {
-      return element.getKind() == ElementKind.PARAMETER;
+      return element.getKind() == PARAMETER;
     }
 
     @Override
