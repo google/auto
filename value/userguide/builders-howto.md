@@ -730,7 +730,17 @@ Instead, you could write this:
   @AutoValue
   public abstract class Foo {
     public abstract ImmutableMap<Integer, String> map();
-    ...
+    
+    // #start
+    // Needed only if your class has toBuilder() method
+    public Builder toBuilder() {
+      Builder builder = autoToBuilder();
+      builder.mapBuilder().putAll(map());
+      return builder;
+    }
+
+    abstract Builder autoToBuilder(); // not public
+    // #end
 
     @AutoValue.Builder
     public abstract static class Builder {
@@ -749,19 +759,6 @@ Instead, you could write this:
         setMap(mapBuilder.buildKeepingLast());
         return autoBuild();
       }
-
-      ...
-
-      // #start
-      // Needed only if your class has toBuilder() method
-      public Builder toBuilder() {
-        Builder builder = autoToBuilder();
-        builder.mapBuilder().putAll(map());
-        return builder;
-      }
-
-      abstract Builder autoToBuilder(); // not public
-      // #end
     }
   }
 ```
