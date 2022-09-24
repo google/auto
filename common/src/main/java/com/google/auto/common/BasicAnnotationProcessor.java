@@ -46,7 +46,9 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import java.lang.annotation.Annotation;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.ListIterator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -65,9 +67,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ErrorType;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -123,7 +123,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       LinkedHashMultimap.create();
 
   private Elements elementUtils;
-  private Types typeUtils;
   private Messager messager;
   private ImmutableList<? extends Step> steps;
 
@@ -131,7 +130,6 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   public final synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
     this.elementUtils = processingEnv.getElementUtils();
-    this.typeUtils = processingEnv.getTypeUtils();
     this.messager = processingEnv.getMessager();
     this.steps = ImmutableList.copyOf(steps());
   }
@@ -242,7 +240,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         elementsDeferredBySteps.replaceValues(
             step,
             rejectedElements.stream()
-                .map(element -> ElementBluePrint.forAnnotatedElement(element, typeUtils, messager))
+                .map(element -> ElementBluePrint.forAnnotatedElement(element, messager))
                 .collect(Collectors.toList()));
       }
     }
@@ -308,8 +306,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
       ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
       for (Element element : Sets.union(roundElements, prevRoundElements)) {
-        ElementBluePrint elementBluePrint =
-            ElementBluePrint.forAnnotatedElement(element, typeUtils, messager);
+        ElementBluePrint elementBluePrint = ElementBluePrint.forAnnotatedElement(element, messager);
         // For every element that is not module/package, to be well-formed its
         // enclosing-type in its entirety should be well-formed. Since modules
         // don't get annotated (and not supported here) they can be ignored.
@@ -519,8 +516,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
 
     /** An {@link ElementBluePrint} for an annotated element. */
-    static ElementBluePrint forAnnotatedElement(
-        Element element, Types typeUtils, Messager messenger) {
+    static ElementBluePrint forAnnotatedElement(Element element, Messager messenger) {
       /* The name of the ElementKind constants is used instead to accommodate for RECORD
        * and RECORD_COMPONENT kinds, which are introduced in Java 16.
        */
@@ -542,9 +538,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
           return new RecordComponentElementBluePrint(element);
         case "CONSTRUCTOR":
         case "METHOD":
-          return new ExecutableElementBluePrint(element, typeUtils);
+          return new ExecutableElementBluePrint(element);
         case "PARAMETER":
-          return new ParameterElementBluePrint(element, typeUtils);
+          return new ParameterElementBluePrint(element);
         default:
           messenger.printMessage(
               WARNING,
@@ -755,52 +751,44 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * extends Set<String>> void m(C c) {}}, and {@code <C extends SortedSet<String>> void m(C c) {}}
    * both have the same toString {@code <C>m(C)} but are valid cases for overloading methods.
    * Moreover, the needed enclosing type-element information is not included in the toString.
+   *
+   * <p>The executable element is retrieved by saving its enclosing type element, simple name, and
+   * ordinal position in the source code relative to other related overloaded methods, meaning those
+   * with the same simple name. This is possible because according to Java language specification
+   * for {@link TypeElement#getEnclosedElements()}: "As a particular instance of the general
+   * accuracy requirements and the ordering behavior required of this interface, the list of
+   * enclosed elements will be returned to the natural order for the originating source of
+   * information about the type. For example, if the information about the type is originating from
+   * a source file, the elements will be returned in source code order. (However, in that case the
+   * ordering of implicitly declared elements, such as default constructors, is not specified.)"
+   *
+   * <p>Simple name is saved since comparing the toString as a subtitle is not reliable when at
+   * least one parameter references ERROR, possibly because it is not generated yet. For example,
+   * method {@code void m(SomeGeneratedClass sgc)}, before the generation of {@code
+   * SomeGeneratedClass} has the toString {@code m(SomeGeneratedClass)}; however, after the
+   * generation it will have toString equal to {@code m(test.SomeGeneratedClass)} assuming that the
+   * package name is "test".
    */
   private static final class ExecutableElementBluePrint extends ElementBluePrint {
     private final TypeElementBluePrint enclosingTypeElementBluePrint;
-    /* Considering the following strategy for retrieving the element, the simple name is saved
-     * since comparing the toString as a subtitle for comparing a simple name is not reliable when
-     * at least one parameter references ERROR (possibly not generated yet).
-     * For example, method void m(SomeGeneratedClass sgc), when it first is received without
-     * SomeGeneratedClass being generated, has the toString m(SomeGeneratedClass); however,
-     * after the generation, it will have toString equal to m(test.SomeGeneratedClass) assuming
-     * that the package name is "test".
-     */
     private final Name simpleName;
-    private final ImmutableList<? extends TypeMirror> erasedParametersTypes;
+    private final int ordinalOverloadPosition;
 
-    private final Types typeUtils;
-
-    private ExecutableElementBluePrint(Element element, Types typeUtils) {
+    private ExecutableElementBluePrint(Element element) {
       super(element);
-      ExecutableElement execElement = (ExecutableElement) element;
-      TypeElement enclosingTypeElement = getEnclosingType(execElement);
+      TypeElement enclosingTypeElement = getEnclosingType(element);
       this.enclosingTypeElementBluePrint = new TypeElementBluePrint(enclosingTypeElement);
-      /* For retrieving the element through getElement():
-       * 1. Since the enclosing type element is known there is no ambiguity in terms of
-       * Overridden methods.
-       * 2. As for Overloaded executable elements, according to
-       * 2.1. JLS 8.4.2:
-       * "The signature of a method m1 is a subsignature of the signature of a method m2 if either:
-       * * m2 has the same signature as m1, or
-       * * the signature of m1 is the same as the erasure (§4.6) of the signature of m2."
-       * Therefore, an ordered erased parameters types is stored.
-       * 2.2. JLS 8.4.9:
-       * "There is no required relationship between the return types or between the throws clauses
-       * of two methods with the same name, unless their signatures are override-equivalent."
-       * Therefore, checking for simple name (which is included in the toString) and erased
-       * parameter types is enough to identify the represented executable element.
-       */
-      this.simpleName = execElement.getSimpleName();
-      this.typeUtils = typeUtils;
-      this.erasedParametersTypes = getErasedParameterTypes(execElement);
-    }
-
-    private ImmutableList<? extends TypeMirror> getErasedParameterTypes(
-        ExecutableElement execElement) {
-      return execElement.getParameters().stream()
-          .map(varElt -> typeUtils.erasure(varElt.asType()))
-          .collect(ImmutableList.toImmutableList());
+      this.simpleName = element.getSimpleName();
+      int ordinalOverloadPosition = 1;
+      Iterator<? extends Element> iter = enclosingTypeElement.getEnclosedElements().iterator();
+      Element elt = iter.next(); // The collection is not empty
+      while (!element.equals(elt)) {
+        if (elt.getSimpleName().equals(element.getSimpleName()) && isAcceptableElementKind(elt)) {
+          ordinalOverloadPosition++;
+        }
+        elt = iter.next();
+      }
+      this.ordinalOverloadPosition = ordinalOverloadPosition;
     }
 
     @Override
@@ -808,67 +796,62 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       return element.getKind() == CONSTRUCTOR || element.getKind() == METHOD;
     }
 
-    /* Executable element can be identified using the enclosing type element,
-     * simple name, and an ordered erased parameter types as described in the
-     * constructor.
-     */
     @Override
-    Optional<ExecutableElement> getElement(Elements elementUtils) {
+    Optional<? extends ExecutableElement> getElement(Elements elementUtils) {
       return enclosingTypeElementBluePrint
           .getElement(elementUtils)
           .map(
-              enclosingTypeElement ->
-                  enclosingTypeElement.getEnclosedElements().stream()
-                      .filter(
-                          element ->
-                              isAcceptableElementKind(element)
-                                  && simpleName.equals(element.getSimpleName())
-                                  && hasSameErasedParametersType(
-                                      getErasedParameterTypes((ExecutableElement) element)))
-                      .collect(MoreCollectors.onlyElement()))
+              typeElement -> {
+                ListIterator<? extends Element> listIter =
+                    typeElement.getEnclosedElements().listIterator();
+                for (int i = 0; i < ordinalOverloadPosition; i++) { // ordinalOverloadPosition >= 1
+                  if (!listIter.hasNext()) {
+                    return null;
+                  }
+                  Element elt = listIter.next();
+                  while (listIter.hasNext() && !elt.getSimpleName().equals(simpleName)
+                      || !isAcceptableElementKind(elt)) {
+                    elt = listIter.next();
+                  }
+                }
+
+                if (listIter.hasPrevious() // should not fail
+                    && simpleName.equals(listIter.previous().getSimpleName())) {
+                  return listIter.next();
+                } else {
+                  return null;
+                }
+              })
           .map(ExecutableElement.class::cast);
-    }
-
-    private boolean hasSameErasedParametersType(
-        ImmutableList<? extends TypeMirror> execElementErasedParametersTypes) {
-      // TypeMirror needs to be compared using Types
-      if (erasedParametersTypes.size() != execElementErasedParametersTypes.size()) {
-        return false;
-      }
-      for (int i = 0; i < erasedParametersTypes.size(); i++) {
-        if (!typeUtils.isSameType(
-            erasedParametersTypes.get(i), execElementErasedParametersTypes.get(i))) {
-          return false;
-        }
-      }
-
-      return true;
     }
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!super.equals(object) || !(object instanceof ExecutableElementBluePrint)) {
+      if (this == object) {
+        return true;
+      } else if (!(object instanceof ExecutableElementBluePrint)) {
         return false;
       }
-      // For rare cases where toString is the same. Therefore, simple name is the same here.
+
       ExecutableElementBluePrint that = (ExecutableElementBluePrint) object;
-      return this.hasSameErasedParametersType(that.erasedParametersTypes)
+      return this.simpleName.equals(that.simpleName)
+          && this.ordinalOverloadPosition == that.ordinalOverloadPosition
           && this.enclosingTypeElementBluePrint.equals(that.enclosingTypeElementBluePrint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(simpleName, erasedParametersTypes, enclosingTypeElementBluePrint);
+      return Objects.hash(simpleName, ordinalOverloadPosition, enclosingTypeElementBluePrint);
     }
   }
 
   private static final class ParameterElementBluePrint extends ElementBluePrint {
     private final ExecutableElementBluePrint enclosingExecutableElementBluePrint;
 
-    private ParameterElementBluePrint(Element element, Types typeUtils) {
+    private ParameterElementBluePrint(Element element) {
       super(element);
       this.enclosingExecutableElementBluePrint =
-          new ExecutableElementBluePrint(element.getEnclosingElement(), typeUtils);
+          new ExecutableElementBluePrint(element.getEnclosingElement());
     }
 
     @Override
