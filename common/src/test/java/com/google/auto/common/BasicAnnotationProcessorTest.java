@@ -109,18 +109,6 @@ public class BasicAnnotationProcessorTest {
                   ENCLOSING_CLASS_NAME + ".RequiresGeneratedCode",
                   ENCLOSING_CLASS_NAME + ".TypeParameterRequiresGeneratedCode");
             }
-          },
-          new Step() {
-            @Override
-            public ImmutableSet<? extends Element> process(
-                ImmutableSetMultimap<String, Element> elementsByAnnotation) {
-              return ImmutableSet.of();
-            }
-
-            @Override
-            public ImmutableSet<String> annotations() {
-              return ImmutableSet.of(ENCLOSING_CLASS_NAME + ".AnAnnotation");
-            }
           });
     }
 
@@ -175,6 +163,11 @@ public class BasicAnnotationProcessorTest {
     }
   }
 
+  /**
+   * This processor process the OneMethodAtATime annotated methods, one at a time in the following
+   * fashion. If the number of annotated methods is more than two the second annotated method is
+   * processed and the rest are deferred. Otherwise, the first annotated method is processed.
+   */
   private static class OneOverloadedMethodAtATimeProcessor extends BaseAnnotationProcessor {
 
     int rejectedRounds;
@@ -218,6 +211,7 @@ public class BasicAnnotationProcessorTest {
                       "GeneratedByOneMethodAtATimeProcessor_%d_%s",
                       numberOfAnnotatedElements > 1 ? rejectedRounds : rejectedRounds + 1,
                       Objects.requireNonNull(NameOfToBeProcessedElement)));
+
               return Objects.requireNonNull(rejectedElements);
             }
 
@@ -495,8 +489,7 @@ public class BasicAnnotationProcessorTest {
             "  @" + AnAnnotation.class.getCanonicalName(),
             "  static class ValidInRound1 {}",
             "}");
-    Compilation compilation =
-        javac().withProcessors(new AnAnnotationProcessor()).compile(source);
+    Compilation compilation = javac().withProcessors(new AnAnnotationProcessor()).compile(source);
     assertThat(compilation).succeeded();
     assertThat(compilation).generatedSourceFile("test.ValidInRound2XYZ");
   }
@@ -549,7 +542,7 @@ public class BasicAnnotationProcessorTest {
   }
 
   @Test
-  public void properlyDefersProcessing_rejectsExecutableElement() {
+  public void properlyDefersProcessing_stepRejectingExecutableElements() {
     JavaFileObject classAFileObject =
         JavaFileObjects.forSourceLines(
             "test.ClassA",
@@ -585,7 +578,7 @@ public class BasicAnnotationProcessorTest {
   }
 
   @Test
-  public void properlyDefersProcessing_handlesOverloadedExecutableElements() {
+  public void properlyDefersProcessing_stepRejectingOverloadedExecutableElements() {
     JavaFileObject classAFileObject =
         JavaFileObjects.forSourceLines(
             "test.ClassA",
@@ -619,6 +612,66 @@ public class BasicAnnotationProcessorTest {
                 OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(double)"),
             ImmutableSetMultimap.of(
                 OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(double)"))
+        .inOrder();
+  }
+
+  @Test
+  public void properlyDefersProcessing_stepAndIllFormedRejectingExecutableElements() {
+    JavaFileObject testFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassA",
+            "package test;",
+            "import java.util.Set;",
+            "import java.util.SortedSet;",
+            "",
+            "public class ClassA {",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  <C extends Set<String>> void overloadedMethod(C x) {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  <C extends SortedSet<String>> void overloadedMethod(C c) {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  void overloadedMethod(SomeGeneratedClass c) {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  void method0(SomeGeneratedClass c) {}",
+            "}");
+
+    JavaFileObject generatesCodeFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassB",
+            "package test;",
+            "",
+            "@" + GeneratesCode.class.getCanonicalName(),
+            "public class ClassB {}");
+
+    OneOverloadedMethodAtATimeProcessor oneOverloadedMethodAtATimeProcessor =
+        new OneOverloadedMethodAtATimeProcessor();
+    Compilation compilation =
+        javac()
+            .withProcessors(oneOverloadedMethodAtATimeProcessor, new GeneratesCodeProcessor())
+            .compile(testFileObject, generatesCodeFileObject);
+
+    assertThat(compilation).succeeded();
+    assertThat(oneOverloadedMethodAtATimeProcessor.rejectedRounds).isEqualTo(3);
+
+    assertThat(oneOverloadedMethodAtATimeProcessor.processArguments())
+        .comparingElementsUsing(setMultimapValuesByString())
+        .containsExactly(
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "<C>overloadedMethod(C)",
+                OneMethodAtATime.class.getCanonicalName(), "<C>overloadedMethod(C)",
+                OneMethodAtATime.class.getCanonicalName(),
+                    "overloadedMethod(test.SomeGeneratedClass)",
+                OneMethodAtATime.class.getCanonicalName(), "method0(test.SomeGeneratedClass)"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "<C>overloadedMethod(C)",
+                OneMethodAtATime.class.getCanonicalName(),
+                    "overloadedMethod(test.SomeGeneratedClass)",
+                OneMethodAtATime.class.getCanonicalName(), "method0(test.SomeGeneratedClass)"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "<C>overloadedMethod(C)",
+                OneMethodAtATime.class.getCanonicalName(), "method0(test.SomeGeneratedClass)"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "method0(test.SomeGeneratedClass)"))
         .inOrder();
   }
 
