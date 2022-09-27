@@ -44,10 +44,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
 import org.junit.Rule;
@@ -672,6 +674,62 @@ public class BasicAnnotationProcessorTest {
                 OneMethodAtATime.class.getCanonicalName(), "method0(test.SomeGeneratedClass)"),
             ImmutableSetMultimap.of(
                 OneMethodAtATime.class.getCanonicalName(), "method0(test.SomeGeneratedClass)"))
+        .inOrder();
+  }
+
+  /**
+   * In the following example, at least open-jdk does not report the second method if {@code
+   * SomeGeneratedClass} references a {@link TypeKind#ERROR} when {@link
+   * RoundEnvironment#getElementsAnnotatedWith} is called, or even when {@link
+   * TypeElement#getEnclosedElements()} is called. Therefore, our implementation should be vigilant
+   * that the second method is captured for processing at some point.
+   *
+   * <p>Note that for a method to get "hidden" like this, it should reside after the ERROR
+   * referencing method, and it should not have any distinguishing characteristic like different
+   * name, different number of parameter, or a clear parameter type mismatch.
+   */
+  @Test
+  public void properlyDefersProcessing_errorTypeReferencingOverloadedMethods() {
+    JavaFileObject testFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassA",
+            "package test;",
+            "",
+            "public class ClassA {",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  void overloadedMethod(SomeGeneratedClass c) {}",
+            "  @" + OneMethodAtATime.class.getCanonicalName(),
+            "  void overloadedMethod(int c) {}",
+            "}");
+
+    JavaFileObject generatesCodeFileObject =
+        JavaFileObjects.forSourceLines(
+            "test.ClassB",
+            "package test;",
+            "",
+            "@" + GeneratesCode.class.getCanonicalName(),
+            "public class ClassB {}");
+
+    OneOverloadedMethodAtATimeProcessor oneOverloadedMethodAtATimeProcessor =
+        new OneOverloadedMethodAtATimeProcessor();
+    Compilation compilation =
+        javac()
+            .withProcessors(oneOverloadedMethodAtATimeProcessor, new GeneratesCodeProcessor())
+            .compile(testFileObject, generatesCodeFileObject);
+
+    assertThat(compilation).succeeded();
+    assertThat(oneOverloadedMethodAtATimeProcessor.rejectedRounds).isEqualTo(1);
+
+    assertThat(oneOverloadedMethodAtATimeProcessor.processArguments())
+        .comparingElementsUsing(setMultimapValuesByString())
+        .containsExactly(
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(),
+                "overloadedMethod(test.SomeGeneratedClass)",
+                OneMethodAtATime.class.getCanonicalName(),
+                "overloadedMethod(int)"),
+            ImmutableSetMultimap.of(
+                OneMethodAtATime.class.getCanonicalName(), "overloadedMethod(int)"))
         .inOrder();
   }
 
