@@ -118,7 +118,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
-  private final Set<ElementBluePrint> deferredElementBluePrints = new LinkedHashSet<>();
+  private final Set<PackageOrTypeElementBluePrint> illFormedElementBluePrints =
+      new LinkedHashSet<>();
   private final SetMultimap<Step, ElementBluePrint> elementsDeferredBySteps =
       LinkedHashMultimap.create();
 
@@ -209,14 +210,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       if (!roundEnv.errorRaised()) {
         reportMissingElements(
             ImmutableSet.<ElementBluePrint>builder()
-                .addAll(deferredElementBluePrints)
+                .addAll(illFormedElementBluePrints)
                 .addAll(elementsDeferredBySteps.values())
                 .build());
       }
       return false;
     }
 
-    process(validElements(roundEnv));
+    process(getWellFormedElements(roundEnv));
 
     postRound(roundEnv);
 
@@ -270,73 +271,96 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /**
-   * Returns the valid annotated elements contained in all of the deferred elements. If none are
-   * found for a deferred element, defers it again.
+   * Returns the superficially validated annotated elements of this round, including the validated
+   * previously ill-formed elements.
+   *
+   * <p>Note that the elements deferred by processing steps are guaranteed to be well-formed;
+   * therefore, they are ignored (not returned) here, and they will be considered directly in the
+   * {@link #process(ImmutableSetMultimap)} method.
    */
-  private ImmutableSetMultimap<TypeElement, Element> validElements(RoundEnvironment roundEnv) {
-    ImmutableSet<ElementBluePrint> prevDeferredElementBluePrints =
-        ImmutableSet.copyOf(deferredElementBluePrints);
-    deferredElementBluePrints.clear();
+  private ImmutableSetMultimap<TypeElement, Element> getWellFormedElements(
+      RoundEnvironment roundEnv) {
+    ImmutableSet<PackageOrTypeElementBluePrint> prevIllFormedElementBluePrints =
+        ImmutableSet.copyOf(illFormedElementBluePrints);
+    illFormedElementBluePrints.clear();
 
-    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsByAnnotationBuilder =
+    ImmutableSetMultimap.Builder<TypeElement, Element> readyDeferredElementsByAnnotationBuilder =
         ImmutableSetMultimap.builder();
-    for (ElementBluePrint deferredElementBluePrint : prevDeferredElementBluePrints) {
-      Optional<? extends Element> deferredElement =
+    for (PackageOrTypeElementBluePrint deferredElementBluePrint : prevIllFormedElementBluePrints) {
+      Optional<? extends Element> deferredTypeElement =
           deferredElementBluePrint.getElement(elementUtils);
-      if (deferredElement.isPresent()) {
+      if (deferredTypeElement.isPresent()) {
         findAnnotatedElements(
-            deferredElement.get(),
+            deferredTypeElement.get(),
             getSupportedAnnotationTypeElements(),
-            deferredElementsByAnnotationBuilder);
+            readyDeferredElementsByAnnotationBuilder);
       } else {
-        deferredElementBluePrints.add(deferredElementBluePrint);
+        illFormedElementBluePrints.add(deferredElementBluePrint);
       }
     }
 
-    ImmutableSetMultimap<TypeElement, Element> deferredElementsByAnnotation =
-        deferredElementsByAnnotationBuilder.build();
+    ImmutableSetMultimap<TypeElement, Element> readyDeferredElementsByAnnotation =
+        readyDeferredElementsByAnnotationBuilder.build();
 
-    ImmutableSetMultimap.Builder<TypeElement, Element> validElements =
+    ImmutableSetMultimap.Builder<TypeElement, Element> validatedElementsBuilder =
         ImmutableSetMultimap.builder();
 
-    Set<ElementBluePrint> validElementBluePrints = new LinkedHashSet<>();
+    // For optimization purposes, the PackageOrTypeElementBluePrint that have already
+    // been verified to be well-formed are stored.
+    Set<PackageOrTypeElementBluePrint> wellFormedPackageOrTypeElementBluePrints =
+        new LinkedHashSet<>();
 
-    // Look at the elements we've found and the new elements from this round and validate them.
+    /* Look at the found ready deferred elements and the new elements from this round
+     * and validate them.
+     */
     for (TypeElement annotationType : getSupportedAnnotationTypeElements()) {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
-      ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
-      for (Element element : Sets.union(roundElements, prevRoundElements)) {
-        ElementBluePrint elementBluePrint = ElementBluePrint.forAnnotatedElement(element, messager);
+      ImmutableSet<Element> readyDeferredElements =
+          readyDeferredElementsByAnnotation.get(annotationType);
+
+      for (Element element : Sets.union(roundElements, readyDeferredElements)) {
         // For every element that is not module/package, to be well-formed its
         // enclosing-type in its entirety should be well-formed. Since modules
         // don't get annotated (and not supported here) they can be ignored.
-        boolean isValidElement =
-            validElementBluePrints.contains(elementBluePrint)
-                || (!deferredElementBluePrints.contains(elementBluePrint)
+        PackageOrTypeElementBluePrint pTElementBluePrint =
+            (PackageOrTypeElementBluePrint)
+                ElementBluePrint.forAnnotatedElement(
+                    element.getKind() == PACKAGE ? element : getEnclosingType(element), messager);
+
+        boolean isWellFormedElement =
+            wellFormedPackageOrTypeElementBluePrints.contains(pTElementBluePrint)
+                || (!illFormedElementBluePrints.contains(pTElementBluePrint)
                     && validateElement(
                         element.getKind() == PACKAGE ? element : getEnclosingType(element)));
-        if (isValidElement) {
-          validElements.put(annotationType, element);
-          validElementBluePrints.add(elementBluePrint);
+        if (isWellFormedElement) {
+          validatedElementsBuilder.put(annotationType, element);
+          wellFormedPackageOrTypeElementBluePrints.add(pTElementBluePrint);
         } else {
-          deferredElementBluePrints.add(elementBluePrint);
+          illFormedElementBluePrints.add(pTElementBluePrint);
         }
       }
     }
 
-    return validElements.build();
+    return validatedElementsBuilder.build();
   }
 
   private ImmutableSetMultimap<TypeElement, Element> indexByAnnotation(
       Set<ElementBluePrint> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
-    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElements =
+    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsBuilder =
         ImmutableSetMultimap.builder();
     for (ElementBluePrint elementBluePrint : annotatedElements) {
       elementBluePrint
           .getElement(elementUtils)
-          .ifPresent(element -> findAnnotatedElements(element, annotationTypes, deferredElements));
+          .ifPresent(
+              element -> {
+                for (TypeElement annotationType : annotationTypes) {
+                  if (isAnnotationPresent(element, annotationType)) {
+                    deferredElementsBuilder.put(annotationType, element);
+                  }
+                }
+              });
     }
-    return deferredElements.build();
+    return deferredElementsBuilder.build();
   }
 
   /**
@@ -501,6 +525,10 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
+  /* ********************************************************************************* */
+  /* Element blue prints ************************************************************* */
+  /* ********************************************************************************* */
+
   /**
    * An {@link ElementBluePrint} for an annotated element.
    *
@@ -581,7 +609,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   /**
    * Save the Element reference and returns it when inquired, with the hope that the same object
-   * still represent that element.
+   * still represent that element, or the required information is present.
    */
   private static final class UnsupportedElementBluePrint extends ElementBluePrint {
     private final Element element;
@@ -597,11 +625,17 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
+  private abstract static class PackageOrTypeElementBluePrint extends ElementBluePrint {
+    private PackageOrTypeElementBluePrint(Element element) {
+      super(element);
+    }
+  }
+
   /* It's unfortunate that we have to track types and packages separately, but since there are
    * two different methods to look them up in {@link Elements}, we end up with a lot of parallel
    * logic. :(
    */
-  private static final class PackageElementBluePrint extends ElementBluePrint {
+  private static final class PackageElementBluePrint extends PackageOrTypeElementBluePrint {
     private PackageElementBluePrint(Element element) {
       super(element);
     }
@@ -617,7 +651,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class TypeElementBluePrint extends ElementBluePrint {
+  private static final class TypeElementBluePrint extends PackageOrTypeElementBluePrint {
     private TypeElementBluePrint(Element element) {
       super(element);
     }
