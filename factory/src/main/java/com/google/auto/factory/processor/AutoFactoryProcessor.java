@@ -100,7 +100,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         ImmutableListMultimap.builder();
     ImmutableSetMultimap.Builder<PackageAndClass, ImplementationMethodDescriptor>
         implementationMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
-    // Iterate over the classes and methods that are annotated with @AutoFactory.
+    // Iterate over the classes and constructors that are annotated with @AutoFactory.
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {

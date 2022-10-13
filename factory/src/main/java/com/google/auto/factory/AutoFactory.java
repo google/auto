@@ -53,7 +53,7 @@ public @interface AutoFactory {
   Class<?>[] implementing() default {};
 
   /**
-   * The type that the generated factory is require to extend.
+   * The type that the generated factory is required to extend.
    */
   Class<?> extending() default Object.class;
 

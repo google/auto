@@ -37,7 +37,7 @@ import javax.lang.model.type.TypeMirror;
  */
 @AutoValue
 abstract class FactoryDescriptor {
-  private static final CharMatcher invalidIdentifierCharacters =
+  private static final CharMatcher INVALID_IDENTIFIER_CHARACTERS =
       new CharMatcher() {
         @Override
         public boolean matches(char c) {
@@ -119,7 +119,7 @@ abstract class FactoryDescriptor {
                 default:
                   String providerName =
                       uniqueNames.getUniqueName(
-                          invalidIdentifierCharacters.replaceFrom(key.toString(), '_')
+                          INVALID_IDENTIFIER_CHARACTERS.replaceFrom(key.toString(), '_')
                               + "Provider");
                   Optional<AnnotationMirror> nullable =
                       parameters.stream()
