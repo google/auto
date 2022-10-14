@@ -524,6 +524,16 @@ public class AutoFactoryProcessorTest {
         .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_FooImplWithClassFactory.java"));
   }
 
+  @Test
+  public void parameterAnnotations() {
+    JavaFileObject file = JavaFileObjects.forResource("good/ParameterAnnotations.java");
+    Compilation compilation = javac.compile(file);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.ParameterAnnotationsFactory")
+        .hasSourceEquivalentTo(loadExpectedFile("expected/ParameterAnnotationsFactory.java"));
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     if (isJavaxAnnotationProcessingGeneratedAvailable()) {
       return JavaFileObjects.forResource(resourceName);
