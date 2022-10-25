@@ -42,6 +42,7 @@ import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Predicate;
 import javax.annotation.processing.AbstractProcessor;
@@ -861,5 +862,64 @@ public class AutoValueJava8Test {
     Predicate<Number> predicate = n -> n.toString().equals("0");
     OptionalExtends t = OptionalExtends.builder().setPredicate(predicate).build();
     assertThat(t.predicate()).hasValue(predicate);
+  }
+
+  @AutoValue
+  public abstract static class Foo {
+    public abstract Bar bar();
+
+    public abstract double baz();
+
+    public static Foo.Builder builder() {
+      return new AutoValue_AutoValueJava8Test_Foo.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      // https://github.com/google/auto/blob/master/value/userguide/builders-howto.md#normalize
+      abstract Optional<Bar> bar();
+
+      public abstract Builder bar(Bar bar);
+
+      // https://github.com/google/auto/blob/master/value/userguide/builders-howto.md#nested_builders
+      public abstract Bar.Builder barBuilder();
+
+      abstract OptionalDouble baz();
+
+      public abstract Builder baz(double baz);
+
+      abstract Foo autoBuild();
+
+      public Foo build() {
+        if (!bar().isPresent()) {
+          bar(Bar.builder().build());
+        }
+        if (!baz().isPresent()) {
+          baz(0.0);
+        }
+        return autoBuild();
+      }
+    }
+  }
+
+  @AutoValue
+  public abstract static class Bar {
+    public abstract Bar.Builder toBuilder();
+
+    public static Bar.Builder builder() {
+      return new AutoValue_AutoValueJava8Test_Bar.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Bar build();
+    }
+  }
+
+  @Test
+  public void nestedOptionalGetter() {
+    Foo foo = Foo.builder().build();
+    assertThat(foo.bar()).isNotNull();
+    assertThat(foo.baz()).isEqualTo(0.0);
   }
 }
