@@ -548,7 +548,7 @@ Introducing a static method fixes the problem:
 import java.time.LocalTime;
 
 public class TimeUtils {
-  static LocalTime localTimeOf(int hour, int second, int second) {
+  static LocalTime localTimeOf(int hour, int minute, int second) {
     return LocalTime.of(hour, minute, second);
   }
 
