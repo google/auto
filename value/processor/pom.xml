@@ -238,10 +238,6 @@
               </transformers>
               <relocations>
                 <relocation>
-                  <pattern>org.objectweb</pattern>
-                  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>com.google</pattern>
                   <shadedPattern>autovalue.shaded.com.google</shadedPattern>
                   <excludes>
@@ -253,6 +249,14 @@
                   <shadedPattern>autovalue.shaded.com.squareup.javapoet</shadedPattern>
                 </relocation>
                 <relocation>
+                  <pattern>kotlin</pattern>
+                  <shadedPattern>autovalue.shaded.kotlin</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>kotlinx</pattern>
+                  <shadedPattern>autovalue.shaded.kotlinx</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>net.ltgt.gradle.incap</pattern>
                   <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap</shadedPattern>
                 </relocation>
@@ -261,12 +265,12 @@
                   <shadedPattern>autovalue.shaded.org.checkerframework</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>kotlin</pattern>
-                  <shadedPattern>autovalue.shaded.kotlin</shadedPattern>
+                  <pattern>org.jetbrains</pattern>
+                  <shadedPattern>autovalue.shaded.org.jetbrains</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>kotlinx</pattern>
-                  <shadedPattern>autovalue.shaded.kotlinx</shadedPattern>
+                  <pattern>org.objectweb</pattern>
+                  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
