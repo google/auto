@@ -114,8 +114,10 @@ public final class BuilderRequiredPropertiesTest {
     BuilderRequiredProperties builderRequiredProperties = builderRequiredProperties(8);
     ImmutableList<Property> primitives = requiredPrimitiveProperties(builderRequiredProperties);
     assertThat(primitives).hasSize(8);
-    assertThat(builderRequiredProperties.markAsSet(primitives.get(0))).isEqualTo("set$0 |= 1;");
-    assertThat(builderRequiredProperties.markAsSet(primitives.get(7))).isEqualTo("set$0 |= 0x80;");
+    assertThat(builderRequiredProperties.markAsSet(primitives.get(0)))
+        .isEqualTo("set$0 |= (byte) 1;");
+    assertThat(builderRequiredProperties.markAsSet(primitives.get(7)))
+        .isEqualTo("set$0 |= (byte) 0x80;");
   }
 
   @Test
@@ -123,10 +125,12 @@ public final class BuilderRequiredPropertiesTest {
     BuilderRequiredProperties builderRequiredProperties = builderRequiredProperties(16);
     ImmutableList<Property> primitives = requiredPrimitiveProperties(builderRequiredProperties);
     assertThat(primitives).hasSize(16);
-    assertThat(builderRequiredProperties.markAsSet(primitives.get(0))).isEqualTo("set$0 |= 1;");
-    assertThat(builderRequiredProperties.markAsSet(primitives.get(7))).isEqualTo("set$0 |= 0x80;");
+    assertThat(builderRequiredProperties.markAsSet(primitives.get(0)))
+        .isEqualTo("set$0 |= (short) 1;");
+    assertThat(builderRequiredProperties.markAsSet(primitives.get(7)))
+        .isEqualTo("set$0 |= (short) 0x80;");
     assertThat(builderRequiredProperties.markAsSet(primitives.get(15)))
-        .isEqualTo("set$0 |= 0x8000;");
+        .isEqualTo("set$0 |= (short) 0x8000;");
   }
 
   @Test
@@ -147,8 +151,10 @@ public final class BuilderRequiredPropertiesTest {
     assertThat(builderRequiredProperties.markAsSet(primitives.get(0))).isEqualTo("set$0 |= 1;");
     assertThat(builderRequiredProperties.markAsSet(primitives.get(31)))
         .isEqualTo("set$0 |= 0x8000_0000;");
-    assertThat(builderRequiredProperties.markAsSet(primitives.get(32))).isEqualTo("set$1 |= 1;");
-    assertThat(builderRequiredProperties.markAsSet(primitives.get(33))).isEqualTo("set$1 |= 2;");
+    assertThat(builderRequiredProperties.markAsSet(primitives.get(32)))
+        .isEqualTo("set$1 |= (byte) 1;");
+    assertThat(builderRequiredProperties.markAsSet(primitives.get(33)))
+        .isEqualTo("set$1 |= (byte) 2;");
   }
 
   @Test

@@ -52,7 +52,7 @@ public final class AutoBuilderCompilationTest {
           "",
           "  @Override public Baz.Builder setAnInt(int anInt) {",
           "    this.anInt = anInt;",
-          "    set$0 |= 0x1;",
+          "    set$0 |= (byte) 0x1;",
           "    return this;",
           "  }",
           "",

@@ -198,7 +198,7 @@ public abstract class BuilderRequiredProperties {
     }
     BitmaskField field = bitmaskFields.get(index / 32);
     // This use-case is why Java reduces int shift amounts mod 32. :-)
-    return field.name + " |= " + hex(1 << index) + ";";
+    return field.name + " |= " + cast(field.type, hex(1 << index)) + ";";
   }
 
   /**
