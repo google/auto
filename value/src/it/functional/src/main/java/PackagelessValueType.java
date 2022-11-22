@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
+@SuppressWarnings("DefaultPackage")
 @AutoValue
 public abstract class PackagelessValueType {
   // The getters here are formatted as an illustration of what getters typically look in real
