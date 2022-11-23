@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
  * </ul>
  *
  * <p>If you want to memoize {@link #hashCode()} or {@link #toString()}, you can redeclare them,
- * keeping them {@code abstract}, and annotate them with {@code @Memoize}.
+ * keeping them {@code abstract}, and annotate them with {@code @Memoized}.
  *
  * <p>If a {@code @Memoized} method is annotated with an annotation whose simple name is {@code
  * Nullable}, then {@code null} values will also be memoized. Otherwise, if the method returns
