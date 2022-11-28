@@ -34,9 +34,12 @@ code almost any aspect of your class exactly the way you want it.
 **Note**: If you are using Kotlin then its
 [data classes](https://kotlinlang.org/docs/data-classes.html) are usually more
 appropriate than AutoValue. Likewise, if you are using a version of Java that
-has [records](https://docs.oracle.com/en/java/javase/16/language/records.html),
-then those are usually more appropriate. You can still use
-[AutoBuilder](autobuilder.md) to make builders for data classes or records.
+has [records](https://docs.oracle.com/en/java/javase/17/language/records.html),
+then those are usually more appropriate. For a detailed comparison of AutoValue
+and records, including information on how to migrate from one to the other, see
+[here](records.md).<br>
+You can still use [AutoBuilder](autobuilder.md) to make builders for data
+classes or records.
 
 This page will walk you through how to use AutoValue. Looking for a little more
 persuasion? Please see [Why AutoValue?](why.md).
@@ -78,7 +81,6 @@ methods.
 Note that in real life, some classes and methods would presumably be public and
 have Javadoc. We're leaving these off in the User Guide only to keep the
 examples short and simple.
-
 
 ### With Maven
 
@@ -196,8 +198,8 @@ public void testAnimal() {
 
 AutoValue runs inside `javac` as a standard annotation processor. It reads your
 abstract class and infers what the implementation class should look like. It
-generates source code, in your package, of a concrete implementation class
-which extends your abstract class, having:
+generates source code, in your package, of a concrete implementation class which
+extends your abstract class, having:
 
 *   package visibility (non-public)
 *   one field for each of your abstract accessor methods
@@ -284,6 +286,5 @@ How do I...
 *   ... [copy annotations from a class/method to the implemented
     class/method/field?](howto.md#copy_annotations)
 *   ... [create a **pretty string** representation?](howto.md#toprettystring)
-
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->
