@@ -115,7 +115,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.19</version>
+      <version>0.20</version>
       <scope>test</scope>
     </dependency>
     <dependency>
