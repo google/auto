@@ -19,6 +19,8 @@ import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_V
 import static com.google.common.truth.TruthJUnit.assume;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
@@ -34,12 +36,14 @@ public final class AutoBuilderCompilationTest {
           "foo.bar.AutoBuilder_Baz_Builder",
           "package foo.bar;",
           "",
-          GeneratedImport.importGeneratedAnnotationType(),
+          sorted(
+              GeneratedImport.importGeneratedAnnotationType(),
+              "import org.checkerframework.checker.nullness.qual.Nullable;"),
           "",
           "@Generated(\"" + AutoBuilderProcessor.class.getName() + "\")",
           "class AutoBuilder_Baz_Builder implements Baz.Builder {",
           "  private int anInt;",
-          "  private String aString;",
+          "  private @Nullable String aString;",
           "  private byte set$0;",
           "",
           "  AutoBuilder_Baz_Builder() {}",
@@ -123,6 +127,7 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.checkerframework.checker.nullness.qual.Nullable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
@@ -993,5 +998,9 @@ public final class AutoBuilderCompilationTest {
                 + " callMethod, not \"annotationType\"")
         .inFile(javaFileObject)
         .onLineContaining("interface Builder");
+  }
+
+  private static String sorted(String... imports) {
+    return stream(imports).sorted().collect(joining("\n"));
   }
 }

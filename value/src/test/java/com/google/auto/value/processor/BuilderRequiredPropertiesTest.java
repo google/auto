@@ -343,6 +343,7 @@ public final class BuilderRequiredPropertiesTest {
         /* type= */ type.toString(),
         /* typeMirror= */ type,
         /* nullableAnnotation= */ Optional.empty(),
+        /* nullables= */ Nullables.fromMethods(null, ImmutableList.of()),
         /* getter= */ name,
         /* maybeBuilderInitializer= */ Optional.empty(),
         /* hasDefault= */ hasDefault);

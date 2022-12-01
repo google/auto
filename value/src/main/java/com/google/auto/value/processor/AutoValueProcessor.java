@@ -244,8 +244,15 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     String finalSubclass = TypeSimplifier.simpleNameOf(generatedSubclassName(type, 0));
     AutoValueTemplateVars vars = new AutoValueTemplateVars();
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
-    defineSharedVarsForType(type, methods, vars);
-    defineVarsForType(type, vars, toBuilderMethods, propertyMethodsAndTypes, builder);
+    Nullables nullables = Nullables.fromMethods(processingEnv, methods);
+    defineSharedVarsForType(type, methods, nullables, vars);
+    defineVarsForType(
+        type,
+        vars,
+        toBuilderMethods,
+        propertyMethodsAndTypes,
+        builder,
+        nullables);
     vars.builtType = vars.origClass + vars.actualTypes;
     vars.build = "new " + finalSubclass + vars.actualTypes;
 
@@ -422,7 +429,8 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       AutoValueTemplateVars vars,
       ImmutableSet<ExecutableElement> toBuilderMethods,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
-      Optional<BuilderSpec.Builder> maybeBuilder) {
+      Optional<BuilderSpec.Builder> maybeBuilder,
+      Nullables nullables) {
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
     vars.toBuilderMethods =
         toBuilderMethods.stream().map(SimpleMethod::new).collect(toImmutableList());
@@ -432,7 +440,11 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
         propertyMethodAnnotationMap(type, propertyMethods);
     vars.props =
-        propertySet(propertyMethodsAndTypes, annotatedPropertyFields, annotatedPropertyMethods);
+        propertySet(
+            propertyMethodsAndTypes,
+            annotatedPropertyFields,
+            annotatedPropertyMethods,
+            nullables);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     maybeBuilder.ifPresent(
         builder -> {

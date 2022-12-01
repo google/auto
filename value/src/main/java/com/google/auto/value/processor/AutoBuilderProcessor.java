@@ -205,7 +205,13 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     ImmutableMap<String, String> propertyToGetterName =
         propertyToGetterName(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(executable, propertyToGetterName, propertyInitializers);
+    Nullables nullables = Nullables.fromMethods(processingEnv, methods);
+    vars.props =
+        propertySet(
+            executable,
+            propertyToGetterName,
+            propertyInitializers,
+            nullables);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
@@ -219,7 +225,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
             .orElseGet(executable::invoke);
     vars.toBuilderConstructor = !propertyToGetterName.isEmpty();
     vars.toBuilderMethods = ImmutableList.of();
-    defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), vars);
+    defineSharedVarsForType(
+        autoBuilderType, ImmutableSet.of(), nullables, vars);
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoBuilderType.asType());
     text = Reformatter.fixup(text);
@@ -278,7 +285,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   private ImmutableSet<Property> propertySet(
       Executable executable,
       Map<String, String> propertyToGetterName,
-      ImmutableMap<String, String> builderInitializers) {
+      ImmutableMap<String, String> builderInitializers,
+      Nullables nullables) {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
@@ -294,7 +302,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                   identifiers.get(v),
                   propertyToGetterName.get(name),
                   Optional.ofNullable(builderInitializers.get(name)),
-                  executable.isOptional(name));
+                  executable.isOptional(name),
+                  nullables);
             })
         .collect(toImmutableSet());
   }
@@ -304,7 +313,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       String identifier,
       String getterName,
       Optional<String> builderInitializer,
-      boolean hasDefault) {
+      boolean hasDefault,
+      Nullables nullables) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
     Optional<String> nullableAnnotation = nullableAnnotationFor(var, var.asType());
@@ -314,6 +324,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         TypeEncoder.encode(type),
         type,
         nullableAnnotation,
+        nullables,
         getterName,
         builderInitializer,
         hasDefault);
@@ -745,6 +756,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private ImmutableSet<Property> annotationBuilderPropertySet(TypeElement annotationType) {
+    // Annotation methods can't have their own annotations so there's nowhere for us to discover
+    // a user @Nullable. We can only use our default @Nullable type annotation.
+    Nullables nullables = Nullables.fromMethods(processingEnv, ImmutableList.of());
     // Translate the annotation elements into fake Property instances. We're really only interested
     // in the name and type, so we can use them to declare a parameter of the generated
     // @AutoAnnotation method. We'll generate a parameter for every element, even elements that
@@ -752,11 +766,13 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     // value from the annotation to those parameters.
     return methodsIn(annotationType.getEnclosedElements()).stream()
         .filter(m -> m.getParameters().isEmpty() && !m.getModifiers().contains(Modifier.STATIC))
-        .map(AutoBuilderProcessor::annotationBuilderProperty)
+        .map(method -> annotationBuilderProperty(method, nullables))
         .collect(toImmutableSet());
   }
 
-  private static Property annotationBuilderProperty(ExecutableElement annotationMethod) {
+  private static Property annotationBuilderProperty(
+      ExecutableElement annotationMethod,
+      Nullables nullables) {
     String name = annotationMethod.getSimpleName().toString();
     TypeMirror type = annotationMethod.getReturnType();
     return new Property(
@@ -765,6 +781,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         TypeEncoder.encode(type),
         type,
         /* nullableAnnotation= */ Optional.empty(),
+        nullables,
         /* getter= */ "",
         /* maybeBuilderInitializer= */ Optional.empty(),
         /* hasDefault= */ false);

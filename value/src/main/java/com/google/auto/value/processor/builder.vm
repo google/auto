@@ -47,7 +47,7 @@ class ${builderName}${builderFormalTypes} ##
 
     #end
 
-  private $p.type $p $p.builderInitializer;
+  private $p.builderFieldType $p $p.builderInitializer;
 
 #end
 

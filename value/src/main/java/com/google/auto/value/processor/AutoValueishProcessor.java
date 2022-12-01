@@ -114,13 +114,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   private String simpleAnnotationName;
 
   private ErrorReporter errorReporter;
-  private Nullables nullables;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
     errorReporter = new ErrorReporter(processingEnv);
-    nullables = new Nullables(processingEnv);
     annotationType = elementUtils().getTypeElement(annotationClassName);
     if (annotationType != null) {
       simpleAnnotationName = annotationType.getSimpleName().toString();
@@ -166,6 +164,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     private final String type;
     private final TypeMirror typeMirror;
     private final Optional<String> nullableAnnotation;
+    private final Optional<AnnotationMirror> availableNullableTypeAnnotation;
     private final Optionalish optional;
     private final String getter;
     private final String builderInitializer; // empty, or with initial ` = `.
@@ -177,6 +176,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         String type,
         TypeMirror typeMirror,
         Optional<String> nullableAnnotation,
+        Nullables nullables,
         String getter,
         Optional<String> maybeBuilderInitializer,
         boolean hasDefault) {
@@ -185,11 +185,12 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       this.type = type;
       this.typeMirror = typeMirror;
       this.nullableAnnotation = nullableAnnotation;
+      this.availableNullableTypeAnnotation = nullables.nullableTypeAnnotation();
       this.optional = Optionalish.createIfOptional(typeMirror);
       this.builderInitializer =
           maybeBuilderInitializer.isPresent()
               ? " = " + maybeBuilderInitializer.get()
-              : builderInitializer();
+              : builderInitializer(typeMirror, nullableAnnotation);
       this.getter = getter;
       this.hasDefault = hasDefault;
     }
@@ -200,7 +201,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
      * this property is an {@code Optional} and is not {@code @Nullable}. In that case the
      * initializer sets it to {@code Optional.empty()}.
      */
-    private String builderInitializer() {
+    private static String builderInitializer(
+        TypeMirror typeMirror, Optional<String> nullableAnnotation) {
       if (nullableAnnotation.isPresent()) {
         return "";
       }
@@ -209,6 +211,34 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         return "";
       }
       return " = " + optional.getEmpty();
+    }
+
+    /**
+     * Returns the appropriate type for a builder field that will eventually be assigned to this
+     * property. This is the same as the final property type, except that it may have an additional
+     * {@code @Nullable} annotation. Some builder fields start off null and then acquire a value
+     * when the corresponding setter is called. Builder fields should have an extra
+     * {@code @Nullable} if all of the following conditions are met:
+     *
+     * <ul>
+     *   <li>the property is not primitive;
+     *   <li>the property is not already nullable;
+     *   <li>there is no explicit initializer (for example {@code Optional} properties start off as
+     *       {@code Optional.empty()});
+     *   <li>we have found a {@code @Nullable} type annotation that can be applied.
+     * </ul>
+     */
+    public String getBuilderFieldType() {
+      if (typeMirror.getKind().isPrimitive()
+          || nullableAnnotation.isPresent()
+          || !builderInitializer.isEmpty()
+          || !availableNullableTypeAnnotation.isPresent()) {
+        return type;
+      }
+      return TypeEncoder.encodeWithAnnotations(
+          typeMirror,
+          ImmutableList.of(availableNullableTypeAnnotation.get()),
+          /* excludedAnnotationTypes= */ ImmutableSet.of());
     }
 
     /**
@@ -302,16 +332,19 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         String name,
         String identifier,
         ExecutableElement method,
-        String type,
+        TypeMirror typeMirror,
+        String typeString,
         ImmutableList<String> fieldAnnotations,
         ImmutableList<String> methodAnnotations,
-        Optional<String> nullableAnnotation) {
+        Optional<String> nullableAnnotation,
+        Nullables nullables) {
       super(
           name,
           identifier,
-          type,
-          method.getReturnType(),
+          typeString,
+          typeMirror,
           nullableAnnotation,
+          nullables,
           method.getSimpleName().toString(),
           Optional.empty(),
           /* hasDefault= */ false);
@@ -492,7 +525,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   final ImmutableSet<Property> propertySet(
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields,
-      ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods) {
+      ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods,
+      Nullables nullables) {
     ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
         propertyNameToMethodMap(propertyMethodsAndTypes.keySet()).inverse();
     Map<ExecutableElement, String> methodToIdentifier = new LinkedHashMap<>(methodToPropertyName);
@@ -501,7 +535,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     ImmutableSet.Builder<Property> props = ImmutableSet.builder();
     propertyMethodsAndTypes.forEach(
         (propertyMethod, returnType) -> {
-          String propertyType =
+          String propertyTypeString =
               TypeEncoder.encodeWithAnnotations(
                   returnType, ImmutableList.of(), getExcludedAnnotationTypes(propertyMethod));
           String propertyName = methodToPropertyName.get(propertyMethod);
@@ -517,10 +551,12 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
                   propertyName,
                   identifier,
                   propertyMethod,
-                  propertyType,
+                  returnType,
+                  propertyTypeString,
                   fieldAnnotations,
                   methodAnnotations,
-                  nullableAnnotation);
+                  nullableAnnotation,
+                  nullables);
           props.add(p);
           if (p.isNullable() && returnType.getKind().isPrimitive()) {
             errorReporter()
@@ -535,7 +571,10 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
   /** Defines the template variables that are shared by AutoValue, AutoOneOf, and AutoBuilder. */
   final void defineSharedVarsForType(
-      TypeElement type, ImmutableSet<ExecutableElement> methods, AutoValueishTemplateVars vars) {
+      TypeElement type,
+      ImmutableSet<ExecutableElement> methods,
+      Nullables nullables,
+      AutoValueishTemplateVars vars) {
     vars.pkg = TypeSimplifier.packageNameOf(type);
     vars.origClass = TypeSimplifier.classNameOf(type);
     vars.simpleClassName = TypeSimplifier.simpleNameOf(vars.origClass);
@@ -552,8 +591,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    Optional<AnnotationMirror> nullable = nullables.appropriateNullableGivenMethods(methods);
-    vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullable);
+    vars.equalsParameterType =
+        equalsParameterType(methodsToGenerate, nullables);
     vars.serialVersionUID = getSerialVersionUID(type);
   }
 
@@ -835,7 +874,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    * @param nullable the type of a {@code @Nullable} type annotation that we have found, if any
    */
   static String equalsParameterType(
-      Map<ObjectMethod, ExecutableElement> methodsToGenerate, Optional<AnnotationMirror> nullable) {
+      Map<ObjectMethod, ExecutableElement> methodsToGenerate, Nullables nullables) {
     ExecutableElement equals = methodsToGenerate.get(ObjectMethod.EQUALS);
     if (equals == null) {
       return ""; // this will not be referenced because no equals method will be generated
@@ -844,11 +883,14 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     // Add @Nullable if we know one and the parameter doesn't already have one.
     // The @Nullable we add will be a type annotation, but if the parameter already has @Nullable
     // then that might be a type annotation or an annotation on the parameter.
+    Optional<AnnotationMirror> nullableTypeAnnotation = nullables.nullableTypeAnnotation();
     ImmutableList<AnnotationMirror> extraAnnotations =
-        nullable.isPresent() && !nullableAnnotationFor(equals, parameterType).isPresent()
-            ? ImmutableList.of(nullable.get())
+        nullableTypeAnnotation.isPresent()
+                && !nullableAnnotationFor(equals, parameterType).isPresent()
+            ? ImmutableList.of(nullableTypeAnnotation.get())
             : ImmutableList.of();
-    return TypeEncoder.encodeWithAnnotations(parameterType, extraAnnotations, ImmutableSet.of());
+    return TypeEncoder.encodeWithAnnotations(
+        parameterType, extraAnnotations, /* excludedAnnotationTypes= */ ImmutableSet.of());
   }
 
   /**

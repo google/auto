@@ -82,7 +82,6 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
   private Elements elementUtils;
   private Types typeUtils;
-  private Nullables nullables;
   private TypeMirror javaLangObject;
 
   @Override
@@ -100,7 +99,6 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     super.init(processingEnv);
     this.elementUtils = processingEnv.getElementUtils();
     this.typeUtils = processingEnv.getTypeUtils();
-    this.nullables = new Nullables(processingEnv);
     this.javaLangObject = elementUtils.getTypeElement("java.lang.Object").asType();
   }
 
@@ -201,8 +199,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     // Unlike AutoValue, we don't currently try to guess a @Nullable based on the methods in your
     // class. It's the default one or nothing.
     ImmutableList<AnnotationMirror> equalsParameterAnnotations =
-        nullables
-            .appropriateNullableGivenMethods(ImmutableSet.of())
+        Nullables.fromMethods(processingEnv, ImmutableList.of())
+            .nullableTypeAnnotation()
             .map(ImmutableList::of)
             .orElse(ImmutableList.of());
     return TypeEncoder.encodeWithAnnotations(

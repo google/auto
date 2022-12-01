@@ -148,7 +148,7 @@ public class NullablesTest {
 
         expect
             .about(optionals())
-            .that(Nullables.nullableMentionedInMethods(notNullableMethods))
+            .that(Nullables.fromMethods(null, notNullableMethods).nullableTypeAnnotation())
             .isEmpty();
 
         TypeElement nullableElement =
@@ -167,7 +167,8 @@ public class NullablesTest {
               .withMessage("method %s should have @Nullable", nullableMethod)
               .about(optionals())
               .that(
-                  Nullables.nullableMentionedInMethods(notNullablePlusNullable)
+                  Nullables.fromMethods(null, notNullablePlusNullable)
+                      .nullableTypeAnnotation()
                       .map(AnnotationMirror::getAnnotationType))
               .hasValue(nullableType);
         }
