@@ -2,26 +2,33 @@
 
 
 Starting with Java 16,
-[records](https://docs.oracle.com/en/java/javase/17/language/records.html) are a
+[records](https://docs.oracle.com/en/java/javase/19/language/records.html) are a
 standard feature of the language. If records are available to you, is there any
 reason to use AutoValue?
 
-The short answer is that records are usually a better choice when they are
-available. They have a very concise and readable syntax, they produce less code,
-and they don't need any special configuration. They are obviously a better
-choice when your class is just an aggregation of values, for example to allow a
-method to return multiple values or to combine values into a map key.
+## <a id="summary"></a>The short answer
 
-If you have existing code that has AutoValue classes, you may want to migrate
-some or all of those classes to be records instead. Here we will explain how to
-do this and in what cases you might prefer not to.
+Generally, **use records** when you can. They have a very concise and readable
+syntax, they produce less code, and they don't need any special configuration.
+They are obviously a better choice when your class is just an aggregation of
+values, for example to allow a method to return multiple values or to combine
+values into a map key.
+
+(This was by design: the AutoValue authors were part of the
+[Project Amber](https://openjdk.org/projects/amber/) working group, where our
+goal was to make the records feature the best AutoValue replacement it could
+be.)
+
+If you have existing code that has AutoValue classes, you might want to migrate
+some or all of those classes to be records instead. In this document we will
+explain how to do this, and in what cases you might prefer not to.
 
 ## <a id="whynot"></a>Reasons to stick with AutoValue
 
 While records are usually better, there are some AutoValue features that have no
-simple equivalent with records. So you may prefer not to try migrating AutoValue
-classes that use those features, and you may even sometimes make new AutoValue
-classes even if records are available to you.
+simple equivalent with records. So you might prefer not to try migrating
+AutoValue classes that use those features, and you might even sometimes make new
+AutoValue classes even if records are available to you.
 
 ### Extensions
 
@@ -32,25 +39,32 @@ and
 [`@SerializableAutoValue`](https://javadoc.io/static/com.google.auto.value/auto-value-annotations/1.10/com/google/auto/value/extension/serializable/SerializableAutoValue.html)
 extensions. Most extensions will have no real equivalent with records.
 
-### <a id="visible"></a> Non-public constructor
+### <a id="staticfactory"></a> Keeping the static factory method
 
-A record's constructor always has the same visibility as the record: a public
-record has a public constructor. You can define a static factory method or a
-builder for your record, but you can't straightforwardly use visibility to
-require callers to use those rather than the constructor.
+AutoValue has very few API-visible "quirks", but one is that it forces you to
+use a static factory method as your class's creation API. A record can have this
+too, but it can't prevent its constructor from *also* being visible, and
+exposing two ways to do the same thing can be dangerous.
 
-To discourage people from calling the constructor directly, it is probably
-enough to mark it deprecated. More on this [below](#deprecating).
+We think most users will be happy to switch to constructors and drop the factory
+methods, but you might want to keep it. Perhaps for compatibility reasons, or
+because you are normalizing input data to different types, such as from `List`
+to `ImmutableList`.
 
-If you really want to make it impossible to call the constructor directly, there
-are ways to achieve that, but it's probably simpler to keep using AutoValue.
+In this event, you can still *discourage* callers by marking it deprecated. More
+on this [below](#deprecating).
+
+Clever ways do exist to make calling the constructor impossible, but it's
+probably simpler to keep using AutoValue.
 
 ### Superclass
 
 The superclass of a record is always `java.lang.Record`. Occasionally the
 superclass of an AutoValue class is something other than `Object`, for example
-when two AutoValue classes share a subset of their properties. In many cases
-records can use interfaces instead, though.
+when two AutoValue classes share a subset of their properties.
+
+You might still be able to convert to records if you can convert these classes
+into interfaces.
 
 ### Derived properties
 
@@ -59,7 +73,7 @@ to cache a derived property, for example. AutoValue makes this trivial with
 [`@Memoized`](https://javadoc.io/static/com.google.auto.value/auto-value-annotations/1.10/com/google/auto/value/extension/memoized/Memoized.html).
 
 We suggest ways to achieve the same effect with records [below](#derived), but
-it may be simpler to stick with AutoValue.
+it might be simpler to stick with AutoValue.
 
 ### Primitive array properties
 
@@ -68,11 +82,13 @@ and it will implement `equals` and `hashCode` using the methods of
 `java.util.Arrays`. Records do not have any special treatment for primitive
 arrays, so by default they will use the `equals` and `hashCode` methods of the
 arrays. So two distinct arrays will never compare equal even if they have the
-same contents. The simplest way to avoid this problem is not to have properties
-with primitive array type, perhaps using alternatives such as
+same contents.
+
+The best way to avoid this problem is not to have properties with primitive
+array type, perhaps using alternatives such as
 [`ImmutableIntArray`](http://guava.dev/ImmutableIntArray). Alternatively you can
 define custom implementations of `equals` and `hashCode` as described in the
-[section](#eqhc) on that topic. But again, you may prefer to keep using
+[section](#eqhc) on that topic. But again, you might prefer to keep using
 AutoValue.
 
 (AutoValue doesn't allow properties of non-primitive array types.)
@@ -134,7 +150,7 @@ public record Point(int x, int y) {}
 We've omitted the static factory methods from the other examples, but the
 general approach applies: keep the method initially but deprecate it and change
 its body so it just calls the constructor; migrate the callers so they call the
-constructor directly; delete the method. You may be able to use the
+constructor directly; delete the method. You might be able to use the
 [`InlineMe`](https://errorprone.info/docs/inlineme) mechanism from the Error
 Prone project to encourage this migration:
 
@@ -236,21 +252,22 @@ public record Person(String name, int id) {
 With records, you can rewrite the constructor parameters to apply normalization
 or canonicalization rules.
 
+In this example we have two `int` values, but we don't care which order they are
+supplied in. Therefore we have to put them in a standard order, or else `equals`
+won't behave as expected.
+
 Before:
 
 ```java
 @AutoValue
-public abstract class OrderedPair {
-  public abstract int first();
-  public abstract int second();
+public abstract class UnorderedPair {
+  public abstract int left();
+  public abstract int right();
 
-  public static Rational of(int first, int second) {
-    if (first > second) {
-      int tmp = first;
-      first = second;
-      second = tmp;
-    }
-    return new AutoValue_Rational(first, second);
+  public static UnorderedPair of(int left, int right) {
+    int min = Math.min(left, right);
+    int max = Math.max(left, right);
+    return new AutoValue_UnorderedPair(min, max);
   }
 }
 ```
@@ -258,16 +275,22 @@ public abstract class OrderedPair {
 After:
 
 ```java
-public record OrderedPair(int first, int second) {
-  public OrderedPair {
-    if (first > second) {
-      int tmp = first;
-      first = second;
-      second = tmp;
-    }
+public record UnorderedPair(int left, int right) {
+  public UnorderedPair {
+    int min = Math.min(left, right);
+    int max = Math.max(left, right);
+    left = min;
+    right = max;
   }
 }
 ```
+
+If your normalization results in different types (or more or fewer separate
+fields) than the parameters, you will need to keep the static factory method.
+On a more subtle note, the user of this record might be surprised that what they
+passed in as `left` doesn't always come out as `left()`; keeping the static
+factory method would also allow the parameters to be named differently. See the
+section on the [static factory](#staticfactory) method.
 
 ### <a id="beans"></a> JavaBeans prefixes (`getFoo()`)
 
@@ -295,7 +318,7 @@ $1 ==> Person{name=Priz, id=6}
 jshell> $1.getName()
 $2 ==> Priz
 jshell> List<String> showFields(Class<?> c) {
-   ...>     return Arrays.stream(c.getDeclaredFields()).map(Field::getName).toList();
+   ...>   return Arrays.stream(c.getDeclaredFields()).map(Field::getName).toList();
    ...> }
 jshell> showFields($1.getClass())
 $3 ==> [name, id]
@@ -321,7 +344,7 @@ jshell> showFields($1.getClass())
 $3 ==> [getName, getId]
 ```
 
-Alternatively, you can alias `Person.getName()` to be `Person.name()`, etc:
+Alternatively, you can alias `Person.getName()` to be `Person.name()`, etc.:
 
 ```java
 public record Person(String name, int id) {
@@ -339,9 +362,8 @@ public record Person(String name, int id) {
 }
 ```
 
-So both `Person.getName()` and `Person.name()` are allowed. Then you can migrate
-client code so it uses `name()` instead of `getName()`, so you can delete
-`getName()`.
+So both `Person.getName()` and `Person.name()` are allowed. You might want to
+deprecate the `get-` methods so you can eventually remove them.
 
 ### <a id="derived"></a> Caching derived properties
 
@@ -379,22 +401,23 @@ public record Person(String name, int id) {
     Objects.requireNonNull(name);
   }
 
-  private static final Map<Person, String> derivedProperty = new WeakHashMap<>();
+  private static final Map<Person, String> derivedPropertyCache = new WeakHashMap<>();
 
   public UUID derivedProperty() {
-    synchronized (derivedProperty) {
-      return derivedProperty.computeIfAbsent(this, person -> expensiveFunction(person)));
+    synchronized (derivedPropertyCache) {
+      return derivedPropertyCache.computeIfAbsent(this, person -> expensiveFunction(person)));
     }
   }
 }
 ```
 
-As usual with `WeakHashMap`, you have to be sure that the values in the map
-don't reference the keys. For more caching options, consider using
+It's very important to use **`WeakHashMap`** (or similar) or you might suffer a
+memory leak. As usual with `WeakHashMap`, you have to be sure that the values in
+the map don't reference the keys. For more caching options, consider using
 [Caffeine](https://github.com/ben-manes/caffeine).
 
-You may decide that AutoValue with `@Memoized` is simpler than records for this
-case, though.
+You might decide that AutoValue with `@Memoized` is simpler than records for
+this case, though.
 
 ### Builders
 
@@ -445,9 +468,9 @@ Person p = Person.builder().name("Priz").id(6).build();
 
 #### <a id="deprecating"></a>Deprecating the constructor
 
-As mentioned [above](#visible), the primary constructor is always visible. In
-the preceding example, the builder will enforce that the `name` property is not
-null (since it is not marked @Nullable), but someone calling the constructor
+As mentioned [above](#staticfactory), the primary constructor is always visible.
+In the preceding example, the builder will enforce that the `name` property is
+not null (since it is not marked @Nullable), but someone calling the constructor
 will bypass that check. You could deprecate the constructor to discourage this:
 
 ```java
