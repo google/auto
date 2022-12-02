@@ -39,7 +39,7 @@ import java.lang.annotation.Target;
  *   }</pre>
  *
  * @see <a
- * href="https://github.com/google/auto/blob/master/value/userguide/autobuilder.md">AutoBuilder
+ * href="https://github.com/google/auto/blob/main/value/userguide/autobuilder.md">AutoBuilder
  * User's Guide</a>
  */
 @Retention(RetentionPolicy.CLASS)

@@ -368,7 +368,7 @@ public class Names {
 ```
 
 For more details, see the [`AutoAnnotation`
-javadoc](http://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
+javadoc](http://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 
 ## <a name="setters"></a>... also include setter (mutator) methods?
 
@@ -486,7 +486,7 @@ If a `@Memoized` method is also annotated with `@Nullable`, then `null` values
 will be stored; if not, then the overriding method throws `NullPointerException`
 when the annotated method returns `null`.
 
-[`@Memoized`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/memoized/Memoized.java
+[`@Memoized`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/memoized/Memoized.java
 
 ## <a name="memoize_hash_tostring"></a>... memoize the result of `hashCode` or `toString`?
 
@@ -773,4 +773,4 @@ Song {
 default AutoValue-generated `toString()` implementation, or on another
 user-defined method.
 
-[`@ToPrettyString`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/toprettystring/ToPrettyString.java
+[`@ToPrettyString`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/toprettystring/ToPrettyString.java

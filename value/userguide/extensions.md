@@ -36,6 +36,6 @@ behavior by overriding or implementing new methods.
 *   How to distribute extensions.
 *   List of known extensions.
 
-[AutoService]: https://github.com/google/auto/tree/master/service
-[`AutoValueExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/AutoValueExtension.java
+[AutoService]: https://github.com/google/auto/tree/main/service
+[`AutoValueExtension`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/AutoValueExtension.java
 [`ServiceLoader`]: http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html

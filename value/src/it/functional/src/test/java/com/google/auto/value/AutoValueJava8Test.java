@@ -876,12 +876,12 @@ public class AutoValueJava8Test {
 
     @AutoValue.Builder
     public abstract static class Builder {
-      // https://github.com/google/auto/blob/master/value/userguide/builders-howto.md#normalize
+      // https://github.com/google/auto/blob/main/value/userguide/builders-howto.md#normalize
       abstract Optional<Bar> bar();
 
       public abstract Builder bar(Bar bar);
 
-      // https://github.com/google/auto/blob/master/value/userguide/builders-howto.md#nested_builders
+      // https://github.com/google/auto/blob/main/value/userguide/builders-howto.md#nested_builders
       public abstract Bar.Builder barBuilder();
 
       abstract OptionalDouble baz();

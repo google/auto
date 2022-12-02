@@ -49,10 +49,10 @@ Save time.  Save code.  Save sanity.
     See the License for the specific language governing permissions and
     limitations under the License.
 
-[AutoFactory]: https://github.com/google/auto/tree/master/factory
-[AutoService]: https://github.com/google/auto/tree/master/service
-[AutoValue]: https://github.com/google/auto/tree/master/value
-[Common]: https://github.com/google/auto/tree/master/common
+[AutoFactory]: https://github.com/google/auto/tree/main/factory
+[AutoService]: https://github.com/google/auto/tree/main/service
+[AutoValue]: https://github.com/google/auto/tree/main/value
+[Common]: https://github.com/google/auto/tree/main/common
 
 [java]: https://en.wikipedia.org/wiki/Java_(programming_language)
 [value-type]: http://en.wikipedia.org/wiki/Value_object

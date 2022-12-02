@@ -21,7 +21,7 @@ import javax.inject.Provider;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 final class ParameterAnnotationsFactory {
   private final Provider<@ParameterAnnotations.NullableType String> fooProvider;

@@ -32,7 +32,7 @@
     Aggregator POM for @AutoService
   </description>
   <packaging>pom</packaging>
-  <url>https://github.com/google/auto/tree/master/service</url>
+  <url>https://github.com/google/auto/tree/main/service</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

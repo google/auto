@@ -53,7 +53,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  * one-of} types; user code never references this class.
  *
  * @author Éamonn McManus
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * @see <a href="https://github.com/google/auto/tree/main/value">AutoValue User's Guide</a>
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_ONE_OF_NAME)

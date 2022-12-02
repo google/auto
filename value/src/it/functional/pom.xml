@@ -25,7 +25,7 @@
     <version>HEAD-SNAPSHOT</version>
     <relativePath>../../../pom.xml</relativePath>
   </parent>
-  <url>https://github.com/google/auto/tree/master/value</url>
+  <url>https://github.com/google/auto/tree/main/value</url>
 
   <groupId>com.google.auto.value.it.functional</groupId>
   <artifactId>functional</artifactId>

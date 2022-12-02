@@ -56,7 +56,7 @@ import java.lang.annotation.Target;
  * }}</pre>
  *
  * <p>{@code @AutoOneOf} is explained in more detail in the <a
- * href="https://github.com/google/auto/blob/master/value/userguide/howto.md#oneof">user guide</a>.
+ * href="https://github.com/google/auto/blob/main/value/userguide/howto.md#oneof">user guide</a>.
  *
  * @author Chris Nokleberg
  * @author Éamonn McManus

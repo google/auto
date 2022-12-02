@@ -31,7 +31,7 @@
   <description>
     Common utilities for creating annotation processors.
   </description>
-  <url>https://github.com/google/auto/tree/master/common</url>
+  <url>https://github.com/google/auto/tree/main/common</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

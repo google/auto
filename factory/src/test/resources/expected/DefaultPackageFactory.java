@@ -19,7 +19,7 @@ import javax.inject.Inject;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 public final class DefaultPackageFactory {
   @Inject

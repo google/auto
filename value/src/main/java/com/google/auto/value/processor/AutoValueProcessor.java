@@ -57,7 +57,7 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  * Javac annotation processor (compiler plugin) for value types; user code never references this
  * class.
  *
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * @see <a href="https://github.com/google/auto/tree/main/value">AutoValue User's Guide</a>
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
