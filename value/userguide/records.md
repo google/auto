@@ -9,10 +9,10 @@ reason to use AutoValue?
 ## <a id="summary"></a>The short answer
 
 Generally, **use records** when you can. They have a very concise and readable
-syntax, they produce less code, and they don't need any special configuration.
-They are obviously a better choice when your class is just an aggregation of
-values, for example to allow a method to return multiple values or to combine
-values into a map key.
+syntax, they produce less code, and they don't need any special configuration or
+dependency. They are obviously a better choice when your class is just an
+aggregation of values, for example to allow a method to return multiple values
+or to combine values into a map key.
 
 (This was by design: the AutoValue authors were part of the
 [Project Amber](https://openjdk.org/projects/amber/) working group, where our
@@ -286,8 +286,8 @@ public record UnorderedPair(int left, int right) {
 ```
 
 If your normalization results in different types (or more or fewer separate
-fields) than the parameters, you will need to keep the static factory method.
-On a more subtle note, the user of this record might be surprised that what they
+fields) than the parameters, you will need to keep the static factory method. On
+a more subtle note, the user of this record might be surprised that what they
 passed in as `left` doesn't always come out as `left()`; keeping the static
 factory method would also allow the parameters to be named differently. See the
 section on the [static factory](#staticfactory) method.
