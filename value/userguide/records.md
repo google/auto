@@ -23,6 +23,22 @@ If you have existing code that has AutoValue classes, you might want to migrate
 some or all of those classes to be records instead. In this document we will
 explain how to do this, and in what cases you might prefer not to.
 
+## <a id="notyet"></a>Can't use Java records yet?
+
+If you're creating new AutoValue classes for Java 15 or earlier, **follow this
+advice** to make sure your future conversion to records will be straightforward:
+
+*   Extend `Object` only (implementing interfaces is fine).
+*   Don't use JavaBeans-style prefixes: use `abstract int bar()`, not
+    `abstract int getBar()`.
+*   Don't declare any non-static fields of your own.
+*   Give the factory method and accessors the same visibility level as the
+    class.
+*   Avoid using [extensions](extensions.md).
+
+Adopting AutoValue at this time is still a good idea! There is no better way to
+make sure your code is as ready as possible to migrate to records later.
+
 ## <a id="whynot"></a>Reasons to stick with AutoValue
 
 While records are usually better, there are some AutoValue features that have no
