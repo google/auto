@@ -82,9 +82,12 @@ class Nullables {
     return new Nullables(nullableTypeAnnotation);
   }
 
-  /** Returns an appropriate {@code @Nullable} type-annotation, if one is known. */
-  Optional<AnnotationMirror> nullableTypeAnnotation() {
-    return nullableTypeAnnotation;
+  /**
+   * Returns a list that is either empty or contains a single element that is an appropriate
+   * {@code @Nullable} type-annotation.
+   */
+  ImmutableList<AnnotationMirror> nullableTypeAnnotations() {
+    return nullableTypeAnnotation.map(ImmutableList::of).orElse(ImmutableList.of());
   }
 
   private static Optional<AnnotationMirror> defaultNullableTypeAnnotation(

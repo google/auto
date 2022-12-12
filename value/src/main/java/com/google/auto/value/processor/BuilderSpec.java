@@ -270,7 +270,8 @@ class BuilderSpec {
 
     void defineVarsForAutoValue(
         AutoValueOrBuilderTemplateVars vars,
-        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+        Nullables nullables) {
       Iterable<ExecutableElement> builderMethods =
           abstractMethods(builderTypeElement, processingEnv);
       boolean autoValueHasToBuilder = toBuilderMethods != null && !toBuilderMethods.isEmpty();
@@ -293,6 +294,7 @@ class BuilderSpec {
               builderTypeElement,
               getterToPropertyName,
               rewrittenPropertyTypes.build(),
+              nullables,
               autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;

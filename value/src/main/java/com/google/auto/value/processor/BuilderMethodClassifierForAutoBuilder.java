@@ -51,14 +51,16 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       TypeElement builderType,
       ImmutableBiMap<VariableElement, String> paramToPropertyName,
       ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
-      ImmutableSet<String> propertiesWithDefaults) {
+      ImmutableSet<String> propertiesWithDefaults,
+      Nullables nullables) {
     super(
         errorReporter,
         processingEnv,
         builtType,
         builderType,
         rewrittenPropertyTypes,
-        propertiesWithDefaults);
+        propertiesWithDefaults,
+        nullables);
     this.executable = executable;
     this.paramToPropertyName = paramToPropertyName;
   }
@@ -84,7 +86,8 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       Executable executable,
       TypeMirror builtType,
       TypeElement builderType,
-      ImmutableSet<String> propertiesWithDefaults) {
+      ImmutableSet<String> propertiesWithDefaults,
+      Nullables nullables) {
     ImmutableBiMap<VariableElement, String> paramToPropertyName =
         executable.parameters().stream()
             .collect(toImmutableBiMap(v -> v, v -> v.getSimpleName().toString()));
@@ -99,7 +102,8 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
             builderType,
             paramToPropertyName,
             rewrittenPropertyTypes,
-            propertiesWithDefaults);
+            propertiesWithDefaults,
+            nullables);
     if (classifier.classifyMethods(methods, false)) {
       return Optional.of(classifier);
     } else {

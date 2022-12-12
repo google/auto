@@ -164,7 +164,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     private final String type;
     private final TypeMirror typeMirror;
     private final Optional<String> nullableAnnotation;
-    private final Optional<AnnotationMirror> availableNullableTypeAnnotation;
+    private final ImmutableList<AnnotationMirror> availableNullableTypeAnnotations; // 0 or 1
     private final Optionalish optional;
     private final String getter;
     private final String builderInitializer; // empty, or with initial ` = `.
@@ -185,7 +185,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       this.type = type;
       this.typeMirror = typeMirror;
       this.nullableAnnotation = nullableAnnotation;
-      this.availableNullableTypeAnnotation = nullables.nullableTypeAnnotation();
+      this.availableNullableTypeAnnotations = nullables.nullableTypeAnnotations();
       this.optional = Optionalish.createIfOptional(typeMirror);
       this.builderInitializer =
           maybeBuilderInitializer.isPresent()
@@ -232,13 +232,10 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       if (typeMirror.getKind().isPrimitive()
           || nullableAnnotation.isPresent()
           || !builderInitializer.isEmpty()
-          || !availableNullableTypeAnnotation.isPresent()) {
+          || availableNullableTypeAnnotations.isEmpty()) {
         return type;
       }
-      return TypeEncoder.encodeWithAnnotations(
-          typeMirror,
-          ImmutableList.of(availableNullableTypeAnnotation.get()),
-          /* excludedAnnotationTypes= */ ImmutableSet.of());
+      return TypeEncoder.encodeWithAnnotations(typeMirror, availableNullableTypeAnnotations);
     }
 
     /**
@@ -883,14 +880,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     // Add @Nullable if we know one and the parameter doesn't already have one.
     // The @Nullable we add will be a type annotation, but if the parameter already has @Nullable
     // then that might be a type annotation or an annotation on the parameter.
-    Optional<AnnotationMirror> nullableTypeAnnotation = nullables.nullableTypeAnnotation();
     ImmutableList<AnnotationMirror> extraAnnotations =
-        nullableTypeAnnotation.isPresent()
-                && !nullableAnnotationFor(equals, parameterType).isPresent()
-            ? ImmutableList.of(nullableTypeAnnotation.get())
-            : ImmutableList.of();
-    return TypeEncoder.encodeWithAnnotations(
-        parameterType, extraAnnotations, /* excludedAnnotationTypes= */ ImmutableSet.of());
+        nullableAnnotationFor(equals, parameterType).isPresent()
+            ? ImmutableList.of()
+            : nullables.nullableTypeAnnotations();
+    return TypeEncoder.encodeWithAnnotations(parameterType, extraAnnotations);
   }
 
   /**

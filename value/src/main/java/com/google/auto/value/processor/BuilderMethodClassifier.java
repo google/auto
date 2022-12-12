@@ -94,6 +94,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
   private final Multimap<String, PropertySetter> propertyNameToUnprefixedSetters =
       LinkedListMultimap.create();
   private final EclipseHack eclipseHack;
+  private final Nullables nullables;
 
   private boolean settersPrefixed;
 
@@ -103,7 +104,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
       TypeMirror builtType,
       TypeElement builderType,
       ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
-      ImmutableSet<String> propertiesWithDefaults) {
+      ImmutableSet<String> propertiesWithDefaults,
+      Nullables nullables) {
     this.errorReporter = errorReporter;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
@@ -112,6 +114,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
     this.rewrittenPropertyTypes = rewrittenPropertyTypes;
     this.propertiesWithDefaults = propertiesWithDefaults;
     this.eclipseHack = new EclipseHack(processingEnv);
+    this.nullables = nullables;
   }
 
   /**
@@ -264,7 +267,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
                 this,
                 this::propertyIsNullable,
                 rewrittenPropertyTypes,
-                eclipseHack);
+                eclipseHack,
+                nullables);
         Optional<PropertyBuilder> propertyBuilder =
             propertyBuilderClassifier.makePropertyBuilder(method, property);
         if (propertyBuilder.isPresent()) {
@@ -437,7 +441,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
             this,
             this::propertyIsNullable,
             rewrittenPropertyTypes,
-            eclipseHack);
+            eclipseHack,
+            nullables);
     Optional<PropertyBuilder> maybePropertyBuilder =
         propertyBuilderClassifier.makePropertyBuilder(method, property);
     maybePropertyBuilder.ifPresent(

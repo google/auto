@@ -57,6 +57,7 @@ class PropertyBuilderClassifier {
   private final Predicate<String> propertyIsNullable;
   private final ImmutableMap<String, TypeMirror> propertyTypes;
   private final EclipseHack eclipseHack;
+  private final Nullables nullables;
 
   PropertyBuilderClassifier(
       ErrorReporter errorReporter,
@@ -65,7 +66,8 @@ class PropertyBuilderClassifier {
       BuilderMethodClassifier<?> builderMethodClassifier,
       Predicate<String> propertyIsNullable,
       ImmutableMap<String, TypeMirror> propertyTypes,
-      EclipseHack eclipseHack) {
+      EclipseHack eclipseHack,
+      Nullables nullables) {
     this.errorReporter = errorReporter;
     this.typeUtils = typeUtils;
     this.elementUtils = elementUtils;
@@ -73,6 +75,7 @@ class PropertyBuilderClassifier {
     this.propertyIsNullable = propertyIsNullable;
     this.propertyTypes = propertyTypes;
     this.eclipseHack = eclipseHack;
+    this.nullables = nullables;
   }
 
   /**
@@ -85,6 +88,7 @@ class PropertyBuilderClassifier {
     private final ExecutableElement propertyBuilderMethod;
     private final String name;
     private final String builderType;
+    private final String nullableBuilderType;
     private final TypeMirror builderTypeMirror;
     private final String build;
     private final String initializer;
@@ -96,6 +100,7 @@ class PropertyBuilderClassifier {
     PropertyBuilder(
         ExecutableElement propertyBuilderMethod,
         String builderType,
+        String nullableBuilderType,
         TypeMirror builderTypeMirror,
         String build,
         String initializer,
@@ -106,6 +111,7 @@ class PropertyBuilderClassifier {
       this.propertyBuilderMethod = propertyBuilderMethod;
       this.name = propertyBuilderMethod.getSimpleName() + "$";
       this.builderType = builderType;
+      this.nullableBuilderType = nullableBuilderType;
       this.builderTypeMirror = builderTypeMirror;
       this.build = build;
       this.initializer = initializer;
@@ -145,6 +151,11 @@ class PropertyBuilderClassifier {
     /** The type of the builder, for example {@code ImmutableSet.Builder<String>}. */
     public String getBuilderType() {
       return builderType;
+    }
+
+    /** The type of the builder with an appropriate {@code @Nullable} type annotation. */
+    public String getNullableBuilderType() {
+      return nullableBuilderType;
     }
 
     TypeMirror getBuilderTypeMirror() {
@@ -300,6 +311,9 @@ class PropertyBuilderClassifier {
     ExecutableElement builderMaker = maybeBuilderMaker.get();
 
     String barBuilderType = TypeEncoder.encodeWithAnnotations(barBuilderTypeMirror);
+    String nullableBarBuilderType =
+        TypeEncoder.encodeWithAnnotations(
+            barBuilderTypeMirror, nullables.nullableTypeAnnotations());
     String rawBarType = TypeEncoder.encodeRaw(barTypeMirror);
     String arguments =
         method.getParameters().isEmpty()
@@ -341,7 +355,7 @@ class PropertyBuilderClassifier {
       initDefault = rawBarType + ".of()";
     } else {
       String localBuilder = property + "$builder";
-      beforeInitDefault = barBuilderType + " " + localBuilder + " = " + initializer + ";";
+      beforeInitDefault = nullableBarBuilderType + " " + localBuilder + " = " + initializer + ";";
       initDefault = localBuilder + "." + build.getSimpleName() + "()";
     }
 
@@ -349,6 +363,7 @@ class PropertyBuilderClassifier {
         new PropertyBuilder(
             method,
             barBuilderType,
+            nullableBarBuilderType,
             barBuilderTypeMirror,
             build.getSimpleName().toString(),
             initializer,

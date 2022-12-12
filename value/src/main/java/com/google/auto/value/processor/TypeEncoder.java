@@ -107,6 +107,18 @@ final class TypeEncoder {
    * covers the details of annotation encoding.
    *
    * @param extraAnnotations additional type annotations to include with the type
+   */
+  static String encodeWithAnnotations(
+      TypeMirror type,
+      ImmutableList<AnnotationMirror> extraAnnotations) {
+    return encodeWithAnnotations(type, extraAnnotations, ImmutableSet.of());
+  }
+
+  /**
+   * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
+   * covers the details of annotation encoding.
+   *
+   * @param extraAnnotations additional type annotations to include with the type
    * @param excludedAnnotationTypes annotations not to include in the encoding. For example, if
    *     {@code com.example.Nullable} is in this set then the encoding will not include this
    *     {@code @Nullable} annotation.

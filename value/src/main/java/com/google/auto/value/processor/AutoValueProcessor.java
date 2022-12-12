@@ -450,7 +450,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
         builder -> {
           ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
               propertyNameToMethodMap(propertyMethods).inverse();
-          builder.defineVarsForAutoValue(vars, methodToPropertyName);
+          builder.defineVarsForAutoValue(vars, methodToPropertyName, nullables);
           vars.builderName = "Builder";
           vars.builderAnnotations = copiedClassAnnotations(builder.builderType());
         });

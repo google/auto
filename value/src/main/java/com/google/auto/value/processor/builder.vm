@@ -42,7 +42,7 @@ class ${builderName}${builderFormalTypes} ##
     ## private ImmutableList.Builder<String> stringsBuilder$;
     ## private ImmutableList<String> strings;
 
-  private ${builderPropertyBuilders[$p.name].builderType} ##
+  private ${builderPropertyBuilders[$p.name].nullableBuilderType} ##
       ${builderPropertyBuilders[$p.name].name};
 
     #end

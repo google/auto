@@ -188,6 +188,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     TypeMirror builtType = executable.builtType();
     ImmutableMap<String, String> propertyInitializers =
         propertyInitializers(autoBuilderType, executable);
+    Nullables nullables = Nullables.fromMethods(processingEnv, methods);
     Optional<BuilderMethodClassifier<VariableElement>> maybeClassifier =
         BuilderMethodClassifierForAutoBuilder.classify(
             methods,
@@ -196,7 +197,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
             executable,
             builtType,
             autoBuilderType,
-            propertyInitializers.keySet());
+            propertyInitializers.keySet(),
+            nullables);
     if (!maybeClassifier.isPresent() || errorReporter().errorCount() > 0) {
       // We've already output one or more error messages.
       return;
@@ -205,7 +207,6 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     ImmutableMap<String, String> propertyToGetterName =
         propertyToGetterName(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    Nullables nullables = Nullables.fromMethods(processingEnv, methods);
     vars.props =
         propertySet(
             executable,
