@@ -56,6 +56,11 @@ import org.junit.runners.JUnit4;
 public class AutoValueCompilationTest {
   @Rule public final Expect expect = Expect.create();
 
+  // Sadly we can't rely on JDK 8 to handle type annotations correctly.
+  // Some versions do, some don't. So skip the test unless we are on at least JDK 9.
+  private boolean typeAnnotationsWork =
+      Double.parseDouble(JAVA_SPECIFICATION_VERSION.value()) >= 9.0;
+
   @Test
   public void simpleSuccess() {
     // Positive test case that ensures we generate the expected code for at least one case.
@@ -256,6 +261,7 @@ public class AutoValueCompilationTest {
 
   @Test
   public void testNestedParameterizedTypesWithTypeAnnotations() {
+    assume().that(typeAnnotationsWork).isTrue();
     JavaFileObject annotFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Annot",
@@ -1455,10 +1461,7 @@ public class AutoValueCompilationTest {
 
   @Test
   public void builderWithNullableTypeAnnotation() {
-    // Sadly we can't rely on JDK 8 to handle type annotations correctly.
-    // Some versions do, some don't. So skip the test unless we are on at least JDK 9.
-    double javaVersion = Double.parseDouble(JAVA_SPECIFICATION_VERSION.value());
-    assume().that(javaVersion).isAtLeast(9.0);
+    assume().that(typeAnnotationsWork).isTrue();
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
