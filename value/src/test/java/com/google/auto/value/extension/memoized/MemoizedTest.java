@@ -59,10 +59,25 @@ public class MemoizedTest {
   @CopyAnnotations
   @javax.annotation.Nullable
   abstract static class ValueWithCopyAnnotations {
-    abstract boolean getNative();
+    abstract String getNative();
 
     @Memoized
-    boolean getMemoizedNative() {
+    @javax.annotation.Nullable
+    public String getMemoizedNative() {
+      return getNative();
+    }
+  }
+
+  @AutoValue
+  @CopyAnnotations(exclude = javax.annotation.Nullable.class)
+  @javax.annotation.Nullable
+  abstract static class ValueWithExcludedCopyAnnotations {
+    abstract String getNative();
+
+    @Memoized
+    @CopyAnnotations(exclude = javax.annotation.Nullable.class)
+    @javax.annotation.Nullable
+    public String getMemoizedNative() {
       return getNative();
     }
   }
@@ -70,10 +85,11 @@ public class MemoizedTest {
   @AutoValue
   @javax.annotation.Nullable
   abstract static class ValueWithoutCopyAnnotations {
-    abstract boolean getNative();
+    abstract String getNative();
 
     @Memoized
-    boolean getMemoizedNative() {
+    @javax.annotation.Nullable
+    public String getMemoizedNative() {
       return getNative();
     }
   }
@@ -351,20 +367,80 @@ public class MemoizedTest {
   }
 
   @Test
-  public void copyAnnotations() {
+  public void copyClassAnnotations_valueWithCopyAnnotations_copiesAnnotation() throws Exception {
     ValueWithCopyAnnotations valueWithCopyAnnotations =
-        new AutoValue_MemoizedTest_ValueWithCopyAnnotations(true);
-    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
-        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations(true);
+        new AutoValue_MemoizedTest_ValueWithCopyAnnotations("test");
 
     assertThat(
             valueWithCopyAnnotations
                 .getClass()
                 .isAnnotationPresent(javax.annotation.Nullable.class))
         .isTrue();
+  }
+
+  @Test
+  public void copyClassAnnotations_valueWithoutCopyAnnotations_doesNotCopyAnnotation()
+      throws Exception {
+    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations("test");
+
     assertThat(
             valueWithoutCopyAnnotations
                 .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isFalse();
+  }
+
+  @Test
+  public void copyClassAnnotations_valueWithExcludedCopyAnnotations_doesNotCopyAnnotation()
+      throws Exception {
+    ValueWithExcludedCopyAnnotations valueWithExcludedCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithExcludedCopyAnnotations("test");
+
+    assertThat(
+            valueWithExcludedCopyAnnotations
+                .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isFalse();
+  }
+
+  @Test
+  public void copyMethodAnnotations_valueWithCopyAnnotations_copiesAnnotation() throws Exception {
+    ValueWithCopyAnnotations valueWithCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithCopyAnnotations("test");
+
+    assertThat(
+            valueWithCopyAnnotations
+                .getClass()
+                .getMethod("getMemoizedNative")
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void copyMethodAnnotations_valueWithoutCopyAnnotations_copiesAnnotation()
+      throws Exception {
+    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations("test");
+
+    assertThat(
+            valueWithoutCopyAnnotations
+                .getClass()
+                .getMethod("getMemoizedNative")
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void copyMethodAnnotations_valueWithExcludedCopyAnnotations_doesNotCopyAnnotation()
+      throws Exception {
+    ValueWithExcludedCopyAnnotations valueWithExcludedCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithExcludedCopyAnnotations("test");
+
+    assertThat(
+            valueWithExcludedCopyAnnotations
+                .getClass()
+                .getMethod("getMemoizedNative")
                 .isAnnotationPresent(javax.annotation.Nullable.class))
         .isFalse();
   }

@@ -15,13 +15,16 @@
  */
 package com.google.auto.value.extension;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedOptions;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -155,6 +158,32 @@ public abstract class AutoValueExtension {
      * method even if it has been consumed by this or another Extension.
      */
     Set<ExecutableElement> abstractMethods();
+
+    /**
+     * Returns the complete list of annotations defined on the {@code classToCopyFrom} that should
+     * be added to any generated subclass. Only annotations visible to the {@code @AutoValue} will
+     * be present. See {@link com.google.auto.value.AutoValue.CopyAnnotations
+     * AutoValue.CopyAnnotations} for more information.
+     *
+     * <p>The default implementation of this method returns an empty list for compatibility with
+     * extensions which may have implemented this interface themselves.
+     */
+    default List<AnnotationMirror> classAnnotationsToCopy(TypeElement classToCopyFrom) {
+      return ImmutableList.of();
+    }
+
+    /**
+     * Returns the complete list of annotations defined on the {@code method} that should be applied
+     * to any override of that method. Only annotations visible to the {@code @AutoValue} will be
+     * present. See {@link com.google.auto.value.AutoValue.CopyAnnotations
+     * AutoValue.CopyAnnotations} for more information.
+     *
+     * <p>The default implementation of this method returns an empty list for compatibility with
+     * extensions which may have implemented this interface themselves.
+     */
+    default List<AnnotationMirror> methodAnnotationsToCopy(ExecutableElement method) {
+      return ImmutableList.of();
+    }
 
     /**
      * Returns a representation of the {@code Builder} associated with the {@code @AutoValue} class,

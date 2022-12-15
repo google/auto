@@ -438,7 +438,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
         propertyFieldAnnotationMap(type, propertyMethods);
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
-        propertyMethodAnnotationMap(type, propertyMethods);
+        propertyMethodAnnotationMap(type, propertyMethods, typeUtils());
     vars.props =
         propertySet(
             propertyMethodsAndTypes,
