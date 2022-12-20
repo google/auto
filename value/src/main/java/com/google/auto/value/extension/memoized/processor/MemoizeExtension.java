@@ -135,6 +135,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     }
 
     String generate() {
+
       TypeSpec.Builder generated =
           classBuilder(className)
               .superclass(superType())
@@ -147,6 +148,7 @@ public final class MemoizeExtension extends AutoValueExtension {
               .addMethod(constructor());
       generatedAnnotationSpec(elements, sourceVersion, MemoizeExtension.class)
           .ifPresent(generated::addAnnotation);
+
       for (ExecutableElement method : memoizedMethods(context)) {
         MethodOverrider methodOverrider = new MethodOverrider(method);
         generated.addFields(methodOverrider.fields());
@@ -161,7 +163,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       return JavaFile.builder(context.packageName(), generated.build()).build().toString();
     }
 
-    // LINT.IfChange
+
     private TypeName superType() {
       ClassName superType = ClassName.get(context.packageName(), classToExtend);
       ImmutableList<TypeVariableName> typeVariableNames = typeVariableNames();
@@ -199,6 +201,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       constructor.addStatement("super($L)", superParams);
       return constructor.build();
     }
+
 
     private boolean isHashCodeMemoized() {
       return memoizedMethods(context).stream()
@@ -439,10 +442,12 @@ public final class MemoizeExtension extends AutoValueExtension {
         .anyMatch(n -> n.contentEquals("Nullable"));
   }
 
+
   /** Translate a {@link TypeMirror} into a {@link TypeName}, including type annotations. */
   private static TypeName annotatedType(TypeMirror type) {
     List<AnnotationSpec> annotations =
         type.getAnnotationMirrors().stream().map(AnnotationSpec::get).collect(toList());
     return TypeName.get(type).annotated(annotations);
   }
+
 }
