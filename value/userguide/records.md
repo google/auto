@@ -29,8 +29,8 @@ If you're creating new AutoValue classes for Java 15 or earlier, **follow this
 advice** to make sure your future conversion to records will be straightforward:
 
 *   Extend `Object` only (implementing interfaces is fine).
-*   Don't use JavaBeans-style prefixes: use `abstract int bar()`, not
-    `abstract int getBar()`.
+*   Don't use JavaBeans-style prefixes: use `abstract int bar()`, not `abstract
+    int getBar()`.
 *   Don't declare any non-static fields of your own.
 *   Give the factory method and accessors the same visibility level as the
     class.
@@ -63,12 +63,12 @@ too, but it can't prevent its constructor from *also* being visible, and
 exposing two ways to do the same thing can be dangerous.
 
 We think most users will be happy to switch to constructors and drop the factory
-methods, but you might want to keep it. Perhaps for compatibility reasons, or
-because you are normalizing input data to different types, such as from `List`
-to `ImmutableList`.
+methods, but you might want to keep a factory method in some records. Perhaps
+for compatibility reasons, or because you are normalizing input data to
+different types, such as from `List` to `ImmutableList`.
 
-In this event, you can still *discourage* callers by marking it deprecated. More
-on this [below](#deprecating).
+In this event, you can still *discourage* calling the constructor by marking it
+deprecated. More on this [below](#deprecating).
 
 Clever ways do exist to make calling the constructor impossible, but it's
 probably simpler to keep using AutoValue.
