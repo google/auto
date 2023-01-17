@@ -15,11 +15,12 @@
  */
 package com.google.auto.value.extension.serializable.serializer.utils;
 
-import static org.mockito.Mockito.when;
-
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.reflect.Reflection;
 import com.google.testing.compile.CompilationRule;
+import java.lang.reflect.InvocationHandler;
 import java.util.Arrays;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -32,30 +33,47 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public abstract class CompilationAbstractTest {
 
   @Rule public final CompilationRule compilationRule = new CompilationRule();
-  @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
-  @Mock protected ProcessingEnvironment mockProcessingEnvironment;
-  @Mock protected Messager mockMessager;
+  protected ProcessingEnvironment mockProcessingEnvironment = mockProcessingEnvironment();
+  protected Messager mockMessager = mockMessager();
 
   protected Types typeUtils;
   protected Elements elementUtils;
+
+  private ProcessingEnvironment mockProcessingEnvironment() {
+    InvocationHandler handler = (proxy, method, args) -> {
+      switch (method.getName()) {
+        case "getTypeUtils":
+          return typeUtils;
+        case "getElementUtils":
+          return elementUtils;
+        case "getMessager":
+          return mockMessager;
+        case "getOptions":
+          return ImmutableMap.of();
+        case "toString":
+          return "MockProcessingEnvironment";
+        default:
+          throw new IllegalArgumentException("Unsupported method: " + method);
+      }
+    };
+    return Reflection.newProxy(ProcessingEnvironment.class, handler);
+  }
+
+  private Messager mockMessager() {
+    InvocationHandler handler = (proxy, method, args) -> null;
+    return Reflection.newProxy(Messager.class, handler);
+  }
 
   @Before
   public final void setUp() {
     typeUtils = compilationRule.getTypes();
     elementUtils = compilationRule.getElements();
-
-    when(mockProcessingEnvironment.getTypeUtils()).thenReturn(typeUtils);
-    when(mockProcessingEnvironment.getElementUtils()).thenReturn(elementUtils);
-    when(mockProcessingEnvironment.getMessager()).thenReturn(mockMessager);
   }
 
   protected TypeElement typeElementOf(Class<?> c) {

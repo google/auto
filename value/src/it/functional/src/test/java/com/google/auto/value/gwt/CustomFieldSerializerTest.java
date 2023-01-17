@@ -15,26 +15,28 @@
  */
 package com.google.auto.value.gwt;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.reflect.Reflection;
 import com.google.gwt.user.client.rpc.SerializationException;
 import com.google.gwt.user.client.rpc.SerializationStreamWriter;
 import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 /**
  * Tests that the generated GWT serializer for GwtValueType serializes fields in the expected way.
@@ -43,11 +45,6 @@ import org.mockito.MockitoAnnotations;
  */
 @RunWith(JUnit4.class)
 public class CustomFieldSerializerTest {
-  @Before
-  public void setUp() throws Exception {
-    MockitoAnnotations.initMocks(this);
-  }
-
   @AutoValue
   @GwtCompatible(serializable = true)
   abstract static class ValueType implements Serializable {
@@ -75,7 +72,9 @@ public class CustomFieldSerializerTest {
   private static final ValueType WITH_LIST =
       ValueType.create("blim", 11881376, SIMPLE, ImmutableList.of(SIMPLE, CONS));
 
-  @Mock SerializationStreamWriter streamWriter;
+  private final MickeyMouseMock<SerializationStreamWriter> mock =
+      new MickeyMouseMock<>(SerializationStreamWriter.class);
+  private final SerializationStreamWriter streamWriter = mock.proxy();
 
   @Test
   public void testCustomFieldSerializer() throws SerializationException {
@@ -83,11 +82,13 @@ public class CustomFieldSerializerTest {
         (AutoValue_CustomFieldSerializerTest_ValueType) WITH_LIST;
     AutoValue_CustomFieldSerializerTest_ValueType_CustomFieldSerializer.serialize(
         streamWriter, withList);
-    verify(streamWriter).writeString("blim");
-    verify(streamWriter).writeInt(11881376);
-    verify(streamWriter).writeObject(SIMPLE);
-    verify(streamWriter).writeObject(ImmutableList.of(SIMPLE, CONS));
-    verifyNoMoreInteractions(streamWriter);
+    mock.verify(
+        () -> {
+          streamWriter.writeString("blim");
+          streamWriter.writeInt(11881376);
+          streamWriter.writeObject(SIMPLE);
+          streamWriter.writeObject(ImmutableList.of(SIMPLE, CONS));
+        });
   }
 
   @AutoValue
@@ -109,9 +110,11 @@ public class CustomFieldSerializerTest {
             ValueTypeWithGetters.create("package", true);
     AutoValue_CustomFieldSerializerTest_ValueTypeWithGetters_CustomFieldSerializer.serialize(
         streamWriter, instance);
-    verify(streamWriter).writeString("package");
-    verify(streamWriter).writeBoolean(true);
-    verifyNoMoreInteractions(streamWriter);
+    mock.verify(
+        () -> {
+          streamWriter.writeString("package");
+          streamWriter.writeBoolean(true);
+        });
   }
 
   @AutoValue
@@ -133,8 +136,10 @@ public class CustomFieldSerializerTest {
             GenericValueType.create(map);
     AutoValue_CustomFieldSerializerTest_GenericValueType_CustomFieldSerializer.serialize(
         streamWriter, instance);
-    verify(streamWriter).writeObject(map);
-    verifyNoMoreInteractions(streamWriter);
+    mock.verify(
+        () -> {
+          streamWriter.writeObject(map);
+        });
   }
 
   @AutoValue
@@ -165,9 +170,11 @@ public class CustomFieldSerializerTest {
             ValueTypeWithBuilder.builder().string("s").strings(ImmutableList.of("a", "b")).build();
     AutoValue_CustomFieldSerializerTest_ValueTypeWithBuilder_CustomFieldSerializer.serialize(
         streamWriter, instance);
-    verify(streamWriter).writeString("s");
-    verify(streamWriter).writeObject(ImmutableList.of("a", "b"));
-    verifyNoMoreInteractions(streamWriter);
+    mock.verify(
+        () -> {
+          streamWriter.writeString("s");
+          streamWriter.writeObject(ImmutableList.of("a", "b"));
+        });
   }
 
   @AutoValue
@@ -198,9 +205,11 @@ public class CustomFieldSerializerTest {
             ValueTypeWithBuilderAndGetters.builder().setPackage("s").setDefault(false).build();
     AutoValue_CustomFieldSerializerTest_ValueTypeWithBuilderAndGetters_CustomFieldSerializer
         .serialize(streamWriter, instance);
-    verify(streamWriter).writeString("s");
-    verify(streamWriter).writeBoolean(false);
-    verifyNoMoreInteractions(streamWriter);
+    mock.verify(
+        () -> {
+          streamWriter.writeString("s");
+          streamWriter.writeBoolean(false);
+        });
   }
 
   @AutoValue
@@ -229,7 +238,74 @@ public class CustomFieldSerializerTest {
             GenericValueTypeWithBuilder.<Integer, Integer>builder().map(map).build();
     AutoValue_CustomFieldSerializerTest_GenericValueTypeWithBuilder_CustomFieldSerializer.serialize(
         streamWriter, instance);
-    verify(streamWriter).writeObject(map);
-    verifyNoMoreInteractions(streamWriter);
+    mock.verify(
+        () -> {
+          streamWriter.writeObject(map);
+        });
+  }
+
+  @AutoValue
+  abstract static class MethodCall {
+    abstract String method();
+
+    abstract ImmutableList<Object> args();
+
+    static MethodCall of(String method, ImmutableList<Object> args) {
+      return new AutoValue_CustomFieldSerializerTest_MethodCall(method, args);
+    }
+  }
+
+  /**
+   * A trivial home-made mocking framework.
+   *
+   * <p>Mockito 5 no longer supports Java 8, and we do, so rather than pinning to an older version
+   * of Mockito we fake it with {@link Reflection}. This is only really possible because the thing
+   * we want to mock ({@link SerializationStreamWriter}) is an interface. Furthermore all its
+   * methods return void so we don't even need a way to specify what to return.
+   *
+   * <p>The idea is that you make an instance of this class, have the code under test call methods
+   * on it, then call {@link #verify} with a lambda that repeats the expected calls. If they match
+   * the actual calls then the test passes.
+   */
+  private static class MickeyMouseMock<T> {
+    private boolean recording = true;
+    private final Deque<MethodCall> methodCalls = new ArrayDeque<>();
+    private final T proxy;
+
+    MickeyMouseMock(Class<T> intf) {
+      this.proxy = Reflection.newProxy(intf, this::invocationHandler);
+    }
+
+    T proxy() {
+      return proxy;
+    }
+
+    void verify(ThrowingRunnable actions) {
+      assertThat(recording).isTrue();
+      recording = false;
+      try {
+        actions.run();
+      } catch (AssertionError e) {
+        throw e;
+      } catch (Throwable t) {
+        throw new AssertionError(t);
+      }
+      assertThat(methodCalls).isEmpty();
+    }
+
+    private Object invocationHandler(Object proxy, Method method, Object[] args) {
+      if (args == null) {
+        args = new Object[0];
+      }
+      MethodCall methodCall = MethodCall.of(method.getName(), ImmutableList.copyOf(args));
+      if (recording) {
+        methodCalls.add(methodCall);
+      } else { // verifying
+        assertWithMessage("Missing call %s", methodCall).that(methodCalls).isNotEmpty();
+        MethodCall recorded = methodCalls.removeFirst();
+        assertThat(methodCall).isEqualTo(recorded);
+      }
+      return null;
+    }
   }
 }

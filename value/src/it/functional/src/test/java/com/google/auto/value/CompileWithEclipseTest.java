@@ -69,6 +69,7 @@ public class CompileWithEclipseTest {
       ImmutableSet.of(
           "AutoValueNotEclipseTest.java",
           "CompileWithEclipseTest.java",
+          "CustomFieldSerializerTest.java",
           "GradleTest.java",
 
           // AutoBuilder sometimes needs to generate a .class file for Kotlin that is used in the
