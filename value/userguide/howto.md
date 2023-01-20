@@ -254,8 +254,8 @@ abstract class IgnoreExample {
 }
 ```
 
-Note that this means the field is also ignored by `toString`; to AutoValue
-it simply doesn't exist.
+Note that this means the field is also ignored by `toString`; to AutoValue the
+private field simply doesn't exist.
 
 Note that we use `AtomicReference<String>` to ensure that other threads will
 correctly see the value that was written. You could also make the field
