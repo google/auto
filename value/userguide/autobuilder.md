@@ -61,7 +61,7 @@ AutoBuilder can help.
 Given this trivial Kotlin data class:
 
 ```kotlin
-class KotlinData(val int: Int, val string: String?, val id: Long = -1L)
+class KotlinData(val level: Int, val name: String?, val id: Long = -1L)
 ```
 
 You might make a builder for it like this:
@@ -73,8 +73,8 @@ public abstract class KotlinDataBuilder {
     return new AutoBuilder_KotlinDataBuilder();
   }
 
-  public abstract KotlinDataBuilder setInt(int x);
-  public abstract KotlinDataBuilder setString(@Nullable String x);
+  public abstract KotlinDataBuilder setLevel(int x);
+  public abstract KotlinDataBuilder setName(@Nullable String x);
   public abstract KotlinDataBuilder setId(long x);
   public abstract KotlinData build();
 }
@@ -91,11 +91,11 @@ If you are using [kapt](https://kotlinlang.org/docs/kapt.html) then you can also
 define the builder in the data class itself:
 
 ```kotlin
-class KotlinData(val int: Int, val string: String?, val id: Long = -1L) {
+class KotlinData(val level: Int, val name: String?, val id: Long = -1L) {
   @AutoBuilder // we don't need ofClass: by default it is the containing class
   interface Builder {
-    fun setInt(x: Int): Builder
-    fun setString(x: String?): Builder
+    fun setLevel(x: Int): Builder
+    fun setName(x: String?): Builder
     fun setId(x: Long): Builder
     fun build(): KotlinData
   }
@@ -112,7 +112,7 @@ This example uses an interface rather than an abstract class for the builder,
 but both are possible. Java code would then construct instances like this:
 
 ```java
-KotlinData k = KotlinData.builder().setInt(23).build();
+KotlinData k = KotlinData.builder().setLevel(23).build();
 ```
 
 The example also implements a `toBuilder()` method to get a builder that starts
