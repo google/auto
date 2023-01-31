@@ -22,11 +22,11 @@ import static com.google.testing.compile.Compiler.javac;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.Reflection;
+import com.google.errorprone.annotations.Keep;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -52,24 +52,28 @@ public class GeneratedDoesNotExistTest {
       ImmutableList.of("-A" + Nullables.NULLABLE_OPTION + "=");
 
   @Parameters(name = "{0}")
-  public static Collection<Object[]> data() {
+  public static ImmutableList<Object[]> data() {
     ImmutableList.Builder<Object[]> params = ImmutableList.builder();
-    if (SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0) {
-      // use default options when running on JDK > 8
-      // TODO(b/72513371): use --release 8 once compile-testing supports that
+    int release = SourceVersion.latestSupported().ordinal(); // 8 for Java 8, etc.
+    if (release == 8) {
+      params.add(new Object[] {STANDARD_OPTIONS, "javax.annotation.Generated"});
+    } else {
       params.add(
           new Object[] {
             STANDARD_OPTIONS, "javax.annotation.processing.Generated",
           });
+      if (release < 20) {
+        // starting with 20 we get a warning about --release 8 going away soon
+        params.add(
+            new Object[] {
+              ImmutableList.<String>builder()
+                  .addAll(STANDARD_OPTIONS)
+                  .add("--release", "8")
+                  .build(),
+              "javax.annotation.Generated",
+            });
+      }
     }
-    params.add(
-        new Object[] {
-          ImmutableList.<String>builder()
-              .addAll(STANDARD_OPTIONS)
-              .add("-source", "8", "-target", "8")
-              .build(),
-          "javax.annotation.Generated",
-        });
     return params.build();
   }
 
@@ -136,6 +140,7 @@ public class GeneratedDoesNotExistTest {
       this.ignoredGenerated = ignoredGenerated;
     }
 
+    @Keep
     public TypeElement getTypeElement(CharSequence name) {
       if (GENERATED_ANNOTATIONS.contains(name.toString())) {
         ignoredGenerated.add(name.toString());
@@ -157,6 +162,7 @@ public class GeneratedDoesNotExistTest {
       this.noGeneratedElements = partialProxy(Elements.class, elementsHandler);
     }
 
+    @Keep
     public Elements getElementUtils() {
       return noGeneratedElements;
     }
@@ -170,6 +176,7 @@ public class GeneratedDoesNotExistTest {
       this.ignoredGenerated = ignoredGenerated;
     }
 
+    @Keep
     public void init(ProcessingEnvironment processingEnv) {
       ProcessingEnvironmentHandler processingEnvironmentHandler =
           new ProcessingEnvironmentHandler(processingEnv, ignoredGenerated);
