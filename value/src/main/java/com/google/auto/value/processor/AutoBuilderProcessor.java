@@ -599,8 +599,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       AnnotationMirror metadata, TypeElement ofClass) {
     ImmutableMap<String, AnnotationValue> annotationValues =
         AnnotationMirrors.getAnnotationValuesWithDefaults(metadata).entrySet().stream()
-            .map(e -> new SimpleEntry<>(e.getKey().getSimpleName().toString(), e.getValue()))
-            .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+            .collect(toImmutableMap(e -> e.getKey().getSimpleName().toString(), e -> e.getValue()));
     // We match the KmConstructor instances with the ExecutableElement instances based on the
     // parameter names. We could possibly just assume that the constructors are in the same order.
     Map<ImmutableSet<String>, ExecutableElement> map =
