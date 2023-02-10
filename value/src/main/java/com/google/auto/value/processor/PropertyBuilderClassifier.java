@@ -275,9 +275,9 @@ class PropertyBuilderClassifier {
 
     // We've determined that `BarBuilder` has a method `build()` or `buildOrThrow(). But it must
     // return `Bar`. And if the type of `bar()` is Bar<String> then `BarBuilder.build()` must return
-    // Bar<String>.
+    // something that can be assigned to Bar<String>.
     TypeMirror buildType = eclipseHack.methodReturnType(build, barBuilderDeclaredType);
-    if (!MoreTypes.equivalence().equivalent(barTypeMirror, buildType)) {
+    if (!typeUtils.isAssignable(buildType, barTypeMirror)) {
       errorReporter.reportError(
           method,
           "[AutoValueBuilderWrongType] Property builder for %s has type %s whose %s() method"

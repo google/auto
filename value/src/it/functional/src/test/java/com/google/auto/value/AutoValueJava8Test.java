@@ -40,6 +40,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -921,5 +922,46 @@ public class AutoValueJava8Test {
     Foo foo = Foo.builder().build();
     assertThat(foo.bar()).isNotNull();
     assertThat(foo.baz()).isEqualTo(0.0);
+  }
+
+  // Test that we can build a property of type List<? extends Foo> using a property builder whose
+  // build() method returns List<Foo>. The main motivation for this is Kotlin, where you can
+  // easily run into this situation with "in" types.
+  // This is a "Java 8" test because the generated code uses List.of (which is actually Java 9).
+  // If we really are on Java 8 then the generated code will use `new ListBuilder<T>().build()`
+  // instead.
+  @AutoValue
+  public abstract static class PropertyBuilderWildcard<T> {
+    public abstract List<? extends T> list();
+
+    public static <T>PropertyBuilderWildcard.Builder<T> builder() {
+      return new AutoValue_AutoValueJava8Test_PropertyBuilderWildcard.Builder<>();
+    }
+
+    @AutoValue.Builder
+    public interface Builder<T> {
+      ListBuilder<T> listBuilder();
+
+      PropertyBuilderWildcard<T> build();
+    }
+
+    public static class ListBuilder<T> {
+      private final List<T> list = new ArrayList<>();
+
+      public void add(T value) {
+        list.add(value);
+      }
+
+      public List<T> build() {
+        return list;
+      }
+    }
+  }
+
+  @Test
+  public void propertyBuilderWildcard() {
+    PropertyBuilderWildcard.Builder<CharSequence> builder = PropertyBuilderWildcard.builder();
+    builder.listBuilder().add("foo");
+    assertThat(builder.build().list()).containsExactly("foo");
   }
 }
