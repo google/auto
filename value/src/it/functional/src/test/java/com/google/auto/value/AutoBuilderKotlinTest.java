@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -29,6 +30,10 @@ public final class AutoBuilderKotlinTest {
   abstract static class KotlinDataBuilder {
     static KotlinDataBuilder builder() {
       return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataBuilder();
+    }
+
+    static KotlinDataBuilder builder(KotlinData kotlinData) {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataBuilder(kotlinData);
     }
 
     abstract KotlinDataBuilder setInt(int x);
@@ -43,6 +48,11 @@ public final class AutoBuilderKotlinTest {
     KotlinData x = KotlinDataBuilder.builder().setInt(23).setString("skidoo").build();
     assertThat(x.getInt()).isEqualTo(23);
     assertThat(x.getString()).isEqualTo("skidoo");
+
+    KotlinData y = KotlinDataBuilder.builder(x).setString("chromosomes").build();
+    assertThat(y.getInt()).isEqualTo(23);
+    assertThat(y.getString()).isEqualTo("chromosomes");
+
     assertThrows(IllegalStateException.class, () -> KotlinDataBuilder.builder().build());
   }
 
@@ -239,5 +249,35 @@ public final class AutoBuilderKotlinTest {
             IllegalStateException.class, () -> KotlinDataSomeDefaultsBuilder.builder().build());
     assertThat(e).hasMessageThat().contains("requiredInt");
     assertThat(e).hasMessageThat().contains("requiredString");
+  }
+
+  @AutoBuilder(ofClass = KotlinDataWithList.class)
+  interface KotlinDataWithListBuilder {
+    static KotlinDataWithListBuilder builder() {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithListBuilder();
+    }
+
+    static KotlinDataWithListBuilder builder(KotlinDataWithList kotlinData) {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithListBuilder(kotlinData);
+    }
+
+    KotlinDataWithListBuilder list(List<? extends CharSequence> list);
+
+    KotlinDataWithListBuilder number(int number);
+
+    KotlinDataWithList build();
+  }
+
+  // The `getList()` method returns `List<CharSequence>` as seen from Java, but the `list` parameter
+  // to the constructor has type `List<? extends CharSequence>`.
+  @Test
+  public void kotlinWildcards() {
+    List<String> strings = ImmutableList.of("foo");
+    KotlinDataWithList x = KotlinDataWithListBuilder.builder().list(strings).number(17).build();
+    assertThat(x.getList()).isEqualTo(strings);
+    assertThat(x.getNumber()).isEqualTo(17);
+    KotlinDataWithList y = KotlinDataWithListBuilder.builder(x).number(23).build();
+    assertThat(y.getList()).isEqualTo(strings);
+    assertThat(y.getNumber()).isEqualTo(23);
   }
 }

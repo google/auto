@@ -387,7 +387,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       return ImmutableMap.of();
     }
     TypeElement type = MoreTypes.asTypeElement(builtType);
-    Map<String, ExecutableElement> noArgInstanceMethods =
+    Map<String, ExecutableElement> nameToMethod =
         MoreElements.getLocalAndInheritedMethods(type, typeUtils(), elementUtils()).stream()
             .filter(m -> m.getParameters().isEmpty())
             .filter(m -> !m.getModifiers().contains(Modifier.STATIC))
@@ -405,16 +405,18 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                   String name = param.getSimpleName().toString();
                   // Parameter name is `bar`; we look for `bar()` and `getBar()` (or `getbar()` etc)
                   // in that order. If `bar` is boolean we also look for `isBar()`.
-                  ExecutableElement getter = noArgInstanceMethods.get(name);
+                  ExecutableElement getter = nameToMethod.get(name);
                   if (getter == null) {
-                    getter = noArgInstanceMethods.get("get" + name);
+                    getter = nameToMethod.get("get" + name);
                     if (getter == null && param.asType().getKind() == TypeKind.BOOLEAN) {
-                      getter = noArgInstanceMethods.get("is" + name);
+                      getter = nameToMethod.get("is" + name);
                     }
                   }
                   if (getter != null
+                      && !typeUtils().isAssignable(getter.getReturnType(), param.asType())
                       && !MoreTypes.equivalence()
                           .equivalent(getter.getReturnType(), param.asType())) {
+                    // TODO(b/268680785): we should not need to have two type checks here
                     getter = null;
                   }
                   return new SimpleEntry<>(name, getter);

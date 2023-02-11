@@ -502,7 +502,7 @@ public final class AutoBuilderTest {
   }
 
   static <T> String concatList(ImmutableList<T> list) {
-    // We're avoiding streams for now so we compile this in Java 7 mode in CompileWithEclipseTest.
+    // We're avoiding streams for now since we compile this in Java 7 mode in CompileWithEclipseTest
     StringBuilder sb = new StringBuilder();
     for (T element : list) {
       sb.append(element);
