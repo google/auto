@@ -183,6 +183,7 @@
           <configuration>
             <addTestClassPath>true</addTestClassPath>
             <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+            <localRepositoryPath>${project.build.directory}/it-repo</localRepositoryPath>
             <pomIncludes>
               <pomInclude>*/pom.xml</pomInclude>
             </pomIncludes>
