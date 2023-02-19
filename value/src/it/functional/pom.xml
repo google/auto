@@ -187,37 +187,29 @@
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
           </systemPropertyVariables>
-          <skip>true</skip>
+          <excludes>
+            <exclude>**/*IntegrationTest*</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.22.2</version>
+        <configuration>
+          <systemPropertyVariables>
+            <autoValueVersion>${project.version}</autoValueVersion>
+          </systemPropertyVariables>
         </configuration>
         <executions>
           <execution>
-            <id>unit-tests</id>
-            <phase>test</phase>
             <goals>
-              <goal>test</goal>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
             </goals>
-            <configuration>
-              <skip>false</skip>
-              <excludes>
-                <exclude>**/*IntegrationTest.java</exclude>
-              </excludes>
-            </configuration>
-          </execution>
-          <execution>
-            <id>integration-tests</id>
-            <phase>integration-test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <configuration>
-              <skip>false</skip>
-              <includes>
-                <include>**/*IntegrationTest.java</include>
-              </includes>
-            </configuration>
           </execution>
         </executions>
-      </plugin>
+     </plugin>
     </plugins>
   </build>
 
