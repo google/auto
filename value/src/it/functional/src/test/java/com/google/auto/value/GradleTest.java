@@ -80,6 +80,13 @@ public class GradleTest {
     assertThat(autoValueVersion).isNotNull();
     String localRepository = System.getProperty("localRepository");
     assertThat(localRepository).isNotNull();
+    Path localRepositoryPath = Paths.get(localRepository);
+    assertThat(Files.exists(localRepositoryPath)).isTrue();
+    Path autoValuePath = localRepositoryPath.resolve("com/google/auto/value/auto-value");
+    assertThat(Files.exists(autoValuePath)).isTrue();
+    Path autoValueVersionPath = autoValuePath.resolve(autoValueVersion);
+    assertThat(Files.exists(autoValueVersionPath)).isTrue();
+    Files.list(autoValueVersionPath).forEach(p -> System.err.printf("@@@ %s\n", p));
 
     // Set up the fake Gradle project.
     String buildGradleText = expandSystemProperties(BUILD_GRADLE_TEXT);
