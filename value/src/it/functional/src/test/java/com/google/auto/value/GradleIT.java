@@ -38,7 +38,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class GradleTest {
+public class GradleIT {
   @Rule public TemporaryFolder fakeProject = new TemporaryFolder();
 
   private static final String BUILD_GRADLE_TEXT =
@@ -76,6 +76,7 @@ public class GradleTest {
 
   @Test
   public void basic() throws IOException {
+    assertThat(true).isFalse();
     String autoValueVersion = System.getProperty("autoValueVersion");
     assertThat(autoValueVersion).isNotNull();
     String localRepository = System.getProperty("localRepository");

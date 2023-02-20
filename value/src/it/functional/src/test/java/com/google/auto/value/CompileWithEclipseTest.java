@@ -70,7 +70,7 @@ public class CompileWithEclipseTest {
           "AutoValueNotEclipseTest.java",
           "CompileWithEclipseTest.java",
           "CustomFieldSerializerTest.java",
-          "GradleTest.java",
+          "GradleIT.java",
 
           // AutoBuilder sometimes needs to generate a .class file for Kotlin that is used in the
           // rest of compilation, and Eclipse doesn't seem to handle that well. Presumably not many
