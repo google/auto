@@ -40,7 +40,7 @@ jobs:
         run: mvn -B dependency:go-offline test clean -U --quiet --fail-never -DskipTests=true -f build-pom.xml
       - name: 'Test'
         shell: bash
-        run: mvn -B verify -U --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true -f build-pom.xml
+        run: mvn -B verify install -U --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true -f build-pom.xml
 
   publish_snapshot:
     name: 'Publish snapshot'
