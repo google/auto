@@ -92,7 +92,7 @@
     <dependency>
       <groupId>dev.gradleplugins</groupId>
       <artifactId>gradle-test-kit</artifactId>
-      <version>7.6</version>
+      <version>8.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
