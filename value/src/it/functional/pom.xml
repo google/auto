@@ -183,12 +183,26 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.22.2</version>
         <configuration>
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
           </systemPropertyVariables>
         </configuration>
-      </plugin>
+        <executions>
+          <execution>
+            <phase>install</phase>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+     </plugin>
     </plugins>
   </build>
 
