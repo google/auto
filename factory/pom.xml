@@ -169,7 +169,7 @@
             <path>
               <groupId>net.ltgt.gradle.incap</groupId>
               <artifactId>incap-processor</artifactId>
-              <version>0.3</version>
+              <version>1.0.0</version>
             </path>
           </annotationProcessorPaths>
         </configuration>
