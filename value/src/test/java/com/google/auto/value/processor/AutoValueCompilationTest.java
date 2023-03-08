@@ -972,6 +972,8 @@ public class AutoValueCompilationTest {
         .hadErrorContaining("MissingType")
         .inFile(javaFileObject)
         .onLineContaining("MissingType");
+    assertThat(compilation)
+        .hadErrorContaining("references undefined types including MissingType");
   }
 
   @Test

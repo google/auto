@@ -20,6 +20,7 @@ import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_PACKAGE_NAME;
 import static com.google.auto.value.processor.ClassNames.COPY_ANNOTATIONS_NAME;
@@ -27,7 +28,6 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Sets.union;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
 
@@ -98,8 +98,9 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   /**
    * Qualified names of {@code @AutoValue} (etc) classes that we attempted to process but had to
    * abandon because we needed other types that they referenced and those other types were missing.
+   * The corresponding value tells the name of the missing type, if known, or is empty otherwise.
    */
-  private final List<String> deferredTypeNames = new ArrayList<>();
+  private final Map<String, String> deferredTypeNames = new LinkedHashMap<>();
 
   AutoValueishProcessor(String annotationClassName, boolean appliesToInterfaces) {
     this.annotationClassName = annotationClassName;
@@ -143,7 +144,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    * This is used by tests.
    */
   final ImmutableList<String> deferredTypeNames() {
-    return ImmutableList.copyOf(deferredTypeNames);
+    return ImmutableList.copyOf(deferredTypeNames.keySet());
   }
 
   @Override
@@ -381,11 +382,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     }
   }
 
-  void addDeferredType(TypeElement type) {
-    // We save the name of the type rather
-    // than its TypeElement because it is not guaranteed that it will be represented by
-    // the same TypeElement on the next round.
-    deferredTypeNames.add(type.getQualifiedName().toString());
+  void addDeferredType(TypeElement type, String missingType) {
+    // We save the name of the type containing the problem, rather than its TypeElement, because it
+    // is not guaranteed that it will be represented by the same TypeElement on the next round. We
+    // save the name of the missing type for better diagnostics. (It may be empty.)
+    deferredTypeNames.put(type.getQualifiedName().toString(), missingType);
   }
 
   @Override
@@ -402,30 +403,34 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
                   + " because the annotation class was not found");
       return false;
     }
-    List<TypeElement> deferredTypes =
-        deferredTypeNames.stream()
-            .map(name -> elementUtils().getTypeElement(name))
-            .collect(toList());
+    ImmutableMap<TypeElement, String> deferredTypes =
+        deferredTypeNames.entrySet().stream()
+            .collect(
+                toImmutableMap(
+                    entry -> elementUtils().getTypeElement(entry.getKey()), Map.Entry::getValue));
     if (roundEnv.processingOver()) {
       // This means that the previous round didn't generate any new sources, so we can't have found
       // any new instances of @AutoValue; and we can't have any new types that are the reason a type
       // was in deferredTypes.
-      for (TypeElement type : deferredTypes) {
-        errorReporter.reportError(
-            type,
-            "[%sUndefined] Did not generate @%s class for %s because it references"
-                + " undefined types",
-            simpleAnnotationName,
-            simpleAnnotationName,
-            type.getQualifiedName());
-      }
+      deferredTypes.forEach(
+          (type, missing) -> {
+            String including = missing.isEmpty() ? "" : ("including " + missing);
+            errorReporter.reportError(
+                type,
+                "[%sUndefined] Did not generate @%s class for %s because it references"
+                    + " undefined types %s",
+                simpleAnnotationName,
+                simpleAnnotationName,
+                type.getQualifiedName(),
+                including);
+          });
       return false;
     }
     Collection<? extends Element> annotatedElements =
         roundEnv.getElementsAnnotatedWith(annotationType);
     List<TypeElement> types =
         new ImmutableList.Builder<TypeElement>()
-            .addAll(deferredTypes)
+            .addAll(deferredTypes.keySet())
             .addAll(ElementFilter.typesIn(annotatedElements))
             .build();
     deferredTypeNames.clear();
@@ -440,7 +445,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         // that other type was missing. It is possible that the missing type will be generated by
         // further annotation processing, so we will try again on the next round (perhaps failing
         // again and adding it back to the list).
-        addDeferredType(type);
+        addDeferredType(type, e.getMessage());
       } catch (RuntimeException e) {
         String trace = Throwables.getStackTraceAsString(e);
         errorReporter.reportError(

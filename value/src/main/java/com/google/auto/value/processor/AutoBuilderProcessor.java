@@ -754,7 +754,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, /* baseType= */ javaLangVoid);
     text = Reformatter.fixup(text);
     writeSourceFile(autoAnnotationClassName, text, autoBuilderType);
-    addDeferredType(autoBuilderType);
+    addDeferredType(autoBuilderType, autoAnnotationClassName);
   }
 
   private ImmutableSet<Property> annotationBuilderPropertySet(TypeElement annotationType) {

@@ -54,7 +54,7 @@ final class MissingTypes {
       // Although it is not specified as such, in practice ErrorType.toString() is the type name
       // that appeared in the source code. Showing it here can help in debugging issues with
       // deferral.
-      super(missingType == null ? null : missingType.toString());
+      super(missingType == null ? "" : missingType.toString());
     }
   }
 
