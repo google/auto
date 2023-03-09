@@ -13,7 +13,7 @@ jobs:
     name: "JDK ${{ matrix.java }}"
     strategy:
       matrix:
-        java: [ 8, 11 ]
+        java: [ 8, 11, 17 ]
     runs-on: ubuntu-latest
     steps:
       # Cancel any previous runs for the same branch that are still running.

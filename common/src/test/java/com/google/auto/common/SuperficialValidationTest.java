@@ -171,7 +171,11 @@ public class SuperficialValidationTest {
               void runAssertions() {
                 TypeElement testClassElement =
                     processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                // It appears that in some JDK versions, getAnnotationMirrors() doesn't return
+                // erroneous annotations such as we have here.
+                if (!testClassElement.getAnnotationMirrors().isEmpty()) {
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }
               }
             })
         .failsToCompile();

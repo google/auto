@@ -418,7 +418,6 @@ public class MoreElementsTest {
     assertThat(methods)
         .containsAtLeast(
             getMethod(Object.class, "clone"),
-            getMethod(Object.class, "registerNatives"),
             getMethod(Object.class, "finalize"),
             getMethod(Object.class, "wait"),
             getMethod(Object.class, "wait", longMirror),
