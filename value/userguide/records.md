@@ -435,11 +435,7 @@ the map don't reference the keys. For more caching options, consider using
 You might decide that AutoValue with `@Memoized` is simpler than records for
 this case, though.
 
-### 
-
-
-
-s
+### Builders
 
 Builders are still available when using records. Instead of
 `@AutoValue.Builder`, you use [`@AutoBuilder`](autobuilder.md).
