@@ -78,6 +78,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor8;
@@ -715,8 +716,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    *     parameter type for a parameter.
    */
   static Optional<String> nullableAnnotationFor(Element element, TypeMirror elementType) {
-    List<? extends AnnotationMirror> typeAnnotations = elementType.getAnnotationMirrors();
-    if (nullableAnnotationIndex(typeAnnotations).isPresent()) {
+    if (isNullable(elementType)) {
       return Optional.of("");
     }
     List<? extends AnnotationMirror> elementAnnotations = element.getAnnotationMirrors();
@@ -734,6 +734,34 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     return IntStream.range(0, annotations.size())
         .filter(i -> isNullable(annotations.get(i)))
         .findFirst();
+  }
+
+  private static boolean isNullable(TypeMirror type) {
+    return isNullable(type, 0);
+  }
+
+  private static boolean isNullable(TypeMirror type, int depth) {
+    // Some versions of the Eclipse compiler can report that the upper bound of a type variable T
+    // is another T, and if you ask for the upper bound of that other T you'll get a third T, and so
+    // ad infinitum. To avoid StackOverflowError, we bottom out after 10 iterations.
+    if (depth > 10) {
+      return false;
+    }
+    List<? extends AnnotationMirror> typeAnnotations = type.getAnnotationMirrors();
+    // TODO(emcmanus): also check if there is a @NonNull bound and return false if so.
+    if (nullableAnnotationIndex(typeAnnotations).isPresent()) {
+      return true;
+    }
+    if (type.getKind().equals(TypeKind.TYPEVAR)) {
+      TypeVariable typeVariable = MoreTypes.asTypeVariable(type);
+      TypeMirror bound = typeVariable.getUpperBound();
+      if (bound.getKind().equals(TypeKind.INTERSECTION)) {
+        return MoreTypes.asIntersection(bound).getBounds().stream()
+            .allMatch(t -> isNullable(t, depth + 1));
+      }
+      return isNullable(bound, depth + 1);
+    }
+    return false;
   }
 
   private static boolean isNullable(AnnotationMirror annotation) {

@@ -30,6 +30,7 @@ import com.google.common.testing.EqualsTester;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -39,8 +40,8 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.TypeVariable;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -934,7 +935,7 @@ public class AutoValueJava8Test {
   public abstract static class PropertyBuilderWildcard<T> {
     public abstract List<? extends T> list();
 
-    public static <T>PropertyBuilderWildcard.Builder<T> builder() {
+    public static <T> PropertyBuilderWildcard.Builder<T> builder() {
       return new AutoValue_AutoValueJava8Test_PropertyBuilderWildcard.Builder<>();
     }
 
@@ -963,5 +964,83 @@ public class AutoValueJava8Test {
     PropertyBuilderWildcard.Builder<CharSequence> builder = PropertyBuilderWildcard.builder();
     builder.listBuilder().add("foo");
     assertThat(builder.build().list()).containsExactly("foo");
+  }
+
+  @AutoValue
+  public abstract static class NullableBound<T extends @Nullable Object> {
+    public abstract T maybeNullable();
+
+    public static <T extends @Nullable Object> NullableBound<T> create(T maybeNullable) {
+      return new AutoValue_AutoValueJava8Test_NullableBound<>(maybeNullable);
+    }
+  }
+
+  @Test
+  public void propertyCanBeNullIfNullableBound() {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
+    // The generated class doesn't know what the actual type argument is, so it can't know whether
+    // it is @Nullable. Because of the @Nullable bound, it omits an explicit null check, under the
+    // assumption that some static-checking framework is validating type uses.
+    NullableBound<@Nullable String> x = NullableBound.create(null);
+    assertThat(x.maybeNullable()).isNull();
+  }
+
+  @AutoValue
+  public abstract static class NullableIntersectionBound<
+      T extends @Nullable Object & @Nullable Serializable> {
+    public abstract T maybeNullable();
+
+    public static <T extends @Nullable Object & @Nullable Serializable>
+        NullableIntersectionBound<T> create(T maybeNullable) {
+      return new AutoValue_AutoValueJava8Test_NullableIntersectionBound<>(maybeNullable);
+    }
+  }
+
+  @Test
+  public void propertyCanBeNullIfNullableIntersectionBound() {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
+    // The generated class doesn't know what the actual type argument is, so it can't know whether
+    // it is @Nullable. Because of the @Nullable bound, it omits an explicit null check, under the
+    // assumption that some static-checking framework is validating type uses.
+    NullableIntersectionBound<@Nullable String> x = NullableIntersectionBound.create(null);
+    assertThat(x.maybeNullable()).isNull();
+  }
+
+  @AutoValue
+  public abstract static class PartlyNullableIntersectionBound<
+      T extends @Nullable Object & Serializable> {
+    public abstract T notNullable();
+
+    public static <T extends @Nullable Object & Serializable>
+        PartlyNullableIntersectionBound<T> create(T notNullable) {
+      return new AutoValue_AutoValueJava8Test_PartlyNullableIntersectionBound<>(notNullable);
+    }
+  }
+
+  @Test
+  public void propertyCannotBeNullWithPartlyNullableIntersectionBound() {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
+    assertThrows(NullPointerException.class, () -> PartlyNullableIntersectionBound.create(null));
+  }
+
+  @AutoValue
+  public abstract static class NullableVariableBound<T extends @Nullable Object, U extends T> {
+    public abstract T nullOne();
+
+    public abstract U nullTwo();
+
+    public static <T extends @Nullable Object, U extends T> NullableVariableBound<T, U> create(
+        T nullOne, U nullTwo) {
+      return new AutoValue_AutoValueJava8Test_NullableVariableBound<>(nullOne, nullTwo);
+    }
+  }
+
+  @Test
+  public void nullableVariableBound() {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
+    NullableVariableBound<@Nullable CharSequence, @Nullable String> x =
+        NullableVariableBound.create(null, null);
+    assertThat(x.nullOne()).isNull();
+    assertThat(x.nullTwo()).isNull();
   }
 }

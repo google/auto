@@ -18,7 +18,10 @@ package com.google.auto.value;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static java.lang.annotation.ElementType.TYPE_USE;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -27,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.math.BigInteger;
 import java.time.LocalTime;
 import java.util.AbstractSet;
@@ -37,6 +41,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.lang.model.SourceVersion;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -750,5 +755,36 @@ public final class AutoBuilderTest {
     assertThat(AutoBuilder_AutoBuilderTest_AnnotatedSimpleStaticBuilder2.class.getAnnotations())
         .asList()
         .contains(myAnnotationBuilder().value("thing").build());
+  }
+
+  @Target(TYPE_USE)
+  public @interface Nullable {}
+
+  public static <T extends @Nullable Object, U> T frob(T arg, U notNull) {
+    return arg;
+  }
+
+  @AutoBuilder(callMethod = "frob")
+  interface FrobCaller<T extends @Nullable Object, U> {
+    FrobCaller<T, U> arg(T arg);
+
+    FrobCaller<T, U> notNull(U notNull);
+
+    T call();
+
+    static <T extends @Nullable Object, U> FrobCaller<T, U> caller() {
+      return new AutoBuilder_AutoBuilderTest_FrobCaller<>();
+    }
+  }
+
+  @Test
+  public void builderTypeVariableWithNullableBound() {
+    // The Annotation Processing API doesn't see the @Nullable Object bound on Java 8.
+    assumeTrue(SourceVersion.latest().ordinal() > SourceVersion.RELEASE_8.ordinal());
+    assertThat(FrobCaller.<@Nullable String, String>caller().arg(null).notNull("foo").call())
+        .isNull();
+    assertThrows(
+        NullPointerException.class,
+        () -> FrobCaller.<@Nullable String, String>caller().arg(null).notNull(null).call());
   }
 }

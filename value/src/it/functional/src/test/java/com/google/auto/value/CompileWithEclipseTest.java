@@ -80,11 +80,13 @@ public class CompileWithEclipseTest {
   private static final Predicate<File> JAVA_FILE =
       f -> f.getName().endsWith(".java") && !IGNORED_TEST_FILES.contains(f.getName());
 
-  private static final Predicate<File> JAVA8_TEST =
-      f ->
-          f.getName().equals("AutoValueJava8Test.java")
-              || f.getName().equals("AutoOneOfJava8Test.java")
-              || f.getName().equals("EmptyExtension.java");
+  private static final ImmutableSet<String> JAVA8_TEST_FILES =
+      ImmutableSet.of(
+          "AutoBuilderTest.java",
+          "AutoOneOfJava8Test.java",
+          "AutoValueJava8Test.java",
+          "EmptyExtension.java");
+  private static final Predicate<File> JAVA8_TEST = f -> JAVA8_TEST_FILES.contains(f.getName());
 
   @Test
   public void compileWithEclipseJava7() throws Exception {
