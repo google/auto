@@ -468,7 +468,7 @@ After:
 ```java
 public record Person(String name, int id) {
   public static Builder builder() {
-    return new AutoBuilder_Person();
+    return new AutoBuilder_Person_Builder();
   }
 
   @AutoBuilder
@@ -496,7 +496,7 @@ public record Person(String name, int id) {
   public Person {}
 
   public static Builder builder() {
-    return new AutoBuilder_Person();
+    return new AutoBuilder_Person_Builder();
   }
 
   @AutoBuilder
