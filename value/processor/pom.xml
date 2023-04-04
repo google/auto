@@ -177,6 +177,10 @@
           <execution>
             <id>default-testCompile</id>
             <configuration>
+              <compilerArgs>
+                <!-- For MemoizeTest. -->
+                <arg>-parameters</arg>
+              </compilerArgs>
               <annotationProcessorPaths>
                 <path>
                   <groupId>com.google.auto.value</groupId>

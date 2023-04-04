@@ -18,6 +18,7 @@ package com.google.auto.value.extension.toprettystring.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
 import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static java.util.stream.Collectors.joining;
@@ -28,6 +29,7 @@ import static javax.lang.model.element.Modifier.FINAL;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.auto.value.extension.AutoValueExtension.Context;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -36,6 +38,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.util.List;
+import java.util.Set;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -117,13 +120,32 @@ final class ExtensionClassTypeSpecBuilder {
 
   private MethodSpec constructor() {
     MethodSpec.Builder constructor = constructorBuilder();
+    // TODO(b/35944623): Replace this with a standard way of avoiding keywords.
+    Set<String> propertyNames = context.properties().keySet();
+    ImmutableMap<String, String> parameterNames =
+        propertyNames.stream()
+            .collect(toImmutableMap(name -> name, name -> generateIdentifier(name, propertyNames)));
     context
         .propertyTypes()
-        .forEach((name, type) -> constructor.addParameter(annotatedType(type), name + "$"));
+        .forEach(
+            (name, type) ->
+                constructor.addParameter(annotatedType(type), parameterNames.get(name)));
     String superParams =
-        context.properties().keySet().stream().map(n -> n + "$").collect(joining(", "));
+        context.properties().keySet().stream().map(parameterNames::get).collect(joining(", "));
     constructor.addStatement("super($L)", superParams);
     return constructor.build();
+  }
+
+  private static String generateIdentifier(String name, Set<String> existingNames) {
+    if (!SourceVersion.isKeyword(name)) {
+      return name;
+    }
+    for (int i = 0; ; i++) {
+      String newName = name + i;
+      if (!existingNames.contains(newName)) {
+        return newName;
+      }
+    }
   }
 
   /** Translate a {@link TypeMirror} into a {@link TypeName}, including type annotations. */

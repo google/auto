@@ -15,7 +15,9 @@
  */
 package com.google.auto.value.extension.memoized;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Arrays.stream;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
@@ -27,6 +29,7 @@ import com.google.errorprone.annotations.ImmutableTypeParameter;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -43,6 +46,8 @@ public class MemoizedTest {
     abstract boolean getNative();
 
     abstract boolean getNative0();
+
+    abstract String getNotKeyword();
 
     @Memoized
     boolean getMemoizedNative() {
@@ -358,12 +363,19 @@ public class MemoizedTest {
   }
 
   @Test
-  public void keywords() {
-    ValueWithKeywordName value = new AutoValue_MemoizedTest_ValueWithKeywordName(true, false);
+  public void keywords() throws Exception {
+    ValueWithKeywordName value =
+        new AutoValue_MemoizedTest_ValueWithKeywordName(true, false, "foo");
     assertThat(value.getNative()).isTrue();
     assertThat(value.getMemoizedNative()).isTrue();
     assertThat(value.getNative0()).isFalse();
     assertThat(value.getMemoizedNative0()).isFalse();
+
+    Constructor<?> constructor =
+        value.getClass().getDeclaredConstructor(boolean.class, boolean.class, String.class);
+    ImmutableList<String> names =
+        stream(constructor.getParameters()).map(Parameter::getName).collect(toImmutableList());
+    assertThat(names).contains("notKeyword");
   }
 
   @Test
