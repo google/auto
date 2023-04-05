@@ -28,6 +28,8 @@ abstract class Animal {
   abstract int numberOfLegs();
 
   static Builder builder() {
+    // The naming here will be different if you are using a nested class
+    // e.g. `return new AutoValue_OuterClass_InnerClass.Builder();`
     return new AutoValue_Animal.Builder();
   }
 
