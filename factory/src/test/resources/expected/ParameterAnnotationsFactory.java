@@ -31,13 +31,24 @@ final class ParameterAnnotationsFactory {
     this.fooProvider = checkNotNull(fooProvider, 1);
   }
 
-  ParameterAnnotations create(@ParameterAnnotations.NullableParameter Integer bar, @ParameterAnnotations.Nullable Long baz, @ParameterAnnotations.NullableType Thread buh) {
-    return new ParameterAnnotations(checkNotNull(fooProvider.get(), 1), checkNotNull(bar, 2), baz, checkNotNull(buh, 4));
+  ParameterAnnotations create(
+      @ParameterAnnotations.NullableParameter Integer bar,
+      @ParameterAnnotations.Nullable Long baz,
+      @ParameterAnnotations.NullableType Thread buh,
+      @ParameterAnnotations.NullableParameterAndType String quux) {
+    return new ParameterAnnotations(
+        checkNotNull(fooProvider.get(), 1),
+        checkNotNull(bar, 2),
+        baz,
+        checkNotNull(buh, 4),
+        checkNotNull(quux, 5));
   }
 
   private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
-      throw new NullPointerException("@AutoFactory method argument is null but is not marked @Nullable. Argument index: " + argumentIndex);
+      throw new NullPointerException(
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

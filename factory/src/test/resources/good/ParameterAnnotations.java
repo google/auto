@@ -39,9 +39,14 @@ final class ParameterAnnotations {
   @Target(TYPE_USE)
   @interface NullableType {}
 
+  @Retention(RUNTIME)
+  @Target({PARAMETER, TYPE_USE})
+  @interface NullableParameterAndType {}
+
   ParameterAnnotations(
       @Provided @NullableParameter @NullableType String foo,
       @NullableParameter Integer bar,
       @Nullable Long baz,
-      @NullableType Thread buh) {}
+      @NullableType Thread buh,
+      @NullableParameterAndType String quux) {}
 }

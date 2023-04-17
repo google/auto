@@ -16,6 +16,7 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
 import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -80,23 +81,29 @@ abstract class Parameter {
   }
   private static Parameter forVariableElement(
       VariableElement variable, TypeMirror type, Types types) {
-    ImmutableList<AnnotationMirror> annotations =
+    ImmutableList<AnnotationMirror> allAnnotations =
         Stream.of(variable.getAnnotationMirrors(), type.getAnnotationMirrors())
             .flatMap(List::stream)
             .collect(toImmutableList());
     Optional<AnnotationMirror> nullable =
-        annotations.stream().filter(Parameter::isNullable).findFirst();
-    ImmutableList<Equivalence.Wrapper<AnnotationMirror>> annotationWrappers =
+        allAnnotations.stream().filter(Parameter::isNullable).findFirst();
+    Key key = Key.create(type, allAnnotations, types);
+
+    ImmutableSet<Equivalence.Wrapper<AnnotationMirror>> typeAnnotationWrappers =
+        type.getAnnotationMirrors().stream()
+            .map(AnnotationMirrors.equivalence()::wrap)
+            .collect(toImmutableSet());
+    ImmutableList<Equivalence.Wrapper<AnnotationMirror>> parameterAnnotationWrappers =
         variable.getAnnotationMirrors().stream()
             .map(AnnotationMirrors.equivalence()::wrap)
+            .filter(annotation -> !typeAnnotationWrappers.contains(annotation))
             .collect(toImmutableList());
 
-    Key key = Key.create(type, annotations, types);
     return new AutoValue_Parameter(
         MoreTypes.equivalence().wrap(type),
         variable.getSimpleName().toString(),
         key,
-        annotationWrappers,
+        parameterAnnotationWrappers,
         wrapOptionalInEquivalence(AnnotationMirrors.equivalence(), nullable));
   }
 
