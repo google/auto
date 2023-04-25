@@ -178,6 +178,8 @@ public class AutoAnnotationTest {
 
     StringValues anAnnotation();
 
+    Class<? extends CharSequence> aClass();
+
     byte[] bytes();
 
     short[] shorts();
@@ -199,6 +201,8 @@ public class AutoAnnotationTest {
     RetentionPolicy[] enums();
 
     StringValues[] annotations();
+
+    Class<? extends CharSequence>[] classes();
   }
 
   @AutoAnnotation
@@ -214,6 +218,7 @@ public class AutoAnnotationTest {
       String aString,
       RetentionPolicy anEnum,
       StringValues anAnnotation,
+      Class<? extends CharSequence> aClass,
       byte[] bytes,
       short[] shorts,
       int[] ints,
@@ -224,7 +229,8 @@ public class AutoAnnotationTest {
       boolean[] booleans,
       String[] strings,
       RetentionPolicy[] enums,
-      StringValues[] annotations) {
+      StringValues[] annotations,
+      Class<? extends CharSequence>... classes) {
     return new AutoAnnotation_AutoAnnotationTest_newEverything(
         aByte,
         aShort,
@@ -237,6 +243,7 @@ public class AutoAnnotationTest {
         aString,
         anEnum,
         anAnnotation,
+        aClass,
         bytes,
         shorts,
         ints,
@@ -247,7 +254,8 @@ public class AutoAnnotationTest {
         booleans,
         strings,
         enums,
-        annotations);
+        annotations,
+        classes);
   }
 
   @AutoAnnotation
@@ -263,6 +271,7 @@ public class AutoAnnotationTest {
       String aString,
       RetentionPolicy anEnum,
       StringValues anAnnotation,
+      Class<? extends CharSequence> aClass,
       Collection<Byte> bytes,
       List<Short> shorts,
       ArrayList<Integer> ints,
@@ -273,7 +282,8 @@ public class AutoAnnotationTest {
       ImmutableCollection<Boolean> booleans,
       ImmutableList<String> strings,
       ImmutableSet<RetentionPolicy> enums,
-      Set<StringValues> annotations) {
+      Set<StringValues> annotations,
+      List<Class<? extends CharSequence>> classes) {
     return new AutoAnnotation_AutoAnnotationTest_newEverythingCollections(
         aByte,
         aShort,
@@ -286,6 +296,7 @@ public class AutoAnnotationTest {
         aString,
         anEnum,
         anAnnotation,
+        aClass,
         bytes,
         shorts,
         ints,
@@ -296,7 +307,8 @@ public class AutoAnnotationTest {
         booleans,
         strings,
         enums,
-        annotations);
+        annotations,
+        classes);
   }
 
   @Everything(
@@ -311,6 +323,7 @@ public class AutoAnnotationTest {
       aString = "maybe\nmaybe not\n",
       anEnum = RetentionPolicy.RUNTIME,
       anAnnotation = @StringValues("whatever"),
+      aClass = String.class,
       bytes = {5, 6},
       shorts = {},
       ints = {7},
@@ -321,7 +334,8 @@ public class AutoAnnotationTest {
       booleans = {false, true, false},
       strings = {"ver", "vers", "vert", "verre", "vair"},
       enums = {RetentionPolicy.CLASS, RetentionPolicy.RUNTIME},
-      annotations = {@StringValues({}), @StringValues({"foo", "bar"})})
+      annotations = {@StringValues({}), @StringValues({"foo", "bar"})},
+      classes = {String.class, StringBuilder.class})
   private static class AnnotatedWithEverything {}
 
   // Get an instance of @Everything via reflection on the class AnnotatedWithEverything,
@@ -342,6 +356,7 @@ public class AutoAnnotationTest {
           "maybe\nmaybe not\n",
           RetentionPolicy.RUNTIME,
           newStringValues(new String[] {"whatever"}),
+          String.class,
           new byte[] {5, 6},
           new short[] {},
           new int[] {7},
@@ -354,7 +369,9 @@ public class AutoAnnotationTest {
           new RetentionPolicy[] {RetentionPolicy.CLASS, RetentionPolicy.RUNTIME},
           new StringValues[] {
             newStringValues(new String[] {}), newStringValues(new String[] {"foo", "bar"}),
-          });
+          },
+          String.class,
+          StringBuilder.class);
   private static final Everything EVERYTHING_FROM_AUTO_COLLECTIONS =
       newEverythingCollections(
           (byte) 1,
@@ -368,6 +385,7 @@ public class AutoAnnotationTest {
           "maybe\nmaybe not\n",
           RetentionPolicy.RUNTIME,
           newStringValues(new String[] {"whatever"}),
+          String.class,
           Arrays.asList((byte) 5, (byte) 6),
           Collections.<Short>emptyList(),
           new ArrayList<Integer>(Collections.singleton(7)),
@@ -380,7 +398,10 @@ public class AutoAnnotationTest {
           ImmutableList.of("ver", "vers", "vert", "verre", "vair"),
           ImmutableSet.of(RetentionPolicy.CLASS, RetentionPolicy.RUNTIME),
           ImmutableSet.of(
-              newStringValues(new String[] {}), newStringValues(new String[] {"foo", "bar"})));
+              newStringValues(new String[] {}), newStringValues(new String[] {"foo", "bar"})),
+          ImmutableList.of(String.class.asSubclass(CharSequence.class), StringBuilder.class));
+          // .asSubclass because of pre-Java8, where otherwise we get a compilation error because
+          // the inferred type is <Class<? extends CharSequence & Serializable>>.
   private static final Everything EVERYTHING_ELSE_FROM_AUTO =
       newEverything(
           (byte) 0,
@@ -394,6 +415,7 @@ public class AutoAnnotationTest {
           "",
           RetentionPolicy.SOURCE,
           newStringValues(new String[] {""}),
+          String.class,
           new byte[0],
           new short[0],
           new int[0],
@@ -418,6 +440,7 @@ public class AutoAnnotationTest {
           "",
           RetentionPolicy.SOURCE,
           newStringValues(new String[] {""}),
+          String.class,
           ImmutableList.<Byte>of(),
           Collections.<Short>emptyList(),
           new ArrayList<Integer>(),
@@ -428,7 +451,8 @@ public class AutoAnnotationTest {
           ImmutableSet.<Boolean>of(),
           ImmutableList.<String>of(),
           ImmutableSet.<RetentionPolicy>of(),
-          Collections.<StringValues>emptySet());
+          Collections.<StringValues>emptySet(),
+          Collections.<Class<? extends CharSequence>>emptyList());
 
   @Test
   public void testEqualsAndHashCode() {
@@ -515,6 +539,7 @@ public class AutoAnnotationTest {
             + "aByte=1, aShort=2, anInt=3, aLong=-4, aFloat=NaN, aDouble=NaN, aChar='#', "
             + "aBoolean=true, aString=\"maybe\\nmaybe not\\n\", anEnum=RUNTIME, "
             + "anAnnotation=@com.google.auto.value.annotations.StringValues([\"whatever\"]), "
+            + "aClass=class java.lang.String, "
             + "bytes=[5, 6], shorts=[], ints=[7], longs=[8, 9], floats=[10.0, 11.0], "
             + "doubles=[-Infinity, -12.0, Infinity], "
             + "chars=['?', '!', '\\n'], "
@@ -524,7 +549,8 @@ public class AutoAnnotationTest {
             + "annotations=["
             + "@com.google.auto.value.annotations.StringValues([]), "
             + "@com.google.auto.value.annotations.StringValues([\"foo\", \"bar\"])"
-            + "]"
+            + "], "
+            + "classes=[class java.lang.String, class java.lang.StringBuilder]"
             + ")";
     assertThat(EVERYTHING_FROM_AUTO.toString()).isEqualTo(expected);
     assertThat(EVERYTHING_FROM_AUTO_COLLECTIONS.toString()).isEqualTo(expected);
