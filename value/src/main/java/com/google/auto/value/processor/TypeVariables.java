@@ -236,7 +236,7 @@ final class TypeVariables {
         //    ImmutableSet<? extends T> target = ImmutableSet.copyOf(actualParameter);
         // We will infer E=<? extends T> and rewrite the formal parameter type to
         // <? extends T>[], which we must simplify to T[].
-        // TODO - returns null?
+        // TODO: what if getExtendsBound() returns null?
         comp = MoreTypes.asWildcard(comp).getExtendsBound();
       }
       return typeUtils.getArrayType(comp);

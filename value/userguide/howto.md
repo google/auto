@@ -292,6 +292,9 @@ good to go.
 
 ## <a name="annotation"></a>... use AutoValue to implement an annotation type?
 
+Note: If you are writing your annotation in Kotlin, you don't need to use
+`@AutoAnnotation`, since Kotlin allows you to instantiate annotations directly.
+
 Most users should never have the need to programmatically create "fake"
 annotation instances. But if you do, using `@AutoValue` in the usual way will
 fail because the `Annotation.hashCode` specification is incompatible with
@@ -311,28 +314,6 @@ All you need is this:
 public class Names {
   @AutoAnnotation public static Named named(String value) {
     return new AutoAnnotation_Names_named(value);
-  }
-}
-```
-
-In Java the method will usually be static. In Kotlin, which doesn't have static
-methods as such, a normal function can be used:
-
-```kotlin
-public class Names {
-  @AutoAnnotation public fun named(value: String): Named {
-    return AutoAnnotation_Names_named(value);
-  }
-}
-```
-
-Kotlin also allows you to instantiate annotations directly, so you may not need
-AutoAnnotation:
-
-```kotlin
-public class Names {
-  public fun named(value: String): Named {
-    return Named(value = value)
   }
 }
 ```

@@ -77,7 +77,7 @@ public enum Visibility {
     Visibility effectiveVisibility = PUBLIC;
     Element currentElement = element;
     while (currentElement != null) {
-      // NOTE - because that requires Guava 30, which would
+      // NOTE: We don't use Guava's Comparators.min() because that requires Guava 30, which would
       // make this library unusable in annotation processors using Bazel < 5.0.
       effectiveVisibility = Ordering.natural().min(effectiveVisibility, ofElement(currentElement));
       currentElement = currentElement.getEnclosingElement();
