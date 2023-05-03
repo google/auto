@@ -29,6 +29,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.google.auto.common.MoreTypes;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
@@ -45,7 +46,6 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -121,9 +121,10 @@ final class FactoryWriter {
     if (descriptor.publicType()) {
       constructor.addModifiers(PUBLIC);
     }
-    Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
-    for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
-      ProviderField provider = providerFields.next();
+    ImmutableCollection<ProviderField> providerFields = descriptor.providers().values();
+    int argumentNumber = 0;
+    for (ProviderField provider : providerFields) {
+      ++argumentNumber;
       TypeName typeName = resolveTypeName(provider.key().type().get()).box();
       TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
@@ -132,7 +133,11 @@ final class FactoryWriter {
         providerType = providerType.annotated(AnnotationSpec.get(provider.key().qualifier().get()));
       }
       constructor.addParameter(providerType, provider.name());
-      constructor.addStatement("this.$1L = checkNotNull($1L, $2L)", provider.name(), argumentIndex);
+      constructor.addStatement(
+          "this.$1L = checkNotNull($1L, $2L, $3L)",
+          provider.name(),
+          argumentNumber,
+          providerFields.size());
     }
 
     factory.addMethod(constructor.build());
@@ -158,9 +163,13 @@ final class FactoryWriter {
           methodDescriptor.exceptions().stream().map(TypeName::get).collect(toList()));
       CodeBlock.Builder args = CodeBlock.builder();
       method.addParameters(parameters(methodDescriptor.passedParameters()));
-      Iterator<Parameter> parameters = methodDescriptor.creationParameters().iterator();
-      for (int argumentIndex = 1; parameters.hasNext(); argumentIndex++) {
-        Parameter parameter = parameters.next();
+      ImmutableSet<Parameter> parameters = methodDescriptor.creationParameters();
+      int argumentNumber = 0;
+      String sep = "";
+      for (Parameter parameter : parameters) {
+        ++argumentNumber;
+        args.add(sep);
+        sep = ", ";
         boolean checkNotNull = !parameter.nullable().isPresent();
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
@@ -179,12 +188,10 @@ final class FactoryWriter {
           }
         }
         if (checkNotNull) {
-          argument = CodeBlock.of("checkNotNull($L, $L)", argument, argumentIndex);
+          argument =
+              CodeBlock.of("checkNotNull($L, $L, $L)", argument, argumentNumber, parameters.size());
         }
         args.add(argument);
-        if (parameters.hasNext()) {
-          args.add(", ");
-        }
       }
       method.addStatement("return new $T($L)", methodDescriptor.returnType(), args.build());
       factory.addMethod(method.build());
@@ -221,9 +228,7 @@ final class FactoryWriter {
     for (Parameter parameter : parameters) {
       TypeName type = resolveTypeName(parameter.type().get());
       ImmutableList<AnnotationSpec> annotations =
-          parameter.annotations().stream()
-              .map(AnnotationSpec::get)
-              .collect(toImmutableList());
+          parameter.annotations().stream().map(AnnotationSpec::get).collect(toImmutableList());
       ParameterSpec parameterSpec =
           ParameterSpec.builder(type, parameter.name()).addAnnotations(annotations).build();
       builder.add(parameterSpec);
@@ -241,13 +246,14 @@ final class FactoryWriter {
               .addTypeVariable(typeVariable)
               .returns(typeVariable)
               .addParameter(typeVariable, "reference")
-              .addParameter(TypeName.INT, "argumentIndex")
+              .addParameter(TypeName.INT, "argumentNumber")
+              .addParameter(TypeName.INT, "argumentCount")
               .beginControlFlow("if (reference == null)")
               .addStatement(
-                  "throw new $T($S + argumentIndex)",
+                  "throw new $T($S + argumentNumber + $S + argumentCount)",
                   NullPointerException.class,
-                  "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-                      + "index: ")
+                  "@AutoFactory method argument is null but is not marked @Nullable. Argument ",
+                  " of ")
               .endControlFlow()
               .addStatement("return reference")
               .build());
@@ -269,15 +275,14 @@ final class FactoryWriter {
   }
 
   /**
-   * Returns an appropriate {@code TypeName} for the given type. If the type is an
-   * {@code ErrorType}, and if it is a simple-name reference to one of the {@code *Factory}
-   * classes that we are going to generate, then we return its fully-qualified name. In every other
-   * case we just return {@code TypeName.get(type)}. Specifically, if it is an {@code ErrorType}
-   * referencing some other type, or referencing one of the classes we are going to generate but
-   * using its fully-qualified name, then we leave it as-is. JavaPoet treats {@code TypeName.get(t)}
-   * the same for {@code ErrorType} as for {@code DeclaredType}, which means that if this is a name
-   * that will eventually be generated then the code we write that references the type will in fact
-   * compile.
+   * Returns an appropriate {@code TypeName} for the given type. If the type is an {@code
+   * ErrorType}, and if it is a simple-name reference to one of the {@code *Factory} classes that we
+   * are going to generate, then we return its fully-qualified name. In every other case we just
+   * return {@code TypeName.get(type)}. Specifically, if it is an {@code ErrorType} referencing some
+   * other type, or referencing one of the classes we are going to generate but using its
+   * fully-qualified name, then we leave it as-is. JavaPoet treats {@code TypeName.get(t)} the same
+   * for {@code ErrorType} as for {@code DeclaredType}, which means that if this is a name that will
+   * eventually be generated then the code we write that references the type will in fact compile.
    *
    * <p>A simpler alternative would be to defer processing to a later round if we find an
    * {@code @AutoFactory} class that references undefined types, under the assumption that something
