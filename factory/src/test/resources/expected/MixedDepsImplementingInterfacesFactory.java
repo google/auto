@@ -35,15 +35,15 @@ final class MixedDepsImplementingInterfacesFactory
 
   @Inject
   MixedDepsImplementingInterfacesFactory(Provider<String> sProvider) {
-    this.sProvider = checkNotNull(sProvider, 1, 1);
+    this.sProvider = checkNotNull(sProvider, 1);
   }
 
   MixedDepsImplementingInterfaces create(int i) {
-    return new MixedDepsImplementingInterfaces(checkNotNull(sProvider.get(), 1, 2), i);
+    return new MixedDepsImplementingInterfaces(checkNotNull(sProvider.get(), 1), i);
   }
 
   MixedDepsImplementingInterfaces create(Object o) {
-    return new MixedDepsImplementingInterfaces(checkNotNull(o, 1, 1));
+    return new MixedDepsImplementingInterfaces(checkNotNull(o, 1));
   }
 
   @Override
@@ -56,13 +56,11 @@ final class MixedDepsImplementingInterfacesFactory
     return create(o);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

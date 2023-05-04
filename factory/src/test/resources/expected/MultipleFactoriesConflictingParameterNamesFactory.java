@@ -36,35 +36,33 @@ final class MultipleFactoriesConflictingParameterNamesFactory {
       Provider<Object> java_lang_ObjectProvider,
       @AQualifier Provider<String> stringProvider2,
       @AQualifier Provider<Object> _tests_AQualifier_java_lang_ObjectProvider) {
-    this.stringProvider = checkNotNull(stringProvider, 1, 4);
-    this.java_lang_ObjectProvider = checkNotNull(java_lang_ObjectProvider, 2, 4);
-    this.stringProvider2 = checkNotNull(stringProvider2, 3, 4);
+    this.stringProvider = checkNotNull(stringProvider, 1);
+    this.java_lang_ObjectProvider = checkNotNull(java_lang_ObjectProvider, 2);
+    this.stringProvider2 = checkNotNull(stringProvider2, 3);
     this._tests_AQualifier_java_lang_ObjectProvider =
-        checkNotNull(_tests_AQualifier_java_lang_ObjectProvider, 4, 4);
+        checkNotNull(_tests_AQualifier_java_lang_ObjectProvider, 4);
   }
 
   MultipleFactoriesConflictingParameterNames create(Object unused) {
     return new MultipleFactoriesConflictingParameterNames(
-        checkNotNull(stringProvider.get(), 1, 4),
-        checkNotNull(java_lang_ObjectProvider.get(), 2, 4),
+        checkNotNull(stringProvider.get(), 1),
+        checkNotNull(java_lang_ObjectProvider.get(), 2),
         java_lang_ObjectProvider,
-        checkNotNull(unused, 4, 4));
+        checkNotNull(unused, 4));
   }
 
   MultipleFactoriesConflictingParameterNames create() {
     return new MultipleFactoriesConflictingParameterNames(
-        checkNotNull(stringProvider2.get(), 1, 3),
-        checkNotNull(_tests_AQualifier_java_lang_ObjectProvider.get(), 2, 3),
+        checkNotNull(stringProvider2.get(), 1),
+        checkNotNull(_tests_AQualifier_java_lang_ObjectProvider.get(), 2),
         _tests_AQualifier_java_lang_ObjectProvider);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

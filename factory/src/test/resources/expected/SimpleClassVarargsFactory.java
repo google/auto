@@ -27,7 +27,7 @@ final class SimpleClassVarargsFactory implements SimpleClassVarargs.InterfaceWit
   SimpleClassVarargsFactory() {}
 
   SimpleClassVarargs create(String... args) {
-    return new SimpleClassVarargs(checkNotNull(args, 1, 1));
+    return new SimpleClassVarargs(checkNotNull(args, 1));
   }
 
   @Override
@@ -35,13 +35,11 @@ final class SimpleClassVarargsFactory implements SimpleClassVarargs.InterfaceWit
     return create(args);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

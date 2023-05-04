@@ -29,12 +29,12 @@ final class FactoryImplementingGenericInterfaceExtensionFactory
 
   @Inject
   FactoryImplementingGenericInterfaceExtensionFactory(Provider<String> sProvider) {
-    this.sProvider = checkNotNull(sProvider, 1, 1);
+    this.sProvider = checkNotNull(sProvider, 1);
   }
 
   FactoryImplementingGenericInterfaceExtension create(Integer i) {
     return new FactoryImplementingGenericInterfaceExtension(
-        checkNotNull(sProvider.get(), 1, 2), checkNotNull(i, 2, 2));
+        checkNotNull(sProvider.get(), 1), checkNotNull(i, 2));
   }
 
   @Override
@@ -42,13 +42,11 @@ final class FactoryImplementingGenericInterfaceExtensionFactory
     return create(arg);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

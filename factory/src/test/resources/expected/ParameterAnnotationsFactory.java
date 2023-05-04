@@ -28,7 +28,7 @@ final class ParameterAnnotationsFactory {
 
   @Inject
   ParameterAnnotationsFactory(Provider<@ParameterAnnotations.NullableType String> fooProvider) {
-    this.fooProvider = checkNotNull(fooProvider, 1, 1);
+    this.fooProvider = checkNotNull(fooProvider, 1);
   }
 
   ParameterAnnotations create(
@@ -37,20 +37,18 @@ final class ParameterAnnotationsFactory {
       @ParameterAnnotations.NullableType Thread buh,
       @ParameterAnnotations.NullableParameterAndType String quux) {
     return new ParameterAnnotations(
-        checkNotNull(fooProvider.get(), 1, 5),
-        checkNotNull(bar, 2, 5),
+        checkNotNull(fooProvider.get(), 1),
+        checkNotNull(bar, 2),
         baz,
-        checkNotNull(buh, 4, 5),
-        checkNotNull(quux, 5, 5));
+        checkNotNull(buh, 4),
+        checkNotNull(quux, 5));
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

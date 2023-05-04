@@ -33,8 +33,8 @@ final class SimpleClassNullableParametersFactory {
   SimpleClassNullableParametersFactory(
       Provider<String> providedNullableProvider,
       @BQualifier Provider<String> providedQualifiedNullableProvider) {
-    this.providedNullableProvider = checkNotNull(providedNullableProvider, 1, 2);
-    this.providedQualifiedNullableProvider = checkNotNull(providedQualifiedNullableProvider, 2, 2);
+    this.providedNullableProvider = checkNotNull(providedNullableProvider, 1);
+    this.providedQualifiedNullableProvider = checkNotNull(providedQualifiedNullableProvider, 2);
   }
 
   SimpleClassNullableParameters create(
@@ -46,13 +46,11 @@ final class SimpleClassNullableParametersFactory {
         providedQualifiedNullableProvider.get());
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

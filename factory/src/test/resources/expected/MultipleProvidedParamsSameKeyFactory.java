@@ -28,25 +28,23 @@ final class MultipleProvidedParamsSameKeyFactory {
 
   @Inject
   MultipleProvidedParamsSameKeyFactory(Provider<String> java_lang_StringProvider) {
-    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1, 1);
+    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1);
   }
 
   MultipleProvidedParamsSameKey create() {
     return new MultipleProvidedParamsSameKey(
-        checkNotNull(java_lang_StringProvider.get(), 1, 5),
-        checkNotNull(java_lang_StringProvider.get(), 2, 5),
+        checkNotNull(java_lang_StringProvider.get(), 1),
+        checkNotNull(java_lang_StringProvider.get(), 2),
         java_lang_StringProvider.get(),
         java_lang_StringProvider,
         java_lang_StringProvider);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

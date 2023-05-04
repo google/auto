@@ -28,21 +28,19 @@ final class SimpleClassMixedDepsFactory {
 
   @Inject
   SimpleClassMixedDepsFactory(@AQualifier Provider<String> providedDepAProvider) {
-    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1, 1);
+    this.providedDepAProvider = checkNotNull(providedDepAProvider, 1);
   }
 
   SimpleClassMixedDeps create(String depB) {
     return new SimpleClassMixedDeps(
-        checkNotNull(providedDepAProvider.get(), 1, 2), checkNotNull(depB, 2, 2));
+        checkNotNull(providedDepAProvider.get(), 1), checkNotNull(depB, 2));
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

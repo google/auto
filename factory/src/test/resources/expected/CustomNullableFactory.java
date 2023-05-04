@@ -29,20 +29,18 @@ final class CustomNullableFactory {
 
   @Inject
   CustomNullableFactory(Provider<Object> objectProvider) {
-    this.objectProvider = checkNotNull(objectProvider, 1, 1);
+    this.objectProvider = checkNotNull(objectProvider, 1);
   }
 
   CustomNullable create(@CustomNullable.Nullable String string) {
     return new CustomNullable(string, objectProvider.get());
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }

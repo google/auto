@@ -29,7 +29,7 @@ final class ProviderArgumentToCreateMethodFactory
   ProviderArgumentToCreateMethodFactory() {}
 
   ProviderArgumentToCreateMethod create(Provider<String> stringProvider) {
-    return new ProviderArgumentToCreateMethod(checkNotNull(stringProvider, 1, 1));
+    return new ProviderArgumentToCreateMethod(checkNotNull(stringProvider, 1));
   }
 
   @Override
@@ -37,13 +37,11 @@ final class ProviderArgumentToCreateMethodFactory
     return create(stringProvider);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
+  private static <T> T checkNotNull(T reference, int argumentIndex) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-              + argumentNumber
-              + " of "
-              + argumentCount);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
+              + argumentIndex);
     }
     return reference;
   }
