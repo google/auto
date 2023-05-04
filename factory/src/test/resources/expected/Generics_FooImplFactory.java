@@ -24,8 +24,7 @@ import javax.inject.Inject;
     )
 final class Generics_FooImplFactory<M extends Generics.Bar> implements Generics.FooFactory<M> {
   @Inject
-  Generics_FooImplFactory() {
-  }
+  Generics_FooImplFactory() {}
 
   @Override
   public Generics.FooImpl<M> create() {
