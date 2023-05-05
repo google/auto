@@ -19,7 +19,6 @@ import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.ElementKind.PACKAGE;
@@ -110,7 +109,6 @@ abstract class AutoFactoryDeclaration {
               .contentEquals(AutoFactory.class.getName()));
       Map<String, AnnotationValue> values =
           Mirrors.simplifyAnnotationValueMap(elements.getElementValuesWithDefaults(mirror));
-      checkState(values.size() == 4);
 
       // className value is a string, so we can just call toString. We know values.get("className")
       // is non-null because @AutoFactory has an annotation element of that name.
