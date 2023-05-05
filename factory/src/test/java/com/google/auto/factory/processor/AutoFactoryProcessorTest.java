@@ -15,23 +15,35 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.TruthJUnit.assume;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.regex.Pattern.MULTILINE;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.lang.model.SourceVersion;
 import javax.tools.JavaFileObject;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -41,13 +53,99 @@ import org.junit.runners.JUnit4;
 public class AutoFactoryProcessorTest {
   private final Compiler javac = Compiler.javac().withProcessors(new AutoFactoryProcessor());
 
+  private static volatile boolean goldenFileFailures;
+
+  private static final String GOLDEN_FILE_ROOT_ENV = "GOLDEN_FILE_ROOT";
+  private static final String GOLDEN_FILE_ROOT = System.getenv(GOLDEN_FILE_ROOT_ENV);
+  private static final Pattern CLASS_START =
+      Pattern.compile("^(public )?(final )?class ", MULTILINE);
+
+  @AfterClass
+  public static void explainGoldenFileFailures() {
+    if (goldenFileFailures) {
+      System.err.println();
+      System.err.println("Some golden-file tests failed.");
+    }
+  }
+
+  /**
+   * Runs a golden-file test, and optionally updates the golden file if the test fails.
+   *
+   * <p>If the golden file does not match current generated output, and the environment variable
+   * {@value #GOLDEN_FILE_ROOT_ENV} is set to the root directory for resources, then the golden file
+   * will be rewritten to match the generated output.
+   *
+   * @param inputResources resource names for the sources that the test will compile
+   * @param expectedOutput map where each key is the name of an expected generated file, and each
+   *     corresponding value is the name of the resource with the text that should have been
+   *     generated
+   */
+  private void goldenTest(
+      ImmutableList<String> inputResources, ImmutableMap<String, String> expectedOutput) {
+    ImmutableList<JavaFileObject> javaFileObjects =
+        inputResources.stream().map(JavaFileObjects::forResource).collect(toImmutableList());
+    Compilation compilation = javac.compile(javaFileObjects);
+    assertThat(compilation).succeededWithoutWarnings();
+    expectedOutput.forEach(
+        (className, expectedSourceResource) -> {
+          try {
+            assertThat(compilation)
+                .generatedSourceFile(className)
+                .hasSourceEquivalentTo(loadExpectedFile(expectedSourceResource));
+          } catch (AssertionError e) {
+            if (GOLDEN_FILE_ROOT == null) {
+              goldenFileFailures = true;
+              throw e;
+            }
+            try {
+              updateGoldenFile(compilation, className, expectedSourceResource);
+            } catch (IOException e2) {
+              throw new UncheckedIOException(e2);
+            }
+          }
+        });
+  }
+
+  private void updateGoldenFile(Compilation compilation, String className, String relativePath)
+      throws IOException {
+    Path goldenFileRootPath = Paths.get(GOLDEN_FILE_ROOT);
+    Path goldenFilePath = goldenFileRootPath.resolve(relativePath);
+    checkState(
+        Files.isRegularFile(goldenFilePath) && Files.isWritable(goldenFilePath),
+        "%s does not exist or can't be written",
+        goldenFilePath);
+
+    JavaFileObject newJavaFileObject =
+        compilation
+            .generatedSourceFile(className)
+            .orElseThrow(() -> new IllegalStateException("No generated file for " + className));
+    String oldContent = new String(Files.readAllBytes(goldenFilePath), UTF_8);
+    String newContent =
+        newJavaFileObject.getCharContent(/* ignoreEncodingErrors= */ false).toString();
+
+    // We want to preserve the copyright notice and some minor Google-internal things that are
+    // stripped from the open-source version. So keep text from the old golden file before the
+    // class declaration.
+    int oldPosition = indexOfClassStartIn(oldContent, "original " + relativePath);
+    int newPosition = indexOfClassStartIn(newContent, "generated " + relativePath);
+    String updatedContent =
+        oldContent.substring(0, oldPosition) + newContent.substring(newPosition);
+    Files.write(goldenFilePath, updatedContent.getBytes(UTF_8));
+    System.err.println("Updated " + goldenFilePath);
+  }
+
+  private int indexOfClassStartIn(String content, String where) {
+    Matcher matcher = CLASS_START.matcher(content);
+    boolean found = matcher.find();
+    checkArgument(found, "Pattern /%s/ not found in %s:\n%s", where, CLASS_START, content);
+    return matcher.start();
+  }
+
   @Test
   public void simpleClass() {
-    Compilation compilation = javac.compile(JavaFileObjects.forResource("good/SimpleClass.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClass.java"),
+        ImmutableMap.of("tests.SimpleClassFactory", "expected/SimpleClassFactory.java"));
   }
 
   @Test
