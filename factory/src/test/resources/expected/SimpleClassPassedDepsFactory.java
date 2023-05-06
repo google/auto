@@ -27,14 +27,16 @@ final class SimpleClassPassedDepsFactory {
   SimpleClassPassedDepsFactory() {}
 
   SimpleClassPassedDeps create(String depA, String depB) {
-    return new SimpleClassPassedDeps(checkNotNull(depA, 1), checkNotNull(depB, 2));
+    return new SimpleClassPassedDeps(checkNotNull(depA, 1, 2), checkNotNull(depB, 2, 2));
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }

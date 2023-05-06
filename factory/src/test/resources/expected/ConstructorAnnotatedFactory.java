@@ -28,7 +28,7 @@ final class ConstructorAnnotatedFactory {
 
   @Inject
   ConstructorAnnotatedFactory(Provider<Object> objProvider) {
-    this.objProvider = checkNotNull(objProvider, 1);
+    this.objProvider = checkNotNull(objProvider, 1, 1);
   }
 
   ConstructorAnnotated create() {
@@ -36,22 +36,24 @@ final class ConstructorAnnotatedFactory {
   }
 
   ConstructorAnnotated create(String s) {
-    return new ConstructorAnnotated(checkNotNull(s, 1));
+    return new ConstructorAnnotated(checkNotNull(s, 1, 1));
   }
 
   ConstructorAnnotated create(int i) {
-    return new ConstructorAnnotated(checkNotNull(objProvider.get(), 1), i);
+    return new ConstructorAnnotated(checkNotNull(objProvider.get(), 1, 2), i);
   }
 
   ConstructorAnnotated create(char c) {
-    return new ConstructorAnnotated(checkNotNull(objProvider.get(), 1), c);
+    return new ConstructorAnnotated(checkNotNull(objProvider.get(), 1, 2), c);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }
