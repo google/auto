@@ -119,6 +119,7 @@ public class AutoFactoryProcessorTest {
         compilation
             .generatedSourceFile(className)
             .orElseThrow(() -> new IllegalStateException("No generated file for " + className));
+    // We can't use Files.readString here because this test must run on Java 8.
     String oldContent = new String(Files.readAllBytes(goldenFilePath), UTF_8);
     String newContent =
         newJavaFileObject.getCharContent(/* ignoreEncodingErrors= */ false).toString();
@@ -130,6 +131,7 @@ public class AutoFactoryProcessorTest {
     int newPosition = indexOfClassStartIn(newContent, "generated " + relativePath);
     String updatedContent =
         oldContent.substring(0, oldPosition) + newContent.substring(newPosition);
+    // We can't use Files.writeString here because this test must run on Java 8.
     Files.write(goldenFilePath, updatedContent.getBytes(UTF_8));
     System.err.println("Updated " + goldenFilePath);
   }
@@ -137,7 +139,7 @@ public class AutoFactoryProcessorTest {
   private int indexOfClassStartIn(String content, String where) {
     Matcher matcher = CLASS_START.matcher(content);
     boolean found = matcher.find();
-    checkArgument(found, "Pattern /%s/ not found in %s:\n%s", where, CLASS_START, content);
+    checkArgument(found, "Pattern /%s/ not found in %s:\n%s", CLASS_START, where, content);
     return matcher.start();
   }
 
@@ -150,168 +152,136 @@ public class AutoFactoryProcessorTest {
 
   @Test
   public void simpleClassWithConstructorThrowsClause() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/SimpleClassThrows.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassThrowsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassThrowsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassThrows.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassThrowsFactory", "expected/SimpleClassThrowsFactory.java"));
   }
 
   @Test
   public void nestedClasses() {
-    Compilation compilation = javac.compile(JavaFileObjects.forResource("good/NestedClasses.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.NestedClasses_SimpleNestedClassFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/NestedClasses_SimpleNestedClassFactory.java"));
-    assertThat(compilation)
-        .generatedSourceFile("tests.NestedClassCustomNamedFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/NestedClassCustomNamedFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/NestedClasses.java"),
+        ImmutableMap.of(
+            "tests.NestedClasses_SimpleNestedClassFactory",
+            "expected/NestedClasses_SimpleNestedClassFactory.java",
+            "tests.NestedClassCustomNamedFactory",
+            "expected/NestedClassCustomNamedFactory.java"));
   }
 
   @Test
   public void simpleClassNonFinal() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/SimpleClassNonFinal.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassNonFinalFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassNonFinalFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassNonFinal.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassNonFinalFactory", "expected/SimpleClassNonFinalFactory.java"));
   }
 
   @Test
   public void publicClass() {
-    Compilation compilation = javac.compile(JavaFileObjects.forResource("good/PublicClass.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.PublicClassFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/PublicClassFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/PublicClass.java"),
+        ImmutableMap.of("tests.PublicClassFactory", "expected/PublicClassFactory.java"));
   }
 
   @Test
   public void simpleClassCustomName() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/SimpleClassCustomName.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.CustomNamedFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/CustomNamedFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassCustomName.java"),
+        ImmutableMap.of("tests.CustomNamedFactory", "expected/CustomNamedFactory.java"));
   }
 
   @Test
   public void simpleClassMixedDeps() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("good/SimpleClassMixedDeps.java"),
-            JavaFileObjects.forResource("support/AQualifier.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassMixedDepsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassMixedDepsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassMixedDeps.java", "support/AQualifier.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassMixedDepsFactory", "expected/SimpleClassMixedDepsFactory.java"));
   }
 
   @Test
   public void simpleClassPassedDeps() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/SimpleClassPassedDeps.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassPassedDepsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassPassedDepsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassPassedDeps.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassPassedDepsFactory", "expected/SimpleClassPassedDepsFactory.java"));
   }
 
   @Test
   public void simpleClassProvidedDeps() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("support/AQualifier.java"),
-            JavaFileObjects.forResource("support/BQualifier.java"),
-            JavaFileObjects.forResource("good/SimpleClassProvidedDeps.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassProvidedDepsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassProvidedDepsFactory.java"));
+    goldenTest(
+        ImmutableList.of(
+            "good/SimpleClassProvidedDeps.java",
+            "support/AQualifier.java",
+            "support/BQualifier.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassProvidedDepsFactory",
+            "expected/SimpleClassProvidedDepsFactory.java"));
   }
 
   @Test
   public void simpleClassProvidedProviderDeps() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("support/AQualifier.java"),
-            JavaFileObjects.forResource("support/BQualifier.java"),
-            JavaFileObjects.forResource("good/SimpleClassProvidedProviderDeps.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassProvidedProviderDepsFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/SimpleClassProvidedProviderDepsFactory.java"));
+    goldenTest(
+        ImmutableList.of(
+            "good/SimpleClassProvidedProviderDeps.java",
+            "support/AQualifier.java",
+            "support/BQualifier.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassProvidedProviderDepsFactory",
+            "expected/SimpleClassProvidedProviderDepsFactory.java"));
   }
 
   @Test
   public void constructorAnnotated() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/ConstructorAnnotated.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.ConstructorAnnotatedFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/ConstructorAnnotatedFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/ConstructorAnnotated.java"),
+        ImmutableMap.of(
+            "tests.ConstructorAnnotatedFactory", "expected/ConstructorAnnotatedFactory.java"));
   }
 
   @Test
   public void constructorWithThrowsClauseAnnotated() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/ConstructorAnnotatedThrows.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.ConstructorAnnotatedThrowsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/ConstructorAnnotatedThrowsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/ConstructorAnnotatedThrows.java"),
+        ImmutableMap.of(
+            "tests.ConstructorAnnotatedThrowsFactory",
+            "expected/ConstructorAnnotatedThrowsFactory.java"));
   }
 
   @Test
   public void constructorAnnotatedNonFinal() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/ConstructorAnnotatedNonFinal.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.ConstructorAnnotatedNonFinalFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/ConstructorAnnotatedNonFinalFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/ConstructorAnnotatedNonFinal.java"),
+        ImmutableMap.of(
+            "tests.ConstructorAnnotatedNonFinalFactory",
+            "expected/ConstructorAnnotatedNonFinalFactory.java"));
   }
 
   @Test
   public void simpleClassImplementingMarker() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/SimpleClassImplementingMarker.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassImplementingMarkerFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/SimpleClassImplementingMarkerFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassImplementingMarker.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassImplementingMarkerFactory",
+            "expected/SimpleClassImplementingMarkerFactory.java"));
   }
 
   @Test
   public void simpleClassImplementingSimpleInterface() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("good/SimpleClassImplementingSimpleInterface.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassImplementingSimpleInterfaceFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/SimpleClassImplementingSimpleInterfaceFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassImplementingSimpleInterface.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassImplementingSimpleInterfaceFactory",
+            "expected/SimpleClassImplementingSimpleInterfaceFactory.java"));
   }
 
   @Test
   public void mixedDepsImplementingInterfaces() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/MixedDepsImplementingInterfaces.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.MixedDepsImplementingInterfacesFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/MixedDepsImplementingInterfacesFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/MixedDepsImplementingInterfaces.java"),
+        ImmutableMap.of(
+            "tests.MixedDepsImplementingInterfacesFactory",
+            "expected/MixedDepsImplementingInterfacesFactory.java"));
   }
 
   @Test
@@ -367,24 +337,20 @@ public class AutoFactoryProcessorTest {
 
   @Test
   public void factoryExtendingAbstractClass() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/FactoryExtendingAbstractClass.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.FactoryExtendingAbstractClassFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/FactoryExtendingAbstractClassFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/FactoryExtendingAbstractClass.java"),
+        ImmutableMap.of(
+            "tests.FactoryExtendingAbstractClassFactory",
+            "expected/FactoryExtendingAbstractClassFactory.java"));
   }
 
   @Test
   public void factoryWithConstructorThrowsClauseExtendingAbstractClass() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/FactoryExtendingAbstractClassThrows.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.FactoryExtendingAbstractClassThrowsFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/FactoryExtendingAbstractClassThrowsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/FactoryExtendingAbstractClassThrows.java"),
+        ImmutableMap.of(
+            "tests.FactoryExtendingAbstractClassThrowsFactory",
+            "expected/FactoryExtendingAbstractClassThrowsFactory.java"));
   }
 
   @Test
@@ -404,11 +370,9 @@ public class AutoFactoryProcessorTest {
 
   @Test
   public void factoryExtendingAbstractClass_multipleConstructors() {
-    JavaFileObject file =
-        JavaFileObjects.forResource(
-            "good/FactoryExtendingAbstractClassWithMultipleConstructors.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
+    goldenTest(
+        ImmutableList.of("good/FactoryExtendingAbstractClassWithMultipleConstructors.java"),
+        ImmutableMap.of());
   }
 
   @Test
@@ -452,78 +416,59 @@ public class AutoFactoryProcessorTest {
 
   @Test
   public void factoryImplementingGenericInterfaceExtension() {
-    JavaFileObject file =
-        JavaFileObjects.forResource("good/FactoryImplementingGenericInterfaceExtension.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.FactoryImplementingGenericInterfaceExtensionFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/FactoryImplementingGenericInterfaceExtensionFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/FactoryImplementingGenericInterfaceExtension.java"),
+        ImmutableMap.of(
+            "tests.FactoryImplementingGenericInterfaceExtensionFactory",
+            "expected/FactoryImplementingGenericInterfaceExtensionFactory.java"));
   }
 
   @Test
   public void multipleFactoriesImpementingInterface() {
-    JavaFileObject file =
-        JavaFileObjects.forResource("good/MultipleFactoriesImplementingInterface.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.MultipleFactoriesImplementingInterface_ClassAFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/MultipleFactoriesImplementingInterface_ClassAFactory.java"));
-    assertThat(compilation)
-        .generatedSourceFile("tests.MultipleFactoriesImplementingInterface_ClassBFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/MultipleFactoriesImplementingInterface_ClassBFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/MultipleFactoriesImplementingInterface.java"),
+        ImmutableMap.of(
+            "tests.MultipleFactoriesImplementingInterface_ClassAFactory",
+                "expected/MultipleFactoriesImplementingInterface_ClassAFactory.java",
+            "tests.MultipleFactoriesImplementingInterface_ClassBFactory",
+                "expected/MultipleFactoriesImplementingInterface_ClassBFactory.java"));
   }
 
   @Test
   public void classUsingQualifierWithArgs() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("support/QualifierWithArgs.java"),
-            JavaFileObjects.forResource("good/ClassUsingQualifierWithArgs.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.ClassUsingQualifierWithArgsFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/ClassUsingQualifierWithArgsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/ClassUsingQualifierWithArgs.java", "support/QualifierWithArgs.java"),
+        ImmutableMap.of(
+            "tests.ClassUsingQualifierWithArgsFactory",
+            "expected/ClassUsingQualifierWithArgsFactory.java"));
   }
 
   @Test
   public void factoryImplementingInterfaceWhichRedeclaresCreateMethods() {
-    JavaFileObject file = JavaFileObjects.forResource("good/FactoryImplementingCreateMethod.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.FactoryImplementingCreateMethod_ConcreteClassFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/FactoryImplementingCreateMethod_ConcreteClassFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/FactoryImplementingCreateMethod.java"),
+        ImmutableMap.of(
+            "tests.FactoryImplementingCreateMethod_ConcreteClassFactory",
+            "expected/FactoryImplementingCreateMethod_ConcreteClassFactory.java"));
   }
 
   @Test
   public void nullableParams() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("good/SimpleClassNullableParameters.java"),
-            JavaFileObjects.forResource("support/AQualifier.java"),
-            JavaFileObjects.forResource("support/BQualifier.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassNullableParametersFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/SimpleClassNullableParametersFactory.java"));
+    goldenTest(
+        ImmutableList.of(
+            "good/SimpleClassNullableParameters.java",
+            "support/AQualifier.java",
+            "support/BQualifier.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassNullableParametersFactory",
+            "expected/SimpleClassNullableParametersFactory.java"));
   }
 
   @Test
   public void customNullableType() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/CustomNullable.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.CustomNullableFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/CustomNullableFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/CustomNullable.java"),
+        ImmutableMap.of("tests.CustomNullableFactory", "expected/CustomNullableFactory.java"));
   }
 
   @Test
@@ -533,103 +478,82 @@ public class AutoFactoryProcessorTest {
     // it. Checking for a java.specification.version that does not start with "1." eliminates 8 and
     // any earlier version.
     assume().that(JAVA_SPECIFICATION_VERSION.value()).doesNotMatch("1\\..*");
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/CheckerFrameworkNullable.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.CheckerFrameworkNullableFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/CheckerFrameworkNullableFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/CheckerFrameworkNullable.java"),
+        ImmutableMap.of(
+            "tests.CheckerFrameworkNullableFactory",
+            "expected/CheckerFrameworkNullableFactory.java"));
   }
 
   @Test
   public void multipleProvidedParamsWithSameKey() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/MultipleProvidedParamsSameKey.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.MultipleProvidedParamsSameKeyFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/MultipleProvidedParamsSameKeyFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/MultipleProvidedParamsSameKey.java"),
+        ImmutableMap.of(
+            "tests.MultipleProvidedParamsSameKeyFactory",
+            "expected/MultipleProvidedParamsSameKeyFactory.java"));
   }
 
   @Test
   public void providerArgumentToCreateMethod() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/ProviderArgumentToCreateMethod.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.ProviderArgumentToCreateMethodFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/ProviderArgumentToCreateMethodFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/ProviderArgumentToCreateMethod.java"),
+        ImmutableMap.of(
+            "tests.ProviderArgumentToCreateMethodFactory",
+            "expected/ProviderArgumentToCreateMethodFactory.java"));
   }
 
   @Test
   public void multipleFactoriesConflictingParameterNames() {
-    Compilation compilation =
-        javac.compile(
-            JavaFileObjects.forResource("good/MultipleFactoriesConflictingParameterNames.java"),
-            JavaFileObjects.forResource("support/AQualifier.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.MultipleFactoriesConflictingParameterNamesFactory")
-        .hasSourceEquivalentTo(
-            loadExpectedFile("expected/MultipleFactoriesConflictingParameterNamesFactory.java"));
+    goldenTest(
+        ImmutableList.of(
+            "good/MultipleFactoriesConflictingParameterNames.java", "support/AQualifier.java"),
+        ImmutableMap.of(
+            "tests.MultipleFactoriesConflictingParameterNamesFactory",
+            "expected/MultipleFactoriesConflictingParameterNamesFactory.java"));
   }
 
   @Test
   public void factoryVarargs() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/SimpleClassVarargs.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.SimpleClassVarargsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/SimpleClassVarargsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/SimpleClassVarargs.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassVarargsFactory", "expected/SimpleClassVarargsFactory.java"));
   }
 
   @Test
   public void onlyPrimitives() {
-    Compilation compilation =
-        javac.compile(JavaFileObjects.forResource("good/OnlyPrimitives.java"));
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.OnlyPrimitivesFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/OnlyPrimitivesFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/OnlyPrimitives.java"),
+        ImmutableMap.of("tests.OnlyPrimitivesFactory", "expected/OnlyPrimitivesFactory.java"));
   }
 
   @Test
   public void defaultPackage() {
-    JavaFileObject file = JavaFileObjects.forResource("good/DefaultPackage.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("DefaultPackageFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/DefaultPackageFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/DefaultPackage.java"),
+        ImmutableMap.of("DefaultPackageFactory", "expected/DefaultPackageFactory.java"));
   }
 
   @Test
   public void generics() {
-    JavaFileObject file = JavaFileObjects.forResource("good/Generics.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.Generics_FooImplFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_FooImplFactory.java"));
-    assertThat(compilation)
-        .generatedSourceFile("tests.Generics_ExplicitFooImplFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_ExplicitFooImplFactory.java"));
-    assertThat(compilation)
-        .generatedSourceFile("tests.Generics_FooImplWithClassFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/Generics_FooImplWithClassFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/Generics.java"),
+        ImmutableMap.of(
+            "tests.Generics_FooImplFactory",
+            "expected/Generics_FooImplFactory.java",
+            "tests.Generics_ExplicitFooImplFactory",
+            "expected/Generics_ExplicitFooImplFactory.java",
+            "tests.Generics_FooImplWithClassFactory",
+            "expected/Generics_FooImplWithClassFactory.java"));
   }
 
   @Test
   public void parameterAnnotations() {
-    JavaFileObject file = JavaFileObjects.forResource("good/ParameterAnnotations.java");
-    Compilation compilation = javac.compile(file);
-    assertThat(compilation).succeededWithoutWarnings();
-    assertThat(compilation)
-        .generatedSourceFile("tests.ParameterAnnotationsFactory")
-        .hasSourceEquivalentTo(loadExpectedFile("expected/ParameterAnnotationsFactory.java"));
+    goldenTest(
+        ImmutableList.of("good/ParameterAnnotations.java"),
+        ImmutableMap.of(
+            "tests.ParameterAnnotationsFactory", "expected/ParameterAnnotationsFactory.java"));
   }
 
   private JavaFileObject loadExpectedFile(String resourceName) {
