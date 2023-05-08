@@ -47,6 +47,7 @@ abstract class FactoryDescriptor {
 
   abstract PackageAndClass name();
 
+
   abstract TypeMirror extendingType();
 
   abstract ImmutableSet<TypeMirror> implementingTypes();

@@ -59,6 +59,7 @@ abstract class AutoFactoryDeclaration {
 
   abstract Optional<String> className();
 
+
   abstract TypeElement extendingType();
 
   abstract ImmutableSet<TypeElement> implementingTypes();
