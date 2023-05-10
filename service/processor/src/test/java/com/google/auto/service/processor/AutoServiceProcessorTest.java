@@ -16,8 +16,8 @@
 package com.google.auto.service.processor;
 
 import static com.google.auto.service.processor.AutoServiceProcessor.MISSING_SERVICES_ERROR;
-import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.testing.compile.CompilationSubject.assertThat;
 
 import com.google.common.io.Resources;
 import com.google.testing.compile.Compilation;
@@ -88,10 +88,54 @@ public class AutoServiceProcessorTest {
   }
 
   @Test
+  public void doesNotImplement_failsByDefault() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(
+                JavaFileObjects.forResource("test/DoesNotImplement.java"));
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("test.DoesNotImplement does not implement test.SomeService");
+  }
+
+  @Test
+  public void doesNotImplement_succeedsWithVerifyFalse() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .withOptions("-Averify=false")
+            .compile(
+                JavaFileObjects.forResource("test/DoesNotImplement.java"),
+                JavaFileObjects.forResource("test/SomeService.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.SomeService")
+        .contentsAsUtf8String()
+        .isEqualTo("test.DoesNotImplement\n");
+  }
+
+  @Test
+  public void doesNotImplement_suppressed() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(
+                JavaFileObjects.forResource("test/DoesNotImplementSuppressed.java"),
+                JavaFileObjects.forResource("test/SomeService.java"));
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.SomeService")
+        .contentsAsUtf8String()
+        .isEqualTo("test.DoesNotImplementSuppressed\n");
+  }
+
+  @Test
   public void generic() {
     Compilation compilation =
         Compiler.javac()
             .withProcessors(new AutoServiceProcessor())
+            .withOptions("-Averify=false")
             .compile(
                 JavaFileObjects.forResource("test/GenericService.java"),
                 JavaFileObjects.forResource("test/GenericServiceProvider.java"));
@@ -103,7 +147,22 @@ public class AutoServiceProcessorTest {
   }
 
   @Test
-  public void genericWithVerifyOption() {
+  public void genericWithNoVerifyOption() {
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(new AutoServiceProcessor())
+            .compile(
+                JavaFileObjects.forResource("test/GenericService.java"),
+                JavaFileObjects.forResource("test/GenericServiceProvider.java"));
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .hadWarningContaining(
+            "Service provider test.GenericService is generic, so it can't be named exactly by"
+                + " @AutoService. If this is OK, add @SuppressWarnings(\"rawtypes\").");
+  }
+
+  @Test
+  public void genericWithExplicitVerify() {
     Compilation compilation =
         Compiler.javac()
             .withProcessors(new AutoServiceProcessor())

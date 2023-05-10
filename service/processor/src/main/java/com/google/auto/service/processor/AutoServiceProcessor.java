@@ -228,8 +228,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
       TypeElement providerType,
       AnnotationMirror annotationMirror) {
 
-    String verify = processingEnv.getOptions().get("verify");
-    if (verify == null || !Boolean.parseBoolean(verify)) {
+    if (!Boolean.parseBoolean(processingEnv.getOptions().getOrDefault("verify", "true"))
+        || suppresses(providerImplementer, "AutoService")) {
       return true;
     }
 
@@ -246,7 +246,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
     // So we allow that with a warning, which can be suppressed with @SuppressWarnings("rawtypes").
     // See https://github.com/google/auto/issues/870.
     if (types.isSubtype(providerImplementer.asType(), types.erasure(providerType.asType()))) {
-      if (!rawTypesSuppressed(providerImplementer)) {
+      if (!suppresses(providerImplementer, "rawtypes")) {
         warning(
             "Service provider "
                 + providerType
@@ -261,10 +261,10 @@ public class AutoServiceProcessor extends AbstractProcessor {
     return false;
   }
 
-  private static boolean rawTypesSuppressed(Element element) {
+  private static boolean suppresses(Element element, String warning) {
     for (; element != null; element = element.getEnclosingElement()) {
       SuppressWarnings suppress = element.getAnnotation(SuppressWarnings.class);
-      if (suppress != null && Arrays.asList(suppress.value()).contains("rawtypes")) {
+      if (suppress != null && Arrays.asList(suppress.value()).contains(warning)) {
         return true;
       }
     }
