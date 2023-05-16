@@ -32,18 +32,18 @@ import org.junit.runners.JUnit4;
 /** Tests the {@link AutoServiceProcessor}. */
 @RunWith(JUnit4.class)
 public class AutoServiceProcessorTest {
+  private final Compiler compiler = Compiler.javac().withProcessors(new AutoServiceProcessor());
+
   @Test
   public void autoService() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
-            .compile(
-                JavaFileObjects.forResource("test/SomeService.java"),
-                JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
-                JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
-                JavaFileObjects.forResource("test/Enclosing.java"),
-                JavaFileObjects.forResource("test/AnotherService.java"),
-                JavaFileObjects.forResource("test/AnotherServiceProvider.java"));
+        compiler.compile(
+            JavaFileObjects.forResource("test/SomeService.java"),
+            JavaFileObjects.forResource("test/SomeServiceProvider1.java"),
+            JavaFileObjects.forResource("test/SomeServiceProvider2.java"),
+            JavaFileObjects.forResource("test/Enclosing.java"),
+            JavaFileObjects.forResource("test/AnotherService.java"),
+            JavaFileObjects.forResource("test/AnotherServiceProvider.java"));
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.SomeService")
@@ -58,12 +58,10 @@ public class AutoServiceProcessorTest {
   @Test
   public void multiService() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
-            .compile(
-                JavaFileObjects.forResource("test/SomeService.java"),
-                JavaFileObjects.forResource("test/AnotherService.java"),
-                JavaFileObjects.forResource("test/MultiServiceProvider.java"));
+        compiler.compile(
+            JavaFileObjects.forResource("test/SomeService.java"),
+            JavaFileObjects.forResource("test/AnotherService.java"),
+            JavaFileObjects.forResource("test/MultiServiceProvider.java"));
     assertThat(compilation).succeededWithoutWarnings();
     // We have @AutoService({SomeService.class, AnotherService.class}) class MultiServiceProvider.
     // So we expect META-INF/services/test.SomeService with contents that name MultiServiceProvider
@@ -80,10 +78,7 @@ public class AutoServiceProcessorTest {
 
   @Test
   public void badMultiService() {
-    Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
-            .compile(JavaFileObjects.forResource("test/NoServices.java"));
+    Compilation compilation = compiler.compile(JavaFileObjects.forResource("test/NoServices.java"));
     assertThat(compilation).failed();
     assertThat(compilation).hadErrorContaining(MISSING_SERVICES_ERROR);
   }
@@ -91,10 +86,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void doesNotImplement_failsByDefault() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
-            .compile(
-                JavaFileObjects.forResource("test/DoesNotImplement.java"));
+        compiler.compile(JavaFileObjects.forResource("test/DoesNotImplement.java"));
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("test.DoesNotImplement does not implement test.SomeService");
@@ -103,8 +95,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void doesNotImplement_succeedsWithVerifyFalse() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
+        compiler
             .withOptions("-Averify=false")
             .compile(
                 JavaFileObjects.forResource("test/DoesNotImplement.java"),
@@ -119,11 +110,9 @@ public class AutoServiceProcessorTest {
   @Test
   public void doesNotImplement_suppressed() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
-            .compile(
-                JavaFileObjects.forResource("test/DoesNotImplementSuppressed.java"),
-                JavaFileObjects.forResource("test/SomeService.java"));
+        compiler.compile(
+            JavaFileObjects.forResource("test/DoesNotImplementSuppressed.java"),
+            JavaFileObjects.forResource("test/SomeService.java"));
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/test.SomeService")
@@ -134,8 +123,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void generic() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
+        compiler
             .withOptions("-Averify=false")
             .compile(
                 JavaFileObjects.forResource("test/GenericService.java"),
@@ -150,11 +138,9 @@ public class AutoServiceProcessorTest {
   @Test
   public void genericWithNoVerifyOption() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
-            .compile(
-                JavaFileObjects.forResource("test/GenericService.java"),
-                JavaFileObjects.forResource("test/GenericServiceProvider.java"));
+        compiler.compile(
+            JavaFileObjects.forResource("test/GenericService.java"),
+            JavaFileObjects.forResource("test/GenericServiceProvider.java"));
     assertThat(compilation).succeeded();
     assertThat(compilation)
         .hadWarningContaining(
@@ -165,8 +151,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void genericWithExplicitVerify() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
+        compiler
             .withOptions("-Averify=true")
             .compile(
                 JavaFileObjects.forResource("test/GenericService.java"),
@@ -181,8 +166,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void genericWithVerifyOptionAndSuppressWarings() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
+        compiler
             .withOptions("-Averify=true")
             .compile(
                 JavaFileObjects.forResource("test/GenericService.java"),
@@ -193,8 +177,7 @@ public class AutoServiceProcessorTest {
   @Test
   public void nestedGenericWithVerifyOptionAndSuppressWarnings() {
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(new AutoServiceProcessor())
+        compiler
             .withOptions("-Averify=true")
             .compile(
                 JavaFileObjects.forResource("test/GenericService.java"),
@@ -210,8 +193,7 @@ public class AutoServiceProcessorTest {
   public void missing() {
     AutoServiceProcessor processor = new AutoServiceProcessor();
     Compilation compilation =
-        Compiler.javac()
-            .withProcessors(processor)
+        compiler
             .withOptions("-Averify=true")
             .compile(
                 JavaFileObjects.forResource(
@@ -246,7 +228,7 @@ public class AutoServiceProcessorTest {
         Compiler.javac()
             .withProcessors(processor)
             .withOptions("-Averify=true")
-            .compile(JavaFileObjects.forResource("test/AutoServiceOnAbstractClass.java"));
+            .compile(autoServiceOnAbstractClass);
     assertThat(compilation)
         .hadErrorContaining("@AutoService cannot be applied to an abstract class or an interface")
         .inFile(autoServiceOnAbstractClass)
