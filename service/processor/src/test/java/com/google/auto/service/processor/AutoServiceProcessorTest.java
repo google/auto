@@ -23,6 +23,7 @@ import com.google.common.io.Resources;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -216,6 +217,40 @@ public class AutoServiceProcessorTest {
                 JavaFileObjects.forResource(
                     "test/GenericServiceProviderWithMissingServiceClass.java"));
     assertThat(compilation).failed();
+    assertThat(processor.exceptionStacks()).isEmpty();
+  }
+
+  @Test
+  public void autoServiceOnInterface() {
+    AutoServiceProcessor processor = new AutoServiceProcessor();
+    JavaFileObject autoServiceOnInterface =
+        JavaFileObjects.forResource("test/AutoServiceOnInterface.java");
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(processor)
+            .withOptions("-Averify=true")
+            .compile(autoServiceOnInterface);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoService cannot be applied to an abstract class or an interface")
+        .inFile(autoServiceOnInterface)
+        .onLineContaining("@AutoService");
+    assertThat(processor.exceptionStacks()).isEmpty();
+  }
+
+  @Test
+  public void autoServiceOnAbstractClass() {
+    AutoServiceProcessor processor = new AutoServiceProcessor();
+    JavaFileObject autoServiceOnAbstractClass =
+        JavaFileObjects.forResource("test/AutoServiceOnAbstractClass.java");
+    Compilation compilation =
+        Compiler.javac()
+            .withProcessors(processor)
+            .withOptions("-Averify=true")
+            .compile(JavaFileObjects.forResource("test/AutoServiceOnAbstractClass.java"));
+    assertThat(compilation)
+        .hadErrorContaining("@AutoService cannot be applied to an abstract class or an interface")
+        .inFile(autoServiceOnAbstractClass)
+        .onLineContaining("@AutoService");
     assertThat(processor.exceptionStacks()).isEmpty();
   }
 }

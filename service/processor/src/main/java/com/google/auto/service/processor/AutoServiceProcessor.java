@@ -46,6 +46,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -233,13 +234,18 @@ public class AutoServiceProcessor extends AbstractProcessor {
       return true;
     }
 
-    // TODO: We're currently only enforcing the subtype relationship
-    // constraint. It would be nice to enforce them all.
+    // We check that providerImplementer does indeed inherit from providerType, and that it is not
+    // abstract (an abstract class or interface). For ServiceLoader, we could also check that it has
+    // a public no-arg constructor. But it turns out that people also use AutoService in contexts
+    // where the META-INF/services entries are read by things other than ServiceLoader. Those things
+    // still require the class to exist and inherit from providerType, but they don't necessarily
+    // require a public no-arg constructor.
+    // More background: https://github.com/google/auto/issues/1505.
 
     Types types = processingEnv.getTypeUtils();
 
     if (types.isSubtype(providerImplementer.asType(), providerType.asType())) {
-      return true;
+      return checkNotAbstract(providerImplementer, annotationMirror);
     }
 
     // Maybe the provider has generic type, but the argument to @AutoService can't be generic.
@@ -255,10 +261,29 @@ public class AutoServiceProcessor extends AbstractProcessor {
             providerImplementer,
             annotationMirror);
       }
-      return true;
+      return checkNotAbstract(providerImplementer, annotationMirror);
     }
 
+    String message =
+        "ServiceProviders must implement their service provider interface. "
+            + providerImplementer.getQualifiedName()
+            + " does not implement "
+            + providerType.getQualifiedName();
+    error(message, providerImplementer, annotationMirror);
+
     return false;
+  }
+
+  private boolean checkNotAbstract(
+      TypeElement providerImplementer, AnnotationMirror annotationMirror) {
+    if (providerImplementer.getModifiers().contains(Modifier.ABSTRACT)) {
+      error(
+          "@AutoService cannot be applied to an abstract class or an interface",
+          providerImplementer,
+          annotationMirror);
+      return false;
+    }
+    return true;
   }
 
   private static boolean suppresses(Element element, String warning) {
