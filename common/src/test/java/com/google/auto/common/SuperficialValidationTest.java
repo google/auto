@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
@@ -293,6 +294,12 @@ public class SuperficialValidationTest {
   }
 
   private static class AssertingProcessor extends AbstractProcessor {
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
+
     private final Consumer<ProcessingEnvironment> assertions;
 
     AssertingProcessor(Consumer<ProcessingEnvironment> assertions) {
