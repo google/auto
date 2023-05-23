@@ -30,7 +30,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <auto-service.version>1.0.1</auto-service.version>
+    <auto-service.version>1.1.0</auto-service.version>
     <auto-value.version>1.10.1</auto-value.version>
     <java.version>1.8</java.version>
     <guava.version>31.1-jre</guava.version>
