@@ -15,9 +15,8 @@
  */
 package com.google.auto.service.processor;
 
-import static com.google.common.base.Charsets.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.common.io.Closer;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -57,12 +56,9 @@ final class ServicesFiles {
    */
   static Set<String> readServiceFile(InputStream input) throws IOException {
     HashSet<String> serviceClasses = new HashSet<String>();
-    Closer closer = Closer.create();
-    try {
-      // TODO(gak): use CharStreams
-      BufferedReader r = closer.register(new BufferedReader(new InputStreamReader(input, UTF_8)));
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, UTF_8))) {
       String line;
-      while ((line = r.readLine()) != null) {
+      while ((line = reader.readLine()) != null) {
         int commentStart = line.indexOf('#');
         if (commentStart >= 0) {
           line = line.substring(0, commentStart);
@@ -73,10 +69,6 @@ final class ServicesFiles {
         }
       }
       return serviceClasses;
-    } catch (Throwable t) {
-      throw closer.rethrow(t);
-    } finally {
-      closer.close();
     }
   }
 
