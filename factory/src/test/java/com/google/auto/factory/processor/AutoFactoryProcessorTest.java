@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.TruthJUnit.assume;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static java.lang.Math.max;
@@ -32,8 +33,12 @@ import com.google.common.io.Resources;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,12 +51,78 @@ import javax.tools.JavaFileObject;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /** Functional tests for the {@link AutoFactoryProcessor}. */
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public class AutoFactoryProcessorTest {
-  private final Compiler javac = Compiler.javac().withProcessors(new AutoFactoryProcessor());
+  private final Config config;
+
+  public AutoFactoryProcessorTest(@TestParameter Config config) {
+    this.config = config;
+  }
+
+  private enum InjectPackage {
+    JAVAX,
+  }
+
+  private enum Config {
+    JAVAX_ONLY_ON_CLASSPATH(ImmutableList.of(InjectPackage.JAVAX), InjectPackage.JAVAX);
+
+    /** Config that is used for negative tests, and to update the golden files. */
+    static final Config DEFAULT = JAVAX_ONLY_ON_CLASSPATH;
+
+    final ImmutableList<InjectPackage> packagesOnClasspath;
+    final InjectPackage unusedExpectedPackage;
+    final ImmutableList<String> options;
+
+    Config(ImmutableList<InjectPackage> packagesOnClasspath, InjectPackage expectedPackage) {
+      this(packagesOnClasspath, expectedPackage, ImmutableList.of());
+    }
+
+    Config(
+        ImmutableList<InjectPackage> packagesOnClasspath,
+        InjectPackage expectedPackage,
+        ImmutableList<String> options) {
+      this.packagesOnClasspath = packagesOnClasspath;
+      this.unusedExpectedPackage = expectedPackage;
+      this.options = options;
+    }
+
+    static final ImmutableList<File> COMMON_CLASSPATH =
+        ImmutableList.of(
+            fileForClass("com.google.auto.factory.AutoFactory"),
+            fileForClass("javax.annotation.Nullable"),
+            fileForClass("org.checkerframework.checker.nullness.compatqual.NullableType"));
+    static final File JAVAX_CLASSPATH = fileForClass("javax.inject.Provider");
+
+    static File fileForClass(String className) {
+      Class<?> c;
+      try {
+        c = Class.forName(className);
+      } catch (ClassNotFoundException e) {
+        throw new IllegalArgumentException(e);
+      }
+      URL url = c.getProtectionDomain().getCodeSource().getLocation();
+      assertThat(url.getProtocol()).isEqualTo("file");
+      return new File(url.getPath());
+    }
+
+    ImmutableList<File> classpath() {
+      ImmutableList.Builder<File> classpathBuilder =
+          ImmutableList.<File>builder().addAll(COMMON_CLASSPATH);
+      if (packagesOnClasspath.contains(InjectPackage.JAVAX)) {
+        classpathBuilder.add(JAVAX_CLASSPATH);
+      }
+      return classpathBuilder.build();
+    }
+
+    Compiler javac() {
+      return Compiler.javac()
+          .withClasspath(classpath())
+          .withProcessors(new AutoFactoryProcessor())
+          .withOptions(options);
+    }
+  }
 
   private static volatile boolean goldenFileFailures;
 
@@ -83,8 +154,8 @@ public class AutoFactoryProcessorTest {
   private void goldenTest(
       ImmutableList<String> inputResources, ImmutableMap<String, String> expectedOutput) {
     ImmutableList<JavaFileObject> javaFileObjects =
-        inputResources.stream().map(JavaFileObjects::forResource).collect(toImmutableList());
-    Compilation compilation = javac.compile(javaFileObjects);
+        inputResources.stream().map(this::goldenFile).collect(toImmutableList());
+    Compilation compilation = config.javac().compile(javaFileObjects);
     assertThat(compilation).succeededWithoutWarnings();
     expectedOutput.forEach(
         (className, expectedSourceResource) -> {
@@ -97,13 +168,26 @@ public class AutoFactoryProcessorTest {
               goldenFileFailures = true;
               throw e;
             }
-            try {
-              updateGoldenFile(compilation, className, expectedSourceResource);
-            } catch (IOException e2) {
-              throw new UncheckedIOException(e2);
+            if (config.equals(Config.DEFAULT)) {
+              try {
+                updateGoldenFile(compilation, className, expectedSourceResource);
+              } catch (IOException e2) {
+                throw new UncheckedIOException(e2);
+              }
             }
           }
         });
+  }
+
+  private JavaFileObject goldenFile(String resourceName) {
+    try {
+      URL resourceUrl = Resources.getResource(resourceName);
+      String source = Resources.toString(resourceUrl, UTF_8);
+      String className = resourceName.replaceFirst("\\.java$", "").replace('/', '.');
+      return JavaFileObjects.forSourceString(className, source);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   private void updateGoldenFile(Compilation compilation, String className, String relativePath)
@@ -287,7 +371,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void failsWithMixedFinals() {
     JavaFileObject file = JavaFileObjects.forResource("bad/MixedFinals.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -304,7 +388,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void providedButNoAutoFactory() {
     JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedButNoAutoFactory.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -316,7 +400,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void providedOnMethodParameter() {
     JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedOnMethodParameter.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("@Provided may only be applied to constructor parameters")
@@ -327,7 +411,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void invalidCustomName() {
     JavaFileObject file = JavaFileObjects.forResource("bad/InvalidCustomName.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("\"SillyFactory!\" is not a valid Java identifier")
@@ -357,7 +441,7 @@ public class AutoFactoryProcessorTest {
   public void factoryExtendingAbstractClass_withConstructorParams() {
     JavaFileObject file =
         JavaFileObjects.forResource("bad/FactoryExtendingAbstractClassWithConstructorParams.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -378,7 +462,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void factoryExtendingInterface() {
     JavaFileObject file = JavaFileObjects.forResource("bad/InterfaceSupertype.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -391,7 +475,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void factoryExtendingEnum() {
     JavaFileObject file = JavaFileObjects.forResource("bad/EnumSupertype.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -404,7 +488,7 @@ public class AutoFactoryProcessorTest {
   @Test
   public void factoryExtendingFinalClass() {
     JavaFileObject file = JavaFileObjects.forResource("bad/FinalSupertype.java");
-    Compilation compilation = javac.compile(file);
+    Compilation compilation = config.javac().compile(file);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -557,12 +641,9 @@ public class AutoFactoryProcessorTest {
   }
 
   private JavaFileObject loadExpectedFile(String resourceName) {
-    if (isJavaxAnnotationProcessingGeneratedAvailable()) {
-      return JavaFileObjects.forResource(resourceName);
-    }
     try {
       List<String> sourceLines = Resources.readLines(Resources.getResource(resourceName), UTF_8);
-      replaceGeneratedImport(sourceLines);
+      rewriteImports(sourceLines);
       return JavaFileObjects.forSourceLines(
           resourceName.replace('/', '.').replace(".java", ""), sourceLines);
     } catch (IOException e) {
@@ -570,11 +651,11 @@ public class AutoFactoryProcessorTest {
     }
   }
 
-  private boolean isJavaxAnnotationProcessingGeneratedAvailable() {
+  private static boolean isJavaxAnnotationProcessingGeneratedAvailable() {
     return SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0;
   }
 
-  private static void replaceGeneratedImport(List<String> sourceLines) {
+  private void rewriteImports(List<String> sourceLines) {
     int i = 0;
     int firstImport = Integer.MAX_VALUE;
     int lastImport = -1;
@@ -587,11 +668,13 @@ public class AutoFactoryProcessorTest {
     }
     if (lastImport >= 0) {
       List<String> importLines = sourceLines.subList(firstImport, lastImport + 1);
-      importLines.replaceAll(
-          line ->
-              line.startsWith("import javax.annotation.processing.Generated;")
-                  ? "import javax.annotation.Generated;"
-                  : line);
+      if (!isJavaxAnnotationProcessingGeneratedAvailable()) {
+        importLines.replaceAll(
+            line ->
+                line.startsWith("import javax.annotation.processing.Generated;")
+                    ? "import javax.annotation.Generated;"
+                    : line);
+      }
       Collections.sort(importLines);
     }
   }
