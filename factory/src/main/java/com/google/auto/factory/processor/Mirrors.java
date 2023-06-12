@@ -59,7 +59,7 @@ final class Mirrors {
   }
 
   /**
-   * Returns an annotation value map  with {@link String} keys instead of {@link ExecutableElement}
+   * Returns an annotation value map with {@link String} keys instead of {@link ExecutableElement}
    * instances.
    */
   static ImmutableMap<String, AnnotationValue> simplifyAnnotationValueMap(

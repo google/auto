@@ -134,4 +134,48 @@ public class AutoFactoryProcessorNegativeTest {
         .inFile(file)
         .onLineContaining("@AutoFactory");
   }
+
+  /**
+   * We don't currently allow you to have more than one {@code @AnnotationsToApply} annotation for
+   * any given AutoFactory class.
+   */
+  @Test
+  public void annotationsToApplyMultiple() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/AnnotationsToApplyMultiple.java");
+    Compilation compilation = javac.compile(file);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("Multiple @AnnotationsToApply annotations are not supported");
+  }
+
+  /**
+   * We also don't allow you to have the same annotation appear more than once inside a given
+   * {@code @AnnotationsToApply}, even with the same values.
+   */
+  @Test
+  public void annotationsToApplyRepeated() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/AnnotationsToApplyRepeated.java");
+    Compilation compilation = javac.compile(file);
+    assertThat(compilation).failed();
+    assertThat(compilation).hadErrorContaining("More than one @java.lang.SuppressWarnings");
+  }
+
+  @Test
+  public void annotationsToApplyNotAnnotations() {
+    JavaFileObject file = JavaFileObjects.forResource("bad/AnnotationsToApplyNotAnnotations.java");
+    Compilation compilation = javac.compile(file);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "Members of an @AnnotationsToApply annotation must themselves be annotations;"
+                + " whatIsThis has type int")
+        .inFile(file)
+        .onLineContaining("whatIsThis");
+    assertThat(compilation)
+        .hadErrorContaining(
+            "Members of an @AnnotationsToApply annotation must themselves be annotations;"
+                + " andWhatIsThis has type com.google.errorprone.annotations.Immutable[]")
+        .inFile(file)
+        .onLineContaining("andWhatIsThis");
+  }
 }

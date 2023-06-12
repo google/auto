@@ -47,6 +47,7 @@ abstract class FactoryDescriptor {
 
   abstract PackageAndClass name();
 
+  abstract ImmutableSet<AnnotationMirror> annotations();
 
   abstract TypeMirror extendingType();
 
@@ -85,6 +86,7 @@ abstract class FactoryDescriptor {
 
   static FactoryDescriptor create(
       PackageAndClass name,
+      ImmutableSet<AnnotationMirror> annotations,
       TypeMirror extendingType,
       ImmutableSet<TypeMirror> implementingTypes,
       boolean publicType,
@@ -146,6 +148,7 @@ abstract class FactoryDescriptor {
 
     return new AutoValue_FactoryDescriptor(
         name,
+        annotations,
         extendingType,
         implementingTypes,
         publicType,

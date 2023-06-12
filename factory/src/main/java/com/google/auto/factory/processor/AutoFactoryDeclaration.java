@@ -16,6 +16,7 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.MoreElements.getPackage;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -25,7 +26,9 @@ import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.AutoFactory.AnnotationsToApply;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -59,6 +62,7 @@ abstract class AutoFactoryDeclaration {
 
   abstract Optional<String> className();
 
+  abstract ImmutableSet<AnnotationMirror> annotations();
 
   abstract TypeElement extendingType();
 
@@ -125,6 +129,7 @@ abstract class AutoFactoryDeclaration {
         return Optional.empty();
       }
 
+      ImmutableSet<AnnotationMirror> annotations = annotationsToAdd(element);
       AnnotationValue extendingValue = checkNotNull(values.get("extending"));
       TypeElement extendingType = AnnotationValues.asType(extendingValue);
       if (extendingType == null) {
@@ -187,6 +192,7 @@ abstract class AutoFactoryDeclaration {
               getAnnotatedType(element),
               element,
               className.isEmpty() ? Optional.empty() : Optional.of(className),
+              annotations,
               extendingType,
               implementingTypes,
               allowSubclasses,
@@ -205,6 +211,36 @@ abstract class AutoFactoryDeclaration {
 
     static boolean isValidIdentifier(String identifier) {
       return SourceVersion.isIdentifier(identifier) && !SourceVersion.isKeyword(identifier);
+    }
+
+    private ImmutableSet<AnnotationMirror> annotationsToAdd(Element element) {
+      ImmutableSet.Builder<AnnotationMirror> annotationsBuilder = ImmutableSet.builder();
+
+      ImmutableSet<? extends AnnotationMirror> containers =
+          AnnotationMirrors.getAnnotatedAnnotations(element, AnnotationsToApply.class);
+      switch (containers.size()) {
+        case 1:
+          annotationsBuilder.addAll(extractAnnotationsToApply(getOnlyElement(containers)));
+          break;
+        case 0:
+          break;
+        default:
+          messager.printMessage(
+              ERROR, "Multiple @AnnotationsToApply annotations are not supported", element);
+      }
+
+      return annotationsBuilder.build();
+    }
+
+    private ImmutableSet<AnnotationMirror> extractAnnotationsToApply(
+        AnnotationMirror annotationsToApply) {
+      return elements.getElementValuesWithDefaults(annotationsToApply).values().stream()
+          .map(AnnotationValue::getValue)
+          .filter(AnnotationMirror.class::isInstance)
+          // Any non-annotation element should already have been flagged when processing
+          // @AnnotationsToApply
+          .map(AnnotationMirror.class::cast)
+          .collect(toImmutableSet());
     }
   }
 }

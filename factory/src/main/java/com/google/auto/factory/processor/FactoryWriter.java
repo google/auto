@@ -84,6 +84,7 @@ final class FactoryWriter {
             AutoFactoryProcessor.class,
             "https://github.com/google/auto/tree/main/factory")
         .ifPresent(factory::addAnnotation);
+    descriptor.annotations().forEach(a -> factory.addAnnotation(AnnotationSpec.get(a)));
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }

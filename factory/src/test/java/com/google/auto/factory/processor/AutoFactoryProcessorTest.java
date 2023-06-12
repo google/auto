@@ -91,6 +91,7 @@ public class AutoFactoryProcessorTest {
     static final ImmutableList<File> COMMON_CLASSPATH =
         ImmutableList.of(
             fileForClass("com.google.auto.factory.AutoFactory"),
+            fileForClass("com.google.errorprone.annotations.Immutable"),
             fileForClass("javax.annotation.Nullable"),
             fileForClass("org.checkerframework.checker.nullness.compatqual.NullableType"));
     static final File JAVAX_CLASSPATH = fileForClass("javax.inject.Provider");
@@ -638,6 +639,14 @@ public class AutoFactoryProcessorTest {
         ImmutableList.of("good/ParameterAnnotations.java"),
         ImmutableMap.of(
             "tests.ParameterAnnotationsFactory", "expected/ParameterAnnotationsFactory.java"));
+  }
+
+  @Test
+  public void customAnnotations() {
+    goldenTest(
+        ImmutableList.of("good/CustomAnnotations.java"),
+        ImmutableMap.of(
+            "tests.CustomAnnotationsFactory", "expected/CustomAnnotationsFactory.java"));
   }
 
   private JavaFileObject loadExpectedFile(String resourceName) {
