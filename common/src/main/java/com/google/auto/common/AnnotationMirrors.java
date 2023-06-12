@@ -159,7 +159,7 @@ public final class AnnotationMirrors {
    * Returns all {@linkplain AnnotationMirror annotations} that are present on the given {@link
    * Element} which are themselves annotated with {@code annotationClass}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+  public static ImmutableSet<AnnotationMirror> getAnnotatedAnnotations(
       Element element, Class<? extends Annotation> annotationClass) {
     String name = annotationClass.getCanonicalName();
     if (name == null) {
@@ -172,7 +172,7 @@ public final class AnnotationMirrors {
    * Returns all {@linkplain AnnotationMirror annotations} that are present on the given {@link
    * Element} which are themselves annotated with {@code annotation}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+  public static ImmutableSet<AnnotationMirror> getAnnotatedAnnotations(
       Element element, TypeElement annotation) {
     return element.getAnnotationMirrors().stream()
         .filter(input -> isAnnotationPresent(input.getAnnotationType().asElement(), annotation))
@@ -184,7 +184,7 @@ public final class AnnotationMirrors {
    * Element} which are themselves annotated with an annotation whose type's canonical name is
    * {@code annotationName}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+  public static ImmutableSet<AnnotationMirror> getAnnotatedAnnotations(
       Element element, String annotationName) {
     return element.getAnnotationMirrors().stream()
         .filter(input -> isAnnotationPresent(input.getAnnotationType().asElement(), annotationName))
