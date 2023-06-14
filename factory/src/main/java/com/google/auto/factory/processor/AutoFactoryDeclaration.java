@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -214,27 +215,17 @@ abstract class AutoFactoryDeclaration {
     }
 
     private ImmutableSet<AnnotationMirror> annotationsToAdd(Element element) {
-      ImmutableSet.Builder<AnnotationMirror> annotationsBuilder = ImmutableSet.builder();
-
       ImmutableSet<? extends AnnotationMirror> containers =
           AnnotationMirrors.getAnnotatedAnnotations(element, AnnotationsToApply.class);
-      switch (containers.size()) {
-        case 1:
-          annotationsBuilder.addAll(extractAnnotationsToApply(getOnlyElement(containers)));
-          break;
-        case 0:
-          break;
-        default:
-          messager.printMessage(
-              ERROR, "Multiple @AnnotationsToApply annotations are not supported", element);
+      if (containers.size() > 1) {
+        messager.printMessage(
+            ERROR, "Multiple @AnnotationsToApply annotations are not supported", element);
       }
-
-      return annotationsBuilder.build();
-    }
-
-    private ImmutableSet<AnnotationMirror> extractAnnotationsToApply(
-        AnnotationMirror annotationsToApply) {
-      return elements.getElementValuesWithDefaults(annotationsToApply).values().stream()
+      return containers.stream()
+          .limit(1)
+          .map(elements::getElementValuesWithDefaults)
+          .map(Map::values)
+          .flatMap(Collection::stream)
           .map(AnnotationValue::getValue)
           .filter(AnnotationMirror.class::isInstance)
           // Any non-annotation element should already have been flagged when processing
