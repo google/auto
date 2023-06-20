@@ -67,36 +67,36 @@ public @interface AutoFactory {
   /**
    * Specifies that an annotation should be used to determine how to annotate generated AutoFactory
    * classes. For example, suppose you have this annotation:
-   * <pre>{@code
-   * @AutoFactory.AnnotationsToApply
-   * @interface ApplyImmutableAndSuppressWarnings {
+   * <pre>
+   * {@code @AutoFactory.AnnotationsToApply}
+   * {@code @interface} ApplyImmutableAndSuppressWarnings {
    *   Immutable immutable() default @Immutable;
    *   SuppressWarnings suppressWarnings() default @SuppressWarnings("Immutable");
    * }
-   * }</pre>
+   * </pre>
    *
    * And suppose you use it like this:
-   * <pre>{@code
-   * @ApplyImmutableAndSuppressWarnings
-   * @AutoFactory
+   * <pre>
+   * {@code @ApplyImmutableAndSuppressWarnings}
+   * {@code @AutoFactory}
    * public class Foo {...}
-   * }</pre>
+   * </pre>
    *
    * Then the generated {@code FooFactory} would look like this:
-   * <pre>{@code
-   * @Immutable
-   * @SuppressWarnings("Immutable")
+   * <pre>
+   * {@code @Immutable}
+   * {@code @SuppressWarnings("Immutable")}
    * public class FooFactory {...}
-   * }</pre>
+   * </pre>
    *
    * The same would be true if you used it like this:
-   * <pre>{@code
-   * @ApplyImmutableAndSuppressWarnings(
+   * <pre>
+   * {@code @ApplyImmutableAndSuppressWarnings}(
    *     immutable = @Immutable,
    *     suppressWarnings = @SuppressWarnings("Immutable"))
-   * @AutoFactory
+   * {@code @AutoFactory}
    * public class Foo {...}
-   * }</pre>
+   * </pre>
    *
    * You could also have {@code suppressWarnings = @SuppressWarnings({"Immutable", "unchecked"})},
    * etc, to specify a value different from the default.
