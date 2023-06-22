@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -233,8 +234,7 @@ public class MoreElementsTest {
 
   @Test
   public void getAnnotationMirror() {
-    TypeElement element =
-        elements.getTypeElement(AnnotatedAnnotation.class.getCanonicalName());
+    TypeElement element = elements.getTypeElement(AnnotatedAnnotation.class.getCanonicalName());
 
     // Test Class API
     getAnnotationMirrorAsserts(
@@ -359,6 +359,56 @@ public class MoreElementsTest {
             getMethod(Child.class, "buh", intMirror),
             getMethod(Child.class, "buh", intMirror, intMirror))
         .inOrder();
+  }
+
+  @Test
+  public void getLocalAndInheritedMethods_recursiveTypeVariableBound() {
+    Types types = compilation.getTypes();
+    TypeElement builderElement =
+        elements.getTypeElement(FakeProto.Builder.class.getCanonicalName());
+    // TODO: b/287060583 - this should not trigger infinite recursion
+    assertThrows(
+        StackOverflowError.class,
+        () -> {
+          Object unused = MoreElements.getLocalAndInheritedMethods(builderElement, types, elements);
+        });
+  }
+
+  // The classes that follow mimic the proto classes that triggered the bug that
+  // getLocalAndInheritedMethods_recursiveTypeVariableBound is testing for. They include raw type
+  // usages, because the corresponding real proto API classes do.
+
+  static class FakeProto extends AbstractMessage {
+    static class Builder
+        extends AbstractMessage.Builder<Builder> {
+      @Override
+      @SuppressWarnings("rawtypes")
+      Builder internalMergeFrom(AbstractMessageLite other) {
+        return this;
+      }
+    }
+  }
+
+  @SuppressWarnings("rawtypes")
+  static class AbstractMessage extends AbstractMessageLite {
+    static class Builder<B extends Builder<B>> extends AbstractMessageLite.Builder {
+      @Override
+      @SuppressWarnings("unchecked")
+      B internalMergeFrom(AbstractMessageLite other) {
+        return (B) this;
+      }
+    }
+
+  }
+
+  static class AbstractMessageLite<
+      M extends AbstractMessageLite<M, B>, B extends AbstractMessageLite.Builder<M, B>> {
+    static class Builder<M extends AbstractMessageLite<M, B>, B extends Builder<M, B>> {
+      @SuppressWarnings("unchecked")
+      B internalMergeFrom(M other) {
+        return (B) this;
+      }
+    }
   }
 
   @Test
