@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -366,12 +365,15 @@ public class MoreElementsTest {
     Types types = compilation.getTypes();
     TypeElement builderElement =
         elements.getTypeElement(FakeProto.Builder.class.getCanonicalName());
-    // TODO: b/287060583 - this should not trigger infinite recursion
-    assertThrows(
-        StackOverflowError.class,
-        () -> {
-          Object unused = MoreElements.getLocalAndInheritedMethods(builderElement, types, elements);
-        });
+    TypeMirror abstractMessageLiteMirror =
+        elements.getTypeElement(AbstractMessageLite.class.getCanonicalName()).asType();
+    ExecutableElement internalMergeFromMethod =
+        getMethod(FakeProto.Builder.class, "internalMergeFrom", abstractMessageLiteMirror);
+
+    ImmutableSet<ExecutableElement> methods =
+        MoreElements.getLocalAndInheritedMethods(builderElement, types, elements);
+
+    assertThat(methods).contains(internalMergeFromMethod);
   }
 
   // The classes that follow mimic the proto classes that triggered the bug that
@@ -486,7 +488,7 @@ public class MoreElementsTest {
         for (int i = 0; i < parameterTypes.length; i++) {
           TypeMirror expectedType = parameterTypes[i];
           TypeMirror actualType = method.getParameters().get(i).asType();
-          match &= types.isSameType(expectedType, actualType);
+          match &= types.isSameType(types.erasure(expectedType), types.erasure(actualType));
         }
         if (match) {
           assertThat(found).isNull();

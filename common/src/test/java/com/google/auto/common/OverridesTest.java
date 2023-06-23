@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
+import com.google.common.truth.Correspondence;
 import com.google.common.truth.Expect;
 import com.google.testing.compile.CompilationRule;
 import java.io.File;
@@ -574,11 +575,10 @@ public class OverridesTest {
   }
 
   private void assertTypeListsEqual(@Nullable List<TypeMirror> actual, List<TypeMirror> expected) {
-   requireNonNull(actual);
-   assertThat(actual).hasSize(expected.size());
-   for (int i = 0; i < actual.size(); i++) {
-      assertThat(typeUtils.isSameType(actual.get(i), expected.get(i))).isTrue();
-    }
+    assertThat(actual)
+      .comparingElementsUsing(Correspondence.from(typeUtils::isSameType, "is same type as"))
+      .containsExactlyElementsIn(expected)
+      .inOrder();
   }
 
   // TODO(emcmanus): replace this with something from compile-testing when that's available.

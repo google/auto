@@ -22,8 +22,10 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -44,12 +46,12 @@ import javax.lang.model.util.Types;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Determines if one method overrides another. This class defines two ways of doing that:
- * {@code NativeOverrides} uses the method
- * {@link Elements#overrides(ExecutableElement, ExecutableElement, TypeElement)} while
- * {@code ExplicitOverrides} reimplements that method in a way that is more consistent between
- * compilers, in particular between javac and ecj (the Eclipse compiler).
+ * Determines if one method overrides another. This class defines two ways of doing that: {@code
+ * NativeOverrides} uses the method {@link Elements#overrides(ExecutableElement, ExecutableElement,
+ * TypeElement)} while {@code ExplicitOverrides} reimplements that method in a way that is more
+ * consistent between compilers, in particular between javac and ecj (the Eclipse compiler).
  *
+ * @see <a href="https://github.com/google/auto/issues/372">AutoValue issue about Eclipse</a>
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class Overrides {
@@ -99,6 +101,14 @@ abstract class Overrides {
       }
       if (overridden.getModifiers().contains(Modifier.STATIC)) {
         // Static methods can't be overridden (though they can be hidden by other static methods).
+        return false;
+      }
+      if (overrider.getParameters().size() != overridden.getParameters().size()) {
+        // One method can't override another if they have a different number of parameters.
+        // Varargs `Foo...` appears as `Foo[]` here; there is a separate
+        // ExecutableElement.isVarArgs() method to tell whether a method is varargs, but that has no
+        // effect on override logic.
+        // The check here isn't strictly needed but avoids unnecessary work.
         return false;
       }
       Visibility overriddenVisibility = Visibility.ofElement(overridden);
@@ -252,6 +262,13 @@ abstract class Overrides {
        */
       private final Map<TypeParameterElement, TypeMirror> typeBindings = Maps.newLinkedHashMap();
 
+      /**
+       * Type elements that we are currently visiting. This helps us stay out of trouble when
+       * looking at something like {@code Enum<E extends Enum<E>>}. At the second {@code Enum} we
+       * will just return raw {@code Enum}.
+       */
+      private final Set<TypeElement> visitingTypes = new LinkedHashSet<>();
+
       @Nullable
       ImmutableList<TypeMirror> erasedParameterTypes(ExecutableElement method, TypeElement in) {
         if (method.getEnclosingElement().equals(in)) {
@@ -313,11 +330,18 @@ abstract class Overrides {
         if (t.getTypeArguments().isEmpty()) {
           return t;
         }
+        TypeElement typeElement = asTypeElement(t);
+        if (!visitingTypes.add(typeElement)) {
+          return typeUtils.erasure(t);
+        }
         List<TypeMirror> newArgs = Lists.newArrayList();
         for (TypeMirror arg : t.getTypeArguments()) {
           newArgs.add(visit(arg));
         }
-        return typeUtils.getDeclaredType(asTypeElement(t), newArgs.toArray(new TypeMirror[0]));
+        TypeMirror result =
+            typeUtils.getDeclaredType(asTypeElement(t), newArgs.toArray(new TypeMirror[0]));
+        visitingTypes.remove(typeElement);
+        return result;
       }
 
       @Override
