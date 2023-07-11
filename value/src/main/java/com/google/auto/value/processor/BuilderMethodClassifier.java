@@ -403,6 +403,13 @@ abstract class BuilderMethodClassifier<E extends Element> {
       TypeMirror returnType = methodMirror.getReturnType();
       if (typeUtils.isSubtype(builderType.asType(), returnType)
           && !MoreTypes.isTypeOf(Object.class, returnType)) {
+        if (nullableAnnotationFor(method, returnType).isPresent()) {
+          errorReporter.
+              reportWarning(
+                  method,
+                  "[%sBuilderSetterNullable] Setter methods always return the Builder so @Nullable"
+                      + " is not appropriate", autoWhat());
+        }
         // We allow the return type to be a supertype (other than Object), to support step builders.
         TypeMirror parameterType = Iterables.getOnlyElement(methodMirror.getParameterTypes());
         propertyNameToSetters.put(

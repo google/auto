@@ -2038,6 +2038,37 @@ public class AutoValueCompilationTest {
   }
 
   @Test
+  public void autoValueBuilderSetterReturnsNullable() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import javax.annotation.Nullable;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String blam();",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder {",
+            "    @Nullable Builder blam(String x);",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadWarningContaining(
+            "Setter methods always return the Builder so @Nullable is not appropriate")
+        .inFile(javaFileObject)
+        .onLineContaining("Builder blam(String x)");
+  }
+
+  @Test
   public void autoValueBuilderWrongTypeSetterWithCopyOf() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
