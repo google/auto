@@ -32,7 +32,7 @@
   <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
-    <kotlin.version>1.8.22</kotlin.version>
+    <kotlin.version>1.9.0</kotlin.version>
   </properties>
   <dependencies>
     <dependency>
