@@ -79,11 +79,6 @@
       <artifactId>javapoet</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.jetbrains.kotlinx</groupId>
-      <artifactId>kotlinx-metadata-jvm</artifactId>
-      <version>0.7.0</version>
-    </dependency>
-    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>9.5</version>
