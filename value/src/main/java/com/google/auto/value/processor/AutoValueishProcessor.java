@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
+import static com.google.auto.common.MoreElements.asType;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreStreams.toImmutableList;
@@ -1215,8 +1216,24 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
   private ImmutableList<AnnotationMirror> propertyFieldAnnotations(
       TypeElement type, ExecutableElement method) {
+    // We need to exclude type annotations from the ones being output on the method, since
+    // they will be output as part of the field's type.
+    Set<String> returnTypeAnnotations =
+        getReturnTypeAnnotations(method, this::annotationAppliesToFields);
     if (!hasAnnotationMirror(method, COPY_ANNOTATIONS_NAME)) {
-      return ImmutableList.of();
+      // If there's no @CopyAnnotations, we will still copy a @Nullable annotation, if (1) it is not
+      // a TYPE_USE annotation (those appear as part of the type in the generated code) and (2) it
+      // applies to fields. All known non-TYPE_USE @Nullable annotations do apply to fields, but we
+      // check just in case.
+      return method.getAnnotationMirrors().stream()
+          .filter(
+              a -> {
+                TypeElement annotationType = asType(a.getAnnotationType().asElement());
+                return isNullable(a)
+                    && !returnTypeAnnotations.contains(annotationType.getQualifiedName().toString())
+                    && annotationAppliesToFields(annotationType);
+              })
+          .collect(toImmutableList());
     }
     ImmutableSet<String> excludedAnnotations =
         ImmutableSet.<String>builder()
@@ -1224,10 +1241,6 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
             .add(Override.class.getCanonicalName())
             .build();
 
-    // We need to exclude type annotations from the ones being output on the method, since
-    // they will be output as part of the field's type.
-    Set<String> returnTypeAnnotations =
-        getReturnTypeAnnotations(method, this::annotationAppliesToFields);
     Set<String> nonFieldAnnotations =
         method.getAnnotationMirrors().stream()
             .map(a -> a.getAnnotationType().asElement())

@@ -1163,6 +1163,7 @@ public class AutoValueCompilationTest {
             "final class AutoValue_Baz<T extends Number> extends Baz<T> {",
             "  private final int anInt;",
             "  private final byte[] aByteArray;",
+            "  @Nullable",
             "  private final int[] aNullableIntArray;",
             "  private final List<T> aList;",
             "  private final ImmutableMap<T, String> anImmutableMap;",
