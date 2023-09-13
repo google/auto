@@ -147,4 +147,10 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
    * subclasses)
    */
   Boolean isFinal = false;
+
+  /**
+   * The modifiers (for example {@code final} or {@code abstract}) for the generated builder
+   * subclass, followed by a space if they are not empty.
+   */
+  String builderClassModifiers = "";
 }

@@ -40,6 +40,7 @@ class ExtensionContext implements AutoValueExtension.Context {
   private final ImmutableMap<String, ExecutableElement> properties;
   private final ImmutableMap<String, TypeMirror> propertyTypes;
   private final ImmutableSet<ExecutableElement> abstractMethods;
+  private final ImmutableSet<ExecutableElement> builderAbstractMethods;
   private Optional<BuilderContext> builderContext = Optional.empty();
 
   ExtensionContext(
@@ -47,13 +48,15 @@ class ExtensionContext implements AutoValueExtension.Context {
       TypeElement autoValueClass,
       ImmutableMap<String, ExecutableElement> properties,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
-      ImmutableSet<ExecutableElement> abstractMethods) {
+      ImmutableSet<ExecutableElement> abstractMethods,
+      ImmutableSet<ExecutableElement> builderAbstractMethods) {
     this.processingEnvironment = processingEnvironment;
     this.autoValueClass = autoValueClass;
     this.properties = properties;
     this.propertyTypes =
         ImmutableMap.copyOf(Maps.transformValues(properties, propertyMethodsAndTypes::get));
     this.abstractMethods = abstractMethods;
+    this.builderAbstractMethods = builderAbstractMethods;
   }
 
   void setBuilderContext(BuilderContext builderContext) {
@@ -93,6 +96,11 @@ class ExtensionContext implements AutoValueExtension.Context {
   @Override
   public Set<ExecutableElement> abstractMethods() {
     return abstractMethods;
+  }
+
+  @Override
+  public Set<ExecutableElement> builderAbstractMethods() {
+    return builderAbstractMethods;
   }
 
   @Override

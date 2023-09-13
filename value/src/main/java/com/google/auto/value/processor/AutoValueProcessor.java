@@ -206,10 +206,13 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     BuilderSpec builderSpec = new BuilderSpec(type, processingEnv, errorReporter());
     Optional<BuilderSpec.Builder> builder = builderSpec.getBuilder();
     ImmutableSet<ExecutableElement> toBuilderMethods;
+    ImmutableSet<ExecutableElement> builderAbstractMethods;
     if (builder.isPresent()) {
       toBuilderMethods = builder.get().toBuilderMethods(typeUtils(), type, abstractMethods);
+      builderAbstractMethods = builder.get().builderAbstractMethods();
     } else {
       toBuilderMethods = ImmutableSet.of();
+      builderAbstractMethods = ImmutableSet.of();
     }
 
     ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes =
@@ -219,11 +222,19 @@ public class AutoValueProcessor extends AutoValueishProcessor {
 
     ExtensionContext context =
         new ExtensionContext(
-            processingEnv, type, properties, propertyMethodsAndTypes, abstractMethods);
+            processingEnv,
+            type,
+            properties,
+            propertyMethodsAndTypes,
+            abstractMethods,
+            builderAbstractMethods);
     ImmutableList<AutoValueExtension> applicableExtensions = applicableExtensions(type, context);
     ImmutableSet<ExecutableElement> consumedMethods =
         methodsConsumedByExtensions(
             type, applicableExtensions, context, abstractMethods, properties);
+    ImmutableSet<ExecutableElement> consumedBuilderMethods =
+        builderMethodsConsumedByExtensions(
+            type, applicableExtensions, context, builderAbstractMethods);
 
     if (!consumedMethods.isEmpty()) {
       ImmutableSet<ExecutableElement> allAbstractMethods = abstractMethods;
@@ -234,7 +245,12 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       properties = propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
       context =
           new ExtensionContext(
-              processingEnv, type, properties, propertyMethodsAndTypes, allAbstractMethods);
+              processingEnv,
+              type,
+              properties,
+              propertyMethodsAndTypes,
+              allAbstractMethods,
+              builderAbstractMethods);
     }
 
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
@@ -252,7 +268,8 @@ public class AutoValueProcessor extends AutoValueishProcessor {
         toBuilderMethods,
         propertyMethodsAndTypes,
         builder,
-        nullables);
+        nullables,
+        consumedBuilderMethods);
     vars.builtType = vars.origClass + vars.actualTypes;
     vars.build = "new " + finalSubclass + vars.actualTypes;
 
@@ -270,6 +287,10 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.isFinal = (subclassDepth == 0);
     vars.modifiers = vars.isFinal ? "final " : "abstract ";
+    vars.builderClassModifiers =
+        consumedBuilderMethods.isEmpty()
+            ? vars.isFinal ? "static final " : "static "
+            : "abstract static ";
 
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, type.asType());
@@ -393,6 +414,40 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     return ImmutableSet.copyOf(consumed);
   }
 
+  private ImmutableSet<ExecutableElement> builderMethodsConsumedByExtensions(
+      TypeElement type,
+      ImmutableList<AutoValueExtension> applicableExtensions,
+      ExtensionContext context,
+      ImmutableSet<ExecutableElement> builderAbstractMethods) {
+    Set<ExecutableElement> consumed = new HashSet<>();
+    for (AutoValueExtension extension : applicableExtensions) {
+      Set<ExecutableElement> consumedHere = new HashSet<>();
+      for (ExecutableElement consumedMethod : extension.consumeBuilderMethods(context)) {
+        if (!builderAbstractMethods.contains(consumedMethod)) {
+          errorReporter()
+              .reportError(
+                  type,
+                  "[AutoValueBuilderConsumeNotAbstract] Extension %s wants to consume a method that"
+                      + " is not one of the abstract methods in this class: %s",
+                  extensionName(extension),
+                  consumedMethod);
+        } else {
+          consumedHere.add(consumedMethod);
+        }
+      }
+      for (ExecutableElement repeat : intersection(consumed, consumedHere)) {
+        errorReporter()
+            .reportError(
+                repeat,
+                "[AutoValueBuilderConsumeNotAbstract] Extension %s wants to consume a method that"
+                    + " was already consumed by another extension",
+                extensionName(extension));
+      }
+      consumed.addAll(consumedHere);
+    }
+    return ImmutableSet.copyOf(consumed);
+  }
+
   private void validateMethods(
       TypeElement type,
       ImmutableSet<ExecutableElement> abstractMethods,
@@ -430,7 +485,8 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       ImmutableSet<ExecutableElement> toBuilderMethods,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       Optional<BuilderSpec.Builder> maybeBuilder,
-      Nullables nullables) {
+      Nullables nullables,
+      ImmutableSet<ExecutableElement> consumedBuilderAbstractMethods) {
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
     vars.toBuilderMethods =
         toBuilderMethods.stream().map(SimpleMethod::new).collect(toImmutableList());
@@ -450,7 +506,8 @@ public class AutoValueProcessor extends AutoValueishProcessor {
         builder -> {
           ImmutableBiMap<ExecutableElement, String> methodToPropertyName =
               propertyNameToMethodMap(propertyMethods).inverse();
-          builder.defineVarsForAutoValue(vars, methodToPropertyName, nullables);
+          builder.defineVarsForAutoValue(
+              vars, methodToPropertyName, nullables, consumedBuilderAbstractMethods);
           vars.builderName = "Builder";
           vars.builderAnnotations = copiedClassAnnotations(builder.builderType());
         });

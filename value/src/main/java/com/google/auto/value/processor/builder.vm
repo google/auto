@@ -30,9 +30,7 @@
 #foreach ($a in $builderAnnotations)
 $a
 #end
-#if (!$autoBuilder) static #end##
-#if ($isFinal) final #end##
-class ${builderName}${builderFormalTypes} ##
+${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 #if ($builderIsInterface) implements #else extends #end
     ${builderTypeName}${builderActualTypes} {
 

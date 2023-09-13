@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
@@ -382,6 +383,60 @@ public class ExtensionTest {
                 + "it is a primitive array")
         .inFile(javaFileObject)
         .onLineContaining("abstract Double[] bad()");
+  }
+
+  @Test
+  public void testConsumeBuilderMethod() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  @AutoValue.Builder",
+            "  public static abstract class Builder {",
+            "    abstract Builder setFoo(String value);",
+            "    abstract int doSomething();",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    BuilderExtension extension = new BuilderExtension();
+    extension.consumeMethod("doSomething");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(extension)))
+            .compile(javaFileObject);
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
+  @Test
+  public void testAbstractBuilderMethodNotConsumedFails() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract String foo();",
+            "  @AutoValue.Builder",
+            "  public static abstract class Builder {",
+            "    abstract Builder setFoo(String value);",
+            "    abstract int doSomething();",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(ImmutableList.of(new BuilderExtension())))
+            .compile(javaFileObject);
+    assertThat(compilation).hadErrorContaining("AutoValueBuilderNoArg");
   }
 
   @Test
@@ -769,6 +824,83 @@ public class ExtensionTest {
               + "  }\n"
               + "  public String dizzle() {\n"
               + "    return \"dizzle\";\n"
+              + "  }\n"
+              + "}",
+          context.packageName(),
+          isFinal ? "final" : "abstract",
+          className,
+          classToExtend);
+    }
+  }
+
+  private static class BuilderExtension extends AutoValueExtension {
+
+    private Optional<String> consumedMethodName;
+
+    BuilderExtension() {
+      this.consumedMethodName = Optional.empty();
+    }
+
+    public void consumeMethod(String methodName) {
+      consumedMethodName = Optional.of(methodName);
+    }
+
+    @Override
+    public boolean applicable(Context context) {
+      return true;
+    }
+
+    @Override
+    public Set<ExecutableElement> consumeBuilderMethods(Context context) {
+      return consumedMethodName.map(s -> context.builderAbstractMethods().stream()
+          .filter(element -> element.getSimpleName().toString().endsWith(s))
+          .collect(toImmutableSet())).orElseGet(ImmutableSet::of);
+    }
+
+    @Override
+    public String generateClass(
+        Context context, String className, String classToExtend, boolean isFinal) {
+      StringBuilder constructor =
+          new StringBuilder().append("  public ").append(className).append("(");
+
+      boolean first = true;
+      for (Map.Entry<String, ExecutableElement> el : context.properties().entrySet()) {
+        if (first) {
+          first = false;
+        } else {
+          constructor.append(", ");
+        }
+        constructor.append("String ").append(el.getKey());
+      }
+
+      constructor.append(") {\n");
+      constructor.append("    super(");
+
+      first = true;
+      for (Map.Entry<String, ExecutableElement> el : context.properties().entrySet()) {
+        if (first) {
+          first = false;
+        } else {
+          constructor.append(", ");
+        }
+        constructor.append(el.getKey());
+      }
+      constructor.append(");\n");
+      constructor.append("  }\n");
+
+      return String.format(
+          "package %s;\n"
+              + "\n"
+              + "%s class %s extends %s {\n"
+              + constructor
+              + "  @Override public String foo() {\n"
+              + "    return \"foo\";\n"
+              + "  }\n"
+              + "  public static class Builder extends $AutoValue_Baz.Builder {\n"
+              + "    @Override\n"
+              + "    public int doSomething() {\n"
+              + "      return 5;\n"
+              + "    }\n"
               + "  }\n"
               + "}",
           context.packageName(),
