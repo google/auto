@@ -1273,7 +1273,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     Visibility visibility = Visibility.effectiveVisibilityOfElement(annotationElement);
     switch (visibility) {
       case PUBLIC:
-        return true;
+        break;
       case PROTECTED:
         // If the annotation is protected, it must be inside another class, call it C. If our
         // @AutoValue class is Foo then, for the annotation to be visible, either Foo must be in the
@@ -1286,14 +1286,18 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         // https://docs.oracle.com/javase/specs/jls/se8/html/jls-6.html#jls-6.6.2.1
         // AutoValue_Foo is a top-level class, so an annotation on it cannot be in the body of a
         // subclass of anything.
-        return getPackage(annotationElement).equals(getPackage(from))
-            || typeUtils()
-                .isSubtype(from.asType(), annotationElement.getEnclosingElement().asType());
+        if (!getPackage(annotationElement).equals(getPackage(from))
+            && !typeUtils()
+                .isSubtype(from.asType(), annotationElement.getEnclosingElement().asType())) {
+          return false;
+        }
+        break;
       case DEFAULT:
         return getPackage(annotationElement).equals(getPackage(from));
       default:
         return false;
     }
+    return true;
   }
 
   /**
