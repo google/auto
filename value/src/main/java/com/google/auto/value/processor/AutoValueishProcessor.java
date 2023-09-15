@@ -109,10 +109,9 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     this.appliesToInterfaces = appliesToInterfaces;
   }
 
-  /**
-   * The annotation we are processing, for example {@code AutoValue} or {@code AutoBuilder}.
-   */
+  /** The annotation we are processing, for example {@code AutoValue} or {@code AutoBuilder}. */
   private TypeElement annotationType;
+
   /** The simple name of {@link #annotationType}. */
   private String simpleAnnotationName;
 
@@ -155,11 +154,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   }
 
   /**
-   * A property of an {@code @AutoValue} (etc) class, defined by one of its abstract
-   * methods. An instance of this class is made available to the Velocity template engine for each
-   * property. The public methods of this class define JavaBeans-style properties that are
-   * accessible from templates. For example {@link #getType()} means we can write {@code $p.type}
-   * for a Velocity variable {@code $p} that is a {@code Property}.
+   * A property of an {@code @AutoValue} (etc) class, defined by one of its abstract methods. An
+   * instance of this class is made available to the Velocity template engine for each property. The
+   * public methods of this class define JavaBeans-style properties that are accessible from
+   * templates. For example {@link #getType()} means we can write {@code $p.type} for a Velocity
+   * variable {@code $p} that is a {@code Property}.
    */
   public static class Property {
     private final String name;
@@ -595,8 +594,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     vars.toString = methodsToGenerate.containsKey(ObjectMethod.TO_STRING);
     vars.equals = methodsToGenerate.containsKey(ObjectMethod.EQUALS);
     vars.hashCode = methodsToGenerate.containsKey(ObjectMethod.HASH_CODE);
-    vars.equalsParameterType =
-        equalsParameterType(methodsToGenerate, nullables);
+    vars.equalsParameterType = equalsParameterType(methodsToGenerate, nullables);
     vars.serialVersionUID = getSerialVersionUID(type);
   }
 
@@ -1065,11 +1063,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   }
 
   /** Implements the semantics of {@code AutoValue.CopyAnnotations}; see its javadoc. */
-  static ImmutableList<AnnotationMirror> annotationsToCopy(
-      Element autoValueType,
-      Element typeOrMethod,
-      Set<String> excludedAnnotations,
-      Types typeUtils) {
+  ImmutableList<AnnotationMirror> annotationsToCopy(
+      Element autoValueType, Element typeOrMethod, Set<String> excludedAnnotations) {
     ImmutableList.Builder<AnnotationMirror> result = ImmutableList.builder();
     for (AnnotationMirror annotation : typeOrMethod.getAnnotationMirrors()) {
       String annotationFqName = getAnnotationFqName(annotation);
@@ -1077,7 +1072,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       // and it should not be in the excludedAnnotations set.
       if (!isInAutoValuePackage(annotationFqName)
           && !excludedAnnotations.contains(annotationFqName)
-          && annotationVisibleFrom(annotation, autoValueType, typeUtils)) {
+          && annotationVisibleFrom(annotation, autoValueType)) {
         result.add(annotation);
       }
     }
@@ -1128,7 +1123,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   ImmutableList<String> copyAnnotations(
       Element autoValueType, Element typeOrMethod, Set<String> excludedAnnotations) {
     ImmutableList<AnnotationMirror> annotationsToCopy =
-        annotationsToCopy(autoValueType, typeOrMethod, excludedAnnotations, typeUtils());
+        annotationsToCopy(autoValueType, typeOrMethod, excludedAnnotations);
     return annotationStrings(annotationsToCopy);
   }
 
@@ -1179,18 +1174,18 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         .toString();
   }
 
-  static ImmutableListMultimap<ExecutableElement, AnnotationMirror> propertyMethodAnnotationMap(
-      TypeElement type, ImmutableSet<ExecutableElement> propertyMethods, Types typeUtils) {
+  ImmutableListMultimap<ExecutableElement, AnnotationMirror> propertyMethodAnnotationMap(
+      TypeElement type, ImmutableSet<ExecutableElement> propertyMethods) {
     ImmutableListMultimap.Builder<ExecutableElement, AnnotationMirror> builder =
         ImmutableListMultimap.builder();
     for (ExecutableElement propertyMethod : propertyMethods) {
-      builder.putAll(propertyMethod, propertyMethodAnnotations(type, propertyMethod, typeUtils));
+      builder.putAll(propertyMethod, propertyMethodAnnotations(type, propertyMethod));
     }
     return builder.build();
   }
 
-  static ImmutableList<AnnotationMirror> propertyMethodAnnotations(
-      TypeElement type, ExecutableElement method, Types typeUtils) {
+  ImmutableList<AnnotationMirror> propertyMethodAnnotations(
+      TypeElement type, ExecutableElement method) {
     ImmutableSet<String> excludedAnnotations =
         ImmutableSet.<String>builder()
             .addAll(getExcludedAnnotationClassNames(method))
@@ -1201,7 +1196,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     // they will be output as part of the method's return type.
     Set<String> returnTypeAnnotations = getReturnTypeAnnotations(method, a -> true);
     Set<String> excluded = union(excludedAnnotations, returnTypeAnnotations);
-    return annotationsToCopy(type, method, excluded, typeUtils);
+    return annotationsToCopy(type, method, excluded);
   }
 
   final ImmutableListMultimap<ExecutableElement, AnnotationMirror> propertyFieldAnnotationMap(
@@ -1255,7 +1250,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
             .addAll(returnTypeAnnotations)
             .addAll(nonFieldAnnotations)
             .build();
-    return annotationsToCopy(type, method, excluded, typeUtils());
+    return annotationsToCopy(type, method, excluded);
   }
 
   private static Set<String> getReturnTypeAnnotations(
@@ -1273,8 +1268,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     return target == null || Arrays.asList(target.value()).contains(ElementType.FIELD);
   }
 
-  private static boolean annotationVisibleFrom(
-      AnnotationMirror annotation, Element from, Types typeUtils) {
+  private boolean annotationVisibleFrom(AnnotationMirror annotation, Element from) {
     Element annotationElement = annotation.getAnnotationType().asElement();
     Visibility visibility = Visibility.effectiveVisibilityOfElement(annotationElement);
     switch (visibility) {
@@ -1293,7 +1287,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         // AutoValue_Foo is a top-level class, so an annotation on it cannot be in the body of a
         // subclass of anything.
         return getPackage(annotationElement).equals(getPackage(from))
-            || typeUtils.isSubtype(from.asType(), annotationElement.getEnclosingElement().asType());
+            || typeUtils()
+                .isSubtype(from.asType(), annotationElement.getEnclosingElement().asType());
       case DEFAULT:
         return getPackage(annotationElement).equals(getPackage(from));
       default:

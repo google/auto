@@ -222,6 +222,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
 
     ExtensionContext context =
         new ExtensionContext(
+            this,
             processingEnv,
             type,
             properties,
@@ -245,6 +246,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       properties = propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
       context =
           new ExtensionContext(
+              this,
               processingEnv,
               type,
               properties,
@@ -494,7 +496,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
         propertyFieldAnnotationMap(type, propertyMethods);
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods =
-        propertyMethodAnnotationMap(type, propertyMethods, typeUtils());
+        propertyMethodAnnotationMap(type, propertyMethods);
     vars.props =
         propertySet(
             propertyMethodsAndTypes,

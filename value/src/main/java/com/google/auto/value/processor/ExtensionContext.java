@@ -35,6 +35,7 @@ import javax.lang.model.type.TypeMirror;
 
 class ExtensionContext implements AutoValueExtension.Context {
 
+  private final AutoValueProcessor autoValueProcessor;
   private final ProcessingEnvironment processingEnvironment;
   private final TypeElement autoValueClass;
   private final ImmutableMap<String, ExecutableElement> properties;
@@ -44,12 +45,14 @@ class ExtensionContext implements AutoValueExtension.Context {
   private Optional<BuilderContext> builderContext = Optional.empty();
 
   ExtensionContext(
+      AutoValueProcessor autoValueProcessor,
       ProcessingEnvironment processingEnvironment,
       TypeElement autoValueClass,
       ImmutableMap<String, ExecutableElement> properties,
       ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
       ImmutableSet<ExecutableElement> abstractMethods,
       ImmutableSet<ExecutableElement> builderAbstractMethods) {
+    this.autoValueProcessor = autoValueProcessor;
     this.processingEnvironment = processingEnvironment;
     this.autoValueClass = autoValueClass;
     this.properties = properties;
@@ -131,14 +134,13 @@ class ExtensionContext implements AutoValueExtension.Context {
             .add(ClassNames.KOTLIN_METADATA_NAME)
             .build();
 
-    return AutoValueishProcessor.annotationsToCopy(
-        autoValueClass, classToCopyFrom, excludedAnnotations, processingEnvironment.getTypeUtils());
+    return autoValueProcessor.annotationsToCopy(
+        autoValueClass, classToCopyFrom, excludedAnnotations);
   }
 
   @Override
   public List<AnnotationMirror> methodAnnotationsToCopy(ExecutableElement method) {
-    return AutoValueishProcessor.propertyMethodAnnotations(
-        autoValueClass, method, processingEnvironment.getTypeUtils());
+    return autoValueProcessor.propertyMethodAnnotations(autoValueClass, method);
   }
 
   @Override
