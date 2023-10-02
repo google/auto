@@ -58,7 +58,6 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
 #if ($toBuilderConstructor)
 
-  #if (!$autoBuilder) private #end##
   ${builderName}($builtType source) {
 
   #foreach ($p in $props)
