@@ -181,7 +181,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   @`java.lang.Override`
   ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
-    return new Builder${builderActualTypes}(this);
+    return new ${finalSubclass}.Builder${builderActualTypes}(this);
   }
 
   #end

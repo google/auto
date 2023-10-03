@@ -507,6 +507,26 @@ public abstract class AutoValueExtension {
    * name. The {@code <constructorParameters>} and {@code <constructorParameterNames>} are typically
    * derived from {@link Context#propertyTypes()}.
    *
+   * <p>An extension can also generate a subclass of the nested {@code Builder} class if there is
+   * one. In that case, it should check if {@link BuilderContext#toBuilderMethods()} is empty. If
+   * not, the {@code Builder} subclass should include a "copy constructor", like this:
+   *
+   * <pre>{@code
+   * ...
+   * <finalOrAbstract> class <className> extends <classToExtend> {
+   *   ...
+   *   static class Builder extends <classToExtend>.Builder {
+   *     Builder() {}
+   *     Builder(<autoValueClass> copyFrom) {
+   *       super(copyFrom);
+   *     }
+   *     ...
+   *   }
+   * }
+   * }</pre>
+   *
+   * <p>Here, {@code <autoValueClass>} is {@link Context#autoValueClass()}.}
+   *
    * @param context The {@link Context} of the code generation for this class.
    * @param className The simple name of the resulting class. The returned code will be written to a
    *     file named accordingly.

@@ -287,6 +287,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     int subclassDepth = writeExtensions(type, context, applicableExtensions);
     String subclass = generatedSubclassName(type, subclassDepth);
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
+    vars.finalSubclass = finalSubclass;
     vars.isFinal = (subclassDepth == 0);
     vars.modifiers = vars.isFinal ? "final " : "abstract ";
     vars.builderClassModifiers =
