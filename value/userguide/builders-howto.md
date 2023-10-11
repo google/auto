@@ -117,9 +117,9 @@ abstract class Animal {
 }
 ```
 
-Occasionally you may want to supply a default value, but only if the property is
-not set explicitly. This is covered in the section on
-[normalization](#normalize).
+Occasionally you may want to supply a more complex default value, possibly
+derived from other fields and only if the property is not set explicitly. This
+is covered in the section on [normalization](#normalize).
 
 ## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
