@@ -337,7 +337,7 @@ public class Names {
   }
 
   public static NamedBuilder namedBuilder() {
-    return new AutoBuilder_Names_namedBuilder();
+    return new AutoBuilder_Names_NamedBuilder();
   }
 
   ...
