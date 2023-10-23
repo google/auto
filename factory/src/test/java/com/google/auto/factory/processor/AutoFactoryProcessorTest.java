@@ -63,16 +63,36 @@ public class AutoFactoryProcessorTest {
 
   private enum InjectPackage {
     JAVAX,
+    JAKARTA
   }
 
+  /**
+   * Each test configuration specifies whether javax or jakarta or both are on the classpath, which
+   * one is expected to be chosen, and any {@code -A} options.
+   */
   private enum Config {
-    JAVAX_ONLY_ON_CLASSPATH(ImmutableList.of(InjectPackage.JAVAX), InjectPackage.JAVAX);
+    JAVAX_ONLY_ON_CLASSPATH(ImmutableList.of(InjectPackage.JAVAX), InjectPackage.JAVAX),
+    JAKARTA_ONLY_ON_CLASSPATH(ImmutableList.of(InjectPackage.JAKARTA), InjectPackage.JAKARTA),
+    BOTH_ON_CLASSPATH(
+        ImmutableList.of(InjectPackage.JAVAX, InjectPackage.JAKARTA),
+        InjectPackage.JAKARTA),
+    EXPLICIT_JAVAX(
+        ImmutableList.of(InjectPackage.JAVAX, InjectPackage.JAKARTA),
+        InjectPackage.JAVAX,
+        ImmutableList.of("-A" + AutoFactoryProcessor.INJECT_API_OPTION + "=javax")),
+    EXPLICIT_JAKARTA(
+        ImmutableList.of(InjectPackage.JAVAX, InjectPackage.JAKARTA),
+        InjectPackage.JAKARTA,
+        ImmutableList.of("-A" + AutoFactoryProcessor.INJECT_API_OPTION + "=jakarta"));
 
-    /** Config that is used for negative tests, and to update the golden files. */
-    static final Config DEFAULT = JAVAX_ONLY_ON_CLASSPATH;
+    /**
+     * Config that is used for negative tests, and to update the golden files. Since those files use
+     * {@code javax.inject}, we need a config that specifies that package.
+     */
+    static final Config DEFAULT = EXPLICIT_JAVAX;
 
     final ImmutableList<InjectPackage> packagesOnClasspath;
-    final InjectPackage unusedExpectedPackage;
+    final InjectPackage expectedPackage;
     final ImmutableList<String> options;
 
     Config(ImmutableList<InjectPackage> packagesOnClasspath, InjectPackage expectedPackage) {
@@ -84,7 +104,7 @@ public class AutoFactoryProcessorTest {
         InjectPackage expectedPackage,
         ImmutableList<String> options) {
       this.packagesOnClasspath = packagesOnClasspath;
-      this.unusedExpectedPackage = expectedPackage;
+      this.expectedPackage = expectedPackage;
       this.options = options;
     }
 
@@ -95,6 +115,7 @@ public class AutoFactoryProcessorTest {
             fileForClass("javax.annotation.Nullable"),
             fileForClass("org.checkerframework.checker.nullness.compatqual.NullableType"));
     static final File JAVAX_CLASSPATH = fileForClass("javax.inject.Provider");
+    static final File JAKARTA_CLASSPATH = fileForClass("jakarta.inject.Provider");
 
     static File fileForClass(String className) {
       Class<?> c;
@@ -113,6 +134,9 @@ public class AutoFactoryProcessorTest {
           ImmutableList.<File>builder().addAll(COMMON_CLASSPATH);
       if (packagesOnClasspath.contains(InjectPackage.JAVAX)) {
         classpathBuilder.add(JAVAX_CLASSPATH);
+      }
+      if (packagesOnClasspath.contains(InjectPackage.JAKARTA)) {
+        classpathBuilder.add(JAKARTA_CLASSPATH);
       }
       return classpathBuilder.build();
     }
@@ -184,6 +208,9 @@ public class AutoFactoryProcessorTest {
     try {
       URL resourceUrl = Resources.getResource(resourceName);
       String source = Resources.toString(resourceUrl, UTF_8);
+      if (config.expectedPackage.equals(InjectPackage.JAKARTA)) {
+        source = source.replace("javax.inject", "jakarta.inject");
+      }
       String className = resourceName.replaceFirst("\\.java$", "").replace('/', '.');
       return JavaFileObjects.forSourceString(className, source);
     } catch (IOException e) {
@@ -370,57 +397,6 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test
-  public void failsWithMixedFinals() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/MixedFinals.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining(
-            "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-        .inFile(file)
-        .onLine(24);
-    assertThat(compilation)
-        .hadErrorContaining(
-            "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.")
-        .inFile(file)
-        .onLine(27);
-  }
-
-  @Test
-  public void providedButNoAutoFactory() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedButNoAutoFactory.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining(
-            "@Provided may only be applied to constructors requesting an auto-factory")
-        .inFile(file)
-        .onLineContaining("@Provided");
-  }
-
-  @Test
-  public void providedOnMethodParameter() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/ProvidedOnMethodParameter.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining("@Provided may only be applied to constructor parameters")
-        .inFile(file)
-        .onLineContaining("@Provided");
-  }
-
-  @Test
-  public void invalidCustomName() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/InvalidCustomName.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining("\"SillyFactory!\" is not a valid Java identifier")
-        .inFile(file)
-        .onLineContaining("SillyFactory!");
-  }
-
-  @Test
   public void factoryExtendingAbstractClass() {
     goldenTest(
         ImmutableList.of("good/FactoryExtendingAbstractClass.java"),
@@ -439,64 +415,10 @@ public class AutoFactoryProcessorTest {
   }
 
   @Test
-  public void factoryExtendingAbstractClass_withConstructorParams() {
-    JavaFileObject file =
-        JavaFileObjects.forResource("bad/FactoryExtendingAbstractClassWithConstructorParams.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining(
-            "tests.FactoryExtendingAbstractClassWithConstructorParams.AbstractFactory is not a"
-                + " valid supertype for a factory. Factory supertypes must have a no-arg"
-                + " constructor.")
-        .inFile(file)
-        .onLineContaining("@AutoFactory");
-  }
-
-  @Test
   public void factoryExtendingAbstractClass_multipleConstructors() {
     goldenTest(
         ImmutableList.of("good/FactoryExtendingAbstractClassWithMultipleConstructors.java"),
         ImmutableMap.of());
-  }
-
-  @Test
-  public void factoryExtendingInterface() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/InterfaceSupertype.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining(
-            "java.lang.Runnable is not a valid supertype for a factory. Supertypes must be"
-                + " non-final classes.")
-        .inFile(file)
-        .onLineContaining("@AutoFactory");
-  }
-
-  @Test
-  public void factoryExtendingEnum() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/EnumSupertype.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining(
-            "java.util.concurrent.TimeUnit is not a valid supertype for a factory. Supertypes must"
-                + " be non-final classes.")
-        .inFile(file)
-        .onLineContaining("@AutoFactory");
-  }
-
-  @Test
-  public void factoryExtendingFinalClass() {
-    JavaFileObject file = JavaFileObjects.forResource("bad/FinalSupertype.java");
-    Compilation compilation = config.javac().compile(file);
-    assertThat(compilation).failed();
-    assertThat(compilation)
-        .hadErrorContaining(
-            "java.lang.Boolean is not a valid supertype for a factory. Supertypes must be"
-                + " non-final classes.")
-        .inFile(file)
-        .onLineContaining("@AutoFactory");
   }
 
   @Test
@@ -683,6 +605,9 @@ public class AutoFactoryProcessorTest {
                 line.startsWith("import javax.annotation.processing.Generated;")
                     ? "import javax.annotation.Generated;"
                     : line);
+      }
+      if (config.expectedPackage.equals(InjectPackage.JAKARTA)) {
+        importLines.replaceAll(line -> line.replace("javax.inject", "jakarta.inject"));
       }
       Collections.sort(importLines);
     }

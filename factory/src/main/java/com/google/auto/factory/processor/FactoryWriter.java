@@ -49,8 +49,6 @@ import java.io.IOException;
 import java.util.List;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -60,6 +58,7 @@ import javax.lang.model.util.Elements;
 
 final class FactoryWriter {
 
+  private final InjectApi injectApi;
   private final Filer filer;
   private final Elements elements;
   private final SourceVersion sourceVersion;
@@ -67,7 +66,9 @@ final class FactoryWriter {
 
   FactoryWriter(
       ProcessingEnvironment processingEnv,
+      InjectApi injectApi,
       ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated) {
+    this.injectApi = injectApi;
     this.filer = processingEnv.getFiler();
     this.elements = processingEnv.getElementUtils();
     this.sourceVersion = processingEnv.getSourceVersion();
@@ -118,7 +119,8 @@ final class FactoryWriter {
 
   private void addConstructorAndProviderFields(
       TypeSpec.Builder factory, FactoryDescriptor descriptor) {
-    MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
+    MethodSpec.Builder constructor =
+        constructorBuilder().addAnnotation(ClassName.get(injectApi.inject()));
     if (descriptor.publicType()) {
       constructor.addModifiers(PUBLIC);
     }
@@ -127,7 +129,8 @@ final class FactoryWriter {
     for (ProviderField provider : providerFields) {
       ++argumentNumber;
       TypeName typeName = resolveTypeName(provider.key().type().get()).box();
-      TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
+      TypeName providerType =
+          ParameterizedTypeName.get(ClassName.get(injectApi.provider()), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
         // only qualify the constructor parameter
@@ -181,7 +184,7 @@ final class FactoryWriter {
         } else {
           ProviderField provider = requireNonNull(descriptor.providers().get(parameter.key()));
           argument = CodeBlock.of(provider.name());
-          if (parameter.isProvider()) {
+          if (injectApi.isProvider(parameter.type().get())) {
             // Providers are checked for nullness in the Factory's constructor.
             checkNotNull = false;
           } else {

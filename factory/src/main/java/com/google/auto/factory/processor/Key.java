@@ -16,7 +16,6 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.auto.factory.processor.Mirrors.isProvider;
 import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
 import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 
@@ -26,7 +25,6 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
 import java.util.Collection;
 import java.util.Optional;
-import javax.inject.Qualifier;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
@@ -37,7 +35,6 @@ import javax.lang.model.util.Types;
  * @author Gregory Kick
  */
 @AutoValue
-// TODO(ronshapiro): reuse dagger.model.Key?
 abstract class Key {
 
   abstract Equivalence.Wrapper<TypeMirror> type();
@@ -49,7 +46,7 @@ abstract class Key {
   }
 
   /**
-   * Constructs a key based on the type {@code type} and any {@link Qualifier}s in {@code
+   * Constructs a key based on the type {@code type} and any {@code Qualifier}s in {@code
    * annotations}.
    *
    * <p>If {@code type} is a {@code Provider<T>}, the returned {@link Key}'s {@link #type()} is
@@ -57,6 +54,7 @@ abstract class Key {
    * corresponding {@linkplain Types#boxedClass(PrimitiveType) boxed type}.
    *
    * <p>For example:
+   *
    * <table>
    *   <tr><th>Input type                <th>{@code Key.type()}
    *   <tr><td>{@code String}            <td>{@code String}
@@ -64,18 +62,19 @@ abstract class Key {
    *   <tr><td>{@code int}               <td>{@code Integer}
    * </table>
    */
-  static Key create(TypeMirror type, Collection<AnnotationMirror> annotations, Types types) {
+  static Key create(
+      TypeMirror type, Collection<AnnotationMirror> annotations, Types types, InjectApi injectApi) {
     // TODO(gak): check for only one qualifier rather than using the first
     Optional<AnnotationMirror> qualifier =
         annotations.stream()
             .filter(
                 annotation ->
                     isAnnotationPresent(
-                        annotation.getAnnotationType().asElement(), Qualifier.class))
+                        annotation.getAnnotationType().asElement(), injectApi.qualifier()))
             .findFirst();
 
     TypeMirror keyType =
-        isProvider(type)
+        injectApi.isProvider(type)
             ? MoreTypes.asDeclared(type).getTypeArguments().get(0)
             : boxedType(type, types);
     return new AutoValue_Key(

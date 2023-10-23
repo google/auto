@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
-import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -49,14 +48,10 @@ import javax.lang.model.util.Types;
 abstract class Parameter {
 
   /**
-   * The original type of the parameter, while {@code key().type()} erases the wrapped {@link
+   * The original type of the parameter, while {@code key().type()} erases the wrapped {@code
    * Provider}, if any.
    */
   abstract Equivalence.Wrapper<TypeMirror> type();
-
-  boolean isProvider() {
-    return Mirrors.isProvider(type().get());
-  }
 
   boolean isPrimitive() {
     return type().get().getKind().isPrimitive();
@@ -79,15 +74,16 @@ abstract class Parameter {
   Optional<AnnotationMirror> nullable() {
     return unwrapOptionalEquivalence(nullableWrapper());
   }
+
   private static Parameter forVariableElement(
-      VariableElement variable, TypeMirror type, Types types) {
+      VariableElement variable, TypeMirror type, Types types, InjectApi injectApi) {
     ImmutableList<AnnotationMirror> allAnnotations =
         Stream.of(variable.getAnnotationMirrors(), type.getAnnotationMirrors())
             .flatMap(List::stream)
             .collect(toImmutableList());
     Optional<AnnotationMirror> nullable =
         allAnnotations.stream().filter(Parameter::isNullable).findFirst();
-    Key key = Key.create(type, allAnnotations, types);
+    Key key = Key.create(type, allAnnotations, types, injectApi);
 
     ImmutableSet<Equivalence.Wrapper<AnnotationMirror>> typeAnnotationWrappers =
         type.getAnnotationMirrors().stream()
@@ -120,12 +116,14 @@ abstract class Parameter {
   static ImmutableSet<Parameter> forParameterList(
       List<? extends VariableElement> variables,
       List<? extends TypeMirror> variableTypes,
-      Types types) {
+      Types types,
+      InjectApi injectApi) {
     checkArgument(variables.size() == variableTypes.size());
     ImmutableSet.Builder<Parameter> builder = ImmutableSet.builder();
     Set<String> names = Sets.newHashSetWithExpectedSize(variables.size());
     for (int i = 0; i < variables.size(); i++) {
-      Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i), types);
+      Parameter parameter =
+          forVariableElement(variables.get(i), variableTypes.get(i), types, injectApi);
       checkArgument(names.add(parameter.name()), "Duplicate parameter name: %s", parameter.name());
       builder.add(parameter);
     }
@@ -135,11 +133,11 @@ abstract class Parameter {
   }
 
   static ImmutableSet<Parameter> forParameterList(
-      List<? extends VariableElement> variables, Types types) {
+      List<? extends VariableElement> variables, Types types, InjectApi injectApi) {
     List<TypeMirror> variableTypes = Lists.newArrayListWithExpectedSize(variables.size());
     for (VariableElement var : variables) {
       variableTypes.add(var.asType());
     }
-    return forParameterList(variables, variableTypes, types);
+    return forParameterList(variables, variableTypes, types, injectApi);
   }
 }

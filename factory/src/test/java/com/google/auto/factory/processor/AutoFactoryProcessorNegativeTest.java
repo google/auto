@@ -15,12 +15,17 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import java.io.File;
+import java.net.URL;
 import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -177,5 +182,47 @@ public class AutoFactoryProcessorNegativeTest {
                 + " andWhatIsThis has type com.google.errorprone.annotations.Immutable[]")
         .inFile(file)
         .onLineContaining("andWhatIsThis");
+  }
+
+  @Test
+  public void noInjectApi() throws Exception {
+    URL autoFactoryUrl =
+        Class.forName("com.google.auto.factory.AutoFactory")
+            .getProtectionDomain()
+            .getCodeSource()
+            .getLocation();
+    assertThat(autoFactoryUrl.getProtocol()).isEqualTo("file");
+    File autoFactoryFile = new File(autoFactoryUrl.getPath());
+    Compiler compiler =
+        Compiler.javac()
+            .withProcessors(new AutoFactoryProcessor())
+            .withClasspath(ImmutableList.of(autoFactoryFile));
+    JavaFileObject file = JavaFileObjects.forResource("good/SimpleClass.java");
+    Compilation compilation = compiler.compile(file);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "Class path for AutoFactory class must include"
+                + " jakarta.inject.{Inject,Provider,Qualifier} or"
+                + " javax.inject.{Inject,Provider,Qualifier}");
+    assertThat(compilation).hadErrorCount(1);
+  }
+
+  /**
+   * AutoFactoryProcessor shouldn't complain about the absence of {@code javax.inject} if there are
+   * no {@code @AutoFactory} classes being compiled. Its {@code init} will be called and will see
+   * the problem, but will say nothing.
+   */
+  @Test
+  public void noInjectApiButNoAutoFactoryEither() {
+    Compiler compiler =
+        Compiler.javac()
+            .withProcessors(new AutoFactoryProcessor())
+            .withClasspath(ImmutableList.of());
+    JavaFileObject file =
+        JavaFileObjects.forSourceString("test.Foo", "package test; public class Foo {}");
+    Compilation compilation = compiler.compile(file);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation).generatedFile(StandardLocation.CLASS_OUTPUT, "test", "Foo.class");
   }
 }
