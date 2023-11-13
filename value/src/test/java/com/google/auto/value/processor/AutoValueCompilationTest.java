@@ -61,6 +61,11 @@ public class AutoValueCompilationTest {
   private boolean typeAnnotationsWork =
       Double.parseDouble(JAVA_SPECIFICATION_VERSION.value()) >= 9.0;
 
+  // Sadly we can't rely on JDK 8 to handle accessing the private methods of the builder.
+  // So skip the test unless we are on at least JDK 9.
+  private boolean constructorUsesBuilderFields =
+      Double.parseDouble(JAVA_SPECIFICATION_VERSION.value()) >= 9.0;
+
   @Test
   public void simpleSuccess() {
     // Positive test case that ensures we generate the expected code for at least one case.
@@ -1066,6 +1071,7 @@ public class AutoValueCompilationTest {
 
   @Test
   public void correctBuilder() {
+    assume().that(constructorUsesBuilderFields).isTrue();
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1170,21 +1176,15 @@ public class AutoValueCompilationTest {
             "  private final Optional<String> anOptionalString;",
             "  private final NestedAutoValue<T> aNestedAutoValue;",
             "",
-            "  private AutoValue_Baz(",
-            "      int anInt,",
-            "      byte[] aByteArray,",
-            "      @Nullable int[] aNullableIntArray,",
-            "      List<T> aList,",
-            "      ImmutableMap<T, String> anImmutableMap,",
-            "      Optional<String> anOptionalString,",
-            "      NestedAutoValue<T> aNestedAutoValue) {",
-            "    this.anInt = anInt;",
-            "    this.aByteArray = aByteArray;",
-            "    this.aNullableIntArray = aNullableIntArray;",
-            "    this.aList = aList;",
-            "    this.anImmutableMap = anImmutableMap;",
-            "    this.anOptionalString = anOptionalString;",
-            "    this.aNestedAutoValue = aNestedAutoValue;",
+            "  @SuppressWarnings(\"nullness\") // Null checks happen during \"build\" method.",
+            "  private AutoValue_Baz(Builder<T> builder) {",
+            "    this.anInt = builder.anInt;",
+            "    this.aByteArray = builder.aByteArray;",
+            "    this.aNullableIntArray = builder.aNullableIntArray;",
+            "    this.aList = builder.aList;",
+            "    this.anImmutableMap = builder.anImmutableMap;",
+            "    this.anOptionalString = builder.anOptionalString;",
+            "    this.aNestedAutoValue = builder.aNestedAutoValue;",
             "  }",
             "",
             "  @Override public int anInt() {",
@@ -1439,14 +1439,7 @@ public class AutoValueCompilationTest {
             "        }",
             "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
             "      }",
-            "      return new AutoValue_Baz<T>(",
-            "          this.anInt,",
-            "          this.aByteArray,",
-            "          this.aNullableIntArray,",
-            "          this.aList,",
-            "          this.anImmutableMap,",
-            "          this.anOptionalString,",
-            "          this.aNestedAutoValue);",
+            "      return new AutoValue_Baz<T>(this);",
             "    }",
             "  }",
             "}");
@@ -1465,6 +1458,7 @@ public class AutoValueCompilationTest {
   @Test
   public void builderWithNullableTypeAnnotation() {
     assume().that(typeAnnotationsWork).isTrue();
+    assume().that(constructorUsesBuilderFields).isTrue();
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
             "foo.bar.Baz",
@@ -1531,19 +1525,14 @@ public class AutoValueCompilationTest {
             "  private final ImmutableMap<T, String> anImmutableMap;",
             "  private final Optional<String> anOptionalString;",
             "",
-            "  private AutoValue_Baz(",
-            "      int anInt,",
-            "      byte[] aByteArray,",
-            "      int @Nullable [] aNullableIntArray,",
-            "      List<T> aList,",
-            "      ImmutableMap<T, String> anImmutableMap,",
-            "      Optional<String> anOptionalString) {",
-            "    this.anInt = anInt;",
-            "    this.aByteArray = aByteArray;",
-            "    this.aNullableIntArray = aNullableIntArray;",
-            "    this.aList = aList;",
-            "    this.anImmutableMap = anImmutableMap;",
-            "    this.anOptionalString = anOptionalString;",
+            "  @SuppressWarnings(\"nullness\") // Null checks happen during \"build\" method.",
+            "  private AutoValue_Baz(Builder<T> builder) {",
+            "    this.anInt = builder.anInt;",
+            "    this.aByteArray = builder.aByteArray;",
+            "    this.aNullableIntArray = builder.aNullableIntArray;",
+            "    this.aList = builder.aList;",
+            "    this.anImmutableMap = builder.anImmutableMap;",
+            "    this.anOptionalString = builder.anOptionalString;",
             "  }",
             "",
             "  @Override public int anInt() {",
@@ -1733,13 +1722,7 @@ public class AutoValueCompilationTest {
             "        }",
             "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
             "      }",
-            "      return new AutoValue_Baz<T>(",
-            "          this.anInt,",
-            "          this.aByteArray,",
-            "          this.aNullableIntArray,",
-            "          this.aList,",
-            "          this.anImmutableMap,",
-            "          this.anOptionalString);",
+            "      return new AutoValue_Baz<T>(this);",
             "    }",
             "  }",
             "}");

@@ -274,11 +274,15 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
 #end
 
-    #if ($builtType != "void") return #end ${build}(
-#foreach ($p in $props)
-
-        this.$p #if ($foreach.hasNext) , #end
-#end
-        $builderRequiredProperties.defaultedBitmaskParameters );
+    #if ($builtType != "void") return #end
+    #if ($shouldGenerateBuilderConstructor)
+      ${build}(this);
+    #else
+      ${build}(
+      #foreach ($p in $props)
+          this.$p #if ($foreach.hasNext) , #end
+      #end
+          $builderRequiredProperties.defaultedBitmaskParameters );
+    #end
   }
 }
