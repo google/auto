@@ -61,6 +61,31 @@
     <url>http://www.google.com</url>
   </organization>
 
+  <developers>
+    <developer>
+      <id>gk5885</id>
+      <name>Gregory Kick</name>
+      <email>gk5885@gmail.com</email>
+      <roles>
+        <role>owner</role>
+        <role>developer</role>
+      </roles>
+      <timezone>-6</timezone>
+    </developer>
+    <developer>
+      <id>eamonnmcmanus</id>
+      <name>Éamonn McManus</name>
+      <email>emcmanus@google.com</email>
+      <organization>Google</organization>
+      <organizationUrl>http://www.google.com</organizationUrl>
+      <roles>
+        <role>owner</role>
+        <role>developer</role>
+      </roles>
+      <timezone>-8</timezone>
+    </developer>
+  </developers>
+
   <distributionManagement>
     <snapshotRepository>
       <id>sonatype-nexus-snapshots</id>
