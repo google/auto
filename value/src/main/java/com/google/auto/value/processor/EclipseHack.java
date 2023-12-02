@@ -146,20 +146,26 @@ class EclipseHack {
     ImmutableMap.Builder<ExecutableElement, TypeMirror> map = ImmutableMap.builder();
     Map<Name, ExecutableElement> noArgMethods = null;
     for (ExecutableElement method : methods) {
-      TypeMirror returnType = null;
-      try {
-        TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
-        returnType = MoreTypes.asExecutable(methodMirror).getReturnType();
-      } catch (IllegalArgumentException e) {
-        if (method.getParameters().isEmpty()) {
-          if (noArgMethods == null) {
-            noArgMethods = noArgMethodsIn(in);
+      TypeMirror returnType = method.getReturnType();
+      if (!in.asElement().equals(method.getEnclosingElement())) {
+        // If this method is *not* inherited, but directly defined in `in`, then asMemberOf
+        // shouldn't have any effect. So the if-check here is an optimization. But it also avoids an
+        // issue where the compiler may return an ExecutableType that has lost any annotations that
+        // were present in the original.
+        // We can still hit that issue in the case where the method *is* inherited. Fixing it in
+        // general would probably involve keeping track of type annotations ourselves, separately
+        // from TypeMirror instances.
+        try {
+          TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
+          returnType = MoreTypes.asExecutable(methodMirror).getReturnType();
+        } catch (IllegalArgumentException e) {
+          if (method.getParameters().isEmpty()) {
+            if (noArgMethods == null) {
+              noArgMethods = noArgMethodsIn(in);
+            }
+            returnType = noArgMethods.get(method.getSimpleName()).getReturnType();
           }
-          returnType = noArgMethods.get(method.getSimpleName()).getReturnType();
         }
-      }
-      if (returnType == null) {
-        returnType = method.getReturnType();
       }
       map.put(method, returnType);
     }

@@ -224,7 +224,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
      *
      * <ul>
      *   <li>the property is not primitive;
-     *   <li>the property is not already nullable;
+     *   <li>the property type does not already have a {@code @Nullable} annotation;
      *   <li>there is no explicit initializer (for example {@code Optional} properties start off as
      *       {@code Optional.empty()});
      *   <li>we have found a {@code @Nullable} type annotation that can be applied.

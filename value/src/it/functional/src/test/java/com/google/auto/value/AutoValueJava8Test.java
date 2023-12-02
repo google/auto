@@ -38,6 +38,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
@@ -1046,5 +1047,58 @@ public class AutoValueJava8Test {
         NullableVariableBound.create(null, null);
     assertThat(x.nullOne()).isNull();
     assertThat(x.nullTwo()).isNull();
+  }
+
+  @AutoValue
+  public abstract static class NotNullableVariableBound<T> {
+    public abstract T t();
+
+    public abstract @Nullable T nullableT();
+
+    public abstract String string();
+
+    public static <T> Builder<T> builder() {
+      return new AutoValue_AutoValueJava8Test_NotNullableVariableBound.Builder<>();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder<T> {
+      public abstract Builder<T> setT(T t);
+
+      public abstract Builder<T> setNullableT(@Nullable T nullableT);
+
+      public abstract Builder<T> setString(String string);
+
+      public abstract NotNullableVariableBound<T> build();
+    }
+  }
+
+  @Test
+  public void typeParameterBuilderFieldsAreNullable() throws ReflectiveOperationException {
+    assertThrows(NullPointerException.class, () -> NotNullableVariableBound.builder().setT(null));
+
+    // Even though neither t() nor string() has a @Nullable return type, the corresponding builder
+    // fields should be @Nullable. This test depends on the knowledge that for a property `t`, we
+    // will have a field also called `t`.
+    Field builderT = NotNullableVariableBound.builder().getClass().getDeclaredField("t");
+    assertThat(builderT.getAnnotatedType().getAnnotations()).asList().contains(nullable());
+    Field builderNullableT =
+        NotNullableVariableBound.builder().getClass().getDeclaredField("nullableT");
+    assertThat(builderNullableT.getAnnotatedType().getAnnotations()).asList().contains(nullable());
+
+    // Meanwhile the AutoValue class itself should have @Nullable on the private field, the getter
+    // method, and the constructor parameter for nullableT.
+    Class<?> autoValueClass = AutoValue_AutoValueJava8Test_NotNullableVariableBound.class;
+    Field nullableTField = autoValueClass.getDeclaredField("nullableT");
+    assertThat(nullableTField.getAnnotatedType().getAnnotations()).asList().contains(nullable());
+    Method nullableTMethod = autoValueClass.getMethod("nullableT");
+    assertThat(nullableTMethod.getAnnotatedReturnType().getAnnotations())
+        .asList()
+        .contains(nullable());
+    Constructor<?> autoValueConstructor =
+        autoValueClass.getDeclaredConstructor(Object.class, Object.class, String.class);
+    assertThat(autoValueConstructor.getAnnotatedParameterTypes()[1].getAnnotations())
+        .asList()
+        .contains(nullable());
   }
 }
