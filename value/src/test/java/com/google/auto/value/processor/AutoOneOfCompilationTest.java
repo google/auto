@@ -27,7 +27,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
 public class AutoOneOfCompilationTest {
   @Rule public final Expect expect = Expect.create();
@@ -233,7 +235,8 @@ public class AutoOneOfCompilationTest {
             "    public TaskResult.Kind getKind() {",
             "      return TaskResult.Kind.EMPTY;",
             "    }",
-            "  }");
+            "  }",
+            "}");
     Compilation compilation =
         javac()
             .withProcessors(new AutoOneOfProcessor())
