@@ -105,6 +105,11 @@
       <artifactId>kotlin-stdlib</artifactId>
       <version>${kotlin.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-metadata-jvm</artifactId>
+      <version>0.7.0</version>
+    </dependency>
   </dependencies>
 
   <build>
