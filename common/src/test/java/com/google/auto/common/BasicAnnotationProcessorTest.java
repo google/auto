@@ -16,14 +16,10 @@
 package com.google.auto.common;
 
 import static com.google.common.collect.Multimaps.transformValues;
-import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
-import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.StandardLocation.SOURCE_OUTPUT;
 
 import com.google.auto.common.BasicAnnotationProcessor.ProcessingStep;
 import com.google.auto.common.BasicAnnotationProcessor.Step;
@@ -276,13 +272,12 @@ public class BasicAnnotationProcessorTest {
             "public class ClassB {}");
     RequiresGeneratedCodeProcessor requiresGeneratedCodeProcessor =
         new RequiresGeneratedCodeProcessor();
-    assertAbout(javaSources())
-        .that(ImmutableList.of(classAFileObject, classBFileObject))
-        .processedWith(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesFileNamed(
-            SOURCE_OUTPUT, "test", "GeneratedByRequiresGeneratedCodeProcessor.java");
+    Compilation compilation =
+        javac()
+            .withProcessors(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
+            .compile(classAFileObject, classBFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation).generatedSourceFile("test.GeneratedByRequiresGeneratedCodeProcessor");
     assertThat(requiresGeneratedCodeProcessor.rejectedRounds).isEqualTo(0);
   }
 
@@ -299,12 +294,10 @@ public class BasicAnnotationProcessorTest {
             "  @" + AnAnnotation.class.getCanonicalName(),
             "  static class ValidInRound1 {}",
             "}");
-    assertAbout(javaSource())
-        .that(source)
-        .processedWith(new AnAnnotationProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesFileNamed(SOURCE_OUTPUT, "test", "ValidInRound2XYZ.java");
+    Compilation compilation =
+        javac().withProcessors(new AnAnnotationProcessor()).compile(source);
+    assertThat(compilation).succeeded();
+    assertThat(compilation).generatedSourceFile("test.ValidInRound2XYZ");
   }
 
   @Test
@@ -325,13 +318,12 @@ public class BasicAnnotationProcessorTest {
             "package test;");
     RequiresGeneratedCodeProcessor requiresGeneratedCodeProcessor =
         new RequiresGeneratedCodeProcessor();
-    assertAbout(javaSources())
-        .that(ImmutableList.of(classAFileObject, packageFileObject))
-        .processedWith(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesFileNamed(
-            SOURCE_OUTPUT, "test", "GeneratedByRequiresGeneratedCodeProcessor.java");
+    Compilation compilation =
+        javac()
+            .withProcessors(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
+            .compile(classAFileObject, packageFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation).generatedSourceFile("test.GeneratedByRequiresGeneratedCodeProcessor");
     assertThat(requiresGeneratedCodeProcessor.rejectedRounds).isEqualTo(0);
   }
 
@@ -359,13 +351,12 @@ public class BasicAnnotationProcessorTest {
             "}");
     RequiresGeneratedCodeProcessor requiresGeneratedCodeProcessor =
         new RequiresGeneratedCodeProcessor();
-    assertAbout(javaSources())
-        .that(ImmutableList.of(classAFileObject, classBFileObject))
-        .processedWith(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesFileNamed(
-            SOURCE_OUTPUT, "test", "GeneratedByRequiresGeneratedCodeProcessor.java");
+    Compilation compilation =
+        javac()
+            .withProcessors(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
+            .compile(classAFileObject, classBFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation).generatedSourceFile("test.GeneratedByRequiresGeneratedCodeProcessor");
     assertThat(requiresGeneratedCodeProcessor.rejectedRounds).isEqualTo(0);
   }
 
@@ -390,13 +381,12 @@ public class BasicAnnotationProcessorTest {
             "public class ClassB {}");
     RequiresGeneratedCodeProcessor requiresGeneratedCodeProcessor =
         new RequiresGeneratedCodeProcessor();
-    assertAbout(javaSources())
-        .that(ImmutableList.of(classAFileObject, classBFileObject))
-        .processedWith(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
-        .compilesWithoutError()
-        .and()
-        .generatesFileNamed(
-            SOURCE_OUTPUT, "test", "GeneratedByRequiresGeneratedCodeProcessor.java");
+    Compilation compilation =
+        javac()
+            .withProcessors(requiresGeneratedCodeProcessor, new GeneratesCodeProcessor())
+            .compile(classAFileObject, classBFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation).generatedSourceFile("test.GeneratedByRequiresGeneratedCodeProcessor");
     assertThat(requiresGeneratedCodeProcessor.rejectedRounds).isEqualTo(1);
 
     // Re b/118372780: Assert that the right deferred elements are passed back, and not any enclosed
@@ -464,13 +454,12 @@ public class BasicAnnotationProcessorTest {
             "public class ClassA {",
             "  SomeGeneratedClass bar;",
             "}");
-    assertAbout(javaSources())
-        .that(ImmutableList.of(classAFileObject))
-        .processedWith(new RequiresGeneratedCodeProcessor())
-        .failsToCompile()
-        .withErrorContaining(RequiresGeneratedCodeProcessor.class.getCanonicalName())
-        .in(classAFileObject)
-        .onLine(4);
+    Compilation compilation =
+        javac().withProcessors(new RequiresGeneratedCodeProcessor()).compile(classAFileObject);
+    assertThat(compilation)
+        .hadErrorContaining(RequiresGeneratedCodeProcessor.class.getCanonicalName())
+        .inFile(classAFileObject)
+        .onLineContaining("class ClassA");
   }
 
   @Test
@@ -482,12 +471,9 @@ public class BasicAnnotationProcessorTest {
             "",
             "@" + CauseError.class.getCanonicalName(),
             "public class ClassA {}");
-    assertAbout(javaSources())
-        .that(ImmutableList.of(classAFileObject))
-        .processedWith(new CauseErrorProcessor())
-        .failsToCompile()
-        .withErrorCount(1)
-        .withErrorContaining("purposeful");
+    Compilation compilation =
+        javac().withProcessors(new CauseErrorProcessor()).compile(classAFileObject);
+    assertThat(compilation).hadErrorContaining("purposeful");
   }
 
   @Test
