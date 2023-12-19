@@ -118,9 +118,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
-  private final Set<PackageOrTypeElementBluePrint> illFormedElementBluePrints =
+  private final Set<PackageOrTypeElementBlueprint> illFormedElementBlueprints =
       new LinkedHashSet<>();
-  private final SetMultimap<Step, ElementBluePrint> elementsDeferredBySteps =
+  private final SetMultimap<Step, ElementBlueprint> elementsDeferredBySteps =
       LinkedHashMultimap.create();
 
   private Elements elementUtils;
@@ -209,8 +209,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       postRound(roundEnv);
       if (!roundEnv.errorRaised()) {
         reportMissingElements(
-            ImmutableSet.<ElementBluePrint>builder()
-                .addAll(illFormedElementBluePrints)
+            ImmutableSet.<ElementBlueprint>builder()
+                .addAll(illFormedElementBlueprints)
                 .addAll(elementsDeferredBySteps.values())
                 .build());
       }
@@ -241,15 +241,15 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         elementsDeferredBySteps.replaceValues(
             step,
             rejectedElements.stream()
-                .map(element -> ElementBluePrint.forAnnotatedElement(element, messager))
+                .map(element -> ElementBlueprint.forAnnotatedElement(element, messager))
                 .collect(Collectors.toList()));
       }
     }
   }
 
-  private void reportMissingElements(Set<ElementBluePrint> missingElementBluePrints) {
-    for (ElementBluePrint missingElementBluePrint : missingElementBluePrints) {
-      Optional<? extends Element> missingElement = missingElementBluePrint.getElement(elementUtils);
+  private void reportMissingElements(Set<ElementBlueprint> missingElementBlueprints) {
+    for (ElementBlueprint missingElementBlueprint : missingElementBlueprints) {
+      Optional<? extends Element> missingElement = missingElementBlueprint.getElement(elementUtils);
       if (missingElement.isPresent()) {
         messager.printMessage(
             ERROR,
@@ -257,7 +257,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
                 "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
             missingElement.get());
       } else {
-        messager.printMessage(ERROR, processingErrorMessage(missingElementBluePrint.toString));
+        messager.printMessage(ERROR, processingErrorMessage(missingElementBlueprint.toString));
       }
     }
   }
@@ -280,22 +280,22 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    */
   private ImmutableSetMultimap<TypeElement, Element> getWellFormedElements(
       RoundEnvironment roundEnv) {
-    ImmutableSet<PackageOrTypeElementBluePrint> prevIllFormedElementBluePrints =
-        ImmutableSet.copyOf(illFormedElementBluePrints);
-    illFormedElementBluePrints.clear();
+    ImmutableSet<PackageOrTypeElementBlueprint> prevIllFormedElementBlueprints =
+        ImmutableSet.copyOf(illFormedElementBlueprints);
+    illFormedElementBlueprints.clear();
 
     ImmutableSetMultimap.Builder<TypeElement, Element> readyDeferredElementsByAnnotationBuilder =
         ImmutableSetMultimap.builder();
-    for (PackageOrTypeElementBluePrint deferredElementBluePrint : prevIllFormedElementBluePrints) {
+    for (PackageOrTypeElementBlueprint deferredElementBlueprint : prevIllFormedElementBlueprints) {
       Optional<? extends Element> deferredTypeElement =
-          deferredElementBluePrint.getElement(elementUtils);
+          deferredElementBlueprint.getElement(elementUtils);
       if (deferredTypeElement.isPresent()) {
         findAnnotatedElements(
             deferredTypeElement.get(),
             getSupportedAnnotationTypeElements(),
             readyDeferredElementsByAnnotationBuilder);
       } else {
-        illFormedElementBluePrints.add(deferredElementBluePrint);
+        illFormedElementBlueprints.add(deferredElementBlueprint);
       }
     }
 
@@ -305,9 +305,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     ImmutableSetMultimap.Builder<TypeElement, Element> validatedElementsBuilder =
         ImmutableSetMultimap.builder();
 
-    // For optimization purposes, the PackageOrTypeElementBluePrint that have already
+    // For optimization purposes, the PackageOrTypeElementBlueprint that have already
     // been verified to be well-formed are stored.
-    Set<PackageOrTypeElementBluePrint> wellFormedPackageOrTypeElementBluePrints =
+    Set<PackageOrTypeElementBlueprint> wellFormedPackageOrTypeElementBlueprints =
         new LinkedHashSet<>();
 
     /* Look at the found ready deferred elements and the new elements from this round
@@ -322,21 +322,21 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         // For every element that is not module/package, to be well-formed its
         // enclosing-type in its entirety should be well-formed. Since modules
         // don't get annotated (and not supported here) they can be ignored.
-        PackageOrTypeElementBluePrint pTElementBluePrint =
-            (PackageOrTypeElementBluePrint)
-                ElementBluePrint.forAnnotatedElement(
+        PackageOrTypeElementBlueprint pTElementBlueprint =
+            (PackageOrTypeElementBlueprint)
+                ElementBlueprint.forAnnotatedElement(
                     element.getKind() == PACKAGE ? element : getEnclosingType(element), messager);
 
         boolean isWellFormedElement =
-            wellFormedPackageOrTypeElementBluePrints.contains(pTElementBluePrint)
-                || (!illFormedElementBluePrints.contains(pTElementBluePrint)
+            wellFormedPackageOrTypeElementBlueprints.contains(pTElementBlueprint)
+                || (!illFormedElementBlueprints.contains(pTElementBlueprint)
                     && validateElement(
                         element.getKind() == PACKAGE ? element : getEnclosingType(element)));
         if (isWellFormedElement) {
           validatedElementsBuilder.put(annotationType, element);
-          wellFormedPackageOrTypeElementBluePrints.add(pTElementBluePrint);
+          wellFormedPackageOrTypeElementBlueprints.add(pTElementBlueprint);
         } else {
-          illFormedElementBluePrints.add(pTElementBluePrint);
+          illFormedElementBlueprints.add(pTElementBlueprint);
         }
       }
     }
@@ -345,11 +345,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   private ImmutableSetMultimap<TypeElement, Element> indexByAnnotation(
-      Set<ElementBluePrint> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
+      Set<ElementBlueprint> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
     ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsBuilder =
         ImmutableSetMultimap.builder();
-    for (ElementBluePrint elementBluePrint : annotatedElements) {
-      elementBluePrint
+    for (ElementBlueprint elementBlueprint : annotatedElements) {
+      elementBlueprint
           .getElement(elementUtils)
           .ifPresent(
               element -> {
@@ -526,56 +526,56 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /* ********************************************************************************* */
-  /* Element blue prints ************************************************************* */
+  /* Element Blueprints ************************************************************** */
   /* ********************************************************************************* */
 
   /**
-   * An {@link ElementBluePrint} for an annotated element.
+   * An {@link ElementBlueprint} for an annotated element.
    *
-   * <p>Instead of saving elements, an {@code ElementBluePrint} is saved since there is no guarantee
+   * <p>Instead of saving elements, an {@code ElementBlueprint} is saved since there is no guarantee
    * that any particular element will always be represented by the same object. (Reference: {@link
    * Element}) For example, Eclipse compiler uses different Element instances per round.
    */
-  private abstract static class ElementBluePrint {
+  private abstract static class ElementBlueprint {
     public final String toString;
 
-    private ElementBluePrint(Element element) {
+    private ElementBlueprint(Element element) {
       this.toString = element.toString();
     }
 
-    /** An {@link ElementBluePrint} for an annotated element. */
-    static ElementBluePrint forAnnotatedElement(Element element, Messager messenger) {
+    /** An {@link ElementBlueprint} for an annotated element. */
+    static ElementBlueprint forAnnotatedElement(Element element, Messager messenger) {
       /* The name of the ElementKind constants is used instead to accommodate for RECORD
        * and RECORD_COMPONENT kinds, which are introduced in Java 16.
        */
       switch (element.getKind().name()) {
         case "PACKAGE":
-          return new PackageElementBluePrint(element);
+          return new PackageElementBlueprint(element);
         case "CLASS":
         case "ENUM":
         case "INTERFACE":
         case "ANNOTATION_TYPE":
         case "RECORD":
-          return new TypeElementBluePrint(element);
+          return new TypeElementBlueprint(element);
         case "TYPE_PARAMETER":
-          return new TypeParameterElementBluePrint(element);
+          return new TypeParameterElementBlueprint(element);
         case "FIELD":
         case "ENUM_CONSTANT":
-          return new FieldElementBluePrint(element);
+          return new FieldElementBlueprint(element);
         case "RECORD_COMPONENT":
-          return new RecordComponentElementBluePrint(element);
+          return new RecordComponentElementBlueprint(element);
         case "CONSTRUCTOR":
         case "METHOD":
-          return new ExecutableElementBluePrint(element);
+          return new ExecutableElementBlueprint(element);
         case "PARAMETER":
-          return new ParameterElementBluePrint(element);
+          return new ParameterElementBlueprint(element);
         default:
           messenger.printMessage(
               WARNING,
               String.format(
                   "%s does not support element type %s.",
-                  ElementBluePrint.class.getCanonicalName(), element.getKind()));
-          return new UnsupportedElementBluePrint(element);
+                  ElementBlueprint.class.getCanonicalName(), element.getKind()));
+          return new UnsupportedElementBlueprint(element);
       }
     }
 
@@ -583,11 +583,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof ElementBluePrint)) {
+      } else if (!(object instanceof ElementBlueprint)) {
         return false;
       }
 
-      ElementBluePrint that = (ElementBluePrint) object;
+      ElementBlueprint that = (ElementBlueprint) object;
       return this.toString.equals(that.toString);
     }
 
@@ -602,7 +602,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     /**
      * Returns the {@link Element} corresponding to the name information saved in {@link
-     * ElementBluePrint}. {@link Optional#empty()} ()} if none exists.
+     * ElementBlueprint}. {@link Optional#empty()} ()} if none exists.
      */
     abstract Optional<? extends Element> getElement(Elements elementUtils);
   }
@@ -611,10 +611,10 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * Save the Element reference and returns it when inquired, with the hope that the same object
    * still represent that element, or the required information is present.
    */
-  private static final class UnsupportedElementBluePrint extends ElementBluePrint {
+  private static final class UnsupportedElementBlueprint extends ElementBlueprint {
     private final Element element;
 
-    private UnsupportedElementBluePrint(Element element) {
+    private UnsupportedElementBlueprint(Element element) {
       super(element);
       this.element = element;
     }
@@ -625,8 +625,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private abstract static class PackageOrTypeElementBluePrint extends ElementBluePrint {
-    private PackageOrTypeElementBluePrint(Element element) {
+  private abstract static class PackageOrTypeElementBlueprint extends ElementBlueprint {
+    private PackageOrTypeElementBlueprint(Element element) {
       super(element);
     }
   }
@@ -635,8 +635,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * two different methods to look them up in {@link Elements}, we end up with a lot of parallel
    * logic. :(
    */
-  private static final class PackageElementBluePrint extends PackageOrTypeElementBluePrint {
-    private PackageElementBluePrint(Element element) {
+  private static final class PackageElementBlueprint extends PackageOrTypeElementBlueprint {
+    private PackageElementBlueprint(Element element) {
       super(element);
     }
 
@@ -651,8 +651,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class TypeElementBluePrint extends PackageOrTypeElementBluePrint {
-    private TypeElementBluePrint(Element element) {
+  private static final class TypeElementBlueprint extends PackageOrTypeElementBlueprint {
+    private TypeElementBlueprint(Element element) {
       super(element);
     }
 
@@ -667,12 +667,12 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class TypeParameterElementBluePrint extends ElementBluePrint {
-    private final TypeElementBluePrint enclosingTypeElementBluePrint;
+  private static final class TypeParameterElementBlueprint extends ElementBlueprint {
+    private final TypeElementBlueprint enclosingTypeElementBlueprint;
 
-    private TypeParameterElementBluePrint(Element element) {
+    private TypeParameterElementBlueprint(Element element) {
       super(element);
-      this.enclosingTypeElementBluePrint = new TypeElementBluePrint(element.getEnclosingElement());
+      this.enclosingTypeElementBlueprint = new TypeElementBlueprint(element.getEnclosingElement());
     }
 
     @Override
@@ -682,11 +682,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<? extends TypeParameterElement> getElement(Elements elementUtils) {
-      return enclosingTypeElementBluePrint
+      return enclosingTypeElementBlueprint
           .getElement(elementUtils)
           .map(
-              enclosingTypeElementBluePrint ->
-                  enclosingTypeElementBluePrint.getTypeParameters().stream()
+              enclosingTypeElementBlueprint ->
+                  enclosingTypeElementBlueprint.getTypeParameters().stream()
                       .filter(typeParamElement -> toString.equals(typeParamElement.toString()))
                       .collect(MoreCollectors.onlyElement()));
     }
@@ -695,35 +695,35 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof TypeParameterElementBluePrint)) {
+      } else if (!(object instanceof TypeParameterElementBlueprint)) {
         return false;
       }
 
-      TypeParameterElementBluePrint that = (TypeParameterElementBluePrint) object;
+      TypeParameterElementBlueprint that = (TypeParameterElementBlueprint) object;
       return this.toString.equals(that.toString)
-          && this.enclosingTypeElementBluePrint.equals(that.enclosingTypeElementBluePrint);
+          && this.enclosingTypeElementBlueprint.equals(that.enclosingTypeElementBlueprint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(toString, enclosingTypeElementBluePrint);
+      return Objects.hash(toString, enclosingTypeElementBlueprint);
     }
   }
 
   /** Represents FIELD, ENUM_CONSTANT, and RECORD_COMPONENT */
-  private abstract static class FieldOrRecordComponentElementBluePrint extends ElementBluePrint {
-    private final TypeElementBluePrint enclosingTypeElementBluePrint;
+  private abstract static class FieldOrRecordComponentElementBlueprint extends ElementBlueprint {
+    private final TypeElementBlueprint enclosingTypeElementBlueprint;
     private final ElementKind elementKind;
 
-    private FieldOrRecordComponentElementBluePrint(Element element) {
+    private FieldOrRecordComponentElementBlueprint(Element element) {
       super(element); // toString is its simple name.
-      this.enclosingTypeElementBluePrint = new TypeElementBluePrint(getEnclosingType(element));
+      this.enclosingTypeElementBlueprint = new TypeElementBlueprint(getEnclosingType(element));
       this.elementKind = element.getKind();
     }
 
     @Override
     Optional<VariableElement> getElement(Elements elementUtils) {
-      return enclosingTypeElementBluePrint
+      return enclosingTypeElementBlueprint
           .getElement(elementUtils)
           .map(
               typeElement ->
@@ -738,11 +738,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!super.equals(object) || !(object instanceof FieldOrRecordComponentElementBluePrint)) {
+      if (!super.equals(object) || !(object instanceof FieldOrRecordComponentElementBlueprint)) {
         return false;
       }
       // To distinguish between a field and record_component
-      FieldOrRecordComponentElementBluePrint that = (FieldOrRecordComponentElementBluePrint) object;
+      FieldOrRecordComponentElementBlueprint that = (FieldOrRecordComponentElementBlueprint) object;
       return this.elementKind == that.elementKind;
     }
 
@@ -752,10 +752,10 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class RecordComponentElementBluePrint
-      extends FieldOrRecordComponentElementBluePrint {
+  private static final class RecordComponentElementBlueprint
+      extends FieldOrRecordComponentElementBlueprint {
 
-    private RecordComponentElementBluePrint(Element element) {
+    private RecordComponentElementBlueprint(Element element) {
       super(element);
     }
 
@@ -765,9 +765,9 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static final class FieldElementBluePrint extends FieldOrRecordComponentElementBluePrint {
+  private static final class FieldElementBlueprint extends FieldOrRecordComponentElementBlueprint {
 
-    private FieldElementBluePrint(Element element) {
+    private FieldElementBlueprint(Element element) {
       super(element);
     }
 
@@ -803,15 +803,15 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * generation it will have toString equal to {@code m(test.SomeGeneratedClass)} assuming that the
    * package name is "test".
    */
-  private static final class ExecutableElementBluePrint extends ElementBluePrint {
-    private final TypeElementBluePrint enclosingTypeElementBluePrint;
+  private static final class ExecutableElementBlueprint extends ElementBlueprint {
+    private final TypeElementBlueprint enclosingTypeElementBlueprint;
     private final Name simpleName;
     private final int ordinalOverloadPosition;
 
-    private ExecutableElementBluePrint(Element element) {
+    private ExecutableElementBlueprint(Element element) {
       super(element);
       TypeElement enclosingTypeElement = getEnclosingType(element);
-      this.enclosingTypeElementBluePrint = new TypeElementBluePrint(enclosingTypeElement);
+      this.enclosingTypeElementBlueprint = new TypeElementBlueprint(enclosingTypeElement);
       this.simpleName = element.getSimpleName();
       int ordinalOverloadPosition = 1;
       Iterator<? extends Element> iter = enclosingTypeElement.getEnclosedElements().iterator();
@@ -832,7 +832,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<? extends ExecutableElement> getElement(Elements elementUtils) {
-      return enclosingTypeElementBluePrint
+      return enclosingTypeElementBlueprint
           .getElement(elementUtils)
           .map(
               typeElement -> {
@@ -863,29 +863,29 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof ExecutableElementBluePrint)) {
+      } else if (!(object instanceof ExecutableElementBlueprint)) {
         return false;
       }
 
-      ExecutableElementBluePrint that = (ExecutableElementBluePrint) object;
+      ExecutableElementBlueprint that = (ExecutableElementBlueprint) object;
       return this.simpleName.equals(that.simpleName)
           && this.ordinalOverloadPosition == that.ordinalOverloadPosition
-          && this.enclosingTypeElementBluePrint.equals(that.enclosingTypeElementBluePrint);
+          && this.enclosingTypeElementBlueprint.equals(that.enclosingTypeElementBlueprint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(simpleName, ordinalOverloadPosition, enclosingTypeElementBluePrint);
+      return Objects.hash(simpleName, ordinalOverloadPosition, enclosingTypeElementBlueprint);
     }
   }
 
-  private static final class ParameterElementBluePrint extends ElementBluePrint {
-    private final ExecutableElementBluePrint enclosingExecutableElementBluePrint;
+  private static final class ParameterElementBlueprint extends ElementBlueprint {
+    private final ExecutableElementBlueprint enclosingExecutableElementBlueprint;
 
-    private ParameterElementBluePrint(Element element) {
+    private ParameterElementBlueprint(Element element) {
       super(element);
-      this.enclosingExecutableElementBluePrint =
-          new ExecutableElementBluePrint(element.getEnclosingElement());
+      this.enclosingExecutableElementBlueprint =
+          new ExecutableElementBlueprint(element.getEnclosingElement());
     }
 
     @Override
@@ -895,7 +895,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     @Override
     Optional<? extends VariableElement> getElement(Elements elementUtils) {
-      return enclosingExecutableElementBluePrint
+      return enclosingExecutableElementBlueprint
           .getElement(elementUtils)
           .map(
               enclosingExecutableElement ->
@@ -908,19 +908,19 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     public boolean equals(@Nullable Object object) {
       if (this == object) {
         return true;
-      } else if (!(object instanceof ParameterElementBluePrint)) {
+      } else if (!(object instanceof ParameterElementBlueprint)) {
         return false;
       }
 
-      ParameterElementBluePrint that = (ParameterElementBluePrint) object;
+      ParameterElementBlueprint that = (ParameterElementBlueprint) object;
       return this.toString.equals(that.toString)
-          && this.enclosingExecutableElementBluePrint.equals(
-              that.enclosingExecutableElementBluePrint);
+          && this.enclosingExecutableElementBlueprint.equals(
+              that.enclosingExecutableElementBlueprint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(toString, enclosingExecutableElementBluePrint);
+      return Objects.hash(toString, enclosingExecutableElementBlueprint);
     }
   }
 }
