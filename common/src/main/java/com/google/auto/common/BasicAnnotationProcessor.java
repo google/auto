@@ -825,7 +825,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       int ordinalOverloadPosition = 0;
       Iterator<? extends Element> iter = enclosingTypeElement.getEnclosedElements().iterator();
       Element elt = iter.next(); // The collection is not empty
-      while (!element.equals(elt)) {
+      while (!elt.equals(element)) {
         if (elt.getSimpleName().equals(element.getSimpleName()) && isAcceptableElementKind(elt)) {
           ordinalOverloadPosition++;
         }
