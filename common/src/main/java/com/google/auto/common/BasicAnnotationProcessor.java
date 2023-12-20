@@ -547,7 +547,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * Element}) For example, Eclipse compiler uses different Element instances per round.
    */
   private abstract static class ElementBlueprint {
-    public final String toString;
+    protected final String toString;
 
     private ElementBlueprint(Element element) {
       this.toString = element.toString();
