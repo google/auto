@@ -118,7 +118,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
-  private final Set<PackageOrTypeElementBlueprint> illFormedElementBlueprints =
+  /* For every element that is not module/package, to be well-formed its
+   * enclosing-type in its entirety should be well-formed. Since modules
+   * don't get annotated (and not supported here) they can be ignored.
+   */
+  private final Set<PackageOrTypeElementBlueprint> illFormedPackageOrTypeElementBlueprints =
       new LinkedHashSet<>();
   private final SetMultimap<Step, ElementBlueprint> elementsDeferredBySteps =
       LinkedHashMultimap.create();
@@ -210,14 +214,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       if (!roundEnv.errorRaised()) {
         reportMissingElements(
             ImmutableSet.<ElementBlueprint>builder()
-                .addAll(illFormedElementBlueprints)
+                .addAll(illFormedPackageOrTypeElementBlueprints)
                 .addAll(elementsDeferredBySteps.values())
                 .build());
       }
       return false;
     }
 
-    process(getWellFormedElements(roundEnv));
+    process(getWellFormedElementsByAnnotationType(roundEnv));
 
     postRound(roundEnv);
 
@@ -225,13 +229,15 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /** Processes the valid elements, including those previously deferred by each step. */
-  private void process(ImmutableSetMultimap<TypeElement, Element> validElements) {
+  private void process(
+      ImmutableSetMultimap<TypeElement, Element> wellFormedElementsByAnnotationType) {
     for (Step step : steps) {
       ImmutableSet<TypeElement> annotationTypes = getSupportedAnnotationTypeElements(step);
       ImmutableSetMultimap<TypeElement, Element> stepElements =
           new ImmutableSetMultimap.Builder<TypeElement, Element>()
               .putAll(indexByAnnotation(elementsDeferredBySteps.get(step), annotationTypes))
-              .putAll(filterKeys(validElements, Predicates.in(annotationTypes)))
+              .putAll(
+                  filterKeys(wellFormedElementsByAnnotationType, Predicates.in(annotationTypes)))
               .build();
       if (stepElements.isEmpty()) {
         elementsDeferredBySteps.removeAll(step);
@@ -278,31 +284,32 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * therefore, they are ignored (not returned) here, and they will be considered directly in the
    * {@link #process(ImmutableSetMultimap)} method.
    */
-  private ImmutableSetMultimap<TypeElement, Element> getWellFormedElements(
+  private ImmutableSetMultimap<TypeElement, Element> getWellFormedElementsByAnnotationType(
       RoundEnvironment roundEnv) {
-    ImmutableSet<PackageOrTypeElementBlueprint> prevIllFormedElementBlueprints =
-        ImmutableSet.copyOf(illFormedElementBlueprints);
-    illFormedElementBlueprints.clear();
+    ImmutableSet<PackageOrTypeElementBlueprint> illFormedPackageOrTypeElementBlueprintsCopy =
+        ImmutableSet.copyOf(illFormedPackageOrTypeElementBlueprints);
+    illFormedPackageOrTypeElementBlueprints.clear();
 
-    ImmutableSetMultimap.Builder<TypeElement, Element> readyDeferredElementsByAnnotationBuilder =
-        ImmutableSetMultimap.builder();
-    for (PackageOrTypeElementBlueprint deferredElementBlueprint : prevIllFormedElementBlueprints) {
-      Optional<? extends Element> deferredTypeElement =
-          deferredElementBlueprint.getElement(elementUtils);
-      if (deferredTypeElement.isPresent()) {
+    ImmutableSetMultimap.Builder<TypeElement, Element>
+        prevIllFormedElementsByAnnotationTypeBuilder = ImmutableSetMultimap.builder();
+    for (PackageOrTypeElementBlueprint deferredPackageOrTypeElementBlueprint :
+        illFormedPackageOrTypeElementBlueprintsCopy) {
+      Optional<? extends Element> deferredPackageOrTypeElement =
+          deferredPackageOrTypeElementBlueprint.getElement(elementUtils);
+      if (deferredPackageOrTypeElement.isPresent()) {
         findAnnotatedElements(
-            deferredTypeElement.get(),
+            deferredPackageOrTypeElement.get(),
             getSupportedAnnotationTypeElements(),
-            readyDeferredElementsByAnnotationBuilder);
+            prevIllFormedElementsByAnnotationTypeBuilder);
       } else {
-        illFormedElementBlueprints.add(deferredElementBlueprint);
+        illFormedPackageOrTypeElementBlueprints.add(deferredPackageOrTypeElementBlueprint);
       }
     }
 
-    ImmutableSetMultimap<TypeElement, Element> readyDeferredElementsByAnnotation =
-        readyDeferredElementsByAnnotationBuilder.build();
+    ImmutableSetMultimap<TypeElement, Element> prevIllFormedElementsByAnnotationType =
+        prevIllFormedElementsByAnnotationTypeBuilder.build();
 
-    ImmutableSetMultimap.Builder<TypeElement, Element> validatedElementsBuilder =
+    ImmutableSetMultimap.Builder<TypeElement, Element> wellFormedElementsByAnnotationTypeBuilder =
         ImmutableSetMultimap.builder();
 
     // For optimization purposes, the PackageOrTypeElementBlueprint that have already
@@ -310,15 +317,18 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     Set<PackageOrTypeElementBlueprint> wellFormedPackageOrTypeElementBlueprints =
         new LinkedHashSet<>();
 
-    /* Look at the found ready deferred elements and the new elements from this round
+    /* Look at
+     * 1. the previously ill-formed elements which have a present enclosing type (in case of
+     * Package element, the package itself), and
+     * 2. the new elements from this round
      * and validate them.
      */
     for (TypeElement annotationType : getSupportedAnnotationTypeElements()) {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
-      ImmutableSet<Element> readyDeferredElements =
-          readyDeferredElementsByAnnotation.get(annotationType);
+      ImmutableSet<Element> prevIllFormedElements =
+          prevIllFormedElementsByAnnotationType.get(annotationType);
 
-      for (Element element : Sets.union(roundElements, readyDeferredElements)) {
+      for (Element element : Sets.union(roundElements, prevIllFormedElements)) {
         // For every element that is not module/package, to be well-formed its
         // enclosing-type in its entirety should be well-formed. Since modules
         // don't get annotated (and not supported here) they can be ignored.
@@ -329,38 +339,38 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
         boolean isWellFormedElement =
             wellFormedPackageOrTypeElementBlueprints.contains(pTElementBlueprint)
-                || (!illFormedElementBlueprints.contains(pTElementBlueprint)
+                || (!illFormedPackageOrTypeElementBlueprints.contains(pTElementBlueprint)
                     && validateElement(
                         element.getKind() == PACKAGE ? element : getEnclosingType(element)));
         if (isWellFormedElement) {
-          validatedElementsBuilder.put(annotationType, element);
+          wellFormedElementsByAnnotationTypeBuilder.put(annotationType, element);
           wellFormedPackageOrTypeElementBlueprints.add(pTElementBlueprint);
         } else {
-          illFormedElementBlueprints.add(pTElementBlueprint);
+          illFormedPackageOrTypeElementBlueprints.add(pTElementBlueprint);
         }
       }
     }
 
-    return validatedElementsBuilder.build();
+    return wellFormedElementsByAnnotationTypeBuilder.build();
   }
 
   private ImmutableSetMultimap<TypeElement, Element> indexByAnnotation(
-      Set<ElementBlueprint> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
-    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsBuilder =
+      Set<ElementBlueprint> annotatedElementBlueprints, ImmutableSet<TypeElement> annotationTypes) {
+    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsByAnnotationTypeBuilder =
         ImmutableSetMultimap.builder();
-    for (ElementBlueprint elementBlueprint : annotatedElements) {
+    for (ElementBlueprint elementBlueprint : annotatedElementBlueprints) {
       elementBlueprint
           .getElement(elementUtils)
           .ifPresent(
               element -> {
                 for (TypeElement annotationType : annotationTypes) {
                   if (isAnnotationPresent(element, annotationType)) {
-                    deferredElementsBuilder.put(annotationType, element);
+                    deferredElementsByAnnotationTypeBuilder.put(annotationType, element);
                   }
                 }
               });
     }
-    return deferredElementsBuilder.build();
+    return deferredElementsByAnnotationTypeBuilder.build();
   }
 
   /**
