@@ -48,7 +48,6 @@ import com.google.common.collect.Sets;
 import java.lang.annotation.Annotation;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.ListIterator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -823,7 +822,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       TypeElement enclosingTypeElement = getEnclosingType(element);
       this.enclosingTypeElementBlueprint = new TypeElementBlueprint(enclosingTypeElement);
       this.simpleName = element.getSimpleName();
-      int ordinalOverloadPosition = 1;
+      int ordinalOverloadPosition = 0;
       Iterator<? extends Element> iter = enclosingTypeElement.getEnclosedElements().iterator();
       Element elt = iter.next(); // The collection is not empty
       while (!element.equals(elt)) {
@@ -845,27 +844,14 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       return enclosingTypeElementBlueprint
           .getElement(elementUtils)
           .map(
-              typeElement -> {
-                ListIterator<? extends Element> listIter =
-                    typeElement.getEnclosedElements().listIterator();
-                for (int i = 0; i < ordinalOverloadPosition; i++) { // ordinalOverloadPosition >= 1
-                  if (!listIter.hasNext()) {
-                    return null;
-                  }
-                  Element elt = listIter.next();
-                  while (listIter.hasNext() && !elt.getSimpleName().equals(simpleName)
-                      || !isAcceptableElementKind(elt)) {
-                    elt = listIter.next();
-                  }
-                }
-
-                if (listIter.hasPrevious() // should not fail
-                    && simpleName.equals(listIter.previous().getSimpleName())) {
-                  return listIter.next();
-                } else {
-                  return null;
-                }
-              })
+              typeElement ->
+                  typeElement.getEnclosedElements().stream()
+                      .filter(
+                          elt ->
+                              elt.getSimpleName().equals(simpleName)
+                                  && isAcceptableElementKind(elt))
+                      .collect(ImmutableList.<Element>toImmutableList())
+                      .get(ordinalOverloadPosition))
           .map(ExecutableElement.class::cast);
     }
 
