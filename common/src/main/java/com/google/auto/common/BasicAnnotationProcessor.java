@@ -46,8 +46,8 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import java.lang.annotation.Annotation;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -815,23 +815,25 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   private static final class ExecutableElementBlueprint extends ElementBlueprint {
     private final TypeElementBlueprint enclosingTypeElementBlueprint;
     private final Name simpleName;
-    private final int ordinalOverloadPosition;
+    private final int ordinalPositionWithSameName;
 
     private ExecutableElementBlueprint(Element element) {
       super(element);
       TypeElement enclosingTypeElement = getEnclosingType(element);
       this.enclosingTypeElementBlueprint = new TypeElementBlueprint(enclosingTypeElement);
       this.simpleName = element.getSimpleName();
-      int ordinalOverloadPosition = 0;
-      Iterator<? extends Element> iter = enclosingTypeElement.getEnclosedElements().iterator();
-      Element elt = iter.next(); // The collection is not empty
+
+      int ordinalPositionWithSameName = 0;
+      List<? extends Element> enclosedElements = enclosingTypeElement.getEnclosedElements();
+      int i = 0;
+      Element elt = enclosedElements.get(i++);
       while (!elt.equals(element)) {
-        if (elt.getSimpleName().equals(element.getSimpleName()) && isAcceptableElementKind(elt)) {
-          ordinalOverloadPosition++;
+        if (elt.getSimpleName().equals(this.simpleName) && isAcceptableElementKind(elt)) {
+          ordinalPositionWithSameName++;
         }
-        elt = iter.next();
+        elt = enclosedElements.get(i++);
       }
-      this.ordinalOverloadPosition = ordinalOverloadPosition;
+      this.ordinalPositionWithSameName = ordinalPositionWithSameName;
     }
 
     @Override
@@ -850,8 +852,8 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
                           elt ->
                               elt.getSimpleName().equals(simpleName)
                                   && isAcceptableElementKind(elt))
-                      .collect(ImmutableList.<Element>toImmutableList())
-                      .get(ordinalOverloadPosition))
+                      .collect(Collectors.toList())
+                      .get(ordinalPositionWithSameName))
           .map(ExecutableElement.class::cast);
     }
 
@@ -865,13 +867,13 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
       ExecutableElementBlueprint that = (ExecutableElementBlueprint) object;
       return this.simpleName.equals(that.simpleName)
-          && this.ordinalOverloadPosition == that.ordinalOverloadPosition
+          && this.ordinalPositionWithSameName == that.ordinalPositionWithSameName
           && this.enclosingTypeElementBlueprint.equals(that.enclosingTypeElementBlueprint);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(simpleName, ordinalOverloadPosition, enclosingTypeElementBlueprint);
+      return Objects.hash(simpleName, ordinalPositionWithSameName, enclosingTypeElementBlueprint);
     }
   }
 
