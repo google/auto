@@ -110,7 +110,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.12.0</version>
+        <version>3.12.1</version>
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>
