@@ -298,13 +298,20 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         .map(
             v -> {
               String name = v.getSimpleName().toString();
-              return newProperty(
-                  v,
-                  identifiers.get(v),
-                  propertyToGetterName.get(name),
-                  Optional.ofNullable(builderInitializers.get(name)),
-                  executable.isOptional(name),
-                  nullables);
+              Property p =
+                  newProperty(
+                      v,
+                      identifiers.get(v),
+                      propertyToGetterName.get(name),
+                      Optional.ofNullable(builderInitializers.get(name)),
+                      executable.isOptional(name),
+                      nullables);
+              if (p.isNullable() && v.asType().getKind().isPrimitive()) {
+                errorReporter()
+                    .reportError(
+                        v, "[AutoBuilderNullPrimitive] Primitive types cannot be @Nullable");
+              }
+              return p;
             })
         .collect(toImmutableSet());
   }

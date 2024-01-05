@@ -873,6 +873,46 @@ public final class AutoBuilderCompilationTest {
   }
 
   @Test
+  public void nullablePrimitiveParameter() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import com.example.annotations.Nullable;",
+            "",
+            "class Baz {",
+            "  Baz(@Nullable int thing) {}",
+            "",
+            "  @AutoBuilder",
+            "  interface Builder {",
+            "    abstract Builder thing(int x);",
+            "    abstract Baz build();",
+            "  }",
+            "}");
+    JavaFileObject nullableFileObject =
+        JavaFileObjects.forSourceLines(
+            "com.example.annotations.Nullable",
+            "package com.example.annotations;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target(ElementType.TYPE_USE)",
+            "public @interface Nullable {}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .compile(javaFileObject, nullableFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderNullPrimitive] Primitive types cannot be @Nullable")
+        .inFile(javaFileObject)
+        .onLineContaining("Baz(@Nullable int thing)");
+  }
+
+  @Test
   public void setterWrongType() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
