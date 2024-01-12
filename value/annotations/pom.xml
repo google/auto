@@ -28,12 +28,12 @@
   <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Annotations</name>
   <description>
-    Immutable value-type code generation for Java 1.7+.
+    Immutable value-type code generation for Java 8+.
   </description>
   <url>https://github.com/google/auto/tree/main/value</url>
 
   <properties>
-    <java.version>1.7</java.version>
+    <java.version>1.8</java.version>
   </properties>
 
   <scm>

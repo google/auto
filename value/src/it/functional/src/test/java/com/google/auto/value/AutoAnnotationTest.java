@@ -86,16 +86,8 @@ public class AutoAnnotationTest {
     @SuppressWarnings("GetClassOnAnnotation") // yes, I really want the implementation class
     Class<? extends StringValues> autoAnnotationImpl = newStringValues(new String[0]).getClass();
     Method equals = autoAnnotationImpl.getDeclaredMethod("equals", Object.class);
-    // The remaining faffing around with reflection is there because we have a Google-internal test
-    // that runs this code with -source 7 -target 7. We're really just doing this:
-    //   assertThat(equals.getAnnotatedParameterTypes()[0].isAnnotationPresent(jspecifyNullable))
-    //      .isTrue();
-    Method getAnnotatedParameterTypes = Method.class.getMethod("getAnnotatedParameterTypes");
-    Object[] annotatedParameterTypes = (Object[]) getAnnotatedParameterTypes.invoke(equals);
-    Method isAnnotationPresent =
-        annotatedParameterTypes[0].getClass().getMethod("isAnnotationPresent", Class.class);
-    assertThat(isAnnotationPresent.invoke(annotatedParameterTypes[0], jspecifyNullable))
-        .isEqualTo(true);
+    assertThat(equals.getAnnotatedParameterTypes()[0].isAnnotationPresent(jspecifyNullable))
+        .isTrue();
   }
 
   @Test

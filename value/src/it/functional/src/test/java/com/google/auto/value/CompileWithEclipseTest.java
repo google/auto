@@ -80,32 +80,16 @@ public class CompileWithEclipseTest {
   private static final Predicate<File> JAVA_FILE =
       f -> f.getName().endsWith(".java") && !IGNORED_TEST_FILES.contains(f.getName());
 
-  private static final ImmutableSet<String> JAVA8_TEST_FILES =
-      ImmutableSet.of(
-          "AutoBuilderTest.java",
-          "AutoOneOfJava8Test.java",
-          "AutoValueJava8Test.java",
-          "EmptyExtension.java");
-  private static final Predicate<File> JAVA8_TEST = f -> JAVA8_TEST_FILES.contains(f.getName());
-
   @Test
-  public void compileWithEclipseJava7() throws Exception {
-    compileWithEclipse("7", JAVA_FILE.and(JAVA8_TEST.negate()));
-  }
-
-  @Test
-  public void compileWithEclipseJava8() throws Exception {
-    compileWithEclipse("8", JAVA_FILE);
-  }
-
-  private void compileWithEclipse(String version, Predicate<File> predicate) throws IOException {
+  public void compileWithEclipse() throws IOException {
+    String version = "8";
     File sourceRootFile = new File(SOURCE_ROOT);
     File javaDir = new File(sourceRootFile, "src/main/java");
     File javatestsDir = new File(sourceRootFile, "src/test/java");
     Set<File> sources =
         new ImmutableSet.Builder<File>()
-            .addAll(filesUnderDirectory(javaDir, predicate))
-            .addAll(filesUnderDirectory(javatestsDir, predicate))
+            .addAll(filesUnderDirectory(javaDir, JAVA_FILE))
+            .addAll(filesUnderDirectory(javatestsDir, JAVA_FILE))
             .build();
     assertThat(sources).isNotEmpty();
     JavaCompiler compiler = new EclipseCompiler();

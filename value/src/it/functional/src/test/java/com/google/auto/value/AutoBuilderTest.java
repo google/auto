@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.lang.annotation.ElementType.TYPE_USE;
+import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -412,14 +413,10 @@ public final class AutoBuilderTest {
 
   @Test
   public void missingRequiredProperty() {
-    // This test is compiled at source level 7 by CompileWithEclipseTest, so we can't use
-    // assertThrows with a lambda.
-    try {
-      localTimeBuilder().hour(12).minute(34).build();
-      fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
-    }
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class, () -> localTimeBuilder().hour(12).minute(34).build());
+    assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
   }
 
   static void throwException() throws IOException {
@@ -507,12 +504,7 @@ public final class AutoBuilderTest {
   }
 
   static <T> String concatList(ImmutableList<T> list) {
-    // We're avoiding streams for now since we compile this in Java 7 mode in CompileWithEclipseTest
-    StringBuilder sb = new StringBuilder();
-    for (T element : list) {
-      sb.append(element);
-    }
-    return sb.toString();
+    return list.stream().map(String::valueOf).collect(joining());
   }
 
   @AutoBuilder(callMethod = "concatList")

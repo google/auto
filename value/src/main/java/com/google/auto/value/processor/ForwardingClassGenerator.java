@@ -31,7 +31,7 @@ import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.INVOKESPECIAL;
 import static org.objectweb.asm.Opcodes.LLOAD;
 import static org.objectweb.asm.Opcodes.NEW;
-import static org.objectweb.asm.Opcodes.V1_7;
+import static org.objectweb.asm.Opcodes.V1_8;
 
 import com.google.auto.common.MoreElements;
 import com.google.common.collect.ImmutableList;
@@ -90,7 +90,7 @@ final class ForwardingClassGenerator {
 
     ClassWriter classWriter = new ClassWriter(COMPUTE_MAXS);
     classWriter.visit(
-        V1_7,
+        V1_8,
         ACC_FINAL | ACC_SUPER,
         internalName(forwardingClassName),
         null,

@@ -275,25 +275,6 @@
     </profile>
 
     <profile>
-      <id>exclude-java8-tests</id>
-      <activation>
-        <jdk>(,1.7]</jdk>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <testExcludes>
-                <exclude>**/AutoValueJava8Test.java</exclude>
-              </testExcludes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
       <id>open-modules</id>
       <activation>
         <jdk>[9,)</jdk>
