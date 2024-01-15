@@ -402,14 +402,16 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
     // element.getEnclosedElements() does NOT return parameter or type parameter elements
     if (isType(element)) {
-      for (Element typeParameterElement : asType(element).getTypeParameters()) {
+      TypeElement typeElement = asType(element);
+      for (Element typeParameterElement : typeElement.getTypeParameters()) {
         findAnnotatedElements(typeParameterElement, annotationTypes, annotatedElements);
       }
     } else if (element.getKind() == METHOD || element.getKind() == CONSTRUCTOR) {
-      for (Element parameterElement : asExecutable(element).getParameters()) {
+      ExecutableElement executableElement = asExecutable(element);
+      for (Element parameterElement : executableElement.getParameters()) {
         findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
       }
-      for (Element typeParameterElement : asExecutable(element).getTypeParameters()) {
+      for (Element typeParameterElement : executableElement.getTypeParameters()) {
         findAnnotatedElements(typeParameterElement, annotationTypes, annotatedElements);
       }
     }
