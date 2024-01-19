@@ -34,8 +34,6 @@ import java.util.Set;
 final class ServicesFiles {
   public static final String SERVICES_PATH = "META-INF/services";
 
-  public static final char NEWLINE = '\n';
-
   private ServicesFiles() {}
 
   /**
@@ -86,7 +84,7 @@ final class ServicesFiles {
     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
     for (String service : services) {
       writer.write(service);
-      writer.write(NEWLINE);
+      writer.write('\n');
     }
     writer.flush();
   }
