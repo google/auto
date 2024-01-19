@@ -28,17 +28,14 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * A helper class for reading and writing Services files.
- */
+/** A helper class for reading and writing Services files. */
 final class ServicesFiles {
   public static final String SERVICES_PATH = "META-INF/services";
 
   private ServicesFiles() {}
 
   /**
-   * Returns an absolute path to a service file given the class
-   * name of the service.
+   * Returns an absolute path to a service file given the class name of the service.
    *
    * @param serviceName not {@code null}
    * @return SERVICES_PATH + serviceName
@@ -84,7 +81,7 @@ final class ServicesFiles {
     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
     for (String service : services) {
       writer.write(service);
-      writer.newLine();
+      writer.write('\n');
     }
     writer.flush();
   }
