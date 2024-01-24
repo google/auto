@@ -28,7 +28,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.truth.Truth8;
+import com.google.common.truth.Truth;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -659,9 +659,9 @@ public final class AutoBuilderTest {
   @Test
   public void genericGetters() {
     PairBuilder<Number> builder = pairBuilder();
-    Truth8.assertThat(builder.getSecond()).isEmpty();
+    Truth.assertThat(builder.getSecond()).isEmpty();
     builder.setSecond(2);
-    Truth8.assertThat(builder.getSecond()).hasValue(2);
+    Truth.assertThat(builder.getSecond()).hasValue(2);
     try {
       builder.getFirst();
       fail();

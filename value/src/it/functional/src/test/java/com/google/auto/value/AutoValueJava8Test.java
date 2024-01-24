@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EqualsTester;
-import com.google.common.truth.Truth8;
+import com.google.common.truth.Truth;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
@@ -481,7 +481,7 @@ public class AutoValueJava8Test {
     assertThat(e).hasMessageThat().contains("notNullable");
 
     NullablePropertyWithBuilder.Builder builder = NullablePropertyWithBuilder.builder();
-    Truth8.assertThat(builder.nullable()).isEmpty();
+    Truth.assertThat(builder.nullable()).isEmpty();
   }
 
   @AutoValue
@@ -509,12 +509,12 @@ public class AutoValueJava8Test {
     OptionalPropertyWithNullableBuilder instance1 =
         OptionalPropertyWithNullableBuilder.builder().notOptional("hello").build();
     assertThat(instance1.notOptional()).isEqualTo("hello");
-    Truth8.assertThat(instance1.optional()).isEmpty();
+    Truth.assertThat(instance1.optional()).isEmpty();
 
     OptionalPropertyWithNullableBuilder instance2 =
         OptionalPropertyWithNullableBuilder.builder().notOptional("hello").optional(null).build();
     assertThat(instance2.notOptional()).isEqualTo("hello");
-    Truth8.assertThat(instance2.optional()).isEmpty();
+    Truth.assertThat(instance2.optional()).isEmpty();
     assertThat(instance1).isEqualTo(instance2);
 
     OptionalPropertyWithNullableBuilder instance3 =
@@ -523,7 +523,7 @@ public class AutoValueJava8Test {
             .optional("world")
             .build();
     assertThat(instance3.notOptional()).isEqualTo("hello");
-    Truth8.assertThat(instance3.optional()).hasValue("world");
+    Truth.assertThat(instance3.optional()).hasValue("world");
 
     assertThrows(
         IllegalStateException.class, () -> OptionalPropertyWithNullableBuilder.builder().build());
@@ -551,19 +551,19 @@ public class AutoValueJava8Test {
   public void testNullableOptional() {
     NullableOptionalPropertyWithNullableBuilder instance1 =
         NullableOptionalPropertyWithNullableBuilder.builder().build();
-    Truth8.assertThat(instance1.optional()).isNull();
+    Truth.assertThat(instance1.optional()).isNull();
 
     NullableOptionalPropertyWithNullableBuilder instance2 =
         NullableOptionalPropertyWithNullableBuilder.builder().optional(null).build();
-    Truth8.assertThat(instance2.optional()).isEmpty();
+    Truth.assertThat(instance2.optional()).isEmpty();
 
     NullableOptionalPropertyWithNullableBuilder instance3 =
         NullableOptionalPropertyWithNullableBuilder.builder().optional("haruspex").build();
-    Truth8.assertThat(instance3.optional()).hasValue("haruspex");
+    Truth.assertThat(instance3.optional()).hasValue("haruspex");
 
     NullableOptionalPropertyWithNullableBuilder.Builder builder =
         NullableOptionalPropertyWithNullableBuilder.builder();
-    Truth8.assertThat(builder.optional()).isNull();
+    Truth.assertThat(builder.optional()).isNull();
   }
 
   @AutoValue
@@ -864,20 +864,20 @@ public class AutoValueJava8Test {
   @Test
   public void testOptionalOptional_empty() {
     OptionalOptional empty = OptionalOptional.builder().build();
-    Truth8.assertThat(empty.maybeJustMaybe()).isEmpty();
+    Truth.assertThat(empty.maybeJustMaybe()).isEmpty();
   }
 
   @Test
   public void testOptionalOptional_ofEmpty() {
     OptionalOptional ofEmpty = OptionalOptional.builder().maybeJustMaybe(Optional.empty()).build();
-    Truth8.assertThat(ofEmpty.maybeJustMaybe()).hasValue(Optional.empty());
+    Truth.assertThat(ofEmpty.maybeJustMaybe()).hasValue(Optional.empty());
   }
 
   @Test
   public void testOptionalOptional_ofSomething() {
     OptionalOptional ofSomething =
         OptionalOptional.builder().maybeJustMaybe(Optional.of("foo")).build();
-    Truth8.assertThat(ofSomething.maybeJustMaybe()).hasValue(Optional.of("foo"));
+    Truth.assertThat(ofSomething.maybeJustMaybe()).hasValue(Optional.of("foo"));
   }
 
   @AutoValue
@@ -900,7 +900,7 @@ public class AutoValueJava8Test {
   public void testOptionalExtends() {
     Predicate<Number> predicate = n -> n.toString().equals("0");
     OptionalExtends t = OptionalExtends.builder().setPredicate(predicate).build();
-    Truth8.assertThat(t.predicate()).hasValue(predicate);
+    Truth.assertThat(t.predicate()).hasValue(predicate);
   }
 
   @AutoValue
