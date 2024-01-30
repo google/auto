@@ -37,7 +37,6 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
-import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
 
@@ -80,7 +79,6 @@ final class TypeVariables {
    *     example.
    */
   static ImmutableMap<ExecutableElement, TypeMirror> rewriteReturnTypes(
-      Elements elementUtils,
       Types typeUtils,
       Collection<ExecutableElement> methods,
       TypeElement sourceType,
@@ -95,7 +93,7 @@ final class TypeVariables {
     // What we're doing is only valid if the type parameters are "the same". The check here even
     // requires the names to be the same. The logic would still work without that, but we impose
     // that requirement elsewhere and it means we can check in this simple way.
-    EclipseHack eclipseHack = new EclipseHack(elementUtils, typeUtils);
+    EclipseHack eclipseHack = new EclipseHack(typeUtils);
     TypeMirror[] targetTypeParameterMirrors = new TypeMirror[targetTypeParameters.size()];
     for (int i = 0; i < targetTypeParameters.size(); i++) {
       targetTypeParameterMirrors[i] = targetTypeParameters.get(i).asType();

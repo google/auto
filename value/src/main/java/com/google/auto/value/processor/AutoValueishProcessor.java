@@ -965,7 +965,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         properties.add(method);
       }
     }
-    return new EclipseHack(processingEnv).methodReturnTypes(properties.build(), declaredType);
+    return new EclipseHack(typeUtils()).methodReturnTypes(properties.build(), declaredType);
   }
 
   /** True if void properties are allowed. */

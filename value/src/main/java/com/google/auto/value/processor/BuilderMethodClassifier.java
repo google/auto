@@ -113,7 +113,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
     this.builderType = builderType;
     this.rewrittenPropertyTypes = rewrittenPropertyTypes;
     this.propertiesWithDefaults = propertiesWithDefaults;
-    this.eclipseHack = new EclipseHack(processingEnv);
+    this.eclipseHack = new EclipseHack(typeUtils);
     this.nullables = nullables;
   }
 

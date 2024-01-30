@@ -61,7 +61,7 @@ public class TypeVariablesTest {
     TypeElement target1 = elementUtils.getTypeElement(Target1.class.getCanonicalName());
     List<ExecutableElement> sourceMethods = ElementFilter.methodsIn(source1.getEnclosedElements());
     Map<ExecutableElement, TypeMirror> types =
-        TypeVariables.rewriteReturnTypes(elementUtils, typeUtils, sourceMethods, source1, target1);
+        TypeVariables.rewriteReturnTypes(typeUtils, sourceMethods, source1, target1);
     assertThat(types).containsExactly(sourceMethods.get(0), sourceMethods.get(0).getReturnType());
   }
 
@@ -79,7 +79,7 @@ public class TypeVariablesTest {
     TypeElement target2 = elementUtils.getTypeElement(Target2.class.getCanonicalName());
     List<ExecutableElement> sourceMethods = ElementFilter.methodsIn(source2.getEnclosedElements());
     Map<ExecutableElement, TypeMirror> types =
-        TypeVariables.rewriteReturnTypes(elementUtils, typeUtils, sourceMethods, source2, target2);
+        TypeVariables.rewriteReturnTypes(typeUtils, sourceMethods, source2, target2);
     List<ExecutableElement> targetMethods = ElementFilter.methodsIn(target2.getEnclosedElements());
     TypeMirror setFooParameter = targetMethods.get(0).getParameters().get(0).asType();
     ExecutableElement getFoo = sourceMethods.get(0);
@@ -103,7 +103,7 @@ public class TypeVariablesTest {
     TypeElement target3 = elementUtils.getTypeElement(Target3.class.getCanonicalName());
     List<ExecutableElement> sourceMethods = ElementFilter.methodsIn(source3.getEnclosedElements());
     Map<ExecutableElement, TypeMirror> types =
-        TypeVariables.rewriteReturnTypes(elementUtils, typeUtils, sourceMethods, source3, target3);
+        TypeVariables.rewriteReturnTypes(typeUtils, sourceMethods, source3, target3);
     List<ExecutableElement> targetMethods = ElementFilter.methodsIn(target3.getEnclosedElements());
     TypeMirror setFooParameter = targetMethods.get(0).getParameters().get(0).asType();
     ExecutableElement getFoo = sourceMethods.get(0);
@@ -131,7 +131,7 @@ public class TypeVariablesTest {
     TypeElement inner = elementUtils.getTypeElement(Outer.Inner.class.getCanonicalName());
     List<ExecutableElement> outerMethods = ElementFilter.methodsIn(outer.getEnclosedElements());
     Map<ExecutableElement, TypeMirror> types =
-        TypeVariables.rewriteReturnTypes(elementUtils, typeUtils, outerMethods, outer, inner);
+        TypeVariables.rewriteReturnTypes(typeUtils, outerMethods, outer, inner);
     List<ExecutableElement> innerMethods = ElementFilter.methodsIn(inner.getEnclosedElements());
     ExecutableElement getFoo = methodNamed(outerMethods, "getFoo");
     ExecutableElement getBar = methodNamed(outerMethods, "getBar");

@@ -287,7 +287,6 @@ class BuilderSpec {
       boolean autoValueHasToBuilder = toBuilderMethods != null && !toBuilderMethods.isEmpty();
       ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType =
           TypeVariables.rewriteReturnTypes(
-              processingEnv.getElementUtils(),
               processingEnv.getTypeUtils(),
               getterToPropertyName.keySet(),
               autoValueClass,
