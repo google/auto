@@ -16,7 +16,6 @@
 package com.google.auto.value.extension.serializable.processor;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.auto.value.AutoValue;
@@ -25,6 +24,7 @@ import com.google.auto.value.extension.serializable.SerializableAutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
+import com.google.common.truth.Truth8;
 import java.io.ByteArrayOutputStream;
 import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
@@ -84,8 +84,8 @@ public final class SerializableAutoValueExtensionTest {
 
     assertThat(autoValue.a()).isEqualTo(A);
     assertThat(autoValue.b()).isEqualTo(B);
-    assertThat(autoValue.optionalC()).hasValue(C);
-    assertThat(autoValue.optionalD()).hasValue(D);
+    Truth8.assertThat(autoValue.optionalC()).hasValue(C);
+    Truth8.assertThat(autoValue.optionalD()).hasValue(D);
   }
 
   @Test
@@ -95,8 +95,8 @@ public final class SerializableAutoValueExtensionTest {
 
     assertThat(autoValue.a()).isEqualTo(A);
     assertThat(autoValue.b()).isEqualTo(B);
-    assertThat(autoValue.optionalC()).hasValue(C);
-    assertThat(autoValue.optionalD()).isEmpty();
+    Truth8.assertThat(autoValue.optionalC()).hasValue(C);
+    Truth8.assertThat(autoValue.optionalD()).isEmpty();
   }
 
   @Test
@@ -106,8 +106,8 @@ public final class SerializableAutoValueExtensionTest {
 
     assertThat(autoValue.a()).isEqualTo(A);
     assertThat(autoValue.b()).isEqualTo(B);
-    assertThat(autoValue.optionalC()).isEmpty();
-    assertThat(autoValue.optionalD()).isEmpty();
+    Truth8.assertThat(autoValue.optionalC()).isEmpty();
+    Truth8.assertThat(autoValue.optionalD()).isEmpty();
   }
 
   @Test
@@ -263,7 +263,7 @@ public final class SerializableAutoValueExtensionTest {
         HasTypeParameters.<String, Integer>builder().setA(A).setOptionalB(B).build();
 
     assertThat(autoValue.a()).isEqualTo(A);
-    assertThat(autoValue.optionalB()).hasValue(B);
+    Truth8.assertThat(autoValue.optionalB()).hasValue(B);
   }
 
   @Test
@@ -272,7 +272,7 @@ public final class SerializableAutoValueExtensionTest {
         HasTypeParameters.<String, Integer>builder().setA(A).build();
 
     assertThat(autoValue.a()).isEqualTo(A);
-    assertThat(autoValue.optionalB()).isEmpty();
+    Truth8.assertThat(autoValue.optionalB()).isEmpty();
   }
 
   @Test
@@ -482,15 +482,15 @@ public final class SerializableAutoValueExtensionTest {
   public void serializeMemoize() {
     SerializeMemoize instance1 = SerializeMemoize.builder().setNumber(Optional.of(17)).build();
     assertThat(instance1.methodCount).isEqualTo(0);
-    assertThat(instance1.negate()).hasValue(-17);
+    Truth8.assertThat(instance1.negate()).hasValue(-17);
     assertThat(instance1.methodCount).isEqualTo(1);
-    assertThat(instance1.negate()).hasValue(-17);
+    Truth8.assertThat(instance1.negate()).hasValue(-17);
     assertThat(instance1.methodCount).isEqualTo(1);
     SerializeMemoize instance2 = SerializableTester.reserialize(instance1);
     assertThat(instance2.methodCount).isEqualTo(0);
-    assertThat(instance2.negate()).hasValue(-17);
+    Truth8.assertThat(instance2.negate()).hasValue(-17);
     assertThat(instance2.methodCount).isEqualTo(1);
-    assertThat(instance2.negate()).hasValue(-17);
+    Truth8.assertThat(instance2.negate()).hasValue(-17);
     assertThat(instance2.methodCount).isEqualTo(1);
 
   }
