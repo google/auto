@@ -17,7 +17,6 @@ package com.google.auto.value;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static java.lang.annotation.ElementType.TYPE_USE;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertThrows;
