@@ -26,7 +26,7 @@ For more information, consult the
 **Note:** If you are using Kotlin then its
 [data classes](https://kotlinlang.org/docs/data-classes.html) are usually more
 appropriate than AutoValue. Likewise, if you are using a version of Java that
-has [records](https://docs.oracle.com/en/java/javase/16/language/records.html),
+has [records](userguide/records.md),
 then those are usually more appropriate. You can still use
 [AutoBuilder](userguide/autobuilder.md)
 to make builders for data classes or records.
