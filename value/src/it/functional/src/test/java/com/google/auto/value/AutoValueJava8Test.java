@@ -39,6 +39,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -75,6 +76,8 @@ import org.junit.runners.JUnit4;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 @RunWith(JUnit4.class)
+@SuppressWarnings({"SameNameButDifferent", "NullableTypeParameter", "TruthSelfEquals"})
+// We are deliberately doing some shady stuff to test edge cases.
 public class AutoValueJava8Test {
   @SuppressWarnings("NonFinalStaticField") // b/314784069
   private static boolean javacHandlesTypeAnnotationsCorrectly;
@@ -305,6 +308,71 @@ public class AutoValueJava8Test {
         .addEqualityGroup(somethingNull)
         .addEqualityGroup(nothingNull, nothingNullAgain)
         .testEquals();
+  }
+
+  interface GenericGrandparent<T> {
+    T thing();
+  }
+
+  interface GenericParent<T> extends GenericGrandparent<T> {
+    @Override
+    @Nullable T thing();
+  }
+
+  @AutoValue
+  abstract static class StringThing implements GenericParent<String> {
+  }
+
+  @AutoValue
+  abstract static class StringThingWithBuilder implements GenericParent<String> {
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_StringThingWithBuilder.Builder();
+    }
+
+    @AutoValue.Builder
+    interface Builder {
+      Builder setThing(String thing);
+      @Nullable String thing();
+      StringThingWithBuilder build();
+    }
+  }
+
+  @Test
+  public void testInheritedGetterRemainsNullable() throws NoSuchMethodException {
+    // Ensure that the implementation has `@Nullable String thing()`.
+    StringThing instance = new AutoValue_AutoValueJava8Test_StringThing(null);
+    Method getter = instance.getClass().getDeclaredMethod("thing");
+    assertThat(getter.getAnnotatedReturnType().getAnnotations()).asList().contains(nullable());
+  }
+
+  @Test
+  public void testInheritedBuilderGetterRemainsNullable() throws NoSuchMethodException {
+    StringThingWithBuilder instance = StringThingWithBuilder.builder().setThing(null).build();
+    Method getter = instance.getClass().getDeclaredMethod("thing");
+    assertThat(getter.getAnnotatedReturnType().getAnnotations()).asList().contains(nullable());
+  }
+
+  interface GenericListParent<T> {
+    List<@Nullable T> things();
+  }
+
+  @AutoValue
+  abstract static class StringList implements GenericListParent<String> {}
+
+  // We'd like AutoValue to realize that the effective type of `things()` in `StringList` is
+  // `List<@Nullable String>`. Unfortunately it doesn't, because Types.asMemberOf deletes
+  // annotations. The workaround that we have to restore them only works for top-level annotations,
+  // like the `@Nullable T` in `GenericParent`, but not like the `List<@Nullable T>` here.
+  @Test
+  public void testInheritedListGetterRemainsNullable() throws NoSuchMethodException {
+    StringList instance = new AutoValue_AutoValueJava8Test_StringList(ImmutableList.of());
+    Method getter = instance.getClass().getDeclaredMethod("things");
+    AnnotatedParameterizedType returnType =
+        (AnnotatedParameterizedType) getter.getAnnotatedReturnType();
+    assertThat(returnType.getAnnotatedActualTypeArguments()[0].getAnnotations())
+        .asList()
+        .doesNotContain(nullable());
+    // This should be .contains(nullable()).
   }
 
   public static class Nested {}

@@ -99,7 +99,7 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
     Set<ExecutableElement> otherMethods = new LinkedHashSet<>(abstractMethods);
     otherMethods.remove(kindGetter);
 
-    ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes =
         propertyMethodsIn(otherMethods, autoOneOfType);
     ImmutableBiMap<String, ExecutableElement> properties =
         propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
@@ -257,7 +257,7 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
   private void defineVarsForType(
       TypeElement type,
       AutoOneOfTemplateVars vars,
-      ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes,
       ExecutableElement kindGetter,
       Nullables nullables) {
     vars.props =

@@ -19,17 +19,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import java.util.List;
-import java.util.Set;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Types;
 
 /**
  * Hacks needed to work around various bugs and incompatibilities in Eclipse's implementation of
@@ -38,11 +34,7 @@ import javax.lang.model.util.Types;
  * @author Éamonn McManus
  */
 class EclipseHack {
-  private final Types typeUtils;
-
-  EclipseHack(Types typeUtils) {
-    this.typeUtils = typeUtils;
-  }
+  private EclipseHack() {}
 
   /**
    * Returns the enclosing type of {@code type}, if {@code type} is an inner class. Otherwise
@@ -105,38 +97,5 @@ class EclipseHack {
       }
     }
     return declared;
-  }
-
-  TypeMirror methodReturnType(ExecutableElement method, DeclaredType in) {
-    TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
-    return MoreTypes.asExecutable(methodMirror).getReturnType();
-  }
-
-  /**
-   * Returns a map containing the real return types of the given methods, knowing that they appear
-   * in the given type. This means that if the given type is say {@code StringIterator implements
-   * Iterator<String>} then we want the {@code next()} method to map to String, rather than the
-   * {@code T} that it returns as inherited from {@code Iterator<T>}.
-   */
-  // This method doesn't really need to be in EclipseHack anymore.
-  ImmutableMap<ExecutableElement, TypeMirror> methodReturnTypes(
-      Set<ExecutableElement> methods, DeclaredType in) {
-    ImmutableMap.Builder<ExecutableElement, TypeMirror> map = ImmutableMap.builder();
-    for (ExecutableElement method : methods) {
-      TypeMirror returnType = method.getReturnType();
-      if (!in.asElement().equals(method.getEnclosingElement())) {
-        // If this method is *not* inherited, but directly defined in `in`, then asMemberOf
-        // shouldn't have any effect. So the if-check here is an optimization. But it also avoids an
-        // issue where the compiler may return an ExecutableType that has lost any annotations that
-        // were present in the original.
-        // We can still hit that issue in the case where the method *is* inherited. Fixing it in
-        // general would probably involve keeping track of type annotations ourselves, separately
-        // from TypeMirror instances.
-        TypeMirror methodMirror = typeUtils.asMemberOf(in, method);
-        returnType = MoreTypes.asExecutable(methodMirror).getReturnType();
-      }
-      map.put(method, returnType);
-    }
-    return map.build();
   }
 }

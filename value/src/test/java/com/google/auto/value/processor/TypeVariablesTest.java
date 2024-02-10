@@ -60,9 +60,11 @@ public class TypeVariablesTest {
     TypeElement source1 = elementUtils.getTypeElement(Source1.class.getCanonicalName());
     TypeElement target1 = elementUtils.getTypeElement(Target1.class.getCanonicalName());
     List<ExecutableElement> sourceMethods = ElementFilter.methodsIn(source1.getEnclosedElements());
-    Map<ExecutableElement, TypeMirror> types =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> types =
         TypeVariables.rewriteReturnTypes(typeUtils, sourceMethods, source1, target1);
-    assertThat(types).containsExactly(sourceMethods.get(0), sourceMethods.get(0).getReturnType());
+    assertThat(types)
+        .containsExactly(
+            sourceMethods.get(0), new AnnotatedTypeMirror(sourceMethods.get(0).getReturnType()));
   }
 
   abstract static class Source2<T> {
@@ -78,13 +80,13 @@ public class TypeVariablesTest {
     TypeElement source2 = elementUtils.getTypeElement(Source2.class.getCanonicalName());
     TypeElement target2 = elementUtils.getTypeElement(Target2.class.getCanonicalName());
     List<ExecutableElement> sourceMethods = ElementFilter.methodsIn(source2.getEnclosedElements());
-    Map<ExecutableElement, TypeMirror> types =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> types =
         TypeVariables.rewriteReturnTypes(typeUtils, sourceMethods, source2, target2);
     List<ExecutableElement> targetMethods = ElementFilter.methodsIn(target2.getEnclosedElements());
     TypeMirror setFooParameter = targetMethods.get(0).getParameters().get(0).asType();
     ExecutableElement getFoo = sourceMethods.get(0);
     TypeMirror originalGetFooReturn = getFoo.getReturnType();
-    TypeMirror rewrittenGetFooReturn = types.get(getFoo);
+    TypeMirror rewrittenGetFooReturn = types.get(getFoo).getType();
     assertThat(typeUtils.isAssignable(setFooParameter, originalGetFooReturn)).isFalse();
     assertThat(typeUtils.isAssignable(setFooParameter, rewrittenGetFooReturn)).isTrue();
   }
@@ -102,13 +104,13 @@ public class TypeVariablesTest {
     TypeElement source3 = elementUtils.getTypeElement(Source3.class.getCanonicalName());
     TypeElement target3 = elementUtils.getTypeElement(Target3.class.getCanonicalName());
     List<ExecutableElement> sourceMethods = ElementFilter.methodsIn(source3.getEnclosedElements());
-    Map<ExecutableElement, TypeMirror> types =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> types =
         TypeVariables.rewriteReturnTypes(typeUtils, sourceMethods, source3, target3);
     List<ExecutableElement> targetMethods = ElementFilter.methodsIn(target3.getEnclosedElements());
     TypeMirror setFooParameter = targetMethods.get(0).getParameters().get(0).asType();
     ExecutableElement getFoo = sourceMethods.get(0);
     TypeMirror originalGetFooReturn = getFoo.getReturnType();
-    TypeMirror rewrittenGetFooReturn = types.get(getFoo);
+    TypeMirror rewrittenGetFooReturn = types.get(getFoo).getType();
     assertThat(typeUtils.isAssignable(setFooParameter, originalGetFooReturn)).isFalse();
     assertThat(typeUtils.isAssignable(setFooParameter, rewrittenGetFooReturn)).isTrue();
   }
@@ -130,7 +132,7 @@ public class TypeVariablesTest {
     TypeElement outer = elementUtils.getTypeElement(Outer.class.getCanonicalName());
     TypeElement inner = elementUtils.getTypeElement(Outer.Inner.class.getCanonicalName());
     List<ExecutableElement> outerMethods = ElementFilter.methodsIn(outer.getEnclosedElements());
-    Map<ExecutableElement, TypeMirror> types =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> types =
         TypeVariables.rewriteReturnTypes(typeUtils, outerMethods, outer, inner);
     List<ExecutableElement> innerMethods = ElementFilter.methodsIn(inner.getEnclosedElements());
     ExecutableElement getFoo = methodNamed(outerMethods, "getFoo");
@@ -139,12 +141,12 @@ public class TypeVariablesTest {
     ExecutableElement setBar = methodNamed(innerMethods, "setBar");
     TypeMirror setFooParameter = setFoo.getParameters().get(0).asType();
     TypeMirror originalGetFooReturn = getFoo.getReturnType();
-    TypeMirror rewrittenGetFooReturn = types.get(getFoo);
+    TypeMirror rewrittenGetFooReturn = types.get(getFoo).getType();
     assertThat(typeUtils.isAssignable(setFooParameter, originalGetFooReturn)).isFalse();
     assertThat(typeUtils.isAssignable(setFooParameter, rewrittenGetFooReturn)).isTrue();
     TypeMirror setBarParameter = setBar.getParameters().get(0).asType();
     TypeMirror originalGetBarReturn = getBar.getReturnType();
-    TypeMirror rewrittenGetBarReturn = types.get(getBar);
+    TypeMirror rewrittenGetBarReturn = types.get(getBar).getType();
     assertThat(typeUtils.isAssignable(setBarParameter, originalGetBarReturn)).isFalse();
     assertThat(typeUtils.isAssignable(setBarParameter, rewrittenGetBarReturn)).isTrue();
   }

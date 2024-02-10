@@ -164,7 +164,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     private final String name;
     private final String identifier;
     private final String type;
-    private final TypeMirror typeMirror;
+    private final AnnotatedTypeMirror annotatedType;
     private final Optional<String> nullableAnnotation;
     private final ImmutableList<AnnotationMirror> availableNullableTypeAnnotations; // 0 or 1
     private final Optionalish optional;
@@ -176,7 +176,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         String name,
         String identifier,
         String type,
-        TypeMirror typeMirror,
+        AnnotatedTypeMirror annotatedType,
         Optional<String> nullableAnnotation,
         Nullables nullables,
         String getter,
@@ -185,14 +185,14 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       this.name = name;
       this.identifier = identifier;
       this.type = type;
-      this.typeMirror = typeMirror;
+      this.annotatedType = annotatedType;
       this.nullableAnnotation = nullableAnnotation;
       this.availableNullableTypeAnnotations = nullables.nullableTypeAnnotations();
-      this.optional = Optionalish.createIfOptional(typeMirror);
+      this.optional = Optionalish.createIfOptional(annotatedType.getType());
       this.builderInitializer =
           maybeBuilderInitializer.isPresent()
               ? " = " + maybeBuilderInitializer.get()
-              : builderInitializer(typeMirror, nullableAnnotation);
+              : builderInitializer(annotatedType, nullableAnnotation);
       this.getter = getter;
       this.hasDefault = hasDefault;
     }
@@ -204,11 +204,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
      * initializer sets it to {@code Optional.empty()}.
      */
     private static String builderInitializer(
-        TypeMirror typeMirror, Optional<String> nullableAnnotation) {
+        AnnotatedTypeMirror annotatedType, Optional<String> nullableAnnotation) {
       if (nullableAnnotation.isPresent()) {
         return "";
       }
-      Optionalish optional = Optionalish.createIfOptional(typeMirror);
+      Optionalish optional = Optionalish.createIfOptional(annotatedType.getType());
       if (optional == null) {
         return "";
       }
@@ -231,13 +231,13 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
      * </ul>
      */
     public String getBuilderFieldType() {
-      if (typeMirror.getKind().isPrimitive()
+      if (annotatedType.getType().getKind().isPrimitive()
           || nullableAnnotation.isPresent()
           || !builderInitializer.isEmpty()
           || availableNullableTypeAnnotations.isEmpty()) {
         return type;
       }
-      return TypeEncoder.encodeWithAnnotations(typeMirror, availableNullableTypeAnnotations);
+      return TypeEncoder.encodeWithAnnotations(annotatedType, availableNullableTypeAnnotations);
     }
 
     /**
@@ -262,7 +262,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     }
 
     TypeMirror getTypeMirror() {
-      return typeMirror;
+      return annotatedType.getType();
     }
 
     public String getType() {
@@ -270,7 +270,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     }
 
     public TypeKind getKind() {
-      return typeMirror.getKind();
+      return annotatedType.getType().getKind();
     }
 
     /**
@@ -331,7 +331,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         String name,
         String identifier,
         ExecutableElement method,
-        TypeMirror typeMirror,
+        AnnotatedTypeMirror annotatedType,
         String typeString,
         ImmutableList<String> fieldAnnotations,
         ImmutableList<String> methodAnnotations,
@@ -341,7 +341,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           name,
           identifier,
           typeString,
-          typeMirror,
+          annotatedType,
           nullableAnnotation,
           nullables,
           method.getSimpleName().toString(),
@@ -526,7 +526,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    *     AutoValue.CopyAnnotations} also do not appear here.
    */
   final ImmutableSet<Property> propertySet(
-      ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields,
       ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyMethods,
       Nullables nullables) {
@@ -954,18 +954,20 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    * return types. A property method has no arguments, is not void, and is not {@code hashCode()} or
    * {@code toString()}.
    */
-  ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsIn(
+  ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsIn(
       Set<ExecutableElement> abstractMethods, TypeElement autoValueOrOneOfType) {
-    DeclaredType declaredType = MoreTypes.asDeclared(autoValueOrOneOfType.asType());
-    ImmutableSet.Builder<ExecutableElement> properties = ImmutableSet.builder();
-    for (ExecutableElement method : abstractMethods) {
-      if (method.getParameters().isEmpty()
-          && (method.getReturnType().getKind() != TypeKind.VOID || propertiesCanBeVoid())
-          && objectMethodToOverride(method) == ObjectMethod.NONE) {
-        properties.add(method);
-      }
-    }
-    return new EclipseHack(typeUtils()).methodReturnTypes(properties.build(), declaredType);
+    return abstractMethods.stream()
+        .filter(
+            method ->
+                method.getParameters().isEmpty()
+                    && (method.getReturnType().getKind() != TypeKind.VOID || propertiesCanBeVoid())
+                    && objectMethodToOverride(method) == ObjectMethod.NONE)
+        .collect(
+            toImmutableMap(
+                method -> method,
+                method ->
+                    MethodSignature.asMemberOf(typeUtils(), autoValueOrOneOfType, method)
+                        .returnType()));
   }
 
   /** True if void properties are allowed. */

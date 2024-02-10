@@ -40,7 +40,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
       TypeMirror builtType,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
+      ImmutableMap<String, AnnotatedTypeMirror> rewrittenPropertyTypes,
       Nullables nullables) {
     super(
         errorReporter,
@@ -81,7 +81,7 @@ class BuilderMethodClassifierForAutoValue extends BuilderMethodClassifier<Execut
       TypeElement autoValueClass,
       TypeElement builderType,
       ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
-      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
+      ImmutableMap<String, AnnotatedTypeMirror> rewrittenPropertyTypes,
       Nullables nullables,
       boolean autoValueHasToBuilder) {
     BuilderMethodClassifier<ExecutableElement> classifier =

@@ -33,7 +33,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -55,8 +54,7 @@ class PropertyBuilderClassifier {
   private final Elements elementUtils;
   private final BuilderMethodClassifier<?> builderMethodClassifier;
   private final Predicate<String> propertyIsNullable;
-  private final ImmutableMap<String, TypeMirror> propertyTypes;
-  private final EclipseHack eclipseHack;
+  private final ImmutableMap<String, AnnotatedTypeMirror> propertyTypes;
   private final Nullables nullables;
 
   PropertyBuilderClassifier(
@@ -65,8 +63,7 @@ class PropertyBuilderClassifier {
       Elements elementUtils,
       BuilderMethodClassifier<?> builderMethodClassifier,
       Predicate<String> propertyIsNullable,
-      ImmutableMap<String, TypeMirror> propertyTypes,
-      EclipseHack eclipseHack,
+      ImmutableMap<String, AnnotatedTypeMirror> propertyTypes,
       Nullables nullables) {
     this.errorReporter = errorReporter;
     this.typeUtils = typeUtils;
@@ -74,7 +71,6 @@ class PropertyBuilderClassifier {
     this.builderMethodClassifier = builderMethodClassifier;
     this.propertyIsNullable = propertyIsNullable;
     this.propertyTypes = propertyTypes;
-    this.eclipseHack = eclipseHack;
     this.nullables = nullables;
   }
 
@@ -89,7 +85,7 @@ class PropertyBuilderClassifier {
     private final String name;
     private final String builderType;
     private final String nullableBuilderType;
-    private final TypeMirror builderTypeMirror;
+    private final AnnotatedTypeMirror builderAnnotatedType;
     private final String build;
     private final String initializer;
     private final String beforeInitDefault;
@@ -101,7 +97,7 @@ class PropertyBuilderClassifier {
         ExecutableElement propertyBuilderMethod,
         String builderType,
         String nullableBuilderType,
-        TypeMirror builderTypeMirror,
+        AnnotatedTypeMirror builderAnnotatedType,
         String build,
         String initializer,
         String beforeInitDefault,
@@ -112,7 +108,7 @@ class PropertyBuilderClassifier {
       this.name = propertyBuilderMethod.getSimpleName() + "$";
       this.builderType = builderType;
       this.nullableBuilderType = nullableBuilderType;
-      this.builderTypeMirror = builderTypeMirror;
+      this.builderAnnotatedType = builderAnnotatedType;
       this.build = build;
       this.initializer = initializer;
       this.beforeInitDefault = beforeInitDefault;
@@ -159,7 +155,7 @@ class PropertyBuilderClassifier {
     }
 
     TypeMirror getBuilderTypeMirror() {
-      return builderTypeMirror;
+      return builderAnnotatedType.getType();
     }
 
     /** The name of the build method, {@code build} or {@code buildOrThrow}. */
@@ -229,19 +225,19 @@ class PropertyBuilderClassifier {
   // This method outputs an error and returns Optional.empty() if the barBuilder() method has a
   // problem.
   Optional<PropertyBuilder> makePropertyBuilder(ExecutableElement method, String property) {
-    TypeMirror barBuilderTypeMirror = builderMethodClassifier.builderMethodReturnType(method);
-    if (barBuilderTypeMirror.getKind() != TypeKind.DECLARED) {
+    AnnotatedTypeMirror barBuilderAnnotatedType = builderMethodClassifier.builderMethodReturnType(method);
+    if (barBuilderAnnotatedType.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           method,
           "[AutoValueOddBuilderMethod] Method looks like a property builder, but its return type"
               + " is not a class or interface");
       return Optional.empty();
     }
-    DeclaredType barBuilderDeclaredType = MoreTypes.asDeclared(barBuilderTypeMirror);
-    TypeElement barBuilderTypeElement = MoreTypes.asTypeElement(barBuilderTypeMirror);
+    DeclaredType barBuilderDeclaredType = MoreTypes.asDeclared(barBuilderAnnotatedType.getType());
+    TypeElement barBuilderTypeElement = MoreTypes.asTypeElement(barBuilderDeclaredType);
     Map<String, ExecutableElement> barBuilderNoArgMethods = noArgMethodsOf(barBuilderTypeElement);
 
-    TypeMirror barTypeMirror = propertyTypes.get(property);
+    TypeMirror barTypeMirror = propertyTypes.get(property).getType();
     if (barTypeMirror.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           method,
@@ -276,7 +272,8 @@ class PropertyBuilderClassifier {
     // We've determined that `BarBuilder` has a method `build()` or `buildOrThrow(). But it must
     // return `Bar`. And if the type of `bar()` is Bar<String> then `BarBuilder.build()` must return
     // something that can be assigned to Bar<String>.
-    TypeMirror buildType = eclipseHack.methodReturnType(build, barBuilderDeclaredType);
+    TypeMirror buildType =
+        MethodSignature.asMemberOf(typeUtils, barBuilderDeclaredType, build).returnType().getType();
     if (!typeUtils.isAssignable(buildType, barTypeMirror)) {
       errorReporter.reportError(
           method,
@@ -310,10 +307,10 @@ class PropertyBuilderClassifier {
     }
     ExecutableElement builderMaker = maybeBuilderMaker.get();
 
-    String barBuilderType = TypeEncoder.encodeWithAnnotations(barBuilderTypeMirror);
+    String barBuilderType = TypeEncoder.encodeWithAnnotations(barBuilderAnnotatedType);
     String nullableBarBuilderType =
         TypeEncoder.encodeWithAnnotations(
-            barBuilderTypeMirror, nullables.nullableTypeAnnotations());
+            barBuilderAnnotatedType, nullables.nullableTypeAnnotations());
     String rawBarType = TypeEncoder.encodeRaw(barTypeMirror);
     String arguments =
         method.getParameters().isEmpty()
@@ -330,7 +327,7 @@ class PropertyBuilderClassifier {
         && !toBuilder.getModifiers().contains(Modifier.STATIC)
         && typeUtils.isAssignable(
             typeUtils.erasure(toBuilder.getReturnType()),
-            typeUtils.erasure(barBuilderTypeMirror))) {
+            typeUtils.erasure(barBuilderDeclaredType))) {
       builtToBuilder = toBuilder.getSimpleName().toString();
     } else {
       Optional<ExecutableElement> maybeCopyAll =
@@ -364,7 +361,7 @@ class PropertyBuilderClassifier {
             method,
             barBuilderType,
             nullableBarBuilderType,
-            barBuilderTypeMirror,
+            barBuilderAnnotatedType,
             build.getSimpleName().toString(),
             initializer,
             beforeInitDefault,
@@ -480,9 +477,12 @@ class PropertyBuilderClassifier {
                     && method.getParameters().size() == 1)
         .filter(
             method -> {
-              ExecutableType methodMirror =
-                  MoreTypes.asExecutable(typeUtils.asMemberOf(barBuilderDeclaredType, method));
-              return typeUtils.isAssignable(barTypeMirror, methodMirror.getParameterTypes().get(0));
+              TypeMirror parameterType =
+                  MethodSignature.asMemberOf(typeUtils, barBuilderDeclaredType, method)
+                      .parameterTypes()
+                      .get(0)
+                      .getType();
+              return typeUtils.isAssignable(barTypeMirror, parameterType);
             })
         .findFirst();
   }

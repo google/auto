@@ -78,7 +78,7 @@ final class TypeVariables {
    * @param targetType the class to translate the methods into ({@code Foo.Builder<T>}) in the
    *     example.
    */
-  static ImmutableMap<ExecutableElement, TypeMirror> rewriteReturnTypes(
+  static ImmutableMap<ExecutableElement, AnnotatedTypeMirror> rewriteReturnTypes(
       Types typeUtils,
       Collection<ExecutableElement> methods,
       TypeElement sourceType,
@@ -93,14 +93,16 @@ final class TypeVariables {
     // What we're doing is only valid if the type parameters are "the same". The check here even
     // requires the names to be the same. The logic would still work without that, but we impose
     // that requirement elsewhere and it means we can check in this simple way.
-    EclipseHack eclipseHack = new EclipseHack(typeUtils);
     TypeMirror[] targetTypeParameterMirrors = new TypeMirror[targetTypeParameters.size()];
     for (int i = 0; i < targetTypeParameters.size(); i++) {
       targetTypeParameterMirrors[i] = targetTypeParameters.get(i).asType();
     }
     DeclaredType parallelSource = typeUtils.getDeclaredType(sourceType, targetTypeParameterMirrors);
     return methods.stream()
-        .collect(toImmutableMap(m -> m, m -> eclipseHack.methodReturnType(m, parallelSource)));
+        .collect(
+            toImmutableMap(
+                m -> m,
+                m -> MethodSignature.asMemberOf(typeUtils, parallelSource, m).returnType()));
   }
 
   /**

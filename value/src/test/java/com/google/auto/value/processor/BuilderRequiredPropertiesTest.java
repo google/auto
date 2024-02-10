@@ -341,7 +341,7 @@ public final class BuilderRequiredPropertiesTest {
         /* name= */ name,
         /* identifier= */ name,
         /* type= */ type.toString(),
-        /* typeMirror= */ type,
+        /* annotatedType= */ new AnnotatedTypeMirror(type),
         /* nullableAnnotation= */ Optional.empty(),
         /* nullables= */ Nullables.fromMethods(null, ImmutableList.of()),
         /* getter= */ name,

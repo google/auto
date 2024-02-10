@@ -45,7 +45,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -79,12 +78,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
    * Foo.Builder<T>} are two separate variables. Originally {@code bar()} returned the {@code T} of
    * {@code Foo<T>}, but in this map we have rewritten it to be the {@code T} of {@code
    * Foo.Builder<T>}.
-   *
-   * <p>Importantly, this rewrite <b>loses type annotations</b>, so when those are important we must
-   * be careful to look at the original type as reported by the {@link #originalPropertyType}
-   * method.
    */
-  private final ImmutableMap<String, TypeMirror> rewrittenPropertyTypes;
+  private final ImmutableMap<String, AnnotatedTypeMirror> rewrittenPropertyTypes;
 
   private final Set<ExecutableElement> buildMethods = new LinkedHashSet<>();
   private final Map<String, BuilderSpec.PropertyGetter> builderGetters = new LinkedHashMap<>();
@@ -93,7 +88,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
       LinkedListMultimap.create();
   private final Multimap<String, PropertySetter> propertyNameToUnprefixedSetters =
       LinkedListMultimap.create();
-  private final EclipseHack eclipseHack;
   private final Nullables nullables;
 
   private boolean settersPrefixed;
@@ -103,7 +97,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
       ProcessingEnvironment processingEnv,
       TypeMirror builtType,
       TypeElement builderType,
-      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
+      ImmutableMap<String, AnnotatedTypeMirror> rewrittenPropertyTypes,
       ImmutableSet<String> propertiesWithDefaults,
       Nullables nullables) {
     this.errorReporter = errorReporter;
@@ -113,7 +107,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
     this.builderType = builderType;
     this.rewrittenPropertyTypes = rewrittenPropertyTypes;
     this.propertiesWithDefaults = propertiesWithDefaults;
-    this.eclipseHack = new EclipseHack(typeUtils);
     this.nullables = nullables;
   }
 
@@ -176,7 +169,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
       return false;
     }
     for (String property : rewrittenPropertyTypes.keySet()) {
-      TypeMirror propertyType = rewrittenPropertyTypes.get(property);
+      TypeMirror propertyType = rewrittenPropertyTypes.get(property).getType();
       boolean hasSetter = propertyNameToSetter.containsKey(property);
       PropertyBuilder propertyBuilder = propertyNameToPropertyBuilder.get(property);
       boolean hasBuilder = propertyBuilder != null;
@@ -247,7 +240,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
     }
 
     String methodName = method.getSimpleName().toString();
-    TypeMirror returnType = builderMethodReturnType(method);
+    TypeMirror returnType = builderMethodReturnType(method).getType();
 
     if (methodName.endsWith("Builder")) {
       String prefix = methodName.substring(0, methodName.length() - "Builder".length());
@@ -267,7 +260,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
                 this,
                 this::propertyIsNullable,
                 rewrittenPropertyTypes,
-                eclipseHack,
                 nullables);
         Optional<PropertyBuilder> propertyBuilder =
             propertyBuilderClassifier.makePropertyBuilder(method, property);
@@ -295,16 +287,16 @@ abstract class BuilderMethodClassifier<E extends Element> {
   }
 
   private void classifyGetter(ExecutableElement builderGetter, String propertyName) {
-    TypeMirror originalGetterType = rewrittenPropertyTypes.get(propertyName);
-    TypeMirror builderGetterType = builderMethodReturnType(builderGetter);
+    TypeMirror originalGetterType = rewrittenPropertyTypes.get(propertyName).getType();
+    AnnotatedTypeMirror builderGetterType = builderMethodReturnType(builderGetter);
     String builderGetterTypeString = TypeEncoder.encodeWithAnnotations(builderGetterType);
-    if (TYPE_EQUIVALENCE.equivalent(builderGetterType, originalGetterType)) {
+    if (TYPE_EQUIVALENCE.equivalent(builderGetterType.getType(), originalGetterType)) {
       builderGetters.put(
           propertyName,
           new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, null));
       return;
     }
-    Optionalish optional = Optionalish.createIfOptional(builderGetterType);
+    Optionalish optional = Optionalish.createIfOptional(builderGetterType.getType());
     if (optional != null) {
       TypeMirror containedType = optional.getContainedType(typeUtils);
       // If the original method is int getFoo() then we allow Optional<Integer> here.
@@ -397,10 +389,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
     }
     Optional<Copier> function = getSetterFunction(propertyElement, method);
     if (function.isPresent()) {
-      DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
-      ExecutableType methodMirror =
-          MoreTypes.asExecutable(typeUtils.asMemberOf(builderTypeMirror, method));
-      TypeMirror returnType = methodMirror.getReturnType();
+      MethodSignature methodSignature =
+          MethodSignature.asMemberOf(typeUtils, builderType, method);
+      TypeMirror returnType = methodSignature.returnType().getType();
       if (typeUtils.isSubtype(builderType.asType(), returnType)
           && !MoreTypes.isTypeOf(Object.class, returnType)) {
         if (nullableAnnotationFor(method, returnType).isPresent()) {
@@ -411,7 +402,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
                       + " is not appropriate", autoWhat());
         }
         // We allow the return type to be a supertype (other than Object), to support step builders.
-        TypeMirror parameterType = Iterables.getOnlyElement(methodMirror.getParameterTypes());
+        TypeMirror parameterType =
+            Iterables.getOnlyElement(methodSignature.parameterTypes()).getType();
         propertyNameToSetters.put(
             propertyName, new PropertySetter(method, parameterType, function.get()));
       } else {
@@ -448,7 +440,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
             this,
             this::propertyIsNullable,
             rewrittenPropertyTypes,
-            eclipseHack,
             nullables);
     Optional<PropertyBuilder> maybePropertyBuilder =
         propertyBuilderClassifier.makePropertyBuilder(method, property);
@@ -470,11 +461,12 @@ abstract class BuilderMethodClassifier<E extends Element> {
     boolean nullableParameter =
         nullableAnnotationFor(parameterElement, parameterElement.asType()).isPresent();
     String property = propertyElements().inverse().get(propertyElement);
-    TypeMirror targetType = rewrittenPropertyTypes.get(property);
-    ExecutableType finalSetter =
-        MoreTypes.asExecutable(
-            typeUtils.asMemberOf(MoreTypes.asDeclared(builderType.asType()), setter));
-    TypeMirror parameterType = finalSetter.getParameterTypes().get(0);
+    TypeMirror targetType = rewrittenPropertyTypes.get(property).getType();
+    TypeMirror parameterType =
+        MethodSignature.asMemberOf(typeUtils, builderType, setter)
+            .parameterTypes()
+            .get(0)
+            .getType();
     // Two types are assignable to each other if they are the same type, or if one is primitive and
     // the other is the corresponding boxed type. There might be other cases where this is true, but
     // we're likely to want to accept those too.
@@ -522,7 +514,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
       ExecutableElement setter,
       TypeMirror parameterType) {
     String property = propertyElements().inverse().get(propertyElement);
-    DeclaredType targetType = MoreTypes.asDeclared(rewrittenPropertyTypes.get(property));
+    DeclaredType targetType = MoreTypes.asDeclared(rewrittenPropertyTypes.get(property).getType());
     for (ExecutableElement copyOfMethod : copyOfMethods) {
       Optional<Copier> function =
           getConvertingSetterFunction(copyOfMethod, targetType, parameterType);
@@ -646,25 +638,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
    *
    * If the builder is {@code ChildBuilder} then the return type of {@code setFoo} is also {@code
    * ChildBuilder}, and not {@code B} as its {@code getReturnType()} method would claim.
-   *
-   * <p>If the caller is in a version of Eclipse with <a
-   * href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590">this bug</a> then the {@code
-   * asMemberOf} call will fail if the method is inherited from an interface. We work around that
-   * for methods in the {@code @AutoValue} class using {@link EclipseHack#methodReturnTypes} but we
-   * don't try to do so here because it should be much less likely. You might need to change {@code
-   * ParentBuilder} from an interface to an abstract class to make it work, but you'll often need to
-   * do that anyway.
    */
-  TypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
-    DeclaredType builderTypeMirror = MoreTypes.asDeclared(builderType.asType());
-    TypeMirror methodMirror;
-    try {
-      methodMirror = typeUtils.asMemberOf(builderTypeMirror, builderMethod);
-    } catch (IllegalArgumentException e) {
-      // Presumably we've hit the Eclipse bug cited.
-      return builderMethod.getReturnType();
-    }
-    return MoreTypes.asExecutable(methodMirror).getReturnType();
+  AnnotatedTypeMirror builderMethodReturnType(ExecutableElement builderMethod) {
+    return MethodSignature.asMemberOf(typeUtils, builderType, builderMethod).returnType();
   }
 
   private static String prefixWithSet(String propertyName) {
@@ -696,9 +672,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
   /**
    * Returns the property type as it appears on the original source program element. This can be
    * different from the type stored in {@link #rewrittenPropertyTypes} since that one will refer to
-   * type variables in the builder rather than in the original class. Also, {@link
-   * #rewrittenPropertyTypes} will not have type annotations even if they were present on the
-   * original element, so {@code originalPropertyType} is the right thing to use for those.
+   * type variables in the builder rather than in the original class.
    */
   abstract TypeMirror originalPropertyType(E propertyElement);
 

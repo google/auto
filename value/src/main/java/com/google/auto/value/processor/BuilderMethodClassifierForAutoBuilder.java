@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -50,7 +49,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       TypeMirror builtType,
       TypeElement builderType,
       ImmutableBiMap<VariableElement, String> paramToPropertyName,
-      ImmutableMap<String, TypeMirror> rewrittenPropertyTypes,
+      ImmutableMap<String, AnnotatedTypeMirror> rewrittenPropertyTypes,
       ImmutableSet<String> propertiesWithDefaults,
       Nullables nullables) {
     super(
@@ -91,7 +90,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
     ImmutableBiMap<VariableElement, String> paramToPropertyName =
         executable.parameters().stream()
             .collect(toImmutableBiMap(v -> v, v -> v.getSimpleName().toString()));
-    ImmutableMap<String, TypeMirror> rewrittenPropertyTypes =
+    ImmutableMap<String, AnnotatedTypeMirror> rewrittenPropertyTypes =
         rewriteParameterTypes(executable, builderType, errorReporter, processingEnv.getTypeUtils());
     BuilderMethodClassifier<VariableElement> classifier =
         new BuilderMethodClassifierForAutoBuilder(
@@ -147,7 +146,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
   // the return type Set<E> of SingletonSetBuilder.build(). But in fact we only use
   // MoreTypes.equivalence to compare those, and that returns true for distinct type variables if
   // they have the same name and bounds.
-  private static ImmutableMap<String, TypeMirror> rewriteParameterTypes(
+  private static ImmutableMap<String, AnnotatedTypeMirror> rewriteParameterTypes(
       Executable executable,
       TypeElement builderType,
       ErrorReporter errorReporter,
@@ -166,7 +165,9 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       // Optimization for a common case. No point in doing all that type visiting if we have no
       // variables to substitute.
       return executable.parameters().stream()
-          .collect(toImmutableMap(v -> v.getSimpleName().toString(), Element::asType));
+          .collect(
+              toImmutableMap(
+                  v -> v.getSimpleName().toString(), v -> new AnnotatedTypeMirror(v.asType())));
     }
     Map<Equivalence.Wrapper<TypeVariable>, TypeMirror> typeVariables = new LinkedHashMap<>();
     for (int i = 0; i < executableTypeParams.size(); i++) {
@@ -180,7 +181,10 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
         .collect(
             toImmutableMap(
                 v -> v.getSimpleName().toString(),
-                v -> TypeVariables.substituteTypeVariables(v.asType(), substitute, typeUtils)));
+                v ->
+                    new AnnotatedTypeMirror(
+                        v.asType(),
+                        TypeVariables.substituteTypeVariables(v.asType(), substitute, typeUtils))));
   }
 
   @Override

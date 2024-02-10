@@ -215,7 +215,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       builderAbstractMethods = ImmutableSet.of();
     }
 
-    ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes =
         propertyMethodsIn(immutableSetDifference(abstractMethods, toBuilderMethods), type);
     ImmutableMap<String, ExecutableElement> properties =
         propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
@@ -486,7 +486,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       TypeElement type,
       AutoValueTemplateVars vars,
       ImmutableSet<ExecutableElement> toBuilderMethods,
-      ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes,
       Optional<BuilderSpec.Builder> maybeBuilder,
       Nullables nullables,
       ImmutableSet<ExecutableElement> consumedBuilderAbstractMethods) {

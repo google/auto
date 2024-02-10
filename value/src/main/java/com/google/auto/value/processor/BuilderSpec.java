@@ -285,13 +285,14 @@ class BuilderSpec {
       Iterable<ExecutableElement> builderMethods =
           Sets.difference(builderAbstractMethods, consumedBuilderAbstractMethods);
       boolean autoValueHasToBuilder = toBuilderMethods != null && !toBuilderMethods.isEmpty();
-      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType =
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> getterToPropertyType =
           TypeVariables.rewriteReturnTypes(
               processingEnv.getTypeUtils(),
               getterToPropertyName.keySet(),
               autoValueClass,
               builderTypeElement);
-      ImmutableMap.Builder<String, TypeMirror> rewrittenPropertyTypes = ImmutableMap.builder();
+      ImmutableMap.Builder<String, AnnotatedTypeMirror> rewrittenPropertyTypes =
+          ImmutableMap.builder();
       getterToPropertyType.forEach(
           (getter, type) -> rewrittenPropertyTypes.put(getterToPropertyName.get(getter), type));
       Optional<BuilderMethodClassifier<ExecutableElement>> optionalClassifier =

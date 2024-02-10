@@ -39,7 +39,7 @@ class ExtensionContext implements AutoValueExtension.Context {
   private final ProcessingEnvironment processingEnvironment;
   private final TypeElement autoValueClass;
   private final ImmutableMap<String, ExecutableElement> properties;
-  private final ImmutableMap<String, TypeMirror> propertyTypes;
+  private final ImmutableMap<String, AnnotatedTypeMirror> propertyTypes;
   private final ImmutableSet<ExecutableElement> abstractMethods;
   private final ImmutableSet<ExecutableElement> builderAbstractMethods;
   private Optional<BuilderContext> builderContext = Optional.empty();
@@ -49,7 +49,7 @@ class ExtensionContext implements AutoValueExtension.Context {
       ProcessingEnvironment processingEnvironment,
       TypeElement autoValueClass,
       ImmutableMap<String, ExecutableElement> properties,
-      ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes,
       ImmutableSet<ExecutableElement> abstractMethods,
       ImmutableSet<ExecutableElement> builderAbstractMethods) {
     this.autoValueProcessor = autoValueProcessor;
@@ -93,7 +93,7 @@ class ExtensionContext implements AutoValueExtension.Context {
 
   @Override
   public Map<String, TypeMirror> propertyTypes() {
-    return propertyTypes;
+    return Maps.transformValues(propertyTypes, AnnotatedTypeMirror::getType);
   }
 
   @Override
