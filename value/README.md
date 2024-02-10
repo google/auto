@@ -31,3 +31,6 @@ has
 then those are usually more appropriate. You can still use
 [AutoBuilder](userguide/autobuilder.md)
 to make builders for data classes or records.
+
+[records]: userguide/records.md
+[AutoBuilder]: userguide/autobuilder.md
