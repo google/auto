@@ -45,6 +45,7 @@ import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -289,6 +290,10 @@ public class AutoValueProcessor extends AutoValueishProcessor {
     vars.subclass = TypeSimplifier.simpleNameOf(subclass);
     vars.finalSubclass = finalSubclass;
     vars.isFinal = (subclassDepth == 0);
+    vars.shouldGenerateBuilderConstructor =
+        applicableExtensions.isEmpty()
+            && builder.isPresent()
+            && processingEnv.getSourceVersion().compareTo(SourceVersion.RELEASE_8) > 0;
     vars.modifiers = vars.isFinal ? "final " : "abstract ";
     vars.builderClassModifiers =
         consumedBuilderMethods.isEmpty()
