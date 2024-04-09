@@ -127,8 +127,16 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   @`java.lang.Override`
   public boolean equals($equalsParameterType o) {
-    if (o == this) {
-      return true;
+    int objectPropertyCount = 0;
+    for ($m in $members) {
+      if (!$m.kind.primitive) {
+        objectPropertyCount++;
+      }
+    }
+
+    if (objectPropertyCount > 1) {
+       if (o == this) {
+        return true;
     }
     if (o instanceof $origClass) {
 

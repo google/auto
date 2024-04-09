@@ -39,8 +39,16 @@ final class AutoValue_Animal extends Animal {
 
   @Override
   public boolean equals(Object o) {
-    if (o == this) {
-      return true;
+    int objectPropertyCount = 0;
+    for ($m in $members) {
+      if (!$m.kind.primitive) {
+        objectPropertyCount++;
+      }
+    }
+
+    if (objectPropertyCount > 1) {
+       if (o == this) {
+        return true;
     }
     if (o instanceof Animal) {
       Animal that = (Animal) o;
