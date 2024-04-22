@@ -47,7 +47,7 @@ import java.lang.annotation.Target;
  * href="https://errorprone.info/bugpattern/DoubleCheckedLocking">double-checked locking</a> to
  * ensure that the annotated method is called at most once.
  *
- * <h3>Example</h3>
+ * <h2>Example</h2>
  *
  * <pre>
  *   {@code @AutoValue}

@@ -63,8 +63,8 @@ import javax.lang.model.util.Elements;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An abstract {@link Processor} implementation that defers processing of {@link Element}s to later
- * rounds if they cannot be processed.
+ * An abstract {@link javax.annotation.processing.Processor Processor} implementation that defers
+ * processing of {@link Element}s to later rounds if they cannot be processed.
  *
  * <p>Subclasses put their processing logic in {@link Step} implementations. The steps are passed to
  * the processor by returning them in the {@link #steps()} method, and can access the {@link
@@ -73,11 +73,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>Any logic that needs to happen once per round can be specified by overriding {@link
  * #postRound(RoundEnvironment)}.
  *
- * <h3>Ill-formed elements are deferred</h3>
+ * <h2>Ill-formed elements are deferred</h2>
  *
  * Any annotated element whose nearest enclosing type is not well-formed is deferred, and not passed
  * to any {@code Step}. This helps processors to avoid many common pitfalls, such as {@link
- * ErrorType} instances, {@link ClassCastException}s and badly coerced types.
+ * javax.lang.model.type.ErrorType ErrorType} instances, {@link ClassCastException}s and badly
+ * coerced types.
  *
  * <p>A non-package element is considered well-formed if its type, type parameters, parameters,
  * default values, supertypes, annotations, and enclosed elements are. Package elements are treated
@@ -89,7 +90,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * because the element will never be fully complete. All such compilations will fail with an error
  * message on the offending type that describes the issue.
  *
- * <h3>Each {@code Step} can defer elements</h3>
+ * <h2>Each {@code Step} can defer elements</h2>
  *
  * <p>Each {@code Step} can defer elements by including them in the set returned by {@link
  * Step#process(ImmutableSetMultimap)}; elements deferred by a step will be passed back to that step
