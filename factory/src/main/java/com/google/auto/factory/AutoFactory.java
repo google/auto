@@ -65,6 +65,12 @@ public @interface AutoFactory {
   boolean allowSubclasses() default false;
 
   /**
+   * Whether the provided types should be injected directly instead of using Provider<T>.
+   * This allows using with frameworks such as Weld that don't depend on Provider<T> for injection.
+   */
+  boolean inject() default false;
+
+  /**
    * Specifies that an annotation should be used to determine how to annotate generated AutoFactory
    * classes. For example, suppose you have this annotation:
    * <pre>

@@ -75,6 +75,8 @@ abstract class AutoFactoryDeclaration {
 
   abstract ImmutableMap<String, AnnotationValue> valuesMap();
 
+  abstract boolean inject();
+
   PackageAndClass getFactoryName() {
     String packageName = getPackage(targetType()).getQualifiedName().toString();
     if (className().isPresent()) {
@@ -188,6 +190,9 @@ abstract class AutoFactoryDeclaration {
       AnnotationValue allowSubclassesValue = checkNotNull(values.get("allowSubclasses"));
       boolean allowSubclasses = AnnotationValues.asBoolean(allowSubclassesValue);
 
+      AnnotationValue injectValue = checkNotNull(values.get("inject"));
+      boolean inject = AnnotationValues.asBoolean(injectValue);
+
       return Optional.<AutoFactoryDeclaration>of(
           new AutoValue_AutoFactoryDeclaration(
               getAnnotatedType(element),
@@ -198,7 +203,8 @@ abstract class AutoFactoryDeclaration {
               implementingTypes,
               allowSubclasses,
               mirror,
-              ImmutableMap.copyOf(values)));
+              ImmutableMap.copyOf(values),
+              inject));
     }
 
     private static TypeElement getAnnotatedType(Element element) {

@@ -129,8 +129,8 @@ final class FactoryWriter {
     for (ProviderField provider : providerFields) {
       ++argumentNumber;
       TypeName typeName = resolveTypeName(provider.key().type().get()).box();
-      TypeName providerType =
-          ParameterizedTypeName.get(ClassName.get(injectApi.provider()), typeName);
+      TypeName providerType = descriptor.declaration().inject() ? typeName : ParameterizedTypeName.get(ClassName.get(injectApi.provider()), typeName);
+
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
         // only qualify the constructor parameter
@@ -188,7 +188,7 @@ final class FactoryWriter {
             // Providers are checked for nullness in the Factory's constructor.
             checkNotNull = false;
           } else {
-            argument = CodeBlock.of("$L.get()", argument);
+            argument = descriptor.declaration().inject() ? CodeBlock.of("$L", argument) : CodeBlock.of("$L.get()", argument);
           }
         }
         if (checkNotNull) {

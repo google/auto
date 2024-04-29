@@ -571,6 +571,14 @@ public class AutoFactoryProcessorTest {
             "tests.CustomAnnotationsFactory", "expected/CustomAnnotationsFactory.java"));
   }
 
+  @Test
+  public void injectAnnotation() {
+    goldenTest(
+        ImmutableList.of("good/SimpleClassInject.java"),
+        ImmutableMap.of(
+            "tests.SimpleClassInjectFactory", "expected/SimpleClassInjectFactory.java"));
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     try {
       List<String> sourceLines = Resources.readLines(Resources.getResource(resourceName), UTF_8);
