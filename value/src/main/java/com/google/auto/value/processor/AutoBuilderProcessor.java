@@ -72,7 +72,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
-import kotlinx.metadata.Flag;
+import kotlinx.metadata.Attributes;
 import kotlinx.metadata.KmClass;
 import kotlinx.metadata.KmConstructor;
 import kotlinx.metadata.KmValueParameter;
@@ -626,8 +626,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
             (String) annotationValues.get("pn").getValue(),
             (Integer) annotationValues.get("xi").getValue());
     KotlinClassMetadata.Class classMetadata =
-        (KotlinClassMetadata.Class) KotlinClassMetadata.read(header);
-    KmClass kmClass = classMetadata.toKmClass();
+        (KotlinClassMetadata.Class) KotlinClassMetadata.readStrict(header);
+    KmClass kmClass = classMetadata.getKmClass();
     ImmutableList.Builder<Executable> kotlinConstructorsBuilder = ImmutableList.builder();
     for (KmConstructor constructor : kmClass.getConstructors()) {
       ImmutableSet.Builder<String> allBuilder = ImmutableSet.builder();
@@ -635,7 +635,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       for (KmValueParameter param : constructor.getValueParameters()) {
         String name = param.getName();
         allBuilder.add(name);
-        if (Flag.ValueParameter.DECLARES_DEFAULT_VALUE.invoke(param.getFlags())) {
+        if (Attributes.getDeclaresDefaultValue(param)) {
           optionalBuilder.add(name);
         }
       }
