@@ -79,11 +79,6 @@
       <artifactId>javapoet</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.jetbrains.kotlinx</groupId>
-      <artifactId>kotlinx-metadata-jvm</artifactId>
-      <version>0.9.0</version>
-    </dependency>
-    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>9.7</version>
@@ -230,21 +225,6 @@
                   <exclude>com.google.code.findbugs:jsr305</exclude>
                 </excludes>
               </artifactSet>
-              <filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <!-- Don't include kotlinx-metadata.kotlin_module, etc. We're shading those
-                         libaries and they're only used from Java. Leaving them in the jar creates
-                         "incompatible version" errors from the Kotlin compiler. -->
-                    <exclude>META-INF/*.kotlin_module</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-              <transformers>
-                <!-- Needed to avoid "No MetadataExtensions instances found in the classpath" from Kotlin reflection. -->
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-              </transformers>
               <relocations>
                 <relocation>
                   <pattern>com.google</pattern>
@@ -256,14 +236,6 @@
                 <relocation>
                   <pattern>com.squareup.javapoet</pattern>
                   <shadedPattern>autovalue.shaded.com.squareup.javapoet</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>kotlin</pattern>
-                  <shadedPattern>autovalue.shaded.kotlin</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>kotlinx</pattern>
-                  <shadedPattern>autovalue.shaded.kotlinx</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>net.ltgt.gradle.incap</pattern>

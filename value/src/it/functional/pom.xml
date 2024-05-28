@@ -41,11 +41,6 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.auto.value</groupId>
-      <artifactId>auto-value</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>
       <version>1.1.1</version>
@@ -158,6 +153,18 @@
           </dependency>
         </dependencies>
         <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.auto.value</groupId>
+              <artifactId>auto-value</artifactId>
+              <version>${project.version}</version>
+            </path>
+            <path>
+              <groupId>org.jetbrains.kotlin</groupId>
+              <artifactId>kotlin-metadata-jvm</artifactId>
+              <version>2.0.0</version>
+            </path>
+          </annotationProcessorPaths>
           <source>${java.specification.version}</source>
           <target>${java.specification.version}</target>
           <compilerArgs>
@@ -202,7 +209,7 @@
             </goals>
           </execution>
         </executions>
-     </plugin>
+      </plugin>
     </plugins>
   </build>
 
@@ -223,6 +230,18 @@
               </dependency>
             </dependencies>
             <configuration>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>com.google.auto.value</groupId>
+                  <artifactId>auto-value</artifactId>
+                  <version>${project.version}</version>
+                </path>
+                <path>
+                  <groupId>org.jetbrains.kotlin</groupId>
+                  <artifactId>kotlin-metadata-jvm</artifactId>
+                  <version>2.0.0</version>
+                </path>
+              </annotationProcessorPaths>
               <source>${java.specification.version}</source>
               <target>${java.specification.version}</target>
               <compilerArgs>

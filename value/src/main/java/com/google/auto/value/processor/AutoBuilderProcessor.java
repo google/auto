@@ -21,11 +21,9 @@ import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.auto.common.MoreStreams.toImmutableSet;
-import static com.google.auto.common.MoreTypes.asTypeElement;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
-import static com.google.auto.value.processor.ClassNames.KOTLIN_METADATA_NAME;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
@@ -48,7 +46,6 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -72,12 +69,6 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
-import kotlinx.metadata.Attributes;
-import kotlinx.metadata.KmClass;
-import kotlinx.metadata.KmConstructor;
-import kotlinx.metadata.KmValueParameter;
-import kotlinx.metadata.jvm.KotlinClassHeader;
-import kotlinx.metadata.jvm.KotlinClassMetadata;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
@@ -104,11 +95,13 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private TypeMirror javaLangVoid;
+  private KotlinMetadata kotlinMetadata;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
     javaLangVoid = elementUtils().getTypeElement("java.lang.Void").asType();
+    kotlinMetadata = new KotlinMetadata(errorReporter());
   }
 
   // The handling of @AutoBuilder to generate annotation implementations needs some explanation.
@@ -464,12 +457,13 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
 
   private ImmutableList<Executable> findRelevantExecutables(
       TypeElement ofClass, String callMethod, TypeElement autoBuilderType) {
-    Optional<AnnotationMirror> kotlinMetadata = kotlinMetadataAnnotation(ofClass);
+    Optional<AnnotationMirror> kotlinMetadataAnnotation =
+        kotlinMetadata.kotlinMetadataAnnotation(ofClass);
     List<? extends Element> elements = ofClass.getEnclosedElements();
     Stream<Executable> relevantExecutables =
         callMethod.isEmpty()
-            ? kotlinMetadata
-                .map(a -> kotlinConstructorsIn(a, ofClass).stream())
+            ? kotlinMetadataAnnotation
+                .map(a -> kotlinMetadata.kotlinConstructorsIn(a, ofClass).stream())
                 .orElseGet(() -> constructorsIn(elements).stream().map(Executable::of))
             : methodsIn(elements).stream()
                 .filter(m -> m.getSimpleName().contentEquals(callMethod))
@@ -580,91 +574,6 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       default:
         return false;
     }
-  }
-
-  private Optional<AnnotationMirror> kotlinMetadataAnnotation(Element element) {
-    // It would be MUCH simpler if we could just use ofClass.getAnnotation(Metadata.class).
-    // However that would be unsound. We want to shade the Kotlin runtime, including
-    // kotlin.Metadata, so as not to interfere with other things on the annotation classpath that
-    // might have a different version of the runtime. That means that if we referenced
-    // kotlin.Metadata.class here we would actually be referencing
-    // autovalue.shaded.kotlin.Metadata.class. Obviously the Kotlin class doesn't have that
-    // annotation.
-    return element.getAnnotationMirrors().stream()
-        .filter(
-            a ->
-                asTypeElement(a.getAnnotationType())
-                    .getQualifiedName()
-                    .contentEquals(KOTLIN_METADATA_NAME))
-        .<AnnotationMirror>map(a -> a) // get rid of that stupid wildcard
-        .findFirst();
-  }
-
-  /**
-   * Use Kotlin reflection to build {@link Executable} instances for the constructors in {@code
-   * ofClass} that include information about which parameters have default values.
-   */
-  private ImmutableList<Executable> kotlinConstructorsIn(
-      AnnotationMirror metadata, TypeElement ofClass) {
-    ImmutableMap<String, AnnotationValue> annotationValues =
-        AnnotationMirrors.getAnnotationValuesWithDefaults(metadata).entrySet().stream()
-            .collect(toImmutableMap(e -> e.getKey().getSimpleName().toString(), e -> e.getValue()));
-    // We match the KmConstructor instances with the ExecutableElement instances based on the
-    // parameter names. We could possibly just assume that the constructors are in the same order.
-    Map<ImmutableSet<String>, ExecutableElement> map =
-        constructorsIn(ofClass.getEnclosedElements()).stream()
-            .collect(toMap(c -> parameterNames(c), c -> c, (a, b) -> a, LinkedHashMap::new));
-    ImmutableMap<ImmutableSet<String>, ExecutableElement> paramNamesToConstructor =
-        ImmutableMap.copyOf(map);
-    KotlinClassHeader header =
-        new KotlinClassHeader(
-            (Integer) annotationValues.get("k").getValue(),
-            intArrayValue(annotationValues.get("mv")),
-            stringArrayValue(annotationValues.get("d1")),
-            stringArrayValue(annotationValues.get("d2")),
-            (String) annotationValues.get("xs").getValue(),
-            (String) annotationValues.get("pn").getValue(),
-            (Integer) annotationValues.get("xi").getValue());
-    KotlinClassMetadata.Class classMetadata =
-        (KotlinClassMetadata.Class) KotlinClassMetadata.readStrict(header);
-    KmClass kmClass = classMetadata.getKmClass();
-    ImmutableList.Builder<Executable> kotlinConstructorsBuilder = ImmutableList.builder();
-    for (KmConstructor constructor : kmClass.getConstructors()) {
-      ImmutableSet.Builder<String> allBuilder = ImmutableSet.builder();
-      ImmutableSet.Builder<String> optionalBuilder = ImmutableSet.builder();
-      for (KmValueParameter param : constructor.getValueParameters()) {
-        String name = param.getName();
-        allBuilder.add(name);
-        if (Attributes.getDeclaresDefaultValue(param)) {
-          optionalBuilder.add(name);
-        }
-      }
-      ImmutableSet<String> optional = optionalBuilder.build();
-      ImmutableSet<String> all = allBuilder.build();
-      ExecutableElement javaConstructor = paramNamesToConstructor.get(all);
-      if (javaConstructor != null) {
-        kotlinConstructorsBuilder.add(Executable.of(javaConstructor, optional));
-      }
-    }
-    return kotlinConstructorsBuilder.build();
-  }
-
-  private static int[] intArrayValue(AnnotationValue value) {
-    @SuppressWarnings("unchecked")
-    List<AnnotationValue> list = (List<AnnotationValue>) value.getValue();
-    return list.stream().mapToInt(v -> (int) v.getValue()).toArray();
-  }
-
-  private static String[] stringArrayValue(AnnotationValue value) {
-    @SuppressWarnings("unchecked")
-    List<AnnotationValue> list = (List<AnnotationValue>) value.getValue();
-    return list.stream().map(AnnotationValue::getValue).toArray(String[]::new);
-  }
-
-  private static ImmutableSet<String> parameterNames(ExecutableElement executableElement) {
-    return executableElement.getParameters().stream()
-        .map(v -> v.getSimpleName().toString())
-        .collect(toImmutableSet());
   }
 
   private static final ElementKind ELEMENT_KIND_RECORD = elementKindRecord();

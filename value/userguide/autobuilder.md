@@ -119,6 +119,13 @@ The example also implements a `toBuilder()` method to get a builder that starts
 out with values from the given instance. See [below](#to_builder) for more
 details on that.
 
+### Required configuration to understand Kotlin classes
+
+In order for AutoBuilder to understand Kotlin classes, you will typically need
+to add a dependency on the `org.jetbrains.kotlin:kotlin-metadata-jvm` package,
+in the same place where you depend on `com.google.auto.value:auto-value`. The
+older `org.jetbrains.kotlinx:kotlinx-metadata-jvm` should also work.
+
 ## The generated subclass
 
 Like `@AutoValue.Builder`, compiling an `@AutoBuilder` class will generate a
