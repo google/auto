@@ -145,7 +145,7 @@ abstract class TemplateVars {
       } else if (Ascii.equalsIgnoreCase(resourceUrl.getProtocol(), "jar")) {
         return readerFromJar(resourceUrl);
       } else {
-        throw new AssertionError("Template search logic fails for: " + resourceUrl);
+        return readerFromOther(resourceUrl);
       }
     } catch (URISyntaxException e) {
       throw new IOException(e);
@@ -174,10 +174,16 @@ abstract class TemplateVars {
 
   // In most execution environments, we'll be dealing with a jar, but we handle individual files
   // just for cases like running our tests with Maven.
-  private static Reader readerFromFile(URL resourceUrl)
-      throws IOException, URISyntaxException {
+  private static Reader readerFromFile(URL resourceUrl) throws IOException, URISyntaxException {
     File resourceFile = new File(resourceUrl.toURI());
     return new InputStreamReader(new FileInputStream(resourceFile), UTF_8);
+  }
+
+  // As a fallback, we handle other kinds of URL naively. For example, if we're executing in GraalVM
+  // code, we might have a `resource:` URL. This code is not currently covered by unit tests.
+  // See https://github.com/google/auto/issues/1783.
+  private static Reader readerFromOther(URL resourceUrl) throws IOException {
+    return new InputStreamReader(resourceUrl.openStream(), UTF_8);
   }
 
   private static Object fieldValue(Field field, Object container) {
