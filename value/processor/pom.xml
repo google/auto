@@ -41,7 +41,7 @@
 
   <properties>
     <auto-service.version>1.1.1</auto-service.version>
-    <errorprone.version>2.27.1</errorprone.version>
+    <errorprone.version>2.28.0</errorprone.version>
   </properties>
 
   <dependencies>
