@@ -3,20 +3,45 @@ updates:
   - package-ecosystem: "maven"
     directory: "/common"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
   - package-ecosystem: "maven"
     directory: "/factory"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
   - package-ecosystem: "maven"
     directory: "/service"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
   - package-ecosystem: "maven"
     directory: "/value"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
