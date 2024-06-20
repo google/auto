@@ -440,6 +440,7 @@ public class OverridesTest {
   // it also inherits it from Collection<E>.
 
   private interface XCollection<E> {
+    @SuppressWarnings("unused")
     boolean add(E e);
   }
 
