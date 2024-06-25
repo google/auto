@@ -49,7 +49,7 @@ class Nullables {
   static final String NULLABLE_OPTION = "com.google.auto.value.NullableTypeAnnotation";
 
   // We write this using .concat in order to hide it from rewriting rules.
-  private static final String DEFAULT_NULLABLE = "org".concat(".jspecify.nullness.Nullable");
+  private static final String DEFAULT_NULLABLE = "org".concat(".jspecify.annotations.Nullable");
 
   private final Optional<AnnotationMirror> nullableTypeAnnotation;
 
