@@ -688,7 +688,7 @@ public class AutoValueJava8Test {
     try {
       // We write this using .concat in order to hide it from rewriting rules.
       jspecifyNullable =
-          Class.forName("org".concat(".jspecify.nullness.Nullable")).asSubclass(Annotation.class);
+          Class.forName("org".concat(".jspecify.annotations.Nullable")).asSubclass(Annotation.class);
     } catch (ClassNotFoundException e) {
       throw new AssumptionViolatedException("No JSpecify @Nullable available", e);
     }
