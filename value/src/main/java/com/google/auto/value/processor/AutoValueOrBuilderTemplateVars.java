@@ -153,4 +153,10 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
    * subclass, followed by a space if they are not empty.
    */
   String builderClassModifiers = "";
+
+  /**
+   * Set if the code should generate a constructor that takes a Builder as an argument instead of
+   * the usual per-field constructor.
+   */
+  Boolean shouldGenerateBuilderConstructor = false;
 }
