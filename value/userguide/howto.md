@@ -375,10 +375,12 @@ them!
 
 ## <a name="primitive_array"></a>... use a primitive array for a property value?
 
-Go right ahead! AutoValue will generate code that acts on the *values* stored
+AutoValue supports this, and will generate code that acts on the *values* stored
 the array, not the object identity of the array itself, which is (with virtual
 certainty) what you want. Heed the warnings given above about [mutable
-properties](#mutable_property).
+properties](#mutable_property). AutoValue will by default warn about this case,
+because of the mutability, but you can silence the warning with
+`@SuppressWarnings("mutable")` on the accessor method.
 
 ## <a name="object_array"></a>... use an object array for a property value?
 
