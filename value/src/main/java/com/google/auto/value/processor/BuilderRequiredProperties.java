@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static java.lang.Math.min;
+import static java.math.RoundingMode.CEILING;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.value.processor.AutoValueishProcessor.Property;
@@ -25,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.math.IntMath;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -142,7 +144,7 @@ public abstract class BuilderRequiredProperties {
             .collect(toImmutableMap(trackedProperties::get, i -> i));
 
     this.bitmaskFields =
-        IntStream.range(0, (trackedCount + 31) / 32)
+        IntStream.range(0, IntMath.divide(trackedCount, 32, CEILING))
             .mapToObj(
                 i -> {
                   int bitBase = i * 32;

@@ -24,6 +24,7 @@ import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
+import static java.math.RoundingMode.CEILING;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
@@ -40,6 +41,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.math.IntMath;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -250,7 +252,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         .map(Element::asType)
         .map(typeUtils()::erasure)
         .forEach(constructorParameters::add);
-    int bitmaskCount = (executable.optionalParameterCount() + 31) / 32;
+    int bitmaskCount = IntMath.divide(executable.parameters().size(), 32, CEILING);
     constructorParameters.addAll(
         Collections.nCopies(bitmaskCount, typeUtils().getPrimitiveType(TypeKind.INT)));
     String marker = "kot".concat("lin.jvm.internal.DefaultConstructorMarker"); // defeat shading
@@ -271,9 +273,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
 
   private Optional<String> maybeForwardingClass(
       TypeElement autoBuilderType, Executable executable) {
-    return executable.optionalParameterCount() == 0
-        ? Optional.empty()
-        : Optional.of(generatedClassName(autoBuilderType, "AutoBuilderBridge_"));
+    return executable.hasOptionalParameters()
+        ? Optional.of(generatedClassName(autoBuilderType, "AutoBuilderBridge_"))
+        : Optional.empty();
   }
 
   private ImmutableSet<Property> propertySet(

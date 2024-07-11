@@ -91,8 +91,8 @@ class Executable {
     return optionalParameters.contains(parameterName);
   }
 
-  int optionalParameterCount() {
-    return optionalParameters.size();
+  boolean hasOptionalParameters() {
+    return !optionalParameters.isEmpty();
   }
 
   ImmutableList<TypeParameterElement> typeParameters() {

@@ -251,6 +251,91 @@ public final class AutoBuilderKotlinTest {
     assertThat(e).hasMessageThat().contains("requiredString");
   }
 
+  @AutoBuilder(ofClass = KotlinDataSomeDefaultsBig.class)
+  interface KotlinDataSomeDefaultsBigBuilder {
+    static KotlinDataSomeDefaultsBigBuilder builder() {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataSomeDefaultsBigBuilder();
+    }
+
+    KotlinDataSomeDefaultsBigBuilder requiredInt(int x);
+
+    KotlinDataSomeDefaultsBigBuilder requiredString(String x);
+
+    KotlinDataSomeDefaultsBigBuilder a1(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a2(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a3(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a4(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a5(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a6(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a7(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a8(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a9(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a10(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a11(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a12(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a13(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a14(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a15(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a16(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a17(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a18(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a19(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a20(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a21(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a22(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a23(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a24(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a25(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a26(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a27(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a28(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a29(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a30(int x);
+
+    KotlinDataSomeDefaultsBigBuilder a31(int x);
+
+    KotlinDataSomeDefaultsBig build();
+  }
+
+  @Test
+  public void kotlinSomeDefaultsBig() {
+    KotlinDataSomeDefaultsBig allDefaulted =
+        KotlinDataSomeDefaultsBigBuilder.builder().requiredInt(23).requiredString("skidoo").build();
+    assertThat(allDefaulted.getRequiredInt()).isEqualTo(23);
+    assertThat(allDefaulted.getRequiredString()).isEqualTo("skidoo");
+    assertThat(allDefaulted.getA1()).isEqualTo(1);
+    assertThat(allDefaulted.getA31()).isEqualTo(31);
+  }
+
   @AutoBuilder(ofClass = KotlinDataWithList.class)
   interface KotlinDataWithListBuilder {
     static KotlinDataWithListBuilder builder() {
