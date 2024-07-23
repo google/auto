@@ -506,6 +506,7 @@ public final class ToPrettyStringExtension extends AutoValueExtension {
       private final Types types;
 
       KindVisitor(Types types, Elements elements) {
+        super(REGULAR_OBJECT); // default value, covers generic types
         this.types = types;
         this.elements = elements;
       }
