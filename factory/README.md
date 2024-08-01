@@ -74,15 +74,45 @@ final class SomeClass {
 }
 ```
 
-Download
---------
 
-In order to activate code generation you will need to
-include `auto-factory-${version}.jar` in your build at 
-compile time.
+## Getting Started
 
-In a Maven project, one would include the `auto-factory` 
-artifact as an "optional" dependency:
+You will need `auto-factory-annotations-${version}.jar` in your compile-time
+classpath, and you will need `auto-factory-${version}.jar` in your
+annotation-processor classpath.
+
+In Maven, you can write:
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.google.auto.factory</groupId>
+    <artifactId>auto-factory-annotations</artifactId>
+    <version>${auto-factory.version}</version>
+  </dependency>
+</dependencies>
+
+...
+
+<plugins>
+  <plugin>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+      <annotationProcessorPaths>
+        <path>
+          <groupId>com.google.auto.factory</groupId>
+          <artifactId>auto-factory</artifactId>
+          <version>${auto-factory.version}</version>
+        </path>
+      </annotationProcessorPaths>
+    </configuration>
+  </plugin>
+</plugins>
+```
+
+Alternatively, you can include the processor itself (which transitively depends
+on the annotation) in your compile-time classpath. (However, note that doing so
+may pull unnecessary classes into your runtime classpath.)
 
 ```xml
 <dependencies>
