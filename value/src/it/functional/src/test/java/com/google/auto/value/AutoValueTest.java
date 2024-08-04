@@ -1626,7 +1626,7 @@ public class AutoValueTest {
 
     @AutoValue.Builder
     public interface Builder {
-      Builder setAnInt(Integer x);
+      Builder setAnInt(int x);
 
       Builder setANullableInteger(int x);
 
@@ -1646,12 +1646,6 @@ public class AutoValueTest {
 
     PrimitiveAndBoxed instance2 = instance1.toBuilder().setANullableInteger(5).build();
     assertThat(instance2.aNullableInteger()).isEqualTo(5);
-
-    try {
-      instance1.toBuilder().setAnInt(null);
-      fail();
-    } catch (NullPointerException expected) {
-    }
   }
 
   @AutoValue

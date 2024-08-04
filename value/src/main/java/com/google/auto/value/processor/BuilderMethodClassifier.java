@@ -485,6 +485,16 @@ abstract class BuilderMethodClassifier<E extends Element> {
           return Optional.empty();
         }
       }
+      if (!parameterElement.asType().getKind().isPrimitive()
+          && originalPropertyType(propertyElement).getKind().isPrimitive()) {
+        errorReporter
+            .reportWarning(
+            setter,
+            "[%sUnnecessaryBoxing] %s is primitive but parameter of setter method is not",
+            autoWhat(),
+            propertyString(propertyElement));
+        return Optional.empty();
+      }
       return Optional.of(Copier.IDENTITY);
     }
 

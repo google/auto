@@ -4008,6 +4008,36 @@ public class AutoValueCompilationTest {
         .doesNotContain("kotlin.Metadata");
   }
 
+  @Test
+  public void autoValueBuilderNullableSetterPrimitiveGetter() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  abstract int blam();",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder {",
+            "    Builder blam(Integer x);",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadWarningContaining(
+            "property method foo.bar.Baz.blam() is primitive but parameter of setter method is not")
+        .inFile(javaFileObject)
+        .onLineContaining("Builder blam(Integer x)");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
