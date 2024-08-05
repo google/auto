@@ -1616,6 +1616,7 @@ public class AutoValueTest {
     @Nullable
     public abstract Integer aNullableInteger();
 
+    @SuppressWarnings("AutoValueBoxedValues")
     public abstract Integer aNonNullableInteger();
 
     public abstract Builder toBuilder();
