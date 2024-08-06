@@ -658,4 +658,28 @@ public class AutoOneOfTest {
     OneOfArray oneOfArray = OneOfArray.ofInts(new int[] {1, 2});
     assertThat(oneOfArray.toString()).isEqualTo("OneOfArray{ints=[1, 2]}");
   }
+
+  @AutoOneOf(OneOfFunkyString.Kind.class)
+  public abstract static class OneOfFunkyString {
+    public enum Kind {
+      FUNKY_STRING
+    }
+
+    public static class String {}
+
+    public abstract Kind getKind();
+
+    public abstract String funkyString();
+
+    public static OneOfFunkyString ofFunkyString(String s) {
+      return AutoOneOf_AutoOneOfTest_OneOfFunkyString.funkyString(s);
+    }
+  }
+
+  @Test
+  public void funkyString() {
+    OneOfFunkyString oneOfFunkyString =
+        OneOfFunkyString.ofFunkyString(new OneOfFunkyString.String());
+    assertThat(oneOfFunkyString.funkyString()).isNotNull();
+  }
 }

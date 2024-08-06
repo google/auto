@@ -75,9 +75,7 @@ final class $generatedClass {
 
     #if (!$p.kind.primitive)
 
-    if ($p == null) {
-      throw new NullPointerException();
-    }
+    `java.util.Objects`.requireNonNull($p);
 
     #end
 
@@ -139,7 +137,7 @@ final class $generatedClass {
 
     #if ($serializable)
 
-    private Object readResolve() {
+    private `java.lang.Object` readResolve() {
       return INSTANCE;
     }
 
@@ -148,7 +146,7 @@ final class $generatedClass {
     #if ($toString)
 
     @`java.lang.Override`
-    public String toString() {
+    public `java.lang.String` toString() {
       return "${simpleClassName}{$p.name}";
     }
 
@@ -171,7 +169,7 @@ final class $generatedClass {
 
     @`java.lang.Override`
     public int hashCode() {
-      return System.identityHashCode(this);
+      return `java.lang.System`.identityHashCode(this);
     }
 
     #end
@@ -192,7 +190,7 @@ final class $generatedClass {
     #if ($toString)
 
     @`java.lang.Override`
-    public String toString() {
+    public `java.lang.String` toString() {
       return "${simpleClassName}{$p.name=" ##
           + #if ($p.kind == "ARRAY") `java.util.Arrays`.toString(this.$p) #else this.$p #end
           + "}";
