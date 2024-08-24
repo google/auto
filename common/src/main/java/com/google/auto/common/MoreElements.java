@@ -301,7 +301,7 @@ public final class MoreElements {
    * <p>Here is an example how one could get a List of static methods of a class:
    * <pre>{@code
    * FluentIterable.from(ElementFilter.methodsIn(clazzElement.getEnclosedElements()))
-   *     .filter(MoreElements.hasModifiers(Modifier.STATIC).toList();
+   *     .filter(MoreElements.hasModifiers(Modifier.STATIC)).toList();
    * }</pre>
    */
   public static <T extends Element> Predicate<T> hasModifiers(Modifier... modifiers) {
@@ -317,7 +317,7 @@ public final class MoreElements {
    * <pre>{@code
    * Set<Modifier> modifiers = ...;
    * FluentIterable.from(ElementFilter.methodsIn(clazzElement.getEnclosedElements()))
-   *     .filter(MoreElements.hasModifiers(modifiers).toList();}
+   *     .filter(MoreElements.hasModifiers(modifiers)).toList();}
    * </pre>
    */
   public static <T extends Element> Predicate<T> hasModifiers(final Set<Modifier> modifiers) {
