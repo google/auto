@@ -493,7 +493,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
             "[%sUnnecessaryBoxing] %s is primitive but parameter of setter method is not",
             autoWhat(),
             propertyString(propertyElement));
-        return Optional.empty();
       }
       return Optional.of(Copier.IDENTITY);
     }

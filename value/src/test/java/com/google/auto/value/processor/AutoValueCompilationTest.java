@@ -4031,6 +4031,7 @@ public class AutoValueCompilationTest {
         javac()
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
+    assertThat(compilation).succeeded();
     assertThat(compilation)
         .hadWarningContaining(
             "property method foo.bar.Baz.blam() is primitive but parameter of setter method is not")
