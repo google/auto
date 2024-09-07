@@ -30,10 +30,11 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 /**
- * A utility class that provides Android compatible alternatives to Guava's streaming APIs.
+ * A utility class that provides legacy alternatives to Guava's streaming APIs.
  *
- * <p>This is useful when the Android flavor of Guava somehow finds its way onto the processor
- * classpath.
+ * <p>This class was useful when those APIs were not part of the Android flavor of Guava, since the
+ * Android flavor somehow finds its way onto the processor classpath. Now that the APIs are part of
+ * the Android flavor of Guava, there is no need for this class.
  */
 public final class MoreStreams {
 
