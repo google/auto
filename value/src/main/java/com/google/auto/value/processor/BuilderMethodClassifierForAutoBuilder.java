@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableBiMap;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;

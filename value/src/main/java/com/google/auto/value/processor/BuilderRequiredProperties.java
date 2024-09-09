@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.Math.min;
 import static java.math.RoundingMode.CEILING;
 import static java.util.stream.Collectors.joining;

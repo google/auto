@@ -15,12 +15,12 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.common.MoreTypes.asTypeElement;
 import static com.google.auto.value.processor.ClassNames.KOTLIN_METADATA_NAME;
 import static com.google.common.base.Throwables.throwIfUnchecked;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
 

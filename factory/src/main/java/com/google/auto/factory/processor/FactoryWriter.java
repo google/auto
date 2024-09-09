@@ -16,7 +16,7 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
-import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;

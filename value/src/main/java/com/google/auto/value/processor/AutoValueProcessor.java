@@ -16,9 +16,9 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_NAME;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.intersection;
 import static java.util.Comparator.naturalOrder;

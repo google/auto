@@ -16,13 +16,13 @@
 package com.google.auto.value.extension.memoized.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.extension.memoized.processor.ClassNames.MEMOIZED_NAME;
 import static com.google.auto.value.extension.memoized.processor.MemoizedValidator.getAnnotationMirror;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;

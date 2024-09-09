@@ -15,7 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.common.MoreTypes;

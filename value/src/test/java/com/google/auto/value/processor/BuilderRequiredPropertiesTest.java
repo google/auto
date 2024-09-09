@@ -15,8 +15,8 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 

@@ -17,8 +17,8 @@
 package com.google.auto.value.extension.toprettystring.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static java.util.stream.Collectors.joining;

@@ -16,11 +16,11 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasVisibleNoArgConstructor;
 import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;

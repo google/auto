@@ -15,9 +15,9 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.asExecutable;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import java.util.stream.IntStream;

@@ -15,11 +15,11 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
 import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;

@@ -16,10 +16,10 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.MoreElements.getPackage;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.ElementKind.PACKAGE;

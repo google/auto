@@ -16,7 +16,7 @@
  */
 package com.google.auto.common;
 
-import static com.google.auto.common.MoreStreams.toImmutableSet;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.element.Modifier.STATIC;
 

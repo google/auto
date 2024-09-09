@@ -17,8 +17,8 @@ package com.google.auto.service.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.common.base.Throwables.getStackTraceAsString;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;

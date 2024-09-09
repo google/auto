@@ -16,8 +16,8 @@
 package com.google.auto.common;
 
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Collections.unmodifiableMap;
 
 import com.google.common.base.Equivalence;
