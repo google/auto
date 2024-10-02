@@ -17,7 +17,7 @@ git config --global user.name "$GITHUB_ACTOR"
 git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
 git rm -rf api/latest
 mkdir -p api # Just to make mv work if the directory is missing
-mv ${TARGET}/site/apidocs api/latest
+mv ${TARGET}/reports/apidocs api/latest
 git add -A -f api/latest
 git commit -m "Latest javadoc on successful CI build auto-pushed to gh-pages"
 git push -fq origin gh-pages > /dev/null
