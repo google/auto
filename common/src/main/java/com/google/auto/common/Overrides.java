@@ -15,6 +15,7 @@
  */
 package com.google.auto.common;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import com.google.common.base.Preconditions;
@@ -432,7 +433,8 @@ abstract class Overrides {
     private @Nullable TypeElement superclass(TypeElement type) {
       TypeMirror sup = type.getSuperclass();
       if (sup.getKind() == TypeKind.DECLARED) {
-        return MoreElements.asType(typeUtils.asElement(sup));
+        // asElement returns non-null for DECLARED types.
+        return MoreElements.asType(requireNonNull(typeUtils.asElement(sup)));
       } else {
         return null;
       }
@@ -441,7 +443,11 @@ abstract class Overrides {
     private ImmutableList<TypeElement> superinterfaces(TypeElement type) {
       ImmutableList.Builder<TypeElement> types = ImmutableList.builder();
       for (TypeMirror sup : type.getInterfaces()) {
-        types.add(MoreElements.asType(typeUtils.asElement(sup)));
+        /*
+         * All interfaces implemented/extended are DECLARED types, for which asElement returns
+         * non-null.
+         */
+        types.add(MoreElements.asType(requireNonNull(typeUtils.asElement(sup))));
       }
       return types.build();
     }
