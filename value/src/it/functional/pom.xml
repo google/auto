@@ -32,7 +32,7 @@
   <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
-    <kotlin.version>2.0.20</kotlin.version>
+    <kotlin.version>2.0.21</kotlin.version>
   </properties>
   <dependencies>
     <dependency>
@@ -162,7 +162,7 @@
             <path>
               <groupId>org.jetbrains.kotlin</groupId>
               <artifactId>kotlin-metadata-jvm</artifactId>
-              <version>2.0.20</version>
+              <version>2.0.21</version>
             </path>
           </annotationProcessorPaths>
           <source>${java.specification.version}</source>
@@ -239,7 +239,7 @@
                 <path>
                   <groupId>org.jetbrains.kotlin</groupId>
                   <artifactId>kotlin-metadata-jvm</artifactId>
-                  <version>2.0.20</version>
+                  <version>2.0.21</version>
                 </path>
               </annotationProcessorPaths>
               <source>${java.specification.version}</source>
