@@ -221,15 +221,15 @@ class BuilderSpec {
      * parameters must be the same as those of the {@code @AutoValue} class. Here's a correct
      * example:
      *
-     * <pre>
-     * {@code @AutoValue abstract class Foo<A extends Number, B> {
+     * <pre>{@code
+     * @AutoValue abstract class Foo<A extends Number, B> {
      *   abstract int someProperty();
      *
      *   abstract Builder<A, B> toBuilder();
      *
      *   interface Builder<A extends Number, B> {...}
-     * }}
-     * </pre>
+     * }
+     * }</pre>
      *
      * <p>We currently impose that there cannot be more than one such method.
      */

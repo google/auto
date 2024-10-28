@@ -49,35 +49,36 @@ import java.lang.annotation.Target;
  *
  * <h2>Example</h2>
  *
- * <pre>
- *   {@code @AutoValue}
- *   abstract class Value {
- *     abstract String stringProperty();
+ * <pre>{@code
+ * @AutoValue
+ * abstract class Value {
+ *   abstract String stringProperty();
  *
- *     {@code @Memoized}
- *     String derivedProperty() {
- *       return someCalculationOn(stringProperty());
- *     }
+ *   @Memoized
+ *   String derivedProperty() {
+ *     return someCalculationOn(stringProperty());
  *   }
+ * }
  *
- *   {@code @Generated}
- *   class AutoValue_Value {
- *     // …
+ * @Generated
+ * class AutoValue_Value {
+ *   // …
  *
- *     private volatile String derivedProperty;
+ *   private volatile String derivedProperty;
  *
- *     {@code Override}
- *     String derivedProperty() {
- *       if (derivedProperty == null) {
- *         synchronized (this) {
- *           if (derivedProperty == null) {
- *             derivedProperty = super.derivedProperty();
- *           }
+ *   @Override
+ *   String derivedProperty() {
+ *     if (derivedProperty == null) {
+ *       synchronized (this) {
+ *         if (derivedProperty == null) {
+ *           derivedProperty = super.derivedProperty();
  *         }
  *       }
- *       return derivedProperty;
  *     }
- *   }</pre>
+ *     return derivedProperty;
+ *   }
+ * }
+ * }</pre>
  */
 @Documented
 @Retention(CLASS)

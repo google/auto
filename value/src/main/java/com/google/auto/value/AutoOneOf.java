@@ -27,7 +27,8 @@ import java.lang.annotation.Target;
  * abstract methods define a set of properties. But unlike {@code @AutoValue}, only one of those
  * properties is defined in any given instance.
  *
- * <pre>{@code @AutoOneOf(StringOrInteger.Kind.class)
+ * <pre>{@code
+ * @AutoOneOf(StringOrInteger.Kind.class)
  * public abstract class StringOrInteger {
  *   public enum Kind {STRING, INTEGER}
  *
@@ -53,7 +54,8 @@ import java.lang.annotation.Target;
  *       return "the integer " + stringOrInteger.integer();
  *   }
  *   throw new AssertionError();
- * }}</pre>
+ * }
+ * }</pre>
  *
  * <p>{@code @AutoOneOf} is explained in more detail in the <a
  * href="https://github.com/google/auto/blob/main/value/userguide/howto.md#oneof">user guide</a>.

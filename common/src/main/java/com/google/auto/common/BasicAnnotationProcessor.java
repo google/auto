@@ -367,16 +367,16 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * {@code @X}, then {@code Outer}, {@code Outer.foo}, and {@code Outer.foo()} will be added to the
    * multimap, but neither {@code Inner} nor its members will.
    *
-   * <pre><code>
-   *   {@literal @}X class Outer {
-   *     {@literal @}X Object foo;
-   *     {@literal @}X void foo() {}
-   *     {@literal @}X static class Inner {
-   *       {@literal @}X Object bar;
-   *       {@literal @}X void bar() {}
-   *     }
+   * <pre>{@code
+   * @X class Outer {
+   *   @X Object foo;
+   *   @X void foo() {}
+   *   @X static class Inner {
+   *     @X Object bar;
+   *     @X void bar() {}
    *   }
-   * </code></pre>
+   * }
+   * }</pre>
    */
   private static void findAnnotatedElements(
       Element element,

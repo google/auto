@@ -48,17 +48,17 @@ final class TypeVariables {
    * Returns a map from methods to return types, where the return types are not necessarily the
    * original return types of the methods. Consider this example:
    *
-   * <pre>
-   * &#64;AutoValue class {@code Foo<T>} {
+   * <pre>{@code
+   * @AutoValue class Foo<T> {
    *   abstract T getFoo();
    *
-   *   &#64;AutoValue.Builder
-   *   abstract class {@code Builder<T>} {
+   *   @AutoValue.Builder
+   *   abstract class Builder<T> {
    *     abstract Builder setFoo(T t);
-   *     abstract {@code Foo<T>} build();
+   *     abstract Foo<T> build();
    *   }
    * }
-   * </pre>
+   * }</pre>
    *
    * We want to be able to check that the parameter type of {@code setFoo} is the same as the return
    * type of {@code getFoo}. But in fact it isn't, because the {@code T} of {@code Foo<T>} is not
@@ -113,10 +113,10 @@ final class TypeVariables {
    * {@code static <K, V> ImmutableMap<K, V> copyOf(Map<? extends K, ? extends V>)}<br>
    * and we want to know if we can do this:
    *
-   * <pre>
-   * {@code ImmutableMap<String, Integer> actualParameter = ...;}
-   * {@code ImmutableMap<String, Number> target = ImmutableMap.copyOf(actualParameter);}
-   * </pre>
+   * <pre>{@code
+   * ImmutableMap<String, Integer> actualParameter = ...;
+   * ImmutableMap<String, Number> target = ImmutableMap.copyOf(actualParameter);
+   * }</pre>
    *
    * We will infer {@code K=String}, {@code V=Number} based on the target type, and then rewrite the
    * formal parameter type from<br>

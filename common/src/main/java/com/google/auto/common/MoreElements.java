@@ -309,16 +309,17 @@ public final class MoreElements {
   }
 
   /**
-   * Returns a {@link Predicate} that can be used to filter elements by {@link Modifier}.
-   * The predicate returns {@code true} if the input {@link Element} has all of the given
-   * {@code modifiers}, perhaps in addition to others.
+   * Returns a {@link Predicate} that can be used to filter elements by {@link Modifier}. The
+   * predicate returns {@code true} if the input {@link Element} has all of the given {@code
+   * modifiers}, perhaps in addition to others.
    *
    * <p>Here is an example how one could get a List of methods with certain modifiers of a class:
+   *
    * <pre>{@code
    * Set<Modifier> modifiers = ...;
    * FluentIterable.from(ElementFilter.methodsIn(clazzElement.getEnclosedElements()))
-   *     .filter(MoreElements.hasModifiers(modifiers)).toList();}
-   * </pre>
+   *     .filter(MoreElements.hasModifiers(modifiers)).toList();
+   * }</pre>
    */
   public static <T extends Element> Predicate<T> hasModifiers(final Set<Modifier> modifiers) {
     return new Predicate<T>() {

@@ -51,7 +51,7 @@ import org.objectweb.asm.MethodVisitor;
  * generate a class file, say {@code Forwarder}, that is basically what you would get if you could
  * compile this:
  *
- * <pre>
+ * <pre>{@code
  * final class Forwarder {
  *   private Forwarder() {}
  *
@@ -59,7 +59,7 @@ import org.objectweb.asm.MethodVisitor;
  *     return new ConstructMe(a, b, c);
  *   }
  * }
- * </pre>
+ * }</pre>
  *
  * <p>Because the class file is assembled directly, rather than being produced by the Java compiler,
  * it <i>can</i> call the synthetic constructor. Then regular Java source code can do {@code
