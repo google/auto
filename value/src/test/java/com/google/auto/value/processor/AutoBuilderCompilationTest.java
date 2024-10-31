@@ -168,6 +168,42 @@ public final class AutoBuilderCompilationTest {
   }
 
   @Test
+  public void recordWithNullableNestedComponentType() {
+    double version = Double.parseDouble(JAVA_SPECIFICATION_VERSION.value());
+    assume().that(version).isAtLeast(16.0);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import org.checkerframework.checker.nullness.qual.Nullable;",
+            "",
+            "public record Baz(@Nullable Nested nested) {",
+            "  public static Builder builder() {",
+            "    return new AutoBuilder_Baz_Builder();",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Builder setNested(Nested nested);",
+            "    Baz build();",
+            "  }",
+            "",
+            "  public record Nested() {}",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.checkerframework.checker.nullness.qual.Nullable")
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
+        .contentsAsUtf8String()
+        .contains("private Baz.@Nullable Nested nested;");
+  }
+
+  @Test
   public void buildOtherPackage() {
     JavaFileObject built =
         JavaFileObjects.forSourceLines(

@@ -43,7 +43,7 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
   private ${builderPropertyBuilders[$p.name].nullableBuilderType} ##
       ${builderPropertyBuilders[$p.name].name};
 
-    #end
+  #end
 
   private $p.builderFieldType $p $p.builderInitializer;
 

@@ -324,7 +324,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     return new Property(
         name,
         identifier,
-        TypeEncoder.encode(type),
+        TypeEncoder.encodeWithAnnotations(type),
         new AnnotatedTypeMirror(type),
         nullableAnnotation,
         nullables,
