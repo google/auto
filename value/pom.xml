@@ -78,7 +78,6 @@
     <module>annotations</module>
     <module>processor</module>
     <module>src/it/functional</module>
-    <module>src/it/gwtserializer</module>
   </modules>
 
   <distributionManagement>
@@ -208,6 +207,15 @@
     </pluginManagement>
   </build>
   <profiles>
+    <profile>
+      <id>gwt-test-only-post-java8</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <modules>
+        <module>src/it/gwtserializer</module>
+      </modules>
+    </profile>
     <profile>
       <id>sonatype-oss-release</id>
       <build>
