@@ -67,11 +67,8 @@ methods, but you might want to keep a factory method in some records. Perhaps
 for compatibility reasons, or because you are normalizing input data to
 different types, such as from `List` to `ImmutableList`.
 
-In this event, you can still *discourage* calling the constructor by marking it
-deprecated. More on this [below](#deprecating).
-
-Clever ways do exist to make calling the constructor impossible, but it's
-probably simpler to keep using AutoValue.
+If you don't want users to call your constructor at all, records are not a good
+fit. You probably want to continue using AutoValue in that case.
 
 ### Superclass
 
@@ -482,31 +479,9 @@ public record Person(String name, int id) {
 Person p = Person.builder().name("Priz").id(6).build();
 ```
 
-#### <a id="deprecating"></a>Deprecating the constructor
-
 As mentioned [above](#staticfactory), the primary constructor is always visible.
-In the preceding example, the builder will enforce that the `name` property is
-not null (since it is not marked @Nullable), but someone calling the constructor
-will bypass that check. You could deprecate the constructor to discourage this:
-
-```java
-public record Person(String name, int id) {
-  /** @deprecated Obtain instances using the {@link #builder()} instead. */
-  @Deprecated
-  public Person {}
-
-  public static Builder builder() {
-    return new AutoBuilder_Person_Builder();
-  }
-
-  @AutoBuilder
-  public interface Builder {
-    Builder name(String name);
-    Builder id(int id);
-    Person build();
-  }
-}
-```
+So you cannot assume that instances of your record will always be built with the
+builder. Any data validation should be performed in the constructor.
 
 ### Custom `toString()`
 
