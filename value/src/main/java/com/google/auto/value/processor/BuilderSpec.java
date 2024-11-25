@@ -462,7 +462,7 @@ class BuilderSpec {
     private final String nullableAnnotation;
     private final Copier copier;
 
-    PropertySetter(ExecutableElement setter, TypeMirror parameterType, Copier copier) {
+    PropertySetter(ExecutableElement setter, AnnotatedTypeMirror parameterType, Copier copier) {
       this.setter = setter;
       this.copier = copier;
       this.access = SimpleMethod.access(setter);
@@ -470,7 +470,8 @@ class BuilderSpec {
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
       VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      Optional<String> maybeNullable = nullableAnnotationFor(parameterElement, parameterType);
+      Optional<String> maybeNullable =
+          nullableAnnotationFor(parameterElement, parameterType.getType());
       this.nullableAnnotation = maybeNullable.orElse("");
     }
 
@@ -478,9 +479,10 @@ class BuilderSpec {
       return setter;
     }
 
-    private static String parameterTypeString(ExecutableElement setter, TypeMirror parameterType) {
+    private static String parameterTypeString(
+        ExecutableElement setter, AnnotatedTypeMirror parameterType) {
       if (setter.isVarArgs()) {
-        TypeMirror componentType = MoreTypes.asArray(parameterType).getComponentType();
+        TypeMirror componentType = MoreTypes.asArray(parameterType.getType()).getComponentType();
         // This is a bit ugly. It's OK to annotate just the component type, because if it is
         // say `@Nullable String` then we will end up with `@Nullable String...`. Unlike the
         // normal array case, we can't have the situation where the array itself is annotated;

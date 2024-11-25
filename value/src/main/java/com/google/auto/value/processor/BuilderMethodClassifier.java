@@ -402,8 +402,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
                       + " is not appropriate", autoWhat());
         }
         // We allow the return type to be a supertype (other than Object), to support step builders.
-        TypeMirror parameterType =
-            Iterables.getOnlyElement(methodSignature.parameterTypes()).getType();
+        AnnotatedTypeMirror parameterType =
+            Iterables.getOnlyElement(methodSignature.parameterTypes());
         propertyNameToSetters.put(
             propertyName, new PropertySetter(method, parameterType, function.get()));
       } else {

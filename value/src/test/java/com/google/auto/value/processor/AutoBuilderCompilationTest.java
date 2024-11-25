@@ -168,6 +168,40 @@ public final class AutoBuilderCompilationTest {
   }
 
   @Test
+  public void recordWithNullableTypeVariableComponents() {
+    double version = Double.parseDouble(JAVA_SPECIFICATION_VERSION.value());
+    assume().that(version).isAtLeast(16.0);
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import org.checkerframework.checker.nullness.qual.Nullable;",
+            "",
+            "public record Baz<T>(int anInt, @Nullable T aT) {",
+            "  public static Builder builder() {",
+            "    return new AutoBuilder_Baz_Builder();",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder<T> {",
+            "    Builder setAnInt(int x);",
+            "    Builder setAT(@Nullable T x);",
+            "    Baz<T> build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
+        .contentsAsUtf8String()
+        .contains("public Baz.Builder<T> setAT(@Nullable T aT) {");
+  }
+
+  @Test
   public void recordWithNullableNestedComponentType() {
     double version = Double.parseDouble(JAVA_SPECIFICATION_VERSION.value());
     assume().that(version).isAtLeast(16.0);
