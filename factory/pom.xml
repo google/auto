@@ -101,6 +101,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
       <version>1.2.2</version>

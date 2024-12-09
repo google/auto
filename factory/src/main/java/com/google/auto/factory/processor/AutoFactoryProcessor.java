@@ -62,7 +62,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.

@@ -1477,7 +1477,7 @@ public class AutoValueCompilationTest {
             "import java.util.ArrayList;",
             "import java.util.List;",
             "import java.util.Map;",
-            "import org.checkerframework.checker.nullness.qual.Nullable;",
+            "import org.jspecify.annotations.Nullable;",
             "",
             "@AutoValue",
             "public abstract class Baz<T extends Number> {",
@@ -1520,7 +1520,7 @@ public class AutoValueCompilationTest {
             "import java.util.Map;",
             sorted(
                 GeneratedImport.importGeneratedAnnotationType(),
-                "import org.checkerframework.checker.nullness.qual.Nullable;"),
+                "import org.jspecify.annotations.Nullable;"),
             "",
             "@Generated(\"" + AutoValueProcessor.class.getName() + "\")",
             "final class AutoValue_Baz<T extends Number> extends Baz<T> {",
@@ -1749,7 +1749,7 @@ public class AutoValueCompilationTest {
             .withOptions(
                 "-Xlint:-processing",
                 "-implicit:none",
-                "-A" + Nullables.NULLABLE_OPTION + "=org.checkerframework.checker.nullness.qual.Nullable")
+                "-A" + Nullables.NULLABLE_OPTION + "=org.jspecify.annotations.Nullable")
             .compile(javaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)

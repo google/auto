@@ -38,7 +38,7 @@ public final class AutoBuilderCompilationTest {
           "",
           sorted(
               GeneratedImport.importGeneratedAnnotationType(),
-              "import org.checkerframework.checker.nullness.qual.Nullable;"),
+              "import org.jspecify.annotations.Nullable;"),
           "",
           "@Generated(\"" + AutoBuilderProcessor.class.getName() + "\")",
           "class AutoBuilder_Baz_Builder implements Baz.Builder {",
@@ -127,7 +127,7 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.checkerframework.checker.nullness.qual.Nullable")
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.jspecify.annotations.Nullable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
@@ -160,7 +160,7 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.checkerframework.checker.nullness.qual.Nullable")
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.jspecify.annotations.Nullable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
@@ -177,7 +177,7 @@ public final class AutoBuilderCompilationTest {
             "package foo.bar;",
             "",
             "import com.google.auto.value.AutoBuilder;",
-            "import org.checkerframework.checker.nullness.qual.Nullable;",
+            "import org.jspecify.annotations.Nullable;",
             "",
             "public record Baz<T>(int anInt, @Nullable T aT) {",
             "  public static Builder builder() {",
@@ -211,7 +211,7 @@ public final class AutoBuilderCompilationTest {
             "package foo.bar;",
             "",
             "import com.google.auto.value.AutoBuilder;",
-            "import org.checkerframework.checker.nullness.qual.Nullable;",
+            "import org.jspecify.annotations.Nullable;",
             "",
             "public record Baz(@Nullable Nested nested) {",
             "  public static Builder builder() {",
@@ -229,7 +229,7 @@ public final class AutoBuilderCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoBuilderProcessor())
-            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.checkerframework.checker.nullness.qual.Nullable")
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.jspecify.annotations.Nullable")
             .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")

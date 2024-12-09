@@ -44,7 +44,7 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Determines if one method overrides another. This class defines two ways of doing that: {@code
