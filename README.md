@@ -25,7 +25,7 @@ Save time.  Save code.  Save sanity.
 
     [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.service/auto-service.svg)](https://mvnrepository.com/artifact/com.google.auto.service/auto-service)
 
-  * [AutoValue] - Immutable [value-type] code generation for Java 7+.
+  * [AutoValue] - Immutable [value-type] code generation for Java 8+.
 
     [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.value/auto-value.svg)](https://mvnrepository.com/artifact/com.google.auto.value/auto-value)
 
@@ -56,4 +56,4 @@ Save time.  Save code.  Save sanity.
 
 [java]: https://en.wikipedia.org/wiki/Java_(programming_language)
 [value-type]: http://en.wikipedia.org/wiki/Value_object
-[`ServiceLoader`]: http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html
+[`ServiceLoader`]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/ServiceLoader.html
