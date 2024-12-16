@@ -87,7 +87,7 @@
     <dependency>
       <groupId>dev.gradleplugins</groupId>
       <artifactId>gradle-test-kit</artifactId>
-      <version>8.10.1</version>
+      <version>8.11.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
