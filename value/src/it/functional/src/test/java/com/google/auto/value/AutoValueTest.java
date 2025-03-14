@@ -71,9 +71,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
-@SuppressWarnings({"AutoValueImmutableFields", "AutoValueFinalMethods", "TypeNameShadowing"})
+@SuppressWarnings({
+  "AutoValueImmutableFields",
+  "AutoValueFinalMethods",
+  "TypeNameShadowing",
+  "SelfAssertion"
+})
 public class AutoValueTest {
   private static boolean omitIdentifiers;
 
