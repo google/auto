@@ -59,34 +59,42 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
 ## Constructor
 
+#if ($shouldGenerateBuilderConstructor)
+  @SuppressWarnings("nullness")  // Null checks happen during "build" method.
+#end
 #if ($isFinal && $builderTypeName != "")
   private ##
 #end
+#if ($shouldGenerateBuilderConstructor)
+  $subclass(${builderName}${actualTypes} builder) {
+  #foreach ($p in $props)
+  this.$p = builder.$p;
+  #end
+  }
+#else
   $subclass(
-#foreach ($p in $props)
+  #foreach ($p in $props)
+    ${p.nullableAnnotation}$p.type $p #if ($foreach.hasNext) , #end
+  #end) {
+  #foreach ($p in $props)
+    #if (!$p.kind.primitive && !$p.nullable && ($builderTypeName == "" || !$isFinal))
+      ## We don't need a null check if the type is primitive or @Nullable. We also don't need it
+      ## if there is a builder, since the build() method will check for us. However, if there is a
+      ## builder but there are also extensions (!$isFinal) then we can't omit the null check because
+      ## the constructor is called from the extension code.
 
-      ${p.nullableAnnotation}$p.type $p #if ($foreach.hasNext) , #end
-#end ) {
-#foreach ($p in $props)
-  #if (!$p.kind.primitive && !$p.nullable && ($builderTypeName == "" || !$isFinal))
-    ## We don't need a null check if the type is primitive or @Nullable. We also don't need it
-    ## if there is a builder, since the build() method will check for us. However, if there is a
-    ## builder but there are also extensions (!$isFinal) then we can't omit the null check because
-    ## the constructor is called from the extension code.
-
-    #if ($identifiers)
+      #if ($identifiers)
     if ($p == null) {
       throw new NullPointerException("Null $p.name");
     }
-    #else
+      #else
     `java.util.Objects`.requireNonNull($p);
+      #end
     #end
-
-  #end
-
     this.$p = $p;
-#end
+  #end
   }
+#end
 
 ## Property getters
 
