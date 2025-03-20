@@ -121,6 +121,11 @@
       <artifactId>compile-testing</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -220,11 +225,6 @@
             </goals>
             <configuration>
               <minimizeJar>true</minimizeJar>
-              <artifactSet>
-                <excludes>
-                  <exclude>com.google.code.findbugs:jsr305</exclude>
-                </excludes>
-              </artifactSet>
               <relocations>
                 <relocation>
                   <pattern>com.google</pattern>
@@ -248,6 +248,10 @@
                 <relocation>
                   <pattern>org.jetbrains</pattern>
                   <shadedPattern>autovalue.shaded.org.jetbrains</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.jspecify</pattern>
+                  <shadedPattern>autovalue.shaded.org.jspecify</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.objectweb</pattern>
