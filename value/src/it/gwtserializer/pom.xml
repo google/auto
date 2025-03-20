@@ -49,12 +49,6 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.auto.value</groupId>
-      <artifactId>auto-value</artifactId>
-      <version>${project.version}</version>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>org.gwtproject</groupId>
       <artifactId>gwt-user</artifactId>
       <scope>test</scope>
@@ -108,6 +102,13 @@
           <compilerArgument>-Xlint:all</compilerArgument>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.auto.value</groupId>
+              <artifactId>auto-value</artifactId>
+              <version>${project.version}</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
       <plugin>
