@@ -4039,6 +4039,37 @@ public class AutoValueCompilationTest {
         .onLineContaining("Builder blam(Integer x)");
   }
 
+  @Test
+  public void copyAnnotationsMissingExclusion() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "@AutoValue.CopyAnnotations(exclude = DoesNotExist.class)",
+            "public abstract class Baz {",
+            "  abstract int blam();",
+            "",
+            "  @AutoValue.Builder",
+            "  public interface Builder {",
+            "    Builder blam(int x);",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("DoesNotExist")
+        .inFile(javaFileObject)
+        .onLineContaining("@AutoValue.CopyAnnotations(exclude = DoesNotExist.class)");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }

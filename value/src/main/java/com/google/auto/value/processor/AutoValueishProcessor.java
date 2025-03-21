@@ -1143,8 +1143,19 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     @SuppressWarnings("unchecked")
     List<AnnotationValue> excludedClasses =
         (List<AnnotationValue>) getAnnotationValue(maybeAnnotation.get(), "exclude").getValue();
+    // It turns out that if you write `@AutoValue.CopyAnnotations(exclude = {Missing.class})`, where
+    // `Missing` is a class that does not exist, then javac will represent it as a String in the
+    // AnnotationValue, rather than an ErrorType as you might expect. So we filter out anything that
+    // is not a DeclaredType. (ErrorType *is* a DeclaredType.) Presumably you'll get a compilation
+    // error because of the missing class. If another compiler uses ErrorType instead of String,
+    // then we'll just add that ErrorType to the returned TypeMirrorSet here, where it will
+    // presumably be ignored, or perhaps match the ErrorType for `@Missing` somewhere else in the
+    // code.
+    // This is a pretty obscure case so our main concern here is to avoid a ClassCastException.
     return excludedClasses.stream()
-        .map(annotationValue -> (DeclaredType) annotationValue.getValue())
+        .map(AnnotationValue::getValue)
+        .filter(DeclaredType.class::isInstance)
+        .map(DeclaredType.class::cast)
         .collect(toCollection(TypeMirrorSet::new));
   }
 
