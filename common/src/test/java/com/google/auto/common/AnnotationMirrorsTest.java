@@ -42,9 +42,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * Tests {@link AnnotationMirrors}.
- */
+/** Tests {@link AnnotationMirrors}. */
 @RunWith(JUnit4.class)
 public class AnnotationMirrorsTest {
   @Rule public CompilationRule compilationRule = new CompilationRule();

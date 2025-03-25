@@ -41,8 +41,8 @@ import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.SimpleTypeVisitor8;
 
 /**
- * A utility class that traverses {@link Element} instances and ensures that all type information
- * is present and resolvable.
+ * A utility class that traverses {@link Element} instances and ensures that all type information is
+ * present and resolvable.
  *
  * @author Gregory Kick
  */

@@ -160,10 +160,10 @@ public final class AnnotationValues {
       };
 
   /**
-   * Returns an {@link Equivalence} for {@link AnnotationValue} as annotation values may
-   * contain {@link AnnotationMirror} instances some of whose implementations delegate
-   * equality tests to {@link Object#equals} whereas the documentation explicitly states
-   * that instance/reference equality is not the proper test.
+   * Returns an {@link Equivalence} for {@link AnnotationValue} as annotation values may contain
+   * {@link AnnotationMirror} instances some of whose implementations delegate equality tests to
+   * {@link Object#equals} whereas the documentation explicitly states that instance/reference
+   * equality is not the proper test.
    *
    * @see AnnotationMirrors#equivalence()
    */
@@ -448,6 +448,7 @@ public final class AnnotationValues {
 
   private static final ArrayVisitor<Short> SHORTS_VISITOR =
       new ArrayVisitor<>(AnnotationValues::getShort);
+
   /**
    * Returns the value as a list of shorts.
    *

@@ -202,12 +202,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     ImmutableMap<String, String> propertyToGetterName =
         propertyToGetterName(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props =
-        propertySet(
-            executable,
-            propertyToGetterName,
-            propertyInitializers,
-            nullables);
+    vars.props = propertySet(executable, propertyToGetterName, propertyInitializers, nullables);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
@@ -221,8 +216,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
             .orElseGet(executable::invoke);
     vars.toBuilderConstructor = !propertyToGetterName.isEmpty();
     vars.toBuilderMethods = ImmutableList.of();
-    defineSharedVarsForType(
-        autoBuilderType, ImmutableSet.of(), nullables, vars);
+    defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), nullables, vars);
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoBuilderType.asType());
     text = Reformatter.fixup(text);
@@ -286,8 +280,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
-        executable.parameters().stream()
-            .collect(toMap(v -> v, v -> v.getSimpleName().toString()));
+        executable.parameters().stream().collect(toMap(v -> v, v -> v.getSimpleName().toString()));
     fixReservedIdentifiers(identifiers);
     return executable.parameters().stream()
         .map(
@@ -379,8 +372,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
    * <p>The return type of each getter method must match the type of the corresponding parameter
    * exactly. This will always be true for our principal use cases, Java records and Kotlin data
    * classes. For other use cases, we may in the future accept getters where we know how to convert,
-   * for example if the getter has type {@code ImmutableList<Baz>} and the parameter has type
-   * {@code Baz[]}. We already have similar logic for the parameter types of builder setters.
+   * for example if the getter has type {@code ImmutableList<Baz>} and the parameter has type {@code
+   * Baz[]}. We already have similar logic for the parameter types of builder setters.
    */
   private ImmutableMap<String, String> propertyToGetterName(
       Executable executable, TypeElement autoBuilderType) {
@@ -523,9 +516,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private String executableListString(List<Executable> executables) {
-    return executables.stream()
-        .map(Object::toString)
-        .collect(joining("\n  ", "  ", ""));
+    return executables.stream().map(Object::toString).collect(joining("\n  ", "  ", ""));
   }
 
   private boolean executableMatches(
@@ -568,9 +559,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       case PUBLIC:
         return true;
       case PROTECTED:
-        // We care about whether the constructor is visible from the generated class. The generated
-        // class is never going to be a subclass of the class containing the constructor, so
-        // protected and default access are equivalent.
+      // We care about whether the constructor is visible from the generated class. The generated
+      // class is never going to be a subclass of the class containing the constructor, so
+      // protected and default access are equivalent.
       case DEFAULT:
         return getPackage(element).equals(fromPackage);
       default:
@@ -691,8 +682,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private static Property annotationBuilderProperty(
-      ExecutableElement annotationMethod,
-      Nullables nullables) {
+      ExecutableElement annotationMethod, Nullables nullables) {
     String name = annotationMethod.getSimpleName().toString();
     TypeMirror type = annotationMethod.getReturnType();
     return new Property(

@@ -217,7 +217,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       if (!SourceVersion.isKeyword(name)) {
         return name;
       }
-      for (int i = 0;; i++) {
+      for (int i = 0; ; i++) {
         String newName = name + i;
         if (!existingNames.contains(newName)) {
           return newName;

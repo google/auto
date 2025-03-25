@@ -56,8 +56,8 @@ import javax.lang.model.util.Types;
 @Beta
 public final class MoreElements {
   /**
-   * An alternate implementation of {@link Elements#getPackageOf} that does not require an
-   * {@link Elements} instance.
+   * An alternate implementation of {@link Elements#getPackageOf} that does not require an {@link
+   * Elements} instance.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    */
@@ -110,8 +110,8 @@ public final class MoreElements {
   /**
    * Returns true if the given {@link Element} instance is a {@link TypeElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check, but should
-   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check, but should always be
+   * used over that idiom as instructed in the documentation for {@link Element}.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    */
@@ -294,11 +294,12 @@ public final class MoreElements {
   }
 
   /**
-   * Returns a {@link Predicate} that can be used to filter elements by {@link Modifier}.
-   * The predicate returns {@code true} if the input {@link Element} has all of the given
-   * {@code modifiers}, perhaps in addition to others.
+   * Returns a {@link Predicate} that can be used to filter elements by {@link Modifier}. The
+   * predicate returns {@code true} if the input {@link Element} has all of the given {@code
+   * modifiers}, perhaps in addition to others.
    *
    * <p>Here is an example how one could get a List of static methods of a class:
+   *
    * <pre>{@code
    * FluentIterable.from(ElementFilter.methodsIn(clazzElement.getEnclosedElements()))
    *     .filter(MoreElements.hasModifiers(Modifier.STATIC)).toList();
@@ -336,11 +337,11 @@ public final class MoreElements {
    * the result. So if {@code type} defines {@code public String toString()}, the returned set will
    * contain that method, but not the {@code toString()} method defined by {@code Object}.
    *
-   * <p>The returned set may contain more than one method with the same signature, if
-   * {@code type} inherits those methods from different ancestors. For example, if it
-   * inherits from unrelated interfaces {@code One} and {@code Two} which each define
-   * {@code void foo();}, and if it does not itself override the {@code foo()} method,
-   * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   * <p>The returned set may contain more than one method with the same signature, if {@code type}
+   * inherits those methods from different ancestors. For example, if it inherits from unrelated
+   * interfaces {@code One} and {@code Two} which each define {@code void foo();}, and if it does
+   * not itself override the {@code foo()} method, then both {@code One.foo()} and {@code Two.foo()}
+   * will be in the returned set.
    *
    * <p>The order of the returned set is deterministic: within a class or interface, methods are in
    * the order they appear in the source code; methods in ancestors come before methods in
@@ -349,13 +350,11 @@ public final class MoreElements {
    * {@code implements} or {@code extends}.
    *
    * @param type the type whose own and inherited methods are to be returned
-   * @param elementUtils an {@link Elements} object, typically returned by
-   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getElementUtils
-   *     getElementUtils()}
-   *
-   * @deprecated The method {@link #getLocalAndInheritedMethods(TypeElement, Types, Elements)}
-   *     has better consistency between Java compilers.
+   * @param elementUtils an {@link Elements} object, typically returned by {@link
+   *     javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}.{@link
+   *     javax.annotation.processing.ProcessingEnvironment#getElementUtils getElementUtils()}
+   * @deprecated The method {@link #getLocalAndInheritedMethods(TypeElement, Types, Elements)} has
+   *     better consistency between Java compilers.
    */
   @Deprecated
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
@@ -370,11 +369,11 @@ public final class MoreElements {
    * the result. So if {@code type} defines {@code public String toString()}, the returned set will
    * contain that method, but not the {@code toString()} method defined by {@code Object}.
    *
-   * <p>The returned set may contain more than one method with the same signature, if
-   * {@code type} inherits those methods from different ancestors. For example, if it
-   * inherits from unrelated interfaces {@code One} and {@code Two} which each define
-   * {@code void foo();}, and if it does not itself override the {@code foo()} method,
-   * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   * <p>The returned set may contain more than one method with the same signature, if {@code type}
+   * inherits those methods from different ancestors. For example, if it inherits from unrelated
+   * interfaces {@code One} and {@code Two} which each define {@code void foo();}, and if it does
+   * not itself override the {@code foo()} method, then both {@code One.foo()} and {@code Two.foo()}
+   * will be in the returned set.
    *
    * <p>The order of the returned set is deterministic: within a class or interface, methods are in
    * the order they appear in the source code; methods in ancestors come before methods in
@@ -383,14 +382,12 @@ public final class MoreElements {
    * {@code implements} or {@code extends}.
    *
    * @param type the type whose own and inherited methods are to be returned
-   * @param typeUtils a {@link Types} object, typically returned by
-   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getTypeUtils
-   *     getTypeUtils()}
-   * @param elementUtils an {@link Elements} object, typically returned by
-   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getElementUtils
-   *     getElementUtils()}
+   * @param typeUtils a {@link Types} object, typically returned by {@link
+   *     javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}.{@link
+   *     javax.annotation.processing.ProcessingEnvironment#getTypeUtils getTypeUtils()}
+   * @param elementUtils an {@link Elements} object, typically returned by {@link
+   *     javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}.{@link
+   *     javax.annotation.processing.ProcessingEnvironment#getElementUtils getElementUtils()}
    */
   public static ImmutableSet<ExecutableElement> getLocalAndInheritedMethods(
       TypeElement type, Types typeUtils, Elements elementUtils) {
@@ -432,16 +429,16 @@ public final class MoreElements {
   }
 
   /**
-   * Returns the set of all methods from {@code type}, including methods that it inherits
-   * from its ancestors. Inherited methods that are overridden are not included in the
-   * result. So if {@code type} defines {@code public String toString()}, the returned set
-   * will contain that method, but not the {@code toString()} method defined by {@code Object}.
+   * Returns the set of all methods from {@code type}, including methods that it inherits from its
+   * ancestors. Inherited methods that are overridden are not included in the result. So if {@code
+   * type} defines {@code public String toString()}, the returned set will contain that method, but
+   * not the {@code toString()} method defined by {@code Object}.
    *
-   * <p>The returned set may contain more than one method with the same signature, if
-   * {@code type} inherits those methods from different ancestors. For example, if it
-   * inherits from unrelated interfaces {@code One} and {@code Two} which each define
-   * {@code void foo();}, and if it does not itself override the {@code foo()} method,
-   * then both {@code One.foo()} and {@code Two.foo()} will be in the returned set.
+   * <p>The returned set may contain more than one method with the same signature, if {@code type}
+   * inherits those methods from different ancestors. For example, if it inherits from unrelated
+   * interfaces {@code One} and {@code Two} which each define {@code void foo();}, and if it does
+   * not itself override the {@code foo()} method, then both {@code One.foo()} and {@code Two.foo()}
+   * will be in the returned set.
    *
    * <p>The order of the returned set is deterministic: within a class or interface, methods are in
    * the order they appear in the source code; methods in ancestors come before methods in
@@ -450,14 +447,12 @@ public final class MoreElements {
    * {@code implements} or {@code extends}.
    *
    * @param type the type whose own and inherited methods are to be returned
-   * @param typeUtils a {@link Types} object, typically returned by
-   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getTypeUtils
-   *     getTypeUtils()}
-   * @param elementUtils an {@link Elements} object, typically returned by
-   *     {@link javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}<!--
-   *     -->.{@link javax.annotation.processing.ProcessingEnvironment#getElementUtils
-   *     getElementUtils()}
+   * @param typeUtils a {@link Types} object, typically returned by {@link
+   *     javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}.{@link
+   *     javax.annotation.processing.ProcessingEnvironment#getTypeUtils getTypeUtils()}
+   * @param elementUtils an {@link Elements} object, typically returned by {@link
+   *     javax.annotation.processing.AbstractProcessor#processingEnv processingEnv}.{@link
+   *     javax.annotation.processing.ProcessingEnvironment#getElementUtils getElementUtils()}
    */
   public static ImmutableSet<ExecutableElement> getAllMethods(
       TypeElement type, Types typeUtils, Elements elementUtils) {

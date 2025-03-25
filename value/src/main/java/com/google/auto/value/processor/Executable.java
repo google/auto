@@ -53,10 +53,11 @@ class Executable {
         // class has. That's pretty unusual, but we allow it, requiring the builder to have type
         // parameters that are the concatenation of the class's and the constructor's.
         TypeElement container = MoreElements.asType(executableElement.getEnclosingElement());
-        this.typeParameters = ImmutableList.<TypeParameterElement>builder()
-            .addAll(container.getTypeParameters())
-            .addAll(executableElement.getTypeParameters())
-            .build();
+        this.typeParameters =
+            ImmutableList.<TypeParameterElement>builder()
+                .addAll(container.getTypeParameters())
+                .addAll(executableElement.getTypeParameters())
+                .build();
         break;
       case METHOD:
         this.typeParameters = ImmutableList.copyOf(executableElement.getTypeParameters());

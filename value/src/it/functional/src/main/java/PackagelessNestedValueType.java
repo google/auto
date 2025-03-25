@@ -17,7 +17,9 @@
 import com.google.auto.value.AutoValue;
 import java.util.Map;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @SuppressWarnings("DefaultPackage")
 public class PackagelessNestedValueType {
   @AutoValue

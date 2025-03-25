@@ -12,8 +12,8 @@
  * the License.
  */
 /**
- * This package contains the annotation processor that implements the
- * {@link com.google.auto.factory.AutoFactory} API.
+ * This package contains the annotation processor that implements the {@link
+ * com.google.auto.factory.AutoFactory} API.
  */
 @NullMarked
 package com.google.auto.factory.processor;

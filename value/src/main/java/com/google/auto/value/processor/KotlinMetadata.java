@@ -178,8 +178,7 @@ final class KotlinMetadata {
   private static class KotlinClassMetadata {
     static Class readLenient(KotlinClassHeader kotlinClassHeader)
         throws ReflectiveOperationException {
-      return new Class(
-          KOTLIN_CLASS_METADATA_READ_LENIENT.invoke(null, kotlinClassHeader.wrapped));
+      return new Class(KOTLIN_CLASS_METADATA_READ_LENIENT.invoke(null, kotlinClassHeader.wrapped));
     }
 
     static class Class {

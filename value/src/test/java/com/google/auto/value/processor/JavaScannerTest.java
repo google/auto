@@ -23,7 +23,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
 public class JavaScannerTest {
   private static final ImmutableList<String> TOKENS =

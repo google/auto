@@ -19,4 +19,3 @@ import com.google.auto.service.AutoService;
 
 @AutoService(SomeService.class)
 public class DoesNotImplement {}
-

@@ -1427,6 +1427,7 @@ public class AutoValueTest {
   @AutoValue
   public abstract static class RedeclareFloatAndDouble {
     public abstract float aFloat();
+
     public abstract double aDouble();
 
     public static RedeclareFloatAndDouble of(float aFloat, double aDouble) {
@@ -1434,6 +1435,7 @@ public class AutoValueTest {
     }
 
     static class Float {}
+
     static class Double {}
   }
 
@@ -3686,6 +3688,7 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder implements StepOne<String>, StepTwo, StepThree {
       abstract Builder setThree(double x);
+
       abstract Stepped build();
 
       @Override
@@ -3710,68 +3713,128 @@ public class AutoValueTest {
   // test classes.
   abstract static class Giant {
     abstract int x1();
+
     abstract int x2();
+
     abstract int x3();
+
     abstract int x4();
+
     abstract int x5();
+
     abstract int x6();
+
     abstract int x7();
+
     abstract int x8();
+
     abstract int x9();
+
     abstract int x10();
+
     abstract int x11();
+
     abstract int x12();
+
     abstract int x13();
+
     abstract int x14();
+
     abstract int x15();
+
     abstract int x16();
+
     abstract int x17();
+
     abstract int x18();
+
     abstract int x19();
+
     abstract int x20();
+
     abstract int x21();
+
     abstract int x22();
+
     abstract int x23();
+
     abstract int x24();
+
     abstract int x25();
+
     abstract int x26();
+
     abstract int x27();
+
     abstract int x28();
+
     abstract int x29();
+
     abstract int x30();
+
     abstract int x31();
 
     abstract static class Builder {
       abstract Builder x1(int x);
+
       abstract Builder x2(int x);
+
       abstract Builder x3(int x);
+
       abstract Builder x4(int x);
+
       abstract Builder x5(int x);
+
       abstract Builder x6(int x);
+
       abstract Builder x7(int x);
+
       abstract Builder x8(int x);
+
       abstract Builder x9(int x);
+
       abstract Builder x10(int x);
+
       abstract Builder x11(int x);
+
       abstract Builder x12(int x);
+
       abstract Builder x13(int x);
+
       abstract Builder x14(int x);
+
       abstract Builder x15(int x);
+
       abstract Builder x16(int x);
+
       abstract Builder x17(int x);
+
       abstract Builder x18(int x);
+
       abstract Builder x19(int x);
+
       abstract Builder x20(int x);
+
       abstract Builder x21(int x);
+
       abstract Builder x22(int x);
+
       abstract Builder x23(int x);
+
       abstract Builder x24(int x);
+
       abstract Builder x25(int x);
+
       abstract Builder x26(int x);
+
       abstract Builder x27(int x);
+
       abstract Builder x28(int x);
+
       abstract Builder x29(int x);
+
       abstract Builder x30(int x);
+
       abstract Builder x31(int x);
 
       Builder setFirst30() {
@@ -3832,6 +3895,7 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder extends Giant.Builder {
       abstract Builder x32(int x);
+
       abstract Giant32 build();
     }
   }
@@ -3839,6 +3903,7 @@ public class AutoValueTest {
   @AutoValue
   abstract static class Giant33 extends Giant {
     abstract int x32();
+
     abstract int x33();
 
     static Builder builder() {
@@ -3848,7 +3913,9 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder extends Giant.Builder {
       abstract Builder x32(int x);
+
       abstract Builder x33(int x);
+
       abstract Giant33 build();
     }
   }

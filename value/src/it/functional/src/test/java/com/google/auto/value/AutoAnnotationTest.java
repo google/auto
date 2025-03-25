@@ -47,7 +47,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
 public class AutoAnnotationTest {
   @AutoAnnotation
@@ -393,8 +395,8 @@ public class AutoAnnotationTest {
           ImmutableSet.of(
               newStringValues(new String[] {}), newStringValues(new String[] {"foo", "bar"})),
           ImmutableList.of(String.class.asSubclass(CharSequence.class), StringBuilder.class));
-          // .asSubclass because of pre-Java8, where otherwise we get a compilation error because
-          // the inferred type is <Class<? extends CharSequence & Serializable>>.
+  // .asSubclass because of pre-Java8, where otherwise we get a compilation error because
+  // the inferred type is <Class<? extends CharSequence & Serializable>>.
   private static final Everything EVERYTHING_ELSE_FROM_AUTO =
       newEverything(
           (byte) 0,
@@ -653,6 +655,7 @@ public class AutoAnnotationTest {
     String aString() default "whatever";
 
     RetentionPolicy anEnum() default RetentionPolicy.CLASS;
+
     // We don't yet support defaulting annotation values.
     // StringValues anAnnotation() default @StringValues({"foo", "bar"});
     byte[] bytes() default {1, 2};

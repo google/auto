@@ -221,8 +221,8 @@ abstract class FactoryDescriptor {
   }
 
   /**
-   * Returns true if the given {@link FactoryMethodDescriptor} and
-   * {@link ImplementationMethodDescriptor} are duplicates.
+   * Returns true if the given {@link FactoryMethodDescriptor} and {@link
+   * ImplementationMethodDescriptor} are duplicates.
    *
    * <p>Descriptors are duplicates if they have the same name and if they have the same passed types
    * in the same order.

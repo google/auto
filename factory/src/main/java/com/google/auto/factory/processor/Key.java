@@ -83,8 +83,8 @@ abstract class Key {
   }
 
   /**
-   * If {@code type} is a primitive type, returns the boxed equivalent; otherwise returns
-   * {@code type}.
+   * If {@code type} is a primitive type, returns the boxed equivalent; otherwise returns {@code
+   * type}.
    */
   private static TypeMirror boxedType(TypeMirror type, Types types) {
     return type.getKind().isPrimitive()

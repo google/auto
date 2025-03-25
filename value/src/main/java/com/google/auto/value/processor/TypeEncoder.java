@@ -117,8 +117,7 @@ final class TypeEncoder {
    * @param extraAnnotations additional type annotations to include with the type
    */
   static String encodeWithAnnotations(
-      TypeMirror type,
-      ImmutableList<AnnotationMirror> extraAnnotations) {
+      TypeMirror type, ImmutableList<AnnotationMirror> extraAnnotations) {
     return encodeWithAnnotations(type, extraAnnotations, ImmutableSet.of());
   }
 
@@ -129,8 +128,7 @@ final class TypeEncoder {
    * @param extraAnnotations additional type annotations to include with the type
    */
   static String encodeWithAnnotations(
-      AnnotatedTypeMirror type,
-      ImmutableList<AnnotationMirror> extraAnnotations) {
+      AnnotatedTypeMirror type, ImmutableList<AnnotationMirror> extraAnnotations) {
     return encodeWithAnnotations(type, extraAnnotations, ImmutableSet.of());
   }
 
@@ -225,11 +223,10 @@ final class TypeEncoder {
 
   /**
    * Returns a string representing the given type parameters as they would appear in a class
-   * declaration. For example, if we have {@code @AutoValue abstract
-   * class Foo<T extends SomeClass>} then if we call {@link TypeElement#getTypeParameters()} on
-   * the representation of {@code Foo}, this method will return an encoding of {@code <T extends
-   * SomeClass>}. Likewise it will return an encoding of the angle-bracket part of:
-   * <br>
+   * declaration. For example, if we have {@code @AutoValue abstract class Foo<T extends SomeClass>}
+   * then if we call {@link TypeElement#getTypeParameters()} on the representation of {@code Foo},
+   * this method will return an encoding of {@code <T extends SomeClass>}. Likewise it will return
+   * an encoding of the angle-bracket part of: <br>
    * {@code Foo<SomeClass>}<br>
    * {@code Foo<T extends Number>}<br>
    * {@code Foo<E extends Enum<E>>}<br>

@@ -37,9 +37,9 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
   ImmutableSet<Property> props;
 
   /**
-   * The simple name of the generated builder, or empty if there is no builder. This is just
-   * {@code Builder} for AutoValue, since it is nested inside the {@code AutoValue_Foo} class. But
-   * it is {@code AutoBuilder_Foo} for AutoBuilder.
+   * The simple name of the generated builder, or empty if there is no builder. This is just {@code
+   * Builder} for AutoValue, since it is nested inside the {@code AutoValue_Foo} class. But it is
+   * {@code AutoBuilder_Foo} for AutoBuilder.
    */
   String builderName = "";
 
@@ -67,8 +67,8 @@ abstract class AutoValueOrBuilderTemplateVars extends AutoValueishTemplateVars {
 
   /**
    * The full spelling of any annotations to add to the generated builder subclass, or an empty list
-   * if there are none. A non-empty value might look something like {@code
-   * @`java.lang.SuppressWarnings`("Immutable")}. The {@code ``} marks are explained in
+   * if there are none. A non-empty value might look something like
+   * {@code @`java.lang.SuppressWarnings`("Immutable")}. The {@code ``} marks are explained in
    * {@link TypeEncoder}.
    */
   ImmutableList<String> builderAnnotations = ImmutableList.of();

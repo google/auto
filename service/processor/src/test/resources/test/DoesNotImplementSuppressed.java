@@ -20,4 +20,3 @@ import com.google.auto.service.AutoService;
 @AutoService(SomeService.class)
 @SuppressWarnings("AutoService")
 public class DoesNotImplementSuppressed {}
-

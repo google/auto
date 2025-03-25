@@ -577,7 +577,7 @@ public class BasicAnnotationProcessorTest {
             "package test;",
             "",
             "public class ClassA {",
-                "@" + RequiresGeneratedCode.class.getCanonicalName() + " String s;",
+            "@" + RequiresGeneratedCode.class.getCanonicalName() + " String s;",
             "}");
     requiresGeneratedCodeRejectionTest(classAFileObject);
   }

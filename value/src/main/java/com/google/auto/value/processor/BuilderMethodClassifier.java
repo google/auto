@@ -389,17 +389,17 @@ abstract class BuilderMethodClassifier<E extends Element> {
     }
     Optional<Copier> function = getSetterFunction(propertyElement, method);
     if (function.isPresent()) {
-      MethodSignature methodSignature =
-          MethodSignature.asMemberOf(typeUtils, builderType, method);
+      MethodSignature methodSignature = MethodSignature.asMemberOf(typeUtils, builderType, method);
       TypeMirror returnType = methodSignature.returnType().getType();
       if (typeUtils.isSubtype(builderType.asType(), returnType)
           && !MoreTypes.isTypeOf(Object.class, returnType)) {
         if (nullableAnnotationFor(method, returnType).isPresent()) {
           errorReporter.
               reportWarning(
-                  method,
-                  "[%sBuilderSetterNullable] Setter methods always return the Builder so @Nullable"
-                      + " is not appropriate", autoWhat());
+              method,
+              "[%sBuilderSetterNullable] Setter methods always return the Builder so @Nullable"
+                  + " is not appropriate",
+              autoWhat());
         }
         // We allow the return type to be a supertype (other than Object), to support step builders.
         AnnotatedTypeMirror parameterType =
@@ -692,10 +692,9 @@ abstract class BuilderMethodClassifier<E extends Element> {
   abstract String propertyString(E propertyElement);
 
   /**
-   * Returns the name of the property that the given no-arg builder method queries, if
-   * any. For example, if your {@code @AutoValue} class has a method {@code abstract String
-   * getBar()} then an abstract method in its builder with the same signature will query the {@code
-   * bar} property.
+   * Returns the name of the property that the given no-arg builder method queries, if any. For
+   * example, if your {@code @AutoValue} class has a method {@code abstract String getBar()} then an
+   * abstract method in its builder with the same signature will query the {@code bar} property.
    */
   abstract Optional<String> propertyForBuilderGetter(ExecutableElement method);
 

@@ -381,8 +381,7 @@ public class MoreElementsTest {
   // usages, because the corresponding real proto API classes do.
 
   static class FakeProto extends AbstractMessage {
-    static class Builder
-        extends AbstractMessage.Builder<Builder> {
+    static class Builder extends AbstractMessage.Builder<Builder> {
       @Override
       @SuppressWarnings("rawtypes")
       Builder internalMergeFrom(AbstractMessageLite other) {
@@ -400,7 +399,6 @@ public class MoreElementsTest {
         return (B) this;
       }
     }
-
   }
 
   static class AbstractMessageLite<

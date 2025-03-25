@@ -362,8 +362,7 @@ class BuilderSpec {
               .filter(p -> !p.hasDefault())
               .filter(p -> !vars.builderPropertyBuilders.containsKey(p.getName()))
               .collect(toImmutableSet());
-      vars.builderRequiredProperties =
-          BuilderRequiredProperties.of(vars.props, requiredProperties);
+      vars.builderRequiredProperties = BuilderRequiredProperties.of(vars.props, requiredProperties);
     }
   }
 

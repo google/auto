@@ -316,12 +316,12 @@ public class AutoValueJava8Test {
 
   interface GenericParent<T> extends GenericGrandparent<T> {
     @Override
-    @Nullable T thing();
+    @Nullable
+    T thing();
   }
 
   @AutoValue
-  abstract static class StringThing implements GenericParent<String> {
-  }
+  abstract static class StringThing implements GenericParent<String> {}
 
   @AutoValue
   abstract static class StringThingWithBuilder implements GenericParent<String> {
@@ -332,7 +332,10 @@ public class AutoValueJava8Test {
     @AutoValue.Builder
     interface Builder {
       Builder setThing(String thing);
-      @Nullable String thing();
+
+      @Nullable
+      String thing();
+
       StringThingWithBuilder build();
     }
   }
@@ -688,7 +691,8 @@ public class AutoValueJava8Test {
     try {
       // We write this using .concat in order to hide it from rewriting rules.
       jspecifyNullable =
-          Class.forName("org".concat(".jspecify.annotations.Nullable")).asSubclass(Annotation.class);
+          Class.forName("org".concat(".jspecify.annotations.Nullable"))
+              .asSubclass(Annotation.class);
     } catch (ClassNotFoundException e) {
       throw new AssumptionViolatedException("No JSpecify @Nullable available", e);
     }

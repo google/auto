@@ -25,6 +25,7 @@ import java.lang.annotation.Target;
  * An annotation to be applied to elements for which a factory should be automatically generated.
  *
  * <h2>Visibility</h2>
+ *
  * <p>The visibility of the generated factories will always be either {@code public} or default
  * visibility. The visibility of any given factory method is determined by the visibility of the
  * type being created. The generated factory is {@code public} if any of the factory methods are.
@@ -37,7 +38,7 @@ import java.lang.annotation.Target;
 public @interface AutoFactory {
   /**
    * The <i>simple</i> name of the generated factory; the factory is always generated in the same
-   * package as the annotated type.  The default value (the empty string) will result in a factory
+   * package as the annotated type. The default value (the empty string) will result in a factory
    * with the name of the type being created with {@code Factory} appended to the end. For example,
    * the default name for a factory for {@code MyType} will be {@code MyTypeFactory}.
    *
@@ -48,19 +49,15 @@ public @interface AutoFactory {
    */
   String className() default "";
 
-  /**
-   * A list of interfaces that the generated factory is required to implement.
-   */
+  /** A list of interfaces that the generated factory is required to implement. */
   Class<?>[] implementing() default {};
 
-  /**
-   * The type that the generated factory is required to extend.
-   */
+  /** The type that the generated factory is required to extend. */
   Class<?> extending() default Object.class;
 
   /**
-   * Whether or not the generated factory should be final.
-   * Defaults to disallowing subclasses (generating the factory as final).
+   * Whether or not the generated factory should be final. Defaults to disallowing subclasses
+   * (generating the factory as final).
    */
   boolean allowSubclasses() default false;
 

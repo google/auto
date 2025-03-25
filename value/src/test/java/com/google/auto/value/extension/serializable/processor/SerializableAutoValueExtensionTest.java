@@ -458,6 +458,7 @@ public final class SerializableAutoValueExtensionTest {
   @AutoValue
   abstract static class SerializeMemoize implements Serializable {
     abstract Optional<Integer> number();
+
     private transient int methodCount;
 
     @Memoized
@@ -473,6 +474,7 @@ public final class SerializableAutoValueExtensionTest {
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder setNumber(Optional<Integer> number);
+
       abstract SerializeMemoize build();
     }
   }
@@ -491,6 +493,5 @@ public final class SerializableAutoValueExtensionTest {
     assertThat(instance2.methodCount).isEqualTo(1);
     assertThat(instance2.negate()).hasValue(-17);
     assertThat(instance2.methodCount).isEqualTo(1);
-
   }
 }

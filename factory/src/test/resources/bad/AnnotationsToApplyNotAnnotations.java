@@ -21,8 +21,11 @@ import com.google.errorprone.annotations.Immutable;
 @AutoFactory.AnnotationsToApply
 @interface ImmutableAndSuppressWarnings {
   Immutable immutable() default @Immutable;
+
   SuppressWarnings suppressWarnings() default @SuppressWarnings("Immutable");
+
   int whatIsThis() default 23;
+
   Immutable[] andWhatIsThis() default {};
 }
 

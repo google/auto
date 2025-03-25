@@ -863,9 +863,13 @@ public class ExtensionTest {
 
     @Override
     public Set<ExecutableElement> consumeBuilderMethods(Context context) {
-      return consumedMethodName.map(s -> context.builderAbstractMethods().stream()
-          .filter(element -> element.getSimpleName().toString().endsWith(s))
-          .collect(toImmutableSet())).orElseGet(ImmutableSet::of);
+      return consumedMethodName
+          .map(
+              s ->
+                  context.builderAbstractMethods().stream()
+                      .filter(element -> element.getSimpleName().toString().endsWith(s))
+                      .collect(toImmutableSet()))
+          .orElseGet(ImmutableSet::of);
     }
 
     @Override

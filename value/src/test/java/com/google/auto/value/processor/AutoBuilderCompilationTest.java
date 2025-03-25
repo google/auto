@@ -192,9 +192,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
         .contentsAsUtf8String()
@@ -272,9 +270,7 @@ public final class AutoBuilderCompilationTest {
             "  Built build();",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(built, builder);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(built, builder);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation).generatedSourceFile("foo.bar.AutoBuilder_Builder");
   }
@@ -293,9 +289,7 @@ public final class AutoBuilderCompilationTest {
             "  ZIG, ZAG, DUSTIN,",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -320,9 +314,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("[AutoBuilderPrivate] @AutoBuilder class must not be private")
@@ -455,9 +447,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -482,9 +472,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("[AutoBuilderInner] Nested @AutoBuilder class must be static")
@@ -510,9 +498,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("[AutoBuilderInner] Nested @AutoBuilder ofClass class must be static")
@@ -536,9 +522,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("[AutoBuilderNoVisible] No visible constructor for java.lang.System")
@@ -566,9 +550,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -597,9 +579,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -629,9 +609,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -666,9 +644,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -695,9 +671,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -728,9 +702,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -758,9 +730,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -791,9 +761,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining("[AutoBuilderBuilderArgs] Builder methods must have 0 or 1 parameters")
@@ -822,9 +790,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -857,9 +823,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -889,9 +853,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -1002,9 +964,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -1034,9 +994,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
@@ -1068,9 +1026,7 @@ public final class AutoBuilderCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac()
-            .withProcessors(new AutoBuilderProcessor())
-            .compile(javaFileObject);
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(

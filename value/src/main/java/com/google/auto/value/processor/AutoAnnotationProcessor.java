@@ -474,10 +474,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
    * return null so that would be bad.
    *
    * <p>We could instead add a {@code readObject(ObjectInputStream)} method that would check that
-   * all of the instance fields are really present in the deserialized instance, and perhaps
-   * replace them with their default values from the annotation if not. That seems a lot more
-   * complicated than is justified, though, especially since the instance fields are final and
-   * would have to be set in the deserialized object through reflection.
+   * all of the instance fields are really present in the deserialized instance, and perhaps replace
+   * them with their default values from the annotation if not. That seems a lot more complicated
+   * than is justified, though, especially since the instance fields are final and would have to be
+   * set in the deserialized object through reflection.
    */
   private static long computeSerialVersionUid(
       ImmutableMap<String, Member> members, ImmutableMap<String, Parameter> parameters) {

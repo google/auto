@@ -46,22 +46,23 @@ public abstract class CompilationAbstractTest {
   protected Elements elementUtils;
 
   private ProcessingEnvironment mockProcessingEnvironment() {
-    InvocationHandler handler = (proxy, method, args) -> {
-      switch (method.getName()) {
-        case "getTypeUtils":
-          return typeUtils;
-        case "getElementUtils":
-          return elementUtils;
-        case "getMessager":
-          return mockMessager;
-        case "getOptions":
-          return ImmutableMap.of();
-        case "toString":
-          return "MockProcessingEnvironment";
-        default:
-          throw new IllegalArgumentException("Unsupported method: " + method);
-      }
-    };
+    InvocationHandler handler =
+        (proxy, method, args) -> {
+          switch (method.getName()) {
+            case "getTypeUtils":
+              return typeUtils;
+            case "getElementUtils":
+              return elementUtils;
+            case "getMessager":
+              return mockMessager;
+            case "getOptions":
+              return ImmutableMap.of();
+            case "toString":
+              return "MockProcessingEnvironment";
+            default:
+              throw new IllegalArgumentException("Unsupported method: " + method);
+          }
+        };
     return Reflection.newProxy(ProcessingEnvironment.class, handler);
   }
 

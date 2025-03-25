@@ -111,10 +111,11 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     try {
       injectApi = InjectApi.from(elements, api);
     } catch (IllegalStateException e) {
-      errorFunction = element -> {
-        messager.printMessage(Kind.ERROR, e.getMessage(), element);
-        errorFunction = unused -> {}; // Only print the error once.
-      };
+      errorFunction =
+          element -> {
+            messager.printMessage(Kind.ERROR, e.getMessage(), element);
+            errorFunction = unused -> {}; // Only print the error once.
+          };
       return;
     }
     providedChecker = new ProvidedChecker(messager);
@@ -146,8 +147,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       providedChecker.checkProvidedParameter(element);
     }
 
-    for (Element element :
-        roundEnv.getElementsAnnotatedWith(AnnotationsToApply.class)) {
+    for (Element element : roundEnv.getElementsAnnotatedWith(AnnotationsToApply.class)) {
       checkAnnotationsToApply(element);
     }
 

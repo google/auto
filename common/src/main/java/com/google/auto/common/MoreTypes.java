@@ -88,13 +88,13 @@ public final class MoreTypes {
    * may be preferred in a number of cases:
    *
    * <ul>
-   * <li>If you don't have an instance of {@code Types}.
-   * <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
-   *     of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
-   * <li>If you want distinct type variables to be considered equal if they have the same names
-   *     and bounds.
-   * <li>If you want wildcard types to compare equal if they have the same bounds. {@code
-   *     Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
+   *   <li>If you don't have an instance of {@code Types}.
+   *   <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
+   *       of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
+   *   <li>If you want distinct type variables to be considered equal if they have the same names
+   *       and bounds.
+   *   <li>If you want wildcard types to compare equal if they have the same bounds. {@code
+   *       Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
    * </ul>
    */
   public static Equivalence<TypeMirror> equivalence() {
@@ -347,10 +347,10 @@ public final class MoreTypes {
 
   /**
    * Returns the type of the innermost enclosing instance, or null if there is none. This is the
-   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than
-   * NoType for a static type. We need this because of
-   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby
-   * the Eclipse compiler returns a value for static classes that is not NoType.
+   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than NoType
+   * for a static type. We need this because of <a
+   * href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby the Eclipse
+   * compiler returns a value for static classes that is not NoType.
    */
   private static @Nullable TypeMirror enclosingType(DeclaredType t) {
     TypeMirror enclosing = t.getEnclosingType();
@@ -946,8 +946,8 @@ public final class MoreTypes {
   /**
    * Resolves a {@link VariableElement} parameter to a method or constructor based on the given
    * container, or a member of a class. For parameters to a method or constructor, the variable's
-   * enclosing element must be a supertype of the container type. For example, given a
-   * {@code container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
+   * enclosing element must be a supertype of the container type. For example, given a {@code
+   * container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
    * parameter in the {@code Set.add(E e)} method, this will return a TypeMirror for {@code String}.
    */
   public static TypeMirror asMemberOf(

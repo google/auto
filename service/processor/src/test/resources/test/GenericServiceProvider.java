@@ -18,8 +18,8 @@ package test;
 import com.google.auto.service.AutoService;
 
 /**
- * An implementation of a service with a type parameter, which by default will produce a warning
- * if you compile with {@code -Averify=true}.
+ * An implementation of a service with a type parameter, which by default will produce a warning if
+ * you compile with {@code -Averify=true}.
  */
 @AutoService(GenericService.class)
 public class GenericServiceProvider<T> implements GenericService<T> {}

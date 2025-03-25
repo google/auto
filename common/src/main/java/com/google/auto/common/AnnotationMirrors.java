@@ -73,9 +73,9 @@ public final class AnnotationMirrors {
       };
 
   /**
-   * Returns an {@link Equivalence} for {@link AnnotationMirror} as some implementations
-   * delegate equality tests to {@link Object#equals} whereas the documentation explicitly
-   * states that instance/reference equality is not the proper test.
+   * Returns an {@link Equivalence} for {@link AnnotationMirror} as some implementations delegate
+   * equality tests to {@link Object#equals} whereas the documentation explicitly states that
+   * instance/reference equality is not the proper test.
    */
   public static Equivalence<AnnotationMirror> equivalence() {
     return ANNOTATION_MIRROR_EQUIVALENCE;
@@ -119,9 +119,9 @@ public final class AnnotationMirrors {
   }
 
   /**
-   * Returns an {@link AnnotationValue} for the named element if such an element was
-   * either declared in the usage represented by the provided {@link AnnotationMirror}, or if
-   * such an element was defined with a default.
+   * Returns an {@link AnnotationValue} for the named element if such an element was either declared
+   * in the usage represented by the provided {@link AnnotationMirror}, or if such an element was
+   * defined with a default.
    *
    * @throws IllegalArgumentException if no element is defined with the given elementName.
    */
@@ -131,9 +131,9 @@ public final class AnnotationMirrors {
   }
 
   /**
-   * Returns a {@link ExecutableElement} and its associated {@link AnnotationValue} if such
-   * an element was either declared in the usage represented by the provided
-   * {@link AnnotationMirror}, or if such an element was defined with a default.
+   * Returns a {@link ExecutableElement} and its associated {@link AnnotationValue} if such an
+   * element was either declared in the usage represented by the provided {@link AnnotationMirror},
+   * or if such an element was defined with a default.
    *
    * @throws IllegalArgumentException if no element is defined with the given elementName.
    */

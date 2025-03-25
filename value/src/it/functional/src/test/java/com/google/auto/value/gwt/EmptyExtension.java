@@ -30,9 +30,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.TypeMirror;
 
-/**
- * An AutoValue extension that generates a subclass that does nothing useful.
- */
+/** An AutoValue extension that generates a subclass that does nothing useful. */
 @AutoService(AutoValueExtension.class)
 public class EmptyExtension extends AutoValueExtension {
   // TODO(emcmanus): it is way too difficult to write a trivial extension. Problems we have here:

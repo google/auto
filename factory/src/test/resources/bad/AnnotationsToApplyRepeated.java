@@ -20,6 +20,7 @@ import com.google.auto.factory.AutoFactory;
 @AutoFactory.AnnotationsToApply
 @interface ReallySuppressWarnings {
   SuppressWarnings suppressWarnings() default @SuppressWarnings("Immutable");
+
   SuppressWarnings suppressWarningsSomeMore() default @SuppressWarnings("Immutable");
 }
 

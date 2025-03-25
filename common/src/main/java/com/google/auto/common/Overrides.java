@@ -231,13 +231,13 @@ abstract class Overrides {
     /**
      * Returns the list of erased parameter types of the given method as they appear in the given
      * type. For example, if the method is {@code add(E)} from {@code List<E>} and we ask how it
-     * appears in {@code class NumberList implements List<Number>}, the answer will be
-     * {@code Number}. That will also be the answer for {@code class NumberList<E extends Number>
+     * appears in {@code class NumberList implements List<Number>}, the answer will be {@code
+     * Number}. That will also be the answer for {@code class NumberList<E extends Number>
      * implements List<E>}. The parameter types are erased since the purpose of this method is to
      * determine whether two methods are candidates for one to override the other.
      */
-    @Nullable
-    ImmutableList<TypeMirror> erasedParameterTypes(ExecutableElement method, TypeElement in) {
+    @Nullable ImmutableList<TypeMirror> erasedParameterTypes(
+        ExecutableElement method, TypeElement in) {
       if (method.getParameters().isEmpty()) {
         return ImmutableList.of();
       }
@@ -245,14 +245,14 @@ abstract class Overrides {
     }
 
     /**
-     * Visitor that replaces type variables with their values in the types it sees. If we know
-     * that {@code E} is {@code String}, then we can return {@code String} for {@code E},
-     * {@code List<String>} for {@code List<E>}, {@code String[]} for {@code E[]}, etc. We don't
-     * have to cover all types here because (1) the type is going to end up being erased, and
-     * (2) wildcards can't appear in direct supertypes. So for example it is illegal to write
-     * {@code class MyList implements List<? extends Number>}. It's legal to write
-     * {@code class MyList implements List<Set<? extends Number>>} but that doesn't matter
-     * because the {@code E} of the {@code List} is going to be erased to raw {@code Set}.
+     * Visitor that replaces type variables with their values in the types it sees. If we know that
+     * {@code E} is {@code String}, then we can return {@code String} for {@code E}, {@code
+     * List<String>} for {@code List<E>}, {@code String[]} for {@code E[]}, etc. We don't have to
+     * cover all types here because (1) the type is going to end up being erased, and (2) wildcards
+     * can't appear in direct supertypes. So for example it is illegal to write {@code class MyList
+     * implements List<? extends Number>}. It's legal to write {@code class MyList implements
+     * List<Set<? extends Number>>} but that doesn't matter because the {@code E} of the {@code
+     * List} is going to be erased to raw {@code Set}.
      */
     private class TypeSubstVisitor extends SimpleTypeVisitor8<TypeMirror, Void> {
       /**
@@ -270,8 +270,8 @@ abstract class Overrides {
        */
       private final Set<TypeElement> visitingTypes = new LinkedHashSet<>();
 
-      @Nullable
-      ImmutableList<TypeMirror> erasedParameterTypes(ExecutableElement method, TypeElement in) {
+      @Nullable ImmutableList<TypeMirror> erasedParameterTypes(
+          ExecutableElement method, TypeElement in) {
         if (method.getEnclosingElement().equals(in)) {
           ImmutableList.Builder<TypeMirror> params = ImmutableList.builder();
           for (VariableElement param : method.getParameters()) {
@@ -352,9 +352,9 @@ abstract class Overrides {
     }
 
     /**
-     * Returns the given method as it appears in the given type. This is the method itself,
-     * or the nearest override in a superclass of the given type, or null if the method is not
-     * found in the given type or any of its superclasses.
+     * Returns the given method as it appears in the given type. This is the method itself, or the
+     * nearest override in a superclass of the given type, or null if the method is not found in the
+     * given type or any of its superclasses.
      */
     @Nullable ExecutableElement methodFromSuperclasses(TypeElement in, ExecutableElement method) {
       for (TypeElement t = in; t != null; t = superclass(t)) {
@@ -371,8 +371,8 @@ abstract class Overrides {
      * itself, or the nearest override in a superinterface of the given type, or null if the method
      * is not found in the given type or any of its transitive superinterfaces.
      */
-    @Nullable
-    ExecutableElement methodFromSuperinterfaces(TypeElement in, ExecutableElement method) {
+    @Nullable ExecutableElement methodFromSuperinterfaces(
+        TypeElement in, ExecutableElement method) {
       TypeElement methodContainer = MoreElements.asType(method.getEnclosingElement());
       Preconditions.checkArgument(methodContainer.getKind().isInterface());
       TypeMirror methodContainerType = typeUtils.erasure(methodContainer.asType());

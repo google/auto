@@ -58,12 +58,14 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 /**
- * Processes {@link AutoService} annotations and generates the service provider
- * configuration files described in {@link java.util.ServiceLoader}.
- * <p>
- * Processor Options:<ul>
- *   <li>{@code -Adebug} - turns on debug statements</li>
- *   <li>{@code -Averify=true} - turns on extra verification</li>
+ * Processes {@link AutoService} annotations and generates the service provider configuration files
+ * described in {@link java.util.ServiceLoader}.
+ *
+ * <p>Processor Options:
+ *
+ * <ul>
+ *   <li>{@code -Adebug} - turns on debug statements
+ *   <li>{@code -Averify=true} - turns on extra verification
  * </ul>
  */
 @SupportedOptions({"debug", "verify"})
@@ -75,12 +77,11 @@ public class AutoServiceProcessor extends AbstractProcessor {
   private final List<String> exceptionStacks = Collections.synchronizedList(new ArrayList<>());
 
   /**
-   * Maps the class names of service provider interfaces to the
-   * class names of the concrete classes which implement them.
-   * <p>
-   * For example,
-   *   {@code "com.google.apphosting.LocalRpcService" ->
-   *   "com.google.apphosting.datastore.LocalDatastoreService"}
+   * Maps the class names of service provider interfaces to the class names of the concrete classes
+   * which implement them.
+   *
+   * <p>For example, {@code "com.google.apphosting.LocalRpcService" ->
+   * "com.google.apphosting.datastore.LocalDatastoreService"}
    */
   private final Multimap<String, String> providers = HashMultimap.create();
 
@@ -95,17 +96,21 @@ public class AutoServiceProcessor extends AbstractProcessor {
   }
 
   /**
-   * <ol>
-   *  <li> For each class annotated with {@link AutoService}<ul>
-   *      <li> Verify the {@link AutoService} interface value is correct
-   *      <li> Categorize the class by its service interface
-   *      </ul>
    *
-   *  <li> For each {@link AutoService} interface <ul>
-   *       <li> Create a file named {@code META-INF/services/<interface>}
-   *       <li> For each {@link AutoService} annotated class for this interface <ul>
-   *           <li> Create an entry in the file
-   *           </ul>
+   *
+   * <ol>
+   *   <li>For each class annotated with {@link AutoService}
+   *       <ul>
+   *         <li>Verify the {@link AutoService} interface value is correct
+   *         <li>Categorize the class by its service interface
+   *       </ul>
+   *   <li>For each {@link AutoService} interface
+   *       <ul>
+   *         <li>Create a file named {@code META-INF/services/<interface>}
+   *         <li>For each {@link AutoService} annotated class for this interface
+   *             <ul>
+   *               <li>Create an entry in the file
+   *             </ul>
    *       </ul>
    * </ol>
    */
@@ -297,9 +302,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
   }
 
   /**
-   * Returns the binary name of a reference type. For example,
-   * {@code com.google.Foo$Bar}, instead of {@code com.google.Foo.Bar}.
-   *
+   * Returns the binary name of a reference type. For example, {@code com.google.Foo$Bar}, instead
+   * of {@code com.google.Foo.Bar}.
    */
   private String getBinaryName(TypeElement element) {
     return getBinaryNameImpl(element, element.getSimpleName().toString());

@@ -500,10 +500,7 @@ public class AutoValueProcessor extends AutoValueishProcessor {
         propertyMethodAnnotationMap(type, propertyMethods);
     vars.props =
         propertySet(
-            propertyMethodsAndTypes,
-            annotatedPropertyFields,
-            annotatedPropertyMethods,
-            nullables);
+            propertyMethodsAndTypes, annotatedPropertyFields, annotatedPropertyMethods, nullables);
     // Check for @AutoValue.Builder and add appropriate variables if it is present.
     maybeBuilder.ifPresent(
         builder -> {

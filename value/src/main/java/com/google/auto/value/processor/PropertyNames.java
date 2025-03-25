@@ -26,11 +26,11 @@ class PropertyNames {
    * <p>For consistency with JavaBeans, a getter called {@code getHTMLPage()} defines a property
    * called {@code HTMLPage}. The <a
    * href="https://docs.oracle.com/javase/8/docs/api/java/beans/Introspector.html#decapitalize-java.lang.String-">
-   * rule</a> is: the name of the property is the part after {@code get} or {@code
-   * is}, with the first letter lowercased <i>unless</i> the first two letters are uppercase. This
-   * works well for the {@code HTMLPage} example, but in these more enlightened times we use {@code
-   * HtmlPage} anyway, so the special behaviour is not useful, and of course it behaves poorly with
-   * examples like {@code OAuth}. Nevertheless, we preserve it for compatibility.
+   * rule</a> is: the name of the property is the part after {@code get} or {@code is}, with the
+   * first letter lowercased <i>unless</i> the first two letters are uppercase. This works well for
+   * the {@code HTMLPage} example, but in these more enlightened times we use {@code HtmlPage}
+   * anyway, so the special behaviour is not useful, and of course it behaves poorly with examples
+   * like {@code OAuth}. Nevertheless, we preserve it for compatibility.
    */
   static String decapitalizeLikeJavaBeans(String propertyName) {
     if (propertyName != null
@@ -42,9 +42,7 @@ class PropertyNames {
     return decapitalizeNormally(propertyName);
   }
 
-  /**
-   * Returns the {@code propertyName} with its first character in lower case.
-   */
+  /** Returns the {@code propertyName} with its first character in lower case. */
   static String decapitalizeNormally(String propertyName) {
     if (Strings.isNullOrEmpty(propertyName)) {
       return propertyName;

@@ -18,6 +18,8 @@ package com.google.auto.value.annotations;
 /** Test annotation for AutoAnnotation and Kotlin. */
 public @interface TestAnnotation {
   String value() default "default";
+
   int integer() default 23;
+
   String[] values() default {};
 }

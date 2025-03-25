@@ -225,7 +225,8 @@ class PropertyBuilderClassifier {
   // This method outputs an error and returns Optional.empty() if the barBuilder() method has a
   // problem.
   Optional<PropertyBuilder> makePropertyBuilder(ExecutableElement method, String property) {
-    AnnotatedTypeMirror barBuilderAnnotatedType = builderMethodClassifier.builderMethodReturnType(method);
+    AnnotatedTypeMirror barBuilderAnnotatedType =
+        builderMethodClassifier.builderMethodReturnType(method);
     if (barBuilderAnnotatedType.getKind() != TypeKind.DECLARED) {
       errorReporter.reportError(
           method,

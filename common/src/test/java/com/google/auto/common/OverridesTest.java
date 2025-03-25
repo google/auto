@@ -70,10 +70,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.model.Statement;
 
 /**
- * Tests that the {@link Overrides} class has behaviour consistent with javac. We test this in
- * two ways: once with {@link Overrides.ExplicitOverrides} using javac's own {@link Elements} and
- * {@link Types}, and once with it using the version of those objects from the Eclipse compiler
- * (ecj).
+ * Tests that the {@link Overrides} class has behaviour consistent with javac. We test this in two
+ * ways: once with {@link Overrides.ExplicitOverrides} using javac's own {@link Elements} and {@link
+ * Types}, and once with it using the version of those objects from the Eclipse compiler (ecj).
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
@@ -577,9 +576,9 @@ public class OverridesTest {
 
   private void assertTypeListsEqual(@Nullable List<TypeMirror> actual, List<TypeMirror> expected) {
     assertThat(actual)
-      .comparingElementsUsing(Correspondence.from(typeUtils::isSameType, "is same type as"))
-      .containsExactlyElementsIn(expected)
-      .inOrder();
+        .comparingElementsUsing(Correspondence.from(typeUtils::isSameType, "is same type as"))
+        .containsExactlyElementsIn(expected)
+        .inOrder();
   }
 
   // TODO(emcmanus): replace this with something from compile-testing when that's available.

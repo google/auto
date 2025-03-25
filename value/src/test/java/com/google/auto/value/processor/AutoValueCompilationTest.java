@@ -51,7 +51,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
 public class AutoValueCompilationTest {
   @Rule public final Expect expect = Expect.create();
@@ -972,8 +974,7 @@ public class AutoValueCompilationTest {
         .hadErrorContaining("MissingType")
         .inFile(javaFileObject)
         .onLineContaining("MissingType");
-    assertThat(compilation)
-        .hadErrorContaining("references undefined types including MissingType");
+    assertThat(compilation).hadErrorContaining("references undefined types including MissingType");
   }
 
   @Test
@@ -3425,10 +3426,12 @@ public class AutoValueCompilationTest {
             "    Class<?>[] values() default {};",
             "  }",
             "}");
-    ImmutableList<String> annotations = ImmutableList.of(
-        "@ReferenceClass(BarFoo.class)",
-        "@ReferenceClass(values = {Void.class, BarFoo.class})",
-        "@ReferenceClass(nested = @ReferenceClass.Nested(values = {Void.class, BarFoo.class}))");
+    ImmutableList<String> annotations =
+        ImmutableList.of(
+            "@ReferenceClass(BarFoo.class)",
+            "@ReferenceClass(values = {Void.class, BarFoo.class})",
+            "@ReferenceClass(nested = @ReferenceClass.Nested(values = {Void.class,"
+                + " BarFoo.class}))");
     for (String annotation : annotations) {
       JavaFileObject bazFileObject =
           JavaFileObjects.forSourceLines(
@@ -3454,7 +3457,9 @@ public class AutoValueCompilationTest {
               .compile(bazFileObject, barFileObject, referenceClassFileObject);
       expect.about(compilations()).that(compilation).succeededWithoutWarnings();
       if (compilation.status().equals(Compilation.Status.SUCCESS)) {
-        expect.about(compilations()).that(compilation)
+        expect
+            .about(compilations())
+            .that(compilation)
             .generatedSourceFile("foo.bar.AutoValue_Baz")
             .contentsAsUtf8String()
             .contains(annotation);
@@ -3637,8 +3642,7 @@ public class AutoValueCompilationTest {
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")
         .contentsAsUtf8String()
-        .containsMatch(
-            "(?s:@Annotation1\\s+@Annotation0\\s+@Override\\s+public String foo\\(\\))");
+        .containsMatch("(?s:@Annotation1\\s+@Annotation0\\s+@Override\\s+public String foo\\(\\))");
     // @Annotation1 precedes @Annotation 0 because
     // @com.package2.Annotation1 precedes @com.package1.Annotation0
   }
