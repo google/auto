@@ -59,13 +59,16 @@ extensions. Most extensions will have no real equivalent with records.
 
 AutoValue has very few API-visible "quirks", but one is that it forces you to
 use a static factory method as your class's creation API. A record can have this
-too, but it can't prevent its constructor from *also* being visible, and
+too, but it can't prevent its primary constructor from *also* being visible, and
 exposing two ways to do the same thing can be dangerous.
 
 We think most users will be happy to switch to constructors and drop the factory
 methods, but you might want to keep a factory method in some records. Perhaps
 for compatibility reasons, or because you are normalizing input data to
-different types, such as from `List` to `ImmutableList`.
+different types, such as from `List` to `ImmutableList`. If you have several
+static factory methods then you may still want to keep some or all of them,
+because their names are more meaningful than if you replace them with secondary
+constructors.
 
 If you don't want users to call your constructor at all, records are not a good
 fit. You probably want to continue using AutoValue in that case.
