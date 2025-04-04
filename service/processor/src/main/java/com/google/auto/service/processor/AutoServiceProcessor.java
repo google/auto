@@ -24,17 +24,15 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.SortedSetMultimap;
+import com.google.common.collect.TreeMultimap;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -83,7 +81,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
    * <p>For example, {@code "com.google.apphosting.LocalRpcService" ->
    * "com.google.apphosting.datastore.LocalDatastoreService"}
    */
-  private final Multimap<String, String> providers = HashMultimap.create();
+  private final SortedSetMultimap<String, String> providers = TreeMultimap.create();
 
   @Override
   public ImmutableSet<String> getSupportedAnnotationTypes() {
@@ -151,7 +149,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = MoreElements.asType(e);
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
-      Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
+      ImmutableSet<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
       if (providerInterfaces.isEmpty()) {
         error(MISSING_SERVICES_ERROR, e, annotationMirror);
         continue;
@@ -183,40 +181,15 @@ public class AutoServiceProcessor extends AbstractProcessor {
       String resourceFile = "META-INF/services/" + providerInterface;
       log("Working on resource file: " + resourceFile);
       try {
-        SortedSet<String> allServices = Sets.newTreeSet();
-        try {
-          // would like to be able to print the full path
-          // before we attempt to get the resource in case the behavior
-          // of filer.getResource does change to match the spec, but there's
-          // no good way to resolve CLASS_OUTPUT without first getting a resource.
-          FileObject existingFile =
-              filer.getResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
-          log("Looking for existing resource file at " + existingFile.toUri());
-          Set<String> oldServices = ServicesFiles.readServiceFile(existingFile.openInputStream());
-          log("Existing service entries: " + oldServices);
-          allServices.addAll(oldServices);
-        } catch (IOException e) {
-          // According to the javadoc, Filer.getResource throws an exception
-          // if the file doesn't already exist.  In practice this doesn't
-          // appear to be the case.  Filer.getResource will happily return a
-          // FileObject that refers to a non-existent file but will throw
-          // IOException if you try to open an input stream for it.
-          log("Resource file did not already exist.");
-        }
+        SortedSet<String> newServices = providers.get(providerInterface);
 
-        Set<String> newServices = new HashSet<>(providers.get(providerInterface));
-        if (!allServices.addAll(newServices)) {
-          log("No new service entries being added.");
-          continue;
-        }
-
-        log("New service file contents: " + allServices);
+        log("New service file contents: " + newServices);
         FileObject fileObject =
             filer.createResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
         try (OutputStream out = fileObject.openOutputStream()) {
-          ServicesFiles.writeServiceFile(allServices, out);
+          ServicesFiles.writeServiceFile(newServices, out);
         }
-        log("Wrote to: " + fileObject.toUri());
+        log("Wrote to: " + resourceFile);
       } catch (IOException e) {
         fatalError("Unable to create " + resourceFile + ", " + e);
         return;
