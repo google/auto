@@ -124,13 +124,6 @@
           <showDeprecation>true</showDeprecation>
           <testExcludes combine.children="append" />
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-java</artifactId>
-            <version>1.4.0</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -162,13 +162,6 @@
             <showWarnings>true</showWarnings>
             <showDeprecation>true</showDeprecation>
           </configuration>
-          <dependencies>
-            <dependency>
-              <groupId>org.codehaus.plexus</groupId>
-              <artifactId>plexus-java</artifactId>
-              <version>1.4.0</version>
-            </dependency>
-          </dependencies>
           <executions>
             <execution>
               <id>default-testCompile</id>

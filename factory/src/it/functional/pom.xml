@@ -95,13 +95,6 @@
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-java</artifactId>
-            <version>1.0.5</version>
-          </dependency>
-        </dependencies>
       </plugin>
     </plugins>
   </build>
