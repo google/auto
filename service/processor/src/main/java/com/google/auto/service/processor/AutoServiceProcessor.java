@@ -95,7 +95,6 @@ public class AutoServiceProcessor extends AbstractProcessor {
 
   /**
    *
-   *
    * <ol>
    *   <li>For each class annotated with {@link AutoService}
    *       <ul>
