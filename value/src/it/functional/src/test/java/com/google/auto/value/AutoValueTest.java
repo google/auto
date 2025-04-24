@@ -1317,7 +1317,7 @@ public class AutoValueTest {
   // thinking that the methods from Collection were still abstract and therefore candidates for
   // implementation, even though we inherit concrete implementations of them from AbstractList.
   @AutoValue
-  public static class MoreComplexInheritance extends AbstractList<String> {
+  public abstract static class MoreComplexInheritance extends AbstractList<String> {
     @Override
     public String get(int index) {
       throw new NoSuchElementException(String.valueOf(index));
@@ -1355,7 +1355,7 @@ public class AutoValueTest {
   }
 
   @AutoValue
-  static class EffectiveVisibility extends PrivateParent {
+  abstract static class EffectiveVisibility extends PrivateParent {
     static EffectiveVisibility create() {
       return new AutoValue_AutoValueTest_EffectiveVisibility();
     }
@@ -2473,7 +2473,6 @@ public class AutoValueTest {
 
     @AutoValue.Builder
     public interface Builder<T extends Comparable<T>> {
-      @SuppressWarnings("unchecked")
       Builder<T> setSortedSet(T... x);
 
       Builder<T> setSortedSet(NavigableSet<T> x);
