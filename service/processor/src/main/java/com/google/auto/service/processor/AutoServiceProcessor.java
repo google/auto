@@ -191,7 +191,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
         }
         log("Wrote to: " + resourceFile);
       } catch (IOException e) {
-        fatalError("Unable to create " + resourceFile + ", " + e);
+        fatalError("Unable to create " + resourceFile + ", " + getStackTraceAsString(e));
         return;
       }
     }
@@ -256,7 +256,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
       TypeElement providerImplementer, AnnotationMirror annotationMirror) {
     if (providerImplementer.getModifiers().contains(Modifier.ABSTRACT)) {
       error(
-          "@AutoService cannot be applied to an abstract class or an interface",
+          "@AutoService can only be applied to a concrete class",
           providerImplementer,
           annotationMirror);
       return false;

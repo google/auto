@@ -213,7 +213,7 @@ public class AutoServiceProcessorTest {
             .withOptions("-Averify=true")
             .compile(autoServiceOnInterface);
     assertThat(compilation)
-        .hadErrorContaining("@AutoService cannot be applied to an abstract class or an interface")
+        .hadErrorContaining("@AutoService can only be applied to a concrete class")
         .inFile(autoServiceOnInterface)
         .onLineContaining("@AutoService");
     assertThat(processor.exceptionStacks()).isEmpty();
@@ -230,7 +230,7 @@ public class AutoServiceProcessorTest {
             .withOptions("-Averify=true")
             .compile(autoServiceOnAbstractClass);
     assertThat(compilation)
-        .hadErrorContaining("@AutoService cannot be applied to an abstract class or an interface")
+        .hadErrorContaining("@AutoService can only be applied to a concrete class")
         .inFile(autoServiceOnAbstractClass)
         .onLineContaining("@AutoService");
     assertThat(processor.exceptionStacks()).isEmpty();
