@@ -642,7 +642,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /* It's unfortunate that we have to track types and packages separately, but since there are
-   * two different methods to look them up in {@link Elements}, we end up with a lot of parallel
+   * two different methods to look them up in `Elements`, we end up with a lot of parallel
    * logic. :(
    */
   private static final class PackageElementFactory extends ElementFactory {
