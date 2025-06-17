@@ -254,7 +254,7 @@
         <dependency>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>ecj</artifactId>
-          <version>3.41.0</version>
+          <version>3.42.0</version>
           <scope>test</scope>
         </dependency>
       </dependencies>
