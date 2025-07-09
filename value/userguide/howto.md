@@ -66,6 +66,8 @@ class Outer {
       ...
 ```
 
+NOTE: Nested `@AutoValue` classes must be `static`.
+
 ## <a name="beans"></a>... use (or not use) JavaBeans-style name prefixes?
 
 Some developers prefer to name their accessors with a `get-` or `is-` prefix,
