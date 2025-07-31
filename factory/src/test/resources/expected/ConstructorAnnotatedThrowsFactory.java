@@ -22,14 +22,14 @@ import javax.inject.Provider;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 final class ConstructorAnnotatedThrowsFactory {
   private final Provider<Object> objProvider;
 
   @Inject
   ConstructorAnnotatedThrowsFactory(Provider<Object> objProvider) {
-    this.objProvider = checkNotNull(objProvider, 1);
+    this.objProvider = checkNotNull(objProvider, 1, 1);
   }
 
   ConstructorAnnotatedThrows create() throws IOException, InterruptedException {
@@ -37,22 +37,24 @@ final class ConstructorAnnotatedThrowsFactory {
   }
 
   ConstructorAnnotatedThrows create(String s) {
-    return new ConstructorAnnotatedThrows(checkNotNull(s, 1));
+    return new ConstructorAnnotatedThrows(checkNotNull(s, 1, 1));
   }
 
   ConstructorAnnotatedThrows create(int i) throws IOException {
-    return new ConstructorAnnotatedThrows(checkNotNull(objProvider.get(), 1), i);
+    return new ConstructorAnnotatedThrows(checkNotNull(objProvider.get(), 1, 2), i);
   }
 
   ConstructorAnnotatedThrows create(char c) throws InterruptedException {
-    return new ConstructorAnnotatedThrows(checkNotNull(objProvider.get(), 1), c);
+    return new ConstructorAnnotatedThrows(checkNotNull(objProvider.get(), 1, 2), c);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }

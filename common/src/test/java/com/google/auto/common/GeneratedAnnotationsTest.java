@@ -46,7 +46,7 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -134,14 +134,14 @@ public class GeneratedAnnotationsTest {
   }
 
   /**
-   * Used to produce a {@link StandardJavaFileManager} where a certain package appears to have
-   * no classes. The results are exactly those from the proxied {@code StandardJavaFileManager}
-   * except for the {@link StandardJavaFileManager#list list} method when its {@code packageName}
-   * argument is the given package, in which case the result is an empty list.
+   * Used to produce a {@link StandardJavaFileManager} where a certain package appears to have no
+   * classes. The results are exactly those from the proxied {@code StandardJavaFileManager} except
+   * for the {@link StandardJavaFileManager#list list} method when its {@code packageName} argument
+   * is the given package, in which case the result is an empty list.
    *
    * <p>We can't use {@link javax.tools.ForwardingJavaFileManager} because at least some JDK
-   * versions require the file manager to be a {@code StandardJavaFileManager} when the
-   * {@code --release} flag is given.
+   * versions require the file manager to be a {@code StandardJavaFileManager} when the {@code
+   * --release} flag is given.
    */
   private static class FileManagerInvocationHandler implements InvocationHandler {
     private final StandardJavaFileManager fileManager;

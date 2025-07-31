@@ -15,8 +15,16 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreTypes.asElement;
+import static com.google.auto.common.MoreTypes.asTypeElement;
+import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
+import static javax.lang.model.type.TypeKind.DECLARED;
+import static javax.lang.model.type.TypeKind.ERROR;
+import static javax.lang.model.util.ElementFilter.methodsIn;
+
 import com.google.auto.common.MoreTypes;
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.AutoFactory.AnnotationsToApply;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Throwables;
@@ -33,12 +41,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -51,6 +62,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The annotation processor that generates factories for {@link AutoFactory} annotations.
@@ -59,13 +71,25 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  */
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 @AutoService(Processor.class)
+@SupportedOptions(AutoFactoryProcessor.INJECT_API_OPTION)
 public final class AutoFactoryProcessor extends AbstractProcessor {
+  static final String INJECT_API_OPTION = "com.google.auto.factory.InjectApi";
+
+  private static final ImmutableSet<String> INJECT_APIS = ImmutableSet.of("jakarta", "javax");
+
   private FactoryDescriptorGenerator factoryDescriptorGenerator;
   private AutoFactoryDeclaration.Factory declarationFactory;
   private ProvidedChecker providedChecker;
   private Messager messager;
   private Elements elements;
   private Types types;
+  private InjectApi injectApi;
+
+  /**
+   * If non-null, we will call this whenever the {@link #process} method is called, giving it one of
+   * the {@code @AutoFactory} elements, and do nothing else.
+   */
+  private @Nullable Consumer<@Nullable Element> errorFunction;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -73,14 +97,41 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     elements = processingEnv.getElementUtils();
     types = processingEnv.getTypeUtils();
     messager = processingEnv.getMessager();
+    String api = processingEnv.getOptions().get(INJECT_API_OPTION);
+    if (api != null && !INJECT_APIS.contains(api)) {
+      messager.printMessage(
+          Kind.ERROR,
+          "Usage: -A"
+              + INJECT_API_OPTION
+              + "=<api>, where <api> is "
+              + String.join(" or ", INJECT_APIS));
+      errorFunction = unused -> {};
+      return;
+    }
+    try {
+      injectApi = InjectApi.from(elements, api);
+    } catch (IllegalStateException e) {
+      errorFunction =
+          element -> {
+            messager.printMessage(Kind.ERROR, e.getMessage(), element);
+            errorFunction = unused -> {}; // Only print the error once.
+          };
+      return;
+    }
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
     factoryDescriptorGenerator =
-        new FactoryDescriptorGenerator(messager, types, declarationFactory);
+        new FactoryDescriptorGenerator(messager, types, declarationFactory, injectApi);
   }
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    if (errorFunction != null) {
+      Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(AutoFactory.class);
+      Element anElement = elements.isEmpty() ? null : elements.iterator().next();
+      errorFunction.accept(anElement);
+      return false;
+    }
     try {
       doProcess(roundEnv);
     } catch (Throwable e) {
@@ -96,11 +147,15 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       providedChecker.checkProvidedParameter(element);
     }
 
+    for (Element element : roundEnv.getElementsAnnotatedWith(AnnotationsToApply.class)) {
+      checkAnnotationsToApply(element);
+    }
+
     ImmutableListMultimap.Builder<PackageAndClass, FactoryMethodDescriptor> indexedMethodsBuilder =
         ImmutableListMultimap.builder();
     ImmutableSetMultimap.Builder<PackageAndClass, ImplementationMethodDescriptor>
         implementationMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
-    // Iterate over the classes and methods that are annotated with @AutoFactory.
+    // Iterate over the classes and constructors that are annotated with @AutoFactory.
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
       if (declaration.isPresent()) {
@@ -127,7 +182,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         indexedMethodsBuilder.build();
     ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated =
         simpleNamesToNames(indexedMethods.keySet());
-    FactoryWriter factoryWriter = new FactoryWriter(processingEnv, factoriesBeingCreated);
+    FactoryWriter factoryWriter =
+        new FactoryWriter(processingEnv, injectApi, factoriesBeingCreated);
 
     indexedMethods
         .asMap()
@@ -138,6 +194,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                 // methodDescriptors.iterator().next() below.
                 return;
               }
+              // Sort to ensure output is deterministic.
+              ImmutableSortedSet.Builder<AnnotationMirror> annotationsBuilder =
+                  ImmutableSortedSet.orderedBy(ANNOTATION_COMPARATOR);
               // The sets of classes that are mentioned in the `extending` and `implementing`
               // elements, respectively, of the @AutoFactory annotations for this factory.
               ImmutableSet.Builder<TypeMirror> extending = newTypeSetBuilder();
@@ -146,6 +205,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               Set<Boolean> allowSubclassesSet = new HashSet<>();
               boolean skipCreation = false;
               for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
+                annotationsBuilder.addAll(methodDescriptor.declaration().annotations());
                 extending.add(methodDescriptor.declaration().extendingType().asType());
                 for (TypeElement implementingType :
                     methodDescriptor.declaration().implementingTypes()) {
@@ -170,6 +230,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                   factoryWriter.writeFactory(
                       FactoryDescriptor.create(
                           factoryName,
+                          annotationsBuilder.build(),
                           Iterables.getOnlyElement(extending.build()),
                           implementing.build(),
                           publicType,
@@ -183,6 +244,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
             });
   }
 
+  private static final Comparator<AnnotationMirror> ANNOTATION_COMPARATOR =
+      Comparator.comparing(mirror -> mirror.getAnnotationType().toString());
+
   private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
       TypeElement supertype, Element autoFactoryElement) {
     ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
@@ -194,7 +258,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
             Elements2.getExecutableElementAsMemberOf(types, implementationMethod, supertype);
         ImmutableSet<Parameter> passedParameters =
             Parameter.forParameterList(
-                implementationMethod.getParameters(), methodType.getParameterTypes(), types);
+                implementationMethod.getParameters(),
+                methodType.getParameterTypes(),
+                types,
+                injectApi);
         implementationMethodsBuilder.add(
             ImplementationMethodDescriptor.builder()
                 .name(implementationMethod.getSimpleName().toString())
@@ -234,9 +301,49 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         Comparator.comparing(t -> MoreTypes.asTypeElement(t).getQualifiedName().toString()));
   }
 
+  /** Checks that {@link AnnotationsToApply} is used correctly. */
+  private void checkAnnotationsToApply(Element annotation) {
+    if (!annotation.getKind().equals(ANNOTATION_TYPE)) {
+      // Should not be possible because of @Target.
+      messager.printMessage(
+          Kind.ERROR,
+          "@"
+              + AnnotationsToApply.class.getSimpleName()
+              + " must be applied to an annotation type declaration.",
+          annotation);
+    }
+    Set<TypeElement> seenAnnotations = new HashSet<>();
+    for (ExecutableElement annotationMember : methodsIn(annotation.getEnclosedElements())) {
+      TypeMirror memberType = annotationMember.getReturnType();
+      boolean isAnnotation =
+          memberType.getKind().equals(DECLARED)
+              && asElement(memberType).getKind().equals(ANNOTATION_TYPE);
+      if (!isAnnotation && !memberType.getKind().equals(ERROR)) {
+        messager.printMessage(
+            Kind.ERROR,
+            "Members of an @"
+                + AnnotationsToApply.class.getSimpleName()
+                + " annotation must themselves be annotations; "
+                + annotationMember.getSimpleName()
+                + " has type "
+                + memberType,
+            annotationMember);
+      } else {
+        TypeElement annotationElement = asTypeElement(memberType);
+        if (!seenAnnotations.add(annotationElement)) {
+          messager.printMessage(
+              Kind.ERROR, "More than one @" + annotationElement + " in " + annotation, annotation);
+        }
+      }
+    }
+  }
+
   @Override
   public ImmutableSet<String> getSupportedAnnotationTypes() {
-    return ImmutableSet.of(AutoFactory.class.getName(), Provided.class.getName());
+    return ImmutableSet.of(
+        AutoFactory.class.getCanonicalName(),
+        Provided.class.getCanonicalName(),
+        AnnotationsToApply.class.getCanonicalName());
   }
 
   @Override

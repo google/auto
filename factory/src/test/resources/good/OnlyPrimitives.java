@@ -17,7 +17,9 @@ package tests;
 
 import com.google.auto.factory.AutoFactory;
 
-/** @author Ron Shapiro */
+/**
+ * @author Ron Shapiro
+ */
 @AutoFactory
 final class OnlyPrimitives {
   OnlyPrimitives(int i, long l) {}

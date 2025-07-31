@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.auto.common.MoreStreams.toImmutableMap;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -37,7 +37,6 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
-import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
 
@@ -49,17 +48,17 @@ final class TypeVariables {
    * Returns a map from methods to return types, where the return types are not necessarily the
    * original return types of the methods. Consider this example:
    *
-   * <pre>
-   * &#64;AutoValue class {@code Foo<T>} {
+   * <pre>{@code
+   * @AutoValue class Foo<T> {
    *   abstract T getFoo();
    *
-   *   &#64;AutoValue.Builder
-   *   abstract class {@code Builder<T>} {
+   *   @AutoValue.Builder
+   *   abstract class Builder<T> {
    *     abstract Builder setFoo(T t);
-   *     abstract {@code Foo<T>} build();
+   *     abstract Foo<T> build();
    *   }
    * }
-   * </pre>
+   * }</pre>
    *
    * We want to be able to check that the parameter type of {@code setFoo} is the same as the return
    * type of {@code getFoo}. But in fact it isn't, because the {@code T} of {@code Foo<T>} is not
@@ -79,8 +78,7 @@ final class TypeVariables {
    * @param targetType the class to translate the methods into ({@code Foo.Builder<T>}) in the
    *     example.
    */
-  static ImmutableMap<ExecutableElement, TypeMirror> rewriteReturnTypes(
-      Elements elementUtils,
+  static ImmutableMap<ExecutableElement, AnnotatedTypeMirror> rewriteReturnTypes(
       Types typeUtils,
       Collection<ExecutableElement> methods,
       TypeElement sourceType,
@@ -95,14 +93,16 @@ final class TypeVariables {
     // What we're doing is only valid if the type parameters are "the same". The check here even
     // requires the names to be the same. The logic would still work without that, but we impose
     // that requirement elsewhere and it means we can check in this simple way.
-    EclipseHack eclipseHack = new EclipseHack(elementUtils, typeUtils);
     TypeMirror[] targetTypeParameterMirrors = new TypeMirror[targetTypeParameters.size()];
     for (int i = 0; i < targetTypeParameters.size(); i++) {
       targetTypeParameterMirrors[i] = targetTypeParameters.get(i).asType();
     }
     DeclaredType parallelSource = typeUtils.getDeclaredType(sourceType, targetTypeParameterMirrors);
     return methods.stream()
-        .collect(toImmutableMap(m -> m, m -> eclipseHack.methodReturnType(m, parallelSource)));
+        .collect(
+            toImmutableMap(
+                m -> m,
+                m -> MethodSignature.asMemberOf(typeUtils, parallelSource, m).returnType()));
   }
 
   /**
@@ -113,10 +113,10 @@ final class TypeVariables {
    * {@code static <K, V> ImmutableMap<K, V> copyOf(Map<? extends K, ? extends V>)}<br>
    * and we want to know if we can do this:
    *
-   * <pre>
-   * {@code ImmutableMap<String, Integer> actualParameter = ...;}
-   * {@code ImmutableMap<String, Number> target = ImmutableMap.copyOf(actualParameter);}
-   * </pre>
+   * <pre>{@code
+   * ImmutableMap<String, Integer> actualParameter = ...;
+   * ImmutableMap<String, Number> target = ImmutableMap.copyOf(actualParameter);
+   * }</pre>
    *
    * We will infer {@code K=String}, {@code V=Number} based on the target type, and then rewrite the
    * formal parameter type from<br>

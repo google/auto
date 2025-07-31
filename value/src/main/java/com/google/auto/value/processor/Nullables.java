@@ -18,7 +18,6 @@ package com.google.auto.value.processor;
 import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreTypes;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -50,21 +49,61 @@ class Nullables {
   static final String NULLABLE_OPTION = "com.google.auto.value.NullableTypeAnnotation";
 
   // We write this using .concat in order to hide it from rewriting rules.
-  private static final String DEFAULT_NULLABLE = "org".concat(".jspecify.nullness.Nullable");
+  private static final String DEFAULT_NULLABLE = "org".concat(".jspecify.annotations.Nullable");
 
-  private final Optional<AnnotationMirror> defaultNullable;
+  private final Optional<AnnotationMirror> nullableTypeAnnotation;
 
-  Nullables(ProcessingEnvironment processingEnv) {
+  private Nullables(Optional<AnnotationMirror> nullableTypeAnnotation) {
+    this.nullableTypeAnnotation = nullableTypeAnnotation;
+  }
+
+  /**
+   * Make an instance where the default {@code @Nullable} type annotation is discovered by looking
+   * for methods whose parameter or return types have such an annotation. If there are none, use a
+   * default {@code @Nullable} type annotation if it is available.
+   *
+   * @param methods the methods to examine
+   * @param processingEnv the {@link ProcessingEnvironment}, or null if one is unavailable
+   *     (typically in tests)
+   */
+  static Nullables fromMethods(
+      /* @Nullable */ ProcessingEnvironment processingEnv, Collection<ExecutableElement> methods) {
+    Optional<AnnotationMirror> nullableTypeAnnotation =
+        methods.stream()
+            .flatMap(
+                method ->
+                    Stream.concat(
+                        Stream.of(method.getReturnType()),
+                        method.getParameters().stream().map(Element::asType)))
+            .map(Nullables::nullableIn)
+            .filter(Optional::isPresent)
+            .findFirst()
+            .orElseGet(() -> defaultNullableTypeAnnotation(processingEnv));
+    return new Nullables(nullableTypeAnnotation);
+  }
+
+  /**
+   * Returns a list that is either empty or contains a single element that is an appropriate
+   * {@code @Nullable} type-annotation.
+   */
+  ImmutableList<AnnotationMirror> nullableTypeAnnotations() {
+    return nullableTypeAnnotation.map(ImmutableList::of).orElse(ImmutableList.of());
+  }
+
+  private static Optional<AnnotationMirror> defaultNullableTypeAnnotation(
+      /* @Nullable */ ProcessingEnvironment processingEnv) {
+    if (processingEnv == null) {
+      return Optional.empty();
+    }
     // -Afoo without `=` sets "foo" to null in the getOptions() map.
     String nullableOption =
         Strings.nullToEmpty(
             processingEnv.getOptions().getOrDefault(NULLABLE_OPTION, DEFAULT_NULLABLE));
-    this.defaultNullable =
-        (!nullableOption.isEmpty()
-                && processingEnv.getSourceVersion().ordinal() >= SourceVersion.RELEASE_8.ordinal())
-            ? Optional.ofNullable(processingEnv.getElementUtils().getTypeElement(nullableOption))
-                .map(t -> annotationMirrorOf(MoreTypes.asDeclared(t.asType())))
-            : Optional.empty();
+    return (!nullableOption.isEmpty()
+            && processingEnv.getSourceVersion().ordinal() >= SourceVersion.RELEASE_8.ordinal())
+        ? Optional.ofNullable(processingEnv.getElementUtils().getTypeElement(nullableOption))
+            .map(t -> annotationMirrorOf(MoreTypes.asDeclared(t.asType())))
+        : Optional.empty();
   }
 
   private static AnnotationMirror annotationMirrorOf(DeclaredType annotationType) {
@@ -80,38 +119,6 @@ class Nullables {
         return ImmutableMap.of();
       }
     };
-  }
-
-  /**
-   * Returns the type of a {@code @Nullable} type-annotation, if one is found anywhere in the
-   * signatures of the given methods.
-   */
-  @VisibleForTesting
-  static Optional<AnnotationMirror> nullableMentionedInMethods(
-      Collection<ExecutableElement> methods) {
-    return methods.stream()
-        .flatMap(
-            method ->
-                Stream.concat(
-                    Stream.of(method.getReturnType()),
-                    method.getParameters().stream().map(Element::asType)))
-        .map(Nullables::nullableIn)
-        .filter(Optional::isPresent)
-        .findFirst()
-        .orElse(Optional.empty());
-  }
-
-  /**
-   * Returns the type of an appropriate {@code @Nullable} type-annotation, given a set of methods
-   * that are known to be in the same compilation as the code being generated. If one of those
-   * methods contains an appropriate {@code @Nullable} annotation on a parameter or return type,
-   * this method will return that. Otherwise, if the <a href="http://jspecify.org">JSpecify</a>
-   * {@code @Nullable} is available, this method will return it. Otherwise, this method will return
-   * an empty {@code Optional}.
-   */
-  Optional<AnnotationMirror> appropriateNullableGivenMethods(
-      Collection<ExecutableElement> methods) {
-    return nullableMentionedInMethods(methods).map(Optional::of).orElse(defaultNullable);
   }
 
   private static Optional<AnnotationMirror> nullableIn(TypeMirror type) {

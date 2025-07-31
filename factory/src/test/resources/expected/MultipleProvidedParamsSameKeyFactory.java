@@ -21,30 +21,32 @@ import javax.inject.Provider;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 final class MultipleProvidedParamsSameKeyFactory {
   private final Provider<String> java_lang_StringProvider;
 
   @Inject
   MultipleProvidedParamsSameKeyFactory(Provider<String> java_lang_StringProvider) {
-    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1);
+    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1, 1);
   }
 
   MultipleProvidedParamsSameKey create() {
     return new MultipleProvidedParamsSameKey(
-        checkNotNull(java_lang_StringProvider.get(), 1),
-        checkNotNull(java_lang_StringProvider.get(), 2),
+        checkNotNull(java_lang_StringProvider.get(), 1, 5),
+        checkNotNull(java_lang_StringProvider.get(), 2, 5),
         java_lang_StringProvider.get(),
         java_lang_StringProvider,
         java_lang_StringProvider);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }

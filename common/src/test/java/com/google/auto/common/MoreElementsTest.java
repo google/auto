@@ -233,8 +233,7 @@ public class MoreElementsTest {
 
   @Test
   public void getAnnotationMirror() {
-    TypeElement element =
-        elements.getTypeElement(AnnotatedAnnotation.class.getCanonicalName());
+    TypeElement element = elements.getTypeElement(AnnotatedAnnotation.class.getCanonicalName());
 
     // Test Class API
     getAnnotationMirrorAsserts(
@@ -362,6 +361,57 @@ public class MoreElementsTest {
   }
 
   @Test
+  public void getLocalAndInheritedMethods_recursiveTypeVariableBound() {
+    Types types = compilation.getTypes();
+    TypeElement builderElement =
+        elements.getTypeElement(FakeProto.Builder.class.getCanonicalName());
+    TypeMirror abstractMessageLiteMirror =
+        elements.getTypeElement(AbstractMessageLite.class.getCanonicalName()).asType();
+    ExecutableElement internalMergeFromMethod =
+        getMethod(FakeProto.Builder.class, "internalMergeFrom", abstractMessageLiteMirror);
+
+    ImmutableSet<ExecutableElement> methods =
+        MoreElements.getLocalAndInheritedMethods(builderElement, types, elements);
+
+    assertThat(methods).contains(internalMergeFromMethod);
+  }
+
+  // The classes that follow mimic the proto classes that triggered the bug that
+  // getLocalAndInheritedMethods_recursiveTypeVariableBound is testing for. They include raw type
+  // usages, because the corresponding real proto API classes do.
+
+  static class FakeProto extends AbstractMessage {
+    static class Builder extends AbstractMessage.Builder<Builder> {
+      @Override
+      @SuppressWarnings("rawtypes")
+      Builder internalMergeFrom(AbstractMessageLite other) {
+        return this;
+      }
+    }
+  }
+
+  @SuppressWarnings("rawtypes")
+  static class AbstractMessage extends AbstractMessageLite {
+    static class Builder<B extends Builder<B>> extends AbstractMessageLite.Builder {
+      @Override
+      @SuppressWarnings("unchecked")
+      B internalMergeFrom(AbstractMessageLite other) {
+        return (B) this;
+      }
+    }
+  }
+
+  static class AbstractMessageLite<
+      M extends AbstractMessageLite<M, B>, B extends AbstractMessageLite.Builder<M, B>> {
+    static class Builder<M extends AbstractMessageLite<M, B>, B extends Builder<M, B>> {
+      @SuppressWarnings("unchecked")
+      B internalMergeFrom(M other) {
+        return (B) this;
+      }
+    }
+  }
+
+  @Test
   public void getAllMethods() {
     Types types = compilation.getTypes();
     TypeMirror intMirror = types.getPrimitiveType(TypeKind.INT);
@@ -418,7 +468,6 @@ public class MoreElementsTest {
     assertThat(methods)
         .containsAtLeast(
             getMethod(Object.class, "clone"),
-            getMethod(Object.class, "registerNatives"),
             getMethod(Object.class, "finalize"),
             getMethod(Object.class, "wait"),
             getMethod(Object.class, "wait", longMirror),
@@ -437,7 +486,7 @@ public class MoreElementsTest {
         for (int i = 0; i < parameterTypes.length; i++) {
           TypeMirror expectedType = parameterTypes[i];
           TypeMirror actualType = method.getParameters().get(i).asType();
-          match &= types.isSameType(expectedType, actualType);
+          match &= types.isSameType(types.erasure(expectedType), types.erasure(actualType));
         }
         if (match) {
           assertThat(found).isNull();

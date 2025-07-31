@@ -30,22 +30,24 @@ import java.lang.reflect.AnnotatedElement;
  *
  * <p>For example, suppose you have an annotation like this:
  *
- * <pre>
+ * <pre>{@code
  * package com.google.inject.name;
  *
- * public &#64;interface Named {
+ * public @interface Named {
  *   String value();
+ * }
  * }</pre>
  *
  * <p>You could write a method like this to construct implementations of the interface:
  *
- * <pre>
+ * <pre>{@code
  * package com.example;
  *
  * public class Names {
- *   &#64;AutoAnnotation public static Named named(String value) {
+ *   @AutoAnnotation public static Named named(String value) {
  *     return new AutoAnnotation_Names_named(value);
  *   }
+ * }
  * }</pre>
  *
  * <p>Because the annotated method is called {@code Names.named}, the generated class is called
@@ -71,23 +73,18 @@ import java.lang.reflect.AnnotatedElement;
  * parameter corresponding to an array-valued annotation member, and the implementation of each such
  * member will also return a clone of the array.
  *
- * <p>If your annotation has many elements, you may consider using {@code @AutoBuilder} to make it
- * easier to construct instances. In that case, {@code default} values from the annotation will
- * become default values for the parameters of the {@code @AutoAnnotation} method. For example:
+ * <p>If your annotation has many elements, you may consider using {@code @AutoBuilder} instead of
+ * {@code @AutoAnnotation} to make it easier to construct instances. In that case, {@code default}
+ * values from the annotation will become default values for the values in the builder. For example:
  *
- * <pre>
+ * <pre>{@code
  * class Example {
- *   {@code @interface} MyAnnotation {
+ *   @interface MyAnnotation {
  *     String name() default "foo";
  *     int number() default 23;
  *   }
  *
- *   {@code @AutoAnnotation}
- *   static MyAnnotation myAnnotation(String value) {
- *     return new AutoAnnotation_Example_myAnnotation(value);
- *   }
- *
- *   {@code @AutoBuilder(callMethod = "myAnnotation")}
+ *   @AutoBuilder(ofClass = MyAnnotation.class)
  *   interface MyAnnotationBuilder {
  *     MyAnnotationBuilder name(String name);
  *     MyAnnotationBuilder number(int number);
@@ -98,7 +95,7 @@ import java.lang.reflect.AnnotatedElement;
  *     return new AutoBuilder_Example_MyAnnotationBuilder();
  *   }
  * }
- * </pre>
+ * }</pre>
  *
  * Here, {@code myAnnotationBuilder().build()} is the same as {@code
  * myAnnotationBuilder().name("foo").number(23).build()} because those are the defaults in the
@@ -106,6 +103,6 @@ import java.lang.reflect.AnnotatedElement;
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
+@Retention(RetentionPolicy.CLASS)
 @Target(ElementType.METHOD)
-@Retention(RetentionPolicy.SOURCE)
 public @interface AutoAnnotation {}

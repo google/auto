@@ -16,21 +16,24 @@
 package com.google.auto.common;
 
 import static com.google.auto.common.MoreElements.asExecutable;
-import static com.google.auto.common.MoreElements.asPackage;
-import static com.google.auto.common.MoreStreams.toImmutableMap;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
+import static com.google.auto.common.MoreElements.asType;
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.common.MoreElements.isType;
 import static com.google.auto.common.SuperficialValidation.validateElement;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Iterables.transform;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Multimaps.filterKeys;
 import static java.util.Objects.requireNonNull;
+import static javax.lang.model.element.ElementKind.CONSTRUCTOR;
+import static javax.lang.model.element.ElementKind.METHOD;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.tools.Diagnostic.Kind.ERROR;
+import static javax.tools.Diagnostic.Kind.WARNING;
 
 import com.google.common.base.Ascii;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -46,21 +49,22 @@ import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.Parameterizable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.ErrorType;
+import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.SimpleElementVisitor8;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
- * An abstract {@link Processor} implementation that defers processing of {@link Element}s to later
- * rounds if they cannot be processed.
+ * An abstract {@link javax.annotation.processing.Processor Processor} implementation that defers
+ * processing of {@link Element}s to later rounds if they cannot be processed.
  *
  * <p>Subclasses put their processing logic in {@link Step} implementations. The steps are passed to
  * the processor by returning them in the {@link #steps()} method, and can access the {@link
@@ -69,11 +73,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>Any logic that needs to happen once per round can be specified by overriding {@link
  * #postRound(RoundEnvironment)}.
  *
- * <h3>Ill-formed elements are deferred</h3>
+ * <h2>Ill-formed elements are deferred</h2>
  *
  * Any annotated element whose nearest enclosing type is not well-formed is deferred, and not passed
  * to any {@code Step}. This helps processors to avoid many common pitfalls, such as {@link
- * ErrorType} instances, {@link ClassCastException}s and badly coerced types.
+ * javax.lang.model.type.ErrorType ErrorType} instances, {@link ClassCastException}s and badly
+ * coerced types.
  *
  * <p>A non-package element is considered well-formed if its type, type parameters, parameters,
  * default values, supertypes, annotations, and enclosed elements are. Package elements are treated
@@ -85,7 +90,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * because the element will never be fully complete. All such compilations will fail with an error
  * message on the offending type that describes the issue.
  *
- * <h3>Each {@code Step} can defer elements</h3>
+ * <h2>Each {@code Step} can defer elements</h2>
  *
  * <p>Each {@code Step} can defer elements by including them in the set returned by {@link
  * Step#process(ImmutableSetMultimap)}; elements deferred by a step will be passed back to that step
@@ -106,18 +111,32 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
-  private final Set<ElementName> deferredElementNames = new LinkedHashSet<>();
-  private final SetMultimap<Step, ElementName> elementsDeferredBySteps =
+  /* For every element that is not module/package, to be well-formed its
+   * enclosing-type in its entirety should be well-formed. Since modules
+   * don't get annotated (and are not supported here) they can be ignored.
+   */
+
+  /**
+   * Packages and types that have been deferred because either they themselves reference
+   * as-yet-undefined types, or at least one of their contained elements does.
+   */
+  private final Set<ElementFactory> deferredEnclosingElements = new LinkedHashSet<>();
+
+  /**
+   * Elements that were explicitly deferred in some {@link Step} by being returned from {@link
+   * Step#process}.
+   */
+  private final SetMultimap<Step, ElementFactory> elementsDeferredBySteps =
       LinkedHashMultimap.create();
 
-  private Elements elements;
+  private Elements elementUtils;
   private Messager messager;
   private ImmutableList<? extends Step> steps;
 
   @Override
   public final synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
-    this.elements = processingEnv.getElementUtils();
+    this.elementUtils = processingEnv.getElementUtils();
     this.messager = processingEnv.getMessager();
     this.steps = ImmutableList.copyOf(steps());
   }
@@ -168,7 +187,7 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
 
   private ImmutableSet<TypeElement> getSupportedAnnotationTypeElements(Step step) {
     return step.annotations().stream()
-        .map(elements::getTypeElement)
+        .map(elementUtils::getTypeElement)
         .filter(Objects::nonNull)
         .collect(toImmutableSet());
   }
@@ -180,33 +199,31 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   @Override
   public final ImmutableSet<String> getSupportedAnnotationTypes() {
     checkState(steps != null);
-    return steps.stream()
-        .flatMap(step -> step.annotations().stream())
-        .collect(toImmutableSet());
+    return steps.stream().flatMap(step -> step.annotations().stream()).collect(toImmutableSet());
   }
 
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    checkState(elements != null);
+    checkState(elementUtils != null);
     checkState(messager != null);
     checkState(steps != null);
 
     // If this is the last round, report all of the missing elements if there
     // were no errors raised in the round; otherwise reporting the missing
-    // elements just adds noise the output.
+    // elements just adds noise to the output.
     if (roundEnv.processingOver()) {
       postRound(roundEnv);
       if (!roundEnv.errorRaised()) {
         reportMissingElements(
-            ImmutableSet.<ElementName>builder()
-                .addAll(deferredElementNames)
+            ImmutableSet.<ElementFactory>builder()
+                .addAll(deferredEnclosingElements)
                 .addAll(elementsDeferredBySteps.values())
                 .build());
       }
       return false;
     }
 
-    process(validElements(roundEnv));
+    process(getWellFormedElementsByAnnotationType(roundEnv));
 
     postRound(roundEnv);
 
@@ -214,13 +231,13 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /** Processes the valid elements, including those previously deferred by each step. */
-  private void process(ImmutableSetMultimap<TypeElement, Element> validElements) {
+  private void process(ImmutableSetMultimap<TypeElement, Element> wellFormedElements) {
     for (Step step : steps) {
       ImmutableSet<TypeElement> annotationTypes = getSupportedAnnotationTypeElements(step);
       ImmutableSetMultimap<TypeElement, Element> stepElements =
           new ImmutableSetMultimap.Builder<TypeElement, Element>()
               .putAll(indexByAnnotation(elementsDeferredBySteps.get(step), annotationTypes))
-              .putAll(filterKeys(validElements, Predicates.in(annotationTypes)))
+              .putAll(filterKeys(wellFormedElements, annotationTypes::contains))
               .build();
       if (stepElements.isEmpty()) {
         elementsDeferredBySteps.removeAll(step);
@@ -228,22 +245,24 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
         Set<? extends Element> rejectedElements =
             step.process(toClassNameKeyedMultimap(stepElements));
         elementsDeferredBySteps.replaceValues(
-            step, transform(rejectedElements, ElementName::forAnnotatedElement));
+            step,
+            rejectedElements.stream()
+                .map(element -> ElementFactory.forAnnotatedElement(element, messager))
+                .collect(toImmutableList()));
       }
     }
   }
 
-  private void reportMissingElements(Set<ElementName> missingElementNames) {
-    for (ElementName missingElementName : missingElementNames) {
-      Optional<? extends Element> missingElement = missingElementName.getElement(elements);
-      if (missingElement.isPresent()) {
+  private void reportMissingElements(Set<ElementFactory> missingElementFactories) {
+    for (ElementFactory missingElementFactory : missingElementFactories) {
+      Element missingElement = missingElementFactory.getElement(elementUtils);
+      if (missingElement != null) {
         messager.printMessage(
             ERROR,
-            processingErrorMessage(
-                "this " + Ascii.toLowerCase(missingElement.get().getKind().name())),
-            missingElement.get());
+            processingErrorMessage("this " + Ascii.toLowerCase(missingElement.getKind().name())),
+            missingElement);
       } else {
-        messager.printMessage(ERROR, processingErrorMessage(missingElementName.name()));
+        messager.printMessage(ERROR, processingErrorMessage(missingElementFactory.toString));
       }
     }
   }
@@ -257,69 +276,88 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   }
 
   /**
-   * Returns the valid annotated elements contained in all of the deferred elements. If none are
-   * found for a deferred element, defers it again.
+   * Returns the superficially validated annotated elements of this round, including the validated
+   * previously ill-formed elements. Also update {@link #deferredEnclosingElements}.
+   *
+   * <p>Note that the elements deferred by processing steps are guaranteed to be well-formed;
+   * therefore, they are ignored (not returned) here, and they will be considered directly in the
+   * {@link #process(ImmutableSetMultimap)} method.
    */
-  private ImmutableSetMultimap<TypeElement, Element> validElements(RoundEnvironment roundEnv) {
-    ImmutableSet<ElementName> prevDeferredElementNames = ImmutableSet.copyOf(deferredElementNames);
-    deferredElementNames.clear();
+  private ImmutableSetMultimap<TypeElement, Element> getWellFormedElementsByAnnotationType(
+      RoundEnvironment roundEnv) {
+    ImmutableSet<ElementFactory> deferredEnclosingElementsCopy =
+        ImmutableSet.copyOf(deferredEnclosingElements);
+    deferredEnclosingElements.clear();
 
-    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsByAnnotationBuilder =
+    ImmutableSetMultimap.Builder<TypeElement, Element> prevIllFormedElementsBuilder =
         ImmutableSetMultimap.builder();
-    for (ElementName deferredElementName : prevDeferredElementNames) {
-      Optional<? extends Element> deferredElement = deferredElementName.getElement(elements);
-      if (deferredElement.isPresent()) {
+    for (ElementFactory deferredElementFactory : deferredEnclosingElementsCopy) {
+      Element deferredElement = deferredElementFactory.getElement(elementUtils);
+      if (deferredElement != null) {
         findAnnotatedElements(
-            deferredElement.get(),
-            getSupportedAnnotationTypeElements(),
-            deferredElementsByAnnotationBuilder);
+            deferredElement, getSupportedAnnotationTypeElements(), prevIllFormedElementsBuilder);
       } else {
-        deferredElementNames.add(deferredElementName);
+        deferredEnclosingElements.add(deferredElementFactory);
       }
     }
 
-    ImmutableSetMultimap<TypeElement, Element> deferredElementsByAnnotation =
-        deferredElementsByAnnotationBuilder.build();
+    ImmutableSetMultimap<TypeElement, Element> prevIllFormedElements =
+        prevIllFormedElementsBuilder.build();
 
-    ImmutableSetMultimap.Builder<TypeElement, Element> validElements =
+    ImmutableSetMultimap.Builder<TypeElement, Element> wellFormedElementsBuilder =
         ImmutableSetMultimap.builder();
 
-    Set<ElementName> validElementNames = new LinkedHashSet<>();
+    // For optimization purposes, the ElementFactory instances for packages and types that have
+    // already been verified to be well-formed are stored.
+    Set<ElementFactory> wellFormedPackageOrTypeElements = new LinkedHashSet<>();
 
-    // Look at the elements we've found and the new elements from this round and validate them.
+    /* Look at
+     *   1. the previously ill-formed elements which have a present enclosing type (in case of
+     *      Package element, the package itself), and
+     *   2. the new elements from this round
+     * and validate them.
+     */
     for (TypeElement annotationType : getSupportedAnnotationTypeElements()) {
       Set<? extends Element> roundElements = roundEnv.getElementsAnnotatedWith(annotationType);
-      ImmutableSet<Element> prevRoundElements = deferredElementsByAnnotation.get(annotationType);
-      for (Element element : Sets.union(roundElements, prevRoundElements)) {
-        ElementName elementName = ElementName.forAnnotatedElement(element);
-        boolean isValidElement =
-            validElementNames.contains(elementName)
-                || (!deferredElementNames.contains(elementName)
-                    && validateElement(
-                        element.getKind().equals(PACKAGE) ? element : getEnclosingType(element)));
-        if (isValidElement) {
-          validElements.put(annotationType, element);
-          validElementNames.add(elementName);
+
+      for (Element element : Sets.union(roundElements, prevIllFormedElements.get(annotationType))) {
+        // For every element that is not module/package, to be well-formed its
+        // enclosing-type in its entirety should be well-formed. Since modules
+        // don't get annotated (and not supported here) they can be ignored.
+        Element enclosing = (element.getKind() == PACKAGE) ? element : getEnclosingType(element);
+        ElementFactory enclosingFactory = ElementFactory.forAnnotatedElement(enclosing, messager);
+
+        boolean isWellFormedElement =
+            wellFormedPackageOrTypeElements.contains(enclosingFactory)
+                || (!deferredEnclosingElements.contains(enclosingFactory)
+                    && validateElement(enclosing));
+        if (isWellFormedElement) {
+          wellFormedElementsBuilder.put(annotationType, element);
+          wellFormedPackageOrTypeElements.add(enclosingFactory);
         } else {
-          deferredElementNames.add(elementName);
+          deferredEnclosingElements.add(enclosingFactory);
         }
       }
     }
 
-    return validElements.build();
+    return wellFormedElementsBuilder.build();
   }
 
   private ImmutableSetMultimap<TypeElement, Element> indexByAnnotation(
-      Set<ElementName> annotatedElements, ImmutableSet<TypeElement> annotationTypes) {
-    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElements =
+      Set<ElementFactory> annotatedElementFactories, ImmutableSet<TypeElement> annotationTypes) {
+    ImmutableSetMultimap.Builder<TypeElement, Element> deferredElementsByAnnotationTypeBuilder =
         ImmutableSetMultimap.builder();
-    for (ElementName elementName : annotatedElements) {
-      Optional<? extends Element> element = elementName.getElement(elements);
-      if (element.isPresent()) {
-        findAnnotatedElements(element.get(), annotationTypes, deferredElements);
+    for (ElementFactory elementFactory : annotatedElementFactories) {
+      Element element = elementFactory.getElement(elementUtils);
+      if (element != null) {
+        for (TypeElement annotationType : annotationTypes) {
+          if (isAnnotationPresent(element, annotationType)) {
+            deferredElementsByAnnotationTypeBuilder.put(annotationType, element);
+          }
+        }
       }
     }
-    return deferredElements.build();
+    return deferredElementsByAnnotationTypeBuilder.build();
   }
 
   /**
@@ -329,16 +367,16 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
    * {@code @X}, then {@code Outer}, {@code Outer.foo}, and {@code Outer.foo()} will be added to the
    * multimap, but neither {@code Inner} nor its members will.
    *
-   * <pre><code>
-   *   {@literal @}X class Outer {
-   *     {@literal @}X Object foo;
-   *     {@literal @}X void foo() {}
-   *     {@literal @}X static class Inner {
-   *       {@literal @}X Object bar;
-   *       {@literal @}X void bar() {}
-   *     }
+   * <pre>{@code
+   * @X class Outer {
+   *   @X Object foo;
+   *   @X void foo() {}
+   *   @X static class Inner {
+   *     @X Object bar;
+   *     @X void bar() {}
    *   }
-   * </code></pre>
+   * }
+   * }</pre>
    */
   private static void findAnnotatedElements(
       Element element,
@@ -350,12 +388,24 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
       }
     }
 
-    // element.getEnclosedElements() does NOT return parameter elements
-    if (element instanceof ExecutableElement) {
-      for (Element parameterElement : asExecutable(element).getParameters()) {
+    // element.getEnclosedElements() does NOT return parameter or type parameter elements
+
+    Parameterizable parameterizable = null;
+    if (isType(element)) {
+      parameterizable = asType(element);
+    } else if (isExecutable(element)) {
+      ExecutableElement executableElement = asExecutable(element);
+      parameterizable = executableElement;
+      for (VariableElement parameterElement : executableElement.getParameters()) {
         findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
       }
     }
+    if (parameterizable != null) {
+      for (TypeParameterElement parameterElement : parameterizable.getTypeParameters()) {
+        findAnnotatedElements(parameterElement, annotationTypes, annotatedElements);
+      }
+    }
+
     for (TypeElement annotationType : annotationTypes) {
       if (isAnnotationPresent(element, annotationType)) {
         annotatedElements.put(annotationType, element);
@@ -363,37 +413,21 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
-  private static boolean isAnnotationPresent(Element element, TypeElement annotationType) {
-    return element.getAnnotationMirrors().stream()
-        .anyMatch(
-            mirror -> MoreTypes.asTypeElement(mirror.getAnnotationType()).equals(annotationType));
-  }
-
   /**
    * Returns the nearest enclosing {@link TypeElement} to the current element, throwing an {@link
-   * IllegalArgumentException} if the provided {@link Element} is a {@link PackageElement} or is
-   * otherwise not enclosed by a type.
+   * IllegalArgumentException} if the provided {@link Element} is not enclosed by a type.
    */
   // TODO(user) move to MoreElements and make public.
   private static TypeElement getEnclosingType(Element element) {
-    return element.accept(
-        new SimpleElementVisitor8<TypeElement, Void>() {
-          @Override
-          protected TypeElement defaultAction(Element e, Void p) {
-            return e.getEnclosingElement().accept(this, p);
-          }
+    Element enclosingTypeElement = element;
+    while (enclosingTypeElement != null && !isType(enclosingTypeElement)) {
+      enclosingTypeElement = enclosingTypeElement.getEnclosingElement();
+    }
 
-          @Override
-          public TypeElement visitType(TypeElement e, Void p) {
-            return e;
-          }
-
-          @Override
-          public TypeElement visitPackage(PackageElement e, Void p) {
-            throw new IllegalArgumentException();
-          }
-        },
-        null);
+    if (enclosingTypeElement == null) {
+      throw new IllegalArgumentException(element + " is not enclosed in any TypeElement.");
+    }
+    return asType(enclosingTypeElement);
   }
 
   private static ImmutableSetMultimap<String, Element> toClassNameKeyedMultimap(
@@ -405,6 +439,10 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
             (annotation, element) ->
                 builder.putAll(annotation.getQualifiedName().toString(), element));
     return builder.build();
+  }
+
+  private static boolean isExecutable(Element element) {
+    return element.getKind() == METHOD || element.getKind() == CONSTRUCTOR;
   }
 
   /**
@@ -509,71 +547,328 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
     }
   }
 
+  /* Element Factories */
+
   /**
-   * A package or type name.
+   * A factory for an annotated element.
    *
-   * <p>It's unfortunate that we have to track types and packages separately, but since there are
-   * two different methods to look them up in {@link Elements}, we end up with a lot of parallel
-   * logic. :(
-   *
-   * <p>Packages declared (and annotated) in {@code package-info.java} are tracked as deferred
-   * packages, type elements are tracked directly, and all other elements are tracked via their
-   * nearest enclosing type.
+   * <p>Instead of saving elements, an {@code ElementFactory} is saved since there is no guarantee
+   * that any particular element will always be represented by the same object. (Reference: {@link
+   * Element}) For example, Eclipse compiler uses different {@code Element} instances per round. The
+   * factory allows us to reconstruct an equivalent element in a later round.
    */
-  private static final class ElementName {
-    private enum Kind {
-      PACKAGE_NAME,
-      TYPE_NAME,
+  private abstract static class ElementFactory {
+    final String toString;
+
+    private ElementFactory(Element element) {
+      this.toString = element.toString();
     }
 
-    private final Kind kind;
-    private final String name;
-
-    private ElementName(Kind kind, Name name) {
-      this.kind = checkNotNull(kind);
-      this.name = name.toString();
-    }
-
-    /**
-     * An {@link ElementName} for an annotated element. If {@code element} is a package, uses the
-     * fully qualified name of the package. If it's a type, uses its fully qualified name.
-     * Otherwise, uses the fully-qualified name of the nearest enclosing type.
-     */
-    static ElementName forAnnotatedElement(Element element) {
-      return element.getKind() == PACKAGE
-          ? new ElementName(Kind.PACKAGE_NAME, asPackage(element).getQualifiedName())
-          : new ElementName(Kind.TYPE_NAME, getEnclosingType(element).getQualifiedName());
-    }
-
-    /** The fully-qualified name of the element. */
-    String name() {
-      return name;
-    }
-
-    /**
-     * The {@link Element} whose fully-qualified name is {@link #name()}. Absent if the relevant
-     * method on {@link Elements} returns {@code null}.
-     */
-    Optional<? extends Element> getElement(Elements elements) {
-      return Optional.fromNullable(
-          kind == Kind.PACKAGE_NAME
-              ? elements.getPackageElement(name)
-              : elements.getTypeElement(name));
+    /** An {@link ElementFactory} for an annotated element. */
+    static ElementFactory forAnnotatedElement(Element element, Messager messager) {
+      /* The name of the ElementKind constants is used instead to accommodate for RECORD
+       * and RECORD_COMPONENT kinds, which are introduced in Java 16.
+       */
+      switch (element.getKind().name()) {
+        case "PACKAGE":
+          return new PackageElementFactory(element);
+        case "CLASS":
+        case "ENUM":
+        case "INTERFACE":
+        case "ANNOTATION_TYPE":
+        case "RECORD":
+          return new TypeElementFactory(element);
+        case "TYPE_PARAMETER":
+          return new TypeParameterElementFactory(element, messager);
+        case "FIELD":
+        case "ENUM_CONSTANT":
+        case "RECORD_COMPONENT":
+          return new FieldOrRecordComponentElementFactory(element);
+        case "CONSTRUCTOR":
+        case "METHOD":
+          return new ExecutableElementFactory(element);
+        case "PARAMETER":
+          return new ParameterElementFactory(element);
+        default:
+          messager.printMessage(
+              WARNING,
+              String.format(
+                  "%s does not support element type %s.",
+                  ElementFactory.class.getCanonicalName(), element.getKind()));
+          return new UnsupportedElementFactory(element);
+      }
     }
 
     @Override
     public boolean equals(@Nullable Object object) {
-      if (!(object instanceof ElementName)) {
+      if (this == object) {
+        return true;
+      } else if (!(object instanceof ElementFactory)) {
         return false;
       }
 
-      ElementName that = (ElementName) object;
-      return this.kind == that.kind && this.name.equals(that.name);
+      ElementFactory that = (ElementFactory) object;
+      return this.toString.equals(that.toString);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(kind, name);
+      return toString.hashCode();
+    }
+
+    /**
+     * Returns the {@link Element} corresponding to the name information saved in this factory, or
+     * null if none exists.
+     */
+    abstract @Nullable Element getElement(Elements elementUtils);
+  }
+
+  /**
+   * Saves the Element reference and returns it when inquired, with the hope that the same object
+   * still represents that element, or the required information is present.
+   */
+  private static final class UnsupportedElementFactory extends ElementFactory {
+    private final Element element;
+
+    private UnsupportedElementFactory(Element element) {
+      super(element);
+      this.element = element;
+    }
+
+    @Override
+    Element getElement(Elements elementUtils) {
+      return element;
+    }
+  }
+
+  /* It's unfortunate that we have to track types and packages separately, but since there are
+   * two different methods to look them up in `Elements`, we end up with a lot of parallel
+   * logic. :(
+   */
+  private static final class PackageElementFactory extends ElementFactory {
+    private PackageElementFactory(Element element) {
+      super(element);
+    }
+
+    @Override
+    @Nullable PackageElement getElement(Elements elementUtils) {
+      return elementUtils.getPackageElement(toString);
+    }
+  }
+
+  private static final class TypeElementFactory extends ElementFactory {
+    private TypeElementFactory(Element element) {
+      super(element);
+    }
+
+    @Override
+    @Nullable TypeElement getElement(Elements elementUtils) {
+      return elementUtils.getTypeElement(toString);
+    }
+  }
+
+  private static final class TypeParameterElementFactory extends ElementFactory {
+    private final ElementFactory enclosingElementFactory;
+
+    private TypeParameterElementFactory(Element element, Messager messager) {
+      super(element);
+      this.enclosingElementFactory =
+          ElementFactory.forAnnotatedElement(element.getEnclosingElement(), messager);
+    }
+
+    @Override
+    @Nullable TypeParameterElement getElement(Elements elementUtils) {
+      Parameterizable enclosingElement =
+          (Parameterizable) enclosingElementFactory.getElement(elementUtils);
+      if (enclosingElement == null) {
+        return null;
+      }
+      return enclosingElement.getTypeParameters().stream()
+          .filter(typeParamElement -> toString.equals(typeParamElement.toString()))
+          .collect(onlyElement());
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (this == object) {
+        return true;
+      } else if (!(object instanceof TypeParameterElementFactory)) {
+        return false;
+      }
+
+      TypeParameterElementFactory that = (TypeParameterElementFactory) object;
+      return this.toString.equals(that.toString)
+          && this.enclosingElementFactory.equals(that.enclosingElementFactory);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(toString, enclosingElementFactory);
+    }
+  }
+
+  /** Represents FIELD, ENUM_CONSTANT, and RECORD_COMPONENT */
+  private static class FieldOrRecordComponentElementFactory extends ElementFactory {
+    private final TypeElementFactory enclosingTypeElementFactory;
+    private final ElementKind elementKind;
+
+    private FieldOrRecordComponentElementFactory(Element element) {
+      super(element); // toString is its simple name.
+      this.enclosingTypeElementFactory = new TypeElementFactory(getEnclosingType(element));
+      this.elementKind = element.getKind();
+    }
+
+    @Override
+    @Nullable Element getElement(Elements elementUtils) {
+      TypeElement enclosingTypeElement = enclosingTypeElementFactory.getElement(elementUtils);
+      if (enclosingTypeElement == null) {
+        return null;
+      }
+      return enclosingTypeElement.getEnclosedElements().stream()
+          .filter(
+              element ->
+                  elementKind.equals(element.getKind()) && toString.equals(element.toString()))
+          .collect(onlyElement());
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (!super.equals(object) || !(object instanceof FieldOrRecordComponentElementFactory)) {
+        return false;
+      }
+      // To distinguish between a field and record_component
+      FieldOrRecordComponentElementFactory that = (FieldOrRecordComponentElementFactory) object;
+      return this.elementKind == that.elementKind;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(toString, elementKind);
+    }
+  }
+
+  /**
+   * Represents METHOD and CONSTRUCTOR.
+   *
+   * <p>The {@code equals()} and {@code hashCode()} have been overridden since the {@code toString}
+   * alone is not sufficient to make a distinction in all overloaded cases. For example, {@code <C
+   * extends Set<String>> void m(C c) {}}, and {@code <C extends SortedSet<String>> void m(C c) {}}
+   * both have the same toString {@code <C>m(C)} but are valid cases for overloading methods.
+   * Moreover, the needed enclosing type-element information is not included in the toString.
+   *
+   * <p>The executable element is retrieved by saving its enclosing type element, simple name, and
+   * ordinal position in the source code relative to other related overloaded methods, meaning those
+   * with the same simple name. This is possible because according to Java language specification
+   * for {@link TypeElement#getEnclosedElements()}: "As a particular instance of the general
+   * accuracy requirements and the ordering behavior required of this interface, the list of
+   * enclosed elements will be returned to the natural order for the originating source of
+   * information about the type. For example, if the information about the type is originating from
+   * a source file, the elements will be returned in source code order. (However, in that case the
+   * ordering of implicitly declared elements, such as default constructors, is not specified.)"
+   *
+   * <p>Simple name is saved since comparing the toString is not reliable when at least one
+   * parameter references ERROR, possibly because it is not generated yet. For example, method
+   * {@code void m(SomeGeneratedClass sgc)}, before the generation of {@code SomeGeneratedClass} has
+   * the toString {@code m(SomeGeneratedClass)}; however, after the generation it will have toString
+   * equal to {@code m(test.SomeGeneratedClass)} assuming that the package name is "test".
+   */
+  private static final class ExecutableElementFactory extends ElementFactory {
+    private final TypeElementFactory enclosingTypeElementFactory;
+    private final Name simpleName;
+
+    /**
+     * The index of the element among all elements of the same kind within the enclosing type. If
+     * this is method {@code foo(...)} and the index is 0, that means that the method is the first
+     * method called {@code foo} in the enclosing type.
+     */
+    private final int sameNameIndex;
+
+    private ExecutableElementFactory(Element element) {
+      super(element);
+      TypeElement enclosingTypeElement = getEnclosingType(element);
+      this.enclosingTypeElementFactory = new TypeElementFactory(enclosingTypeElement);
+      this.simpleName = element.getSimpleName();
+
+      ImmutableList<Element> methods = sameNameMethods(enclosingTypeElement, simpleName);
+      this.sameNameIndex = methods.indexOf(element);
+      checkState(this.sameNameIndex >= 0, "Did not find %s in %s", element, methods);
+    }
+
+    @Override
+    @Nullable ExecutableElement getElement(Elements elementUtils) {
+      TypeElement enclosingTypeElement = enclosingTypeElementFactory.getElement(elementUtils);
+      if (enclosingTypeElement == null) {
+        return null;
+      }
+      ImmutableList<Element> methods = sameNameMethods(enclosingTypeElement, simpleName);
+      return asExecutable(methods.get(sameNameIndex));
+    }
+
+    private static ImmutableList<Element> sameNameMethods(
+        TypeElement enclosingTypeElement, Name simpleName) {
+      return enclosingTypeElement.getEnclosedElements().stream()
+          .filter(element -> element.getSimpleName().equals(simpleName) && isExecutable(element))
+          .collect(toImmutableList());
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (this == object) {
+        return true;
+      } else if (!(object instanceof ExecutableElementFactory)) {
+        return false;
+      }
+
+      ExecutableElementFactory that = (ExecutableElementFactory) object;
+      return this.simpleName.equals(that.simpleName)
+          && this.sameNameIndex == that.sameNameIndex
+          && this.enclosingTypeElementFactory.equals(that.enclosingTypeElementFactory);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(simpleName, sameNameIndex, enclosingTypeElementFactory);
+    }
+  }
+
+  private static final class ParameterElementFactory extends ElementFactory {
+    private final ExecutableElementFactory enclosingExecutableElementFactory;
+
+    private ParameterElementFactory(Element element) {
+      super(element);
+      this.enclosingExecutableElementFactory =
+          new ExecutableElementFactory(element.getEnclosingElement());
+    }
+
+    @Override
+    @Nullable VariableElement getElement(Elements elementUtils) {
+      ExecutableElement enclosingExecutableElement =
+          enclosingExecutableElementFactory.getElement(elementUtils);
+      if (enclosingExecutableElement == null) {
+        return null;
+      } else {
+        return enclosingExecutableElement.getParameters().stream()
+            .filter(paramElement -> toString.equals(paramElement.toString()))
+            .collect(onlyElement());
+      }
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+      if (this == object) {
+        return true;
+      } else if (!(object instanceof ParameterElementFactory)) {
+        return false;
+      }
+
+      ParameterElementFactory that = (ParameterElementFactory) object;
+      return this.toString.equals(that.toString)
+          && this.enclosingExecutableElementFactory.equals(that.enclosingExecutableElementFactory);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(toString, enclosingExecutableElementFactory);
     }
   }
 }

@@ -42,9 +42,9 @@
 ## A reminder that trailing ## here serves to delete the newline, which we don't want in the output.
 #macro (equalsThatExpression $p $subclass)
   #if ($p.kind == "FLOAT")
-    Float.floatToIntBits(this.$p) == Float.floatToIntBits(that.${p.getter}()) ##
+    `java.lang.Float`.floatToIntBits(this.$p) == `java.lang.Float`.floatToIntBits(that.${p.getter}()) ##
   #elseif ($p.kind == "DOUBLE")
-    Double.doubleToLongBits(this.$p) == Double.doubleToLongBits(that.${p.getter}()) ##
+    `java.lang.Double`.doubleToLongBits(this.$p) == `java.lang.Double`.doubleToLongBits(that.${p.getter}()) ##
   #elseif ($p.kind.primitive)
     this.$p == that.${p.getter}() ##
   #elseif ($p.kind == "ARRAY")
@@ -65,9 +65,9 @@
   #if ($p.kind == "LONG")
     (int) (($p >>> 32) ^ $p) ##
   #elseif ($p.kind == "FLOAT")
-    Float.floatToIntBits($p) ##
+    `java.lang.Float`.floatToIntBits($p) ##
   #elseif ($p.kind == "DOUBLE")
-    (int) ((Double.doubleToLongBits($p) >>> 32) ^ Double.doubleToLongBits($p)) ##
+    (int) ((`java.lang.Double`.doubleToLongBits($p) >>> 32) ^ `java.lang.Double`.doubleToLongBits($p)) ##
   #elseif ($p.kind == "BOOLEAN")
     $p ? 1231 : 1237 ##
   #elseif ($p.kind.primitive)

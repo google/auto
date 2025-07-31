@@ -95,7 +95,7 @@ object `Proxy$` where `Foo`'s data is unwrapped.
 `SerializableAutoValueExtension` can be extended to support additional
 un-serializable types with [SerializerExtensions].
 
-[`AutoValue`]: https://github.com/google/auto/tree/master/value
-[`SerializableAutoValue`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/SerializableAutoValue.java
-[`SerializableAutoValueExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/extension/SerializableAutoValueExtension.java
-[SerializerExtensions]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/userguide/serializer-extension.md
+[`AutoValue`]: https://github.com/google/auto/tree/main/value
+[`SerializableAutoValue`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/serializable/SerializableAutoValue.java
+[`SerializableAutoValueExtension`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/serializable/extension/SerializableAutoValueExtension.java
+[SerializerExtensions]: serializer-extension

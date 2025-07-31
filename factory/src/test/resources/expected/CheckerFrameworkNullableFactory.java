@@ -24,7 +24,7 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 final class CheckerFrameworkNullableFactory {
 
@@ -36,8 +36,9 @@ final class CheckerFrameworkNullableFactory {
   CheckerFrameworkNullableFactory(
       Provider<String> java_lang_StringProvider,
       Provider<Map.@NullableType Entry<?, ?>> providedNestedNullableTypeProvider) {
-    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1);
-    this.providedNestedNullableTypeProvider = checkNotNull(providedNestedNullableTypeProvider, 2);
+    this.java_lang_StringProvider = checkNotNull(java_lang_StringProvider, 1, 2);
+    this.providedNestedNullableTypeProvider =
+        checkNotNull(providedNestedNullableTypeProvider, 2, 2);
   }
 
   CheckerFrameworkNullable create(
@@ -53,11 +54,13 @@ final class CheckerFrameworkNullableFactory {
         providedNestedNullableTypeProvider.get());
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }

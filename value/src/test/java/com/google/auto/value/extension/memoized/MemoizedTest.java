@@ -15,7 +15,9 @@
  */
 package com.google.auto.value.extension.memoized;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Arrays.stream;
 import static org.junit.Assert.fail;
 
 import com.google.auto.value.AutoValue;
@@ -27,6 +29,7 @@ import com.google.errorprone.annotations.ImmutableTypeParameter;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -44,6 +47,8 @@ public class MemoizedTest {
 
     abstract boolean getNative0();
 
+    abstract String getNotKeyword();
+
     @Memoized
     boolean getMemoizedNative() {
       return getNative();
@@ -59,10 +64,25 @@ public class MemoizedTest {
   @CopyAnnotations
   @javax.annotation.Nullable
   abstract static class ValueWithCopyAnnotations {
-    abstract boolean getNative();
+    abstract String getNative();
 
     @Memoized
-    boolean getMemoizedNative() {
+    @javax.annotation.Nullable
+    public String getMemoizedNative() {
+      return getNative();
+    }
+  }
+
+  @AutoValue
+  @CopyAnnotations(exclude = javax.annotation.Nullable.class)
+  @javax.annotation.Nullable
+  abstract static class ValueWithExcludedCopyAnnotations {
+    abstract String getNative();
+
+    @Memoized
+    @CopyAnnotations(exclude = javax.annotation.Nullable.class)
+    @javax.annotation.Nullable
+    public String getMemoizedNative() {
       return getNative();
     }
   }
@@ -70,10 +90,11 @@ public class MemoizedTest {
   @AutoValue
   @javax.annotation.Nullable
   abstract static class ValueWithoutCopyAnnotations {
-    abstract boolean getNative();
+    abstract String getNative();
 
     @Memoized
-    boolean getMemoizedNative() {
+    @javax.annotation.Nullable
+    public String getMemoizedNative() {
       return getNative();
     }
   }
@@ -342,29 +363,96 @@ public class MemoizedTest {
   }
 
   @Test
-  public void keywords() {
-    ValueWithKeywordName value = new AutoValue_MemoizedTest_ValueWithKeywordName(true, false);
+  public void keywords() throws Exception {
+    ValueWithKeywordName value =
+        new AutoValue_MemoizedTest_ValueWithKeywordName(true, false, "foo");
     assertThat(value.getNative()).isTrue();
     assertThat(value.getMemoizedNative()).isTrue();
     assertThat(value.getNative0()).isFalse();
     assertThat(value.getMemoizedNative0()).isFalse();
+
+    Constructor<?> constructor =
+        value.getClass().getDeclaredConstructor(boolean.class, boolean.class, String.class);
+    ImmutableList<String> names =
+        stream(constructor.getParameters()).map(Parameter::getName).collect(toImmutableList());
+    assertThat(names).contains("notKeyword");
   }
 
   @Test
-  public void copyAnnotations() {
+  public void copyClassAnnotations_valueWithCopyAnnotations_copiesAnnotation() throws Exception {
     ValueWithCopyAnnotations valueWithCopyAnnotations =
-        new AutoValue_MemoizedTest_ValueWithCopyAnnotations(true);
-    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
-        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations(true);
+        new AutoValue_MemoizedTest_ValueWithCopyAnnotations("test");
 
     assertThat(
             valueWithCopyAnnotations
                 .getClass()
                 .isAnnotationPresent(javax.annotation.Nullable.class))
         .isTrue();
+  }
+
+  @Test
+  public void copyClassAnnotations_valueWithoutCopyAnnotations_doesNotCopyAnnotation()
+      throws Exception {
+    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations("test");
+
     assertThat(
             valueWithoutCopyAnnotations
                 .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isFalse();
+  }
+
+  @Test
+  public void copyClassAnnotations_valueWithExcludedCopyAnnotations_doesNotCopyAnnotation()
+      throws Exception {
+    ValueWithExcludedCopyAnnotations valueWithExcludedCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithExcludedCopyAnnotations("test");
+
+    assertThat(
+            valueWithExcludedCopyAnnotations
+                .getClass()
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isFalse();
+  }
+
+  @Test
+  public void copyMethodAnnotations_valueWithCopyAnnotations_copiesAnnotation() throws Exception {
+    ValueWithCopyAnnotations valueWithCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithCopyAnnotations("test");
+
+    assertThat(
+            valueWithCopyAnnotations
+                .getClass()
+                .getMethod("getMemoizedNative")
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void copyMethodAnnotations_valueWithoutCopyAnnotations_copiesAnnotation()
+      throws Exception {
+    ValueWithoutCopyAnnotations valueWithoutCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithoutCopyAnnotations("test");
+
+    assertThat(
+            valueWithoutCopyAnnotations
+                .getClass()
+                .getMethod("getMemoizedNative")
+                .isAnnotationPresent(javax.annotation.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void copyMethodAnnotations_valueWithExcludedCopyAnnotations_doesNotCopyAnnotation()
+      throws Exception {
+    ValueWithExcludedCopyAnnotations valueWithExcludedCopyAnnotations =
+        new AutoValue_MemoizedTest_ValueWithExcludedCopyAnnotations("test");
+
+    assertThat(
+            valueWithExcludedCopyAnnotations
+                .getClass()
+                .getMethod("getMemoizedNative")
                 .isAnnotationPresent(javax.annotation.Nullable.class))
         .isFalse();
   }

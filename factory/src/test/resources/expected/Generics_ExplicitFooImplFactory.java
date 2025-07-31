@@ -21,7 +21,7 @@ import javax.inject.Provider;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 final class Generics_ExplicitFooImplFactory<M extends Generics.Bar>
     implements Generics.FooFactory<M> {
@@ -29,19 +29,21 @@ final class Generics_ExplicitFooImplFactory<M extends Generics.Bar>
 
   @Inject
   Generics_ExplicitFooImplFactory(Provider<M> unusedProvider) {
-    this.unusedProvider = checkNotNull(unusedProvider, 1);
+    this.unusedProvider = checkNotNull(unusedProvider, 1, 1);
   }
 
   @Override
   public Generics.ExplicitFooImpl<M> create() {
-    return new Generics.ExplicitFooImpl<M>(checkNotNull(unusedProvider.get(), 1));
+    return new Generics.ExplicitFooImpl<M>(checkNotNull(unusedProvider.get(), 1, 1));
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }

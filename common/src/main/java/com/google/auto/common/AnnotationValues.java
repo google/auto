@@ -15,8 +15,8 @@
  */
 package com.google.auto.common;
 
-import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableList;
@@ -152,13 +152,18 @@ public final class AnnotationValues {
               },
               null);
         }
+
+        @Override
+        public String toString() {
+          return "AnnotationValues.equivalence()";
+        }
       };
 
   /**
-   * Returns an {@link Equivalence} for {@link AnnotationValue} as annotation values may
-   * contain {@link AnnotationMirror} instances some of whose implementations delegate
-   * equality tests to {@link Object#equals} whereas the documentation explicitly states
-   * that instance/reference equality is not the proper test.
+   * Returns an {@link Equivalence} for {@link AnnotationValue} as annotation values may contain
+   * {@link AnnotationMirror} instances some of whose implementations delegate equality tests to
+   * {@link Object#equals} whereas the documentation explicitly states that instance/reference
+   * equality is not the proper test.
    *
    * @see AnnotationMirrors#equivalence()
    */
@@ -348,7 +353,7 @@ public final class AnnotationValues {
 
     @Override
     public ImmutableList<T> defaultAction(Object o, Void unused) {
-      throw new IllegalStateException("Expected an array, got instead: " + o);
+      throw new IllegalArgumentException("Expected an array, got instead: " + o);
     }
 
     @Override
@@ -443,6 +448,7 @@ public final class AnnotationValues {
 
   private static final ArrayVisitor<Short> SHORTS_VISITOR =
       new ArrayVisitor<>(AnnotationValues::getShort);
+
   /**
    * Returns the value as a list of shorts.
    *

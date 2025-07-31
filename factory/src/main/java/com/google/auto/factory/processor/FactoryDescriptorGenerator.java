@@ -52,12 +52,17 @@ final class FactoryDescriptorGenerator {
   private final Messager messager;
   private final Types types;
   private final AutoFactoryDeclaration.Factory declarationFactory;
+  private final InjectApi injectApi;
 
   FactoryDescriptorGenerator(
-      Messager messager, Types types, AutoFactoryDeclaration.Factory declarationFactory) {
+      Messager messager,
+      Types types,
+      AutoFactoryDeclaration.Factory declarationFactory,
+      InjectApi injectApi) {
     this.messager = messager;
     this.types = types;
     this.declarationFactory = declarationFactory;
+    this.injectApi = injectApi;
   }
 
   ImmutableSet<FactoryMethodDescriptor> generateDescriptor(Element element) {
@@ -132,16 +137,17 @@ final class FactoryDescriptorGenerator {
     // The map returned by partitioningBy always has entries for both key values but our
     // null-checker isn't yet smart enough to know that.
     ImmutableSet<Parameter> providedParameters =
-        Parameter.forParameterList(requireNonNull(parameterMap.get(true)), types);
+        Parameter.forParameterList(requireNonNull(parameterMap.get(true)), types, injectApi);
     ImmutableSet<Parameter> passedParameters =
-        Parameter.forParameterList(requireNonNull(parameterMap.get(false)), types);
+        Parameter.forParameterList(requireNonNull(parameterMap.get(false)), types, injectApi);
     return FactoryMethodDescriptor.builder(declaration)
         .name("create")
         .returnType(classElement.asType())
         .publicMethod(classElement.getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
         .passedParameters(passedParameters)
-        .creationParameters(Parameter.forParameterList(constructor.getParameters(), types))
+        .creationParameters(
+            Parameter.forParameterList(constructor.getParameters(), types, injectApi))
         .isVarArgs(constructor.isVarArgs())
         .exceptions(constructor.getThrownTypes())
         .overridingMethod(false)

@@ -15,6 +15,7 @@
  */
 package com.google.auto.common;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import com.google.common.base.Preconditions;
@@ -22,9 +23,12 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -40,15 +44,15 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
- * Determines if one method overrides another. This class defines two ways of doing that:
- * {@code NativeOverrides} uses the method
- * {@link Elements#overrides(ExecutableElement, ExecutableElement, TypeElement)} while
- * {@code ExplicitOverrides} reimplements that method in a way that is more consistent between
- * compilers, in particular between javac and ecj (the Eclipse compiler).
+ * Determines if one method overrides another. This class defines two ways of doing that: {@code
+ * NativeOverrides} uses the method {@link Elements#overrides(ExecutableElement, ExecutableElement,
+ * TypeElement)} while {@code ExplicitOverrides} reimplements that method in a way that is more
+ * consistent between compilers, in particular between javac and ecj (the Eclipse compiler).
  *
+ * @see <a href="https://github.com/google/auto/issues/372">AutoValue issue about Eclipse</a>
  * @author emcmanus@google.com (Éamonn McManus)
  */
 abstract class Overrides {
@@ -98,6 +102,14 @@ abstract class Overrides {
       }
       if (overridden.getModifiers().contains(Modifier.STATIC)) {
         // Static methods can't be overridden (though they can be hidden by other static methods).
+        return false;
+      }
+      if (overrider.getParameters().size() != overridden.getParameters().size()) {
+        // One method can't override another if they have a different number of parameters.
+        // Varargs `Foo...` appears as `Foo[]` here; there is a separate
+        // ExecutableElement.isVarArgs() method to tell whether a method is varargs, but that has no
+        // effect on override logic.
+        // The check here isn't strictly needed but avoids unnecessary work.
         return false;
       }
       Visibility overriddenVisibility = Visibility.ofElement(overridden);
@@ -219,13 +231,13 @@ abstract class Overrides {
     /**
      * Returns the list of erased parameter types of the given method as they appear in the given
      * type. For example, if the method is {@code add(E)} from {@code List<E>} and we ask how it
-     * appears in {@code class NumberList implements List<Number>}, the answer will be
-     * {@code Number}. That will also be the answer for {@code class NumberList<E extends Number>
+     * appears in {@code class NumberList implements List<Number>}, the answer will be {@code
+     * Number}. That will also be the answer for {@code class NumberList<E extends Number>
      * implements List<E>}. The parameter types are erased since the purpose of this method is to
      * determine whether two methods are candidates for one to override the other.
      */
-    @Nullable
-    ImmutableList<TypeMirror> erasedParameterTypes(ExecutableElement method, TypeElement in) {
+    @Nullable ImmutableList<TypeMirror> erasedParameterTypes(
+        ExecutableElement method, TypeElement in) {
       if (method.getParameters().isEmpty()) {
         return ImmutableList.of();
       }
@@ -233,14 +245,14 @@ abstract class Overrides {
     }
 
     /**
-     * Visitor that replaces type variables with their values in the types it sees. If we know
-     * that {@code E} is {@code String}, then we can return {@code String} for {@code E},
-     * {@code List<String>} for {@code List<E>}, {@code String[]} for {@code E[]}, etc. We don't
-     * have to cover all types here because (1) the type is going to end up being erased, and
-     * (2) wildcards can't appear in direct supertypes. So for example it is illegal to write
-     * {@code class MyList implements List<? extends Number>}. It's legal to write
-     * {@code class MyList implements List<Set<? extends Number>>} but that doesn't matter
-     * because the {@code E} of the {@code List} is going to be erased to raw {@code Set}.
+     * Visitor that replaces type variables with their values in the types it sees. If we know that
+     * {@code E} is {@code String}, then we can return {@code String} for {@code E}, {@code
+     * List<String>} for {@code List<E>}, {@code String[]} for {@code E[]}, etc. We don't have to
+     * cover all types here because (1) the type is going to end up being erased, and (2) wildcards
+     * can't appear in direct supertypes. So for example it is illegal to write {@code class MyList
+     * implements List<? extends Number>}. It's legal to write {@code class MyList implements
+     * List<Set<? extends Number>>} but that doesn't matter because the {@code E} of the {@code
+     * List} is going to be erased to raw {@code Set}.
      */
     private class TypeSubstVisitor extends SimpleTypeVisitor8<TypeMirror, Void> {
       /**
@@ -251,8 +263,15 @@ abstract class Overrides {
        */
       private final Map<TypeParameterElement, TypeMirror> typeBindings = Maps.newLinkedHashMap();
 
-      @Nullable
-      ImmutableList<TypeMirror> erasedParameterTypes(ExecutableElement method, TypeElement in) {
+      /**
+       * Type elements that we are currently visiting. This helps us stay out of trouble when
+       * looking at something like {@code Enum<E extends Enum<E>>}. At the second {@code Enum} we
+       * will just return raw {@code Enum}.
+       */
+      private final Set<TypeElement> visitingTypes = new LinkedHashSet<>();
+
+      @Nullable ImmutableList<TypeMirror> erasedParameterTypes(
+          ExecutableElement method, TypeElement in) {
         if (method.getEnclosingElement().equals(in)) {
           ImmutableList.Builder<TypeMirror> params = ImmutableList.builder();
           for (VariableElement param : method.getParameters()) {
@@ -295,8 +314,8 @@ abstract class Overrides {
 
       @Override
       public TypeMirror visitTypeVariable(TypeVariable t, Void p) {
-        Element element = typeUtils.asElement(t);
-        if (element instanceof TypeParameterElement) {
+        Element element = t.asElement();
+        if (element.getKind() == ElementKind.TYPE_PARAMETER) {
           TypeParameterElement e = (TypeParameterElement) element;
           if (typeBindings.containsKey(e)) {
             return visit(typeBindings.get(e));
@@ -312,11 +331,18 @@ abstract class Overrides {
         if (t.getTypeArguments().isEmpty()) {
           return t;
         }
+        TypeElement typeElement = asTypeElement(t);
+        if (!visitingTypes.add(typeElement)) {
+          return typeUtils.erasure(t);
+        }
         List<TypeMirror> newArgs = Lists.newArrayList();
         for (TypeMirror arg : t.getTypeArguments()) {
           newArgs.add(visit(arg));
         }
-        return typeUtils.getDeclaredType(asTypeElement(t), newArgs.toArray(new TypeMirror[0]));
+        TypeMirror result =
+            typeUtils.getDeclaredType(asTypeElement(t), newArgs.toArray(new TypeMirror[0]));
+        visitingTypes.remove(typeElement);
+        return result;
       }
 
       @Override
@@ -326,9 +352,9 @@ abstract class Overrides {
     }
 
     /**
-     * Returns the given method as it appears in the given type. This is the method itself,
-     * or the nearest override in a superclass of the given type, or null if the method is not
-     * found in the given type or any of its superclasses.
+     * Returns the given method as it appears in the given type. This is the method itself, or the
+     * nearest override in a superclass of the given type, or null if the method is not found in the
+     * given type or any of its superclasses.
      */
     @Nullable ExecutableElement methodFromSuperclasses(TypeElement in, ExecutableElement method) {
       for (TypeElement t = in; t != null; t = superclass(t)) {
@@ -345,8 +371,8 @@ abstract class Overrides {
      * itself, or the nearest override in a superinterface of the given type, or null if the method
      * is not found in the given type or any of its transitive superinterfaces.
      */
-    @Nullable
-    ExecutableElement methodFromSuperinterfaces(TypeElement in, ExecutableElement method) {
+    @Nullable ExecutableElement methodFromSuperinterfaces(
+        TypeElement in, ExecutableElement method) {
       TypeElement methodContainer = MoreElements.asType(method.getEnclosingElement());
       Preconditions.checkArgument(methodContainer.getKind().isInterface());
       TypeMirror methodContainerType = typeUtils.erasure(methodContainer.asType());
@@ -407,7 +433,8 @@ abstract class Overrides {
     private @Nullable TypeElement superclass(TypeElement type) {
       TypeMirror sup = type.getSuperclass();
       if (sup.getKind() == TypeKind.DECLARED) {
-        return MoreElements.asType(typeUtils.asElement(sup));
+        // asElement returns non-null for DECLARED types.
+        return MoreElements.asType(requireNonNull(typeUtils.asElement(sup)));
       } else {
         return null;
       }
@@ -416,7 +443,11 @@ abstract class Overrides {
     private ImmutableList<TypeElement> superinterfaces(TypeElement type) {
       ImmutableList.Builder<TypeElement> types = ImmutableList.builder();
       for (TypeMirror sup : type.getInterfaces()) {
-        types.add(MoreElements.asType(typeUtils.asElement(sup)));
+        /*
+         * All interfaces implemented/extended are DECLARED types, for which asElement returns
+         * non-null.
+         */
+        types.add(MoreElements.asType(requireNonNull(typeUtils.asElement(sup))));
       }
       return types.build();
     }

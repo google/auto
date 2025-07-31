@@ -71,9 +71,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
-@SuppressWarnings({"AutoValueImmutableFields", "AutoValueFinalMethods", "TypeNameShadowing"})
+@SuppressWarnings({
+  "AutoValueImmutableFields",
+  "AutoValueFinalMethods",
+  "TypeNameShadowing",
+  "SelfAssertion"
+})
 public class AutoValueTest {
   private static boolean omitIdentifiers;
 
@@ -1310,7 +1317,7 @@ public class AutoValueTest {
   // thinking that the methods from Collection were still abstract and therefore candidates for
   // implementation, even though we inherit concrete implementations of them from AbstractList.
   @AutoValue
-  public static class MoreComplexInheritance extends AbstractList<String> {
+  public abstract static class MoreComplexInheritance extends AbstractList<String> {
     @Override
     public String get(int index) {
       throw new NoSuchElementException(String.valueOf(index));
@@ -1348,7 +1355,7 @@ public class AutoValueTest {
   }
 
   @AutoValue
-  static class EffectiveVisibility extends PrivateParent {
+  abstract static class EffectiveVisibility extends PrivateParent {
     static EffectiveVisibility create() {
       return new AutoValue_AutoValueTest_EffectiveVisibility();
     }
@@ -1412,6 +1419,31 @@ public class AutoValueTest {
 
   abstract static class AbstractParent {
     abstract int foo();
+  }
+
+  // We use Double.doubleToLongBits in equals and hashCode, so that better be qualified correctly if
+  // someone has unwisely declared their own Float or Double class.
+  @SuppressWarnings("JavaLangClash")
+  @AutoValue
+  public abstract static class RedeclareFloatAndDouble {
+    public abstract float aFloat();
+
+    public abstract double aDouble();
+
+    public static RedeclareFloatAndDouble of(float aFloat, double aDouble) {
+      return new AutoValue_AutoValueTest_RedeclareFloatAndDouble(aFloat, aDouble);
+    }
+
+    static class Float {}
+
+    static class Double {}
+  }
+
+  @SuppressWarnings("TruthSelfEquals")
+  @Test
+  public void testRedeclareFloatAndDouble() {
+    RedeclareFloatAndDouble iEqualMyself = RedeclareFloatAndDouble.of(Float.NaN, Double.NaN);
+    assertThat(iEqualMyself).isEqualTo(iEqualMyself);
   }
 
   @AutoValue
@@ -1593,6 +1625,7 @@ public class AutoValueTest {
     @Nullable
     public abstract Integer aNullableInteger();
 
+    @SuppressWarnings("AutoValueBoxedValues")
     public abstract Integer aNonNullableInteger();
 
     public abstract Builder toBuilder();
@@ -1603,7 +1636,7 @@ public class AutoValueTest {
 
     @AutoValue.Builder
     public interface Builder {
-      Builder setAnInt(Integer x);
+      Builder setAnInt(int x);
 
       Builder setANullableInteger(int x);
 
@@ -1623,12 +1656,6 @@ public class AutoValueTest {
 
     PrimitiveAndBoxed instance2 = instance1.toBuilder().setANullableInteger(5).build();
     assertThat(instance2.aNullableInteger()).isEqualTo(5);
-
-    try {
-      instance1.toBuilder().setAnInt(null);
-      fail();
-    } catch (NullPointerException expected) {
-    }
   }
 
   @AutoValue
@@ -2103,7 +2130,7 @@ public class AutoValueTest {
     @Nullable
     public abstract int[] getInts();
 
-    public abstract String getOAuth();
+    public abstract ImmutableList<String> getOAuths();
 
     public abstract int getNoGetter();
 
@@ -2121,7 +2148,9 @@ public class AutoValueTest {
 
       public abstract Builder<T> setNoGetter(int x);
 
-      public abstract Builder<T> setOAuth(String x);
+      public abstract Builder<T> setOAuths(List<String> x);
+
+      public abstract ImmutableList.Builder<String> oAuthsBuilder();
 
       abstract ImmutableList<T> getList();
 
@@ -2156,14 +2185,22 @@ public class AutoValueTest {
     assertThat(builder.getList()).isSameInstanceAs(names);
     builder.setT(name);
     assertThat(builder.getInts()).isNull();
-    builder.setOAuth("OAuth");
+    builder.setOAuths(ImmutableList.of("OAuth"));
 
     BuilderWithPrefixedGetters<String> instance = builder.setNoGetter(noGetter).build();
     assertThat(instance.getList()).isSameInstanceAs(names);
     assertThat(instance.getT()).isEqualTo(name);
     assertThat(instance.getInts()).isNull();
     assertThat(instance.getNoGetter()).isEqualTo(noGetter);
-    assertThat(instance.getOAuth()).isEqualTo("OAuth");
+    assertThat(instance.getOAuths()).containsExactly("OAuth");
+
+    builder =
+        BuilderWithPrefixedGetters.<String>builder()
+            .setList(names)
+            .setT(name)
+            .setNoGetter(noGetter);
+    builder.oAuthsBuilder().add("foo", "bar");
+    assertThat(builder.build().getOAuths()).containsExactly("foo", "bar").inOrder();
   }
 
   @AutoValue
@@ -2436,7 +2473,6 @@ public class AutoValueTest {
 
     @AutoValue.Builder
     public interface Builder<T extends Comparable<T>> {
-      @SuppressWarnings("unchecked")
       Builder<T> setSortedSet(T... x);
 
       Builder<T> setSortedSet(NavigableSet<T> x);
@@ -3651,6 +3687,7 @@ public class AutoValueTest {
     @AutoValue.Builder
     abstract static class Builder implements StepOne<String>, StepTwo, StepThree {
       abstract Builder setThree(double x);
+
       abstract Stepped build();
 
       @Override
@@ -3666,5 +3703,299 @@ public class AutoValueTest {
     assertThat(stepped.one()).isEqualTo("one");
     assertThat(stepped.two()).isEqualTo(2);
     assertThat(stepped.three()).isEqualTo(3.0);
+  }
+
+  // The code for tracking unset properties with bitmasks is fairly tricky. When there are many
+  // properties, we use as many ints as needed to track which properties are still unset, with
+  // 32 properties being tracked per int. So here we test @AutoValue classes with 31, 32, and 33
+  // required properties, to catch problems at these edge values that we wouldn't see in our smaller
+  // test classes.
+  abstract static class Giant {
+    abstract int x1();
+
+    abstract int x2();
+
+    abstract int x3();
+
+    abstract int x4();
+
+    abstract int x5();
+
+    abstract int x6();
+
+    abstract int x7();
+
+    abstract int x8();
+
+    abstract int x9();
+
+    abstract int x10();
+
+    abstract int x11();
+
+    abstract int x12();
+
+    abstract int x13();
+
+    abstract int x14();
+
+    abstract int x15();
+
+    abstract int x16();
+
+    abstract int x17();
+
+    abstract int x18();
+
+    abstract int x19();
+
+    abstract int x20();
+
+    abstract int x21();
+
+    abstract int x22();
+
+    abstract int x23();
+
+    abstract int x24();
+
+    abstract int x25();
+
+    abstract int x26();
+
+    abstract int x27();
+
+    abstract int x28();
+
+    abstract int x29();
+
+    abstract int x30();
+
+    abstract int x31();
+
+    abstract static class Builder {
+      abstract Builder x1(int x);
+
+      abstract Builder x2(int x);
+
+      abstract Builder x3(int x);
+
+      abstract Builder x4(int x);
+
+      abstract Builder x5(int x);
+
+      abstract Builder x6(int x);
+
+      abstract Builder x7(int x);
+
+      abstract Builder x8(int x);
+
+      abstract Builder x9(int x);
+
+      abstract Builder x10(int x);
+
+      abstract Builder x11(int x);
+
+      abstract Builder x12(int x);
+
+      abstract Builder x13(int x);
+
+      abstract Builder x14(int x);
+
+      abstract Builder x15(int x);
+
+      abstract Builder x16(int x);
+
+      abstract Builder x17(int x);
+
+      abstract Builder x18(int x);
+
+      abstract Builder x19(int x);
+
+      abstract Builder x20(int x);
+
+      abstract Builder x21(int x);
+
+      abstract Builder x22(int x);
+
+      abstract Builder x23(int x);
+
+      abstract Builder x24(int x);
+
+      abstract Builder x25(int x);
+
+      abstract Builder x26(int x);
+
+      abstract Builder x27(int x);
+
+      abstract Builder x28(int x);
+
+      abstract Builder x29(int x);
+
+      abstract Builder x30(int x);
+
+      abstract Builder x31(int x);
+
+      Builder setFirst30() {
+        return this.x1(1)
+            .x2(2)
+            .x3(3)
+            .x4(4)
+            .x5(5)
+            .x6(6)
+            .x7(7)
+            .x8(8)
+            .x9(9)
+            .x10(10)
+            .x11(11)
+            .x12(12)
+            .x13(13)
+            .x14(14)
+            .x15(15)
+            .x16(16)
+            .x17(17)
+            .x18(18)
+            .x19(19)
+            .x20(20)
+            .x21(21)
+            .x22(22)
+            .x23(23)
+            .x24(24)
+            .x25(25)
+            .x26(26)
+            .x27(27)
+            .x28(28)
+            .x29(29)
+            .x30(30);
+      }
+    }
+  }
+
+  @AutoValue
+  abstract static class Giant31 extends Giant {
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_Giant31.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder extends Giant.Builder {
+      abstract Giant31 build();
+    }
+  }
+
+  @AutoValue
+  abstract static class Giant32 extends Giant {
+    abstract int x32();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_Giant32.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder extends Giant.Builder {
+      abstract Builder x32(int x);
+
+      abstract Giant32 build();
+    }
+  }
+
+  @AutoValue
+  abstract static class Giant33 extends Giant {
+    abstract int x32();
+
+    abstract int x33();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueTest_Giant33.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder extends Giant.Builder {
+      abstract Builder x32(int x);
+
+      abstract Builder x33(int x);
+
+      abstract Giant33 build();
+    }
+  }
+
+  @Test
+  public void testGiant31() {
+    Giant31.Builder builder = Giant31.builder();
+    builder.setFirst30();
+    builder.x31(31);
+    Giant31 giant = builder.build();
+    assertThat(giant.x1()).isEqualTo(1);
+    assertThat(giant.x31()).isEqualTo(31);
+
+    builder = Giant31.builder();
+    builder.setFirst30();
+    try {
+      builder.build();
+      fail();
+    } catch (IllegalStateException expected) {
+      if (omitIdentifiers) {
+        assertThat(expected).hasMessageThat().isNull();
+      } else {
+        assertThat(expected).hasMessageThat().contains("x31");
+        assertThat(expected).hasMessageThat().doesNotContain("x30");
+      }
+    }
+  }
+
+  @Test
+  public void testGiant32() {
+    Giant32.Builder builder = Giant32.builder();
+    builder.setFirst30();
+    builder.x31(31);
+    builder.x32(32);
+    Giant32 giant = builder.build();
+    assertThat(giant.x1()).isEqualTo(1);
+    assertThat(giant.x31()).isEqualTo(31);
+
+    builder = Giant32.builder();
+    builder.setFirst30();
+    try {
+      builder.build();
+      fail();
+    } catch (IllegalStateException expected) {
+      if (omitIdentifiers) {
+        assertThat(expected).hasMessageThat().isNull();
+      } else {
+        assertThat(expected).hasMessageThat().contains("x31");
+        assertThat(expected).hasMessageThat().contains("x32");
+        assertThat(expected).hasMessageThat().doesNotContain("x30");
+      }
+    }
+  }
+
+  @Test
+  public void testGiant33() {
+    Giant33.Builder builder = Giant33.builder();
+    builder.setFirst30();
+    builder.x31(31);
+    builder.x32(32);
+    builder.x33(33);
+    Giant33 giant = builder.build();
+    assertThat(giant.x1()).isEqualTo(1);
+    assertThat(giant.x31()).isEqualTo(31);
+    assertThat(giant.x32()).isEqualTo(32);
+    assertThat(giant.x33()).isEqualTo(33);
+
+    builder = Giant33.builder();
+    builder.setFirst30();
+    try {
+      builder.build();
+      fail();
+    } catch (IllegalStateException expected) {
+      if (omitIdentifiers) {
+        assertThat(expected).hasMessageThat().isNull();
+      } else {
+        assertThat(expected).hasMessageThat().contains("x31");
+        assertThat(expected).hasMessageThat().contains("x32");
+        assertThat(expected).hasMessageThat().contains("x33");
+        assertThat(expected).hasMessageThat().doesNotContain("x30");
+      }
+    }
   }
 }

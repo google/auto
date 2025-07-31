@@ -40,10 +40,22 @@ abstract class FactoryMethodDescriptor {
 
   abstract boolean overridingMethod();
 
+  /** The parameters that are passed to the {@code create} method. */
   abstract ImmutableSet<Parameter> passedParameters();
 
+  /**
+   * The factory constructor parameters that this factory method requires. When there is more than
+   * one AutoFactory constructor, each one can have its own {@code @Provided} parameters, or
+   * constructors can have {@code @Provided} parameters in common. The generated factory has a
+   * single constructor, which has one {@code @Injected} constructor parameter for each unique
+   * {@code @Provided} parameter in any constructor.
+   */
   abstract ImmutableSet<Parameter> providedParameters();
 
+  /**
+   * The parameters of the constructor that this {@code create} method calls. This is the union of
+   * {@link #passedParameters()} and {@link #providedParameters()}.
+   */
   abstract ImmutableSet<Parameter> creationParameters();
 
   abstract boolean isVarArgs();

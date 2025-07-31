@@ -35,6 +35,14 @@ class AutoValueTemplateVars extends AutoValueOrBuilderTemplateVars {
 
   /** The simple name of the generated subclass. */
   String subclass;
+
+  /**
+   * The simple name of the final subclass. This is the same as {@link #subclass} unless there are
+   * extensions. If there are extensions, then {@link #subclass} might be something like {@code
+   * $$AutoValue_Foo} while {@code finalSubclass} will be {@code AutoValue_Foo}.
+   */
+  String finalSubclass;
+
   /**
    * The modifiers (for example {@code final} or {@code abstract}) for the generated subclass,
    * followed by a space if they are not empty.

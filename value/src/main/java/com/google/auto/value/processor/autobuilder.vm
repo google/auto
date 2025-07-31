@@ -12,7 +12,7 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-## Template for each generated AutoValue_Foo class.
+## Template for each generated AutoBuilder_Foo class.
 ## This template uses the Apache Velocity Template Language (VTL).
 ## The variables ($pkg, $props, and so on) are defined by the fields of AutoBuilderTemplateVars.
 ##

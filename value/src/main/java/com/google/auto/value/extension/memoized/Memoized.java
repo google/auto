@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
  * </ul>
  *
  * <p>If you want to memoize {@link #hashCode()} or {@link #toString()}, you can redeclare them,
- * keeping them {@code abstract}, and annotate them with {@code @Memoize}.
+ * keeping them {@code abstract}, and annotate them with {@code @Memoized}.
  *
  * <p>If a {@code @Memoized} method is annotated with an annotation whose simple name is {@code
  * Nullable}, then {@code null} values will also be memoized. Otherwise, if the method returns
@@ -47,37 +47,38 @@ import java.lang.annotation.Target;
  * href="https://errorprone.info/bugpattern/DoubleCheckedLocking">double-checked locking</a> to
  * ensure that the annotated method is called at most once.
  *
- * <h3>Example</h3>
+ * <h2>Example</h2>
  *
- * <pre>
- *   {@code @AutoValue}
- *   abstract class Value {
- *     abstract String stringProperty();
+ * <pre>{@code
+ * @AutoValue
+ * abstract class Value {
+ *   abstract String stringProperty();
  *
- *     {@code @Memoized}
- *     String derivedProperty() {
- *       return someCalculationOn(stringProperty());
- *     }
+ *   @Memoized
+ *   String derivedProperty() {
+ *     return someCalculationOn(stringProperty());
  *   }
+ * }
  *
- *   {@code @Generated}
- *   class AutoValue_Value {
- *     // …
+ * @Generated
+ * class AutoValue_Value {
+ *   // …
  *
- *     private volatile String derivedProperty;
+ *   private volatile String derivedProperty;
  *
- *     {@code Override}
- *     String derivedProperty() {
- *       if (derivedProperty == null) {
- *         synchronized (this) {
- *           if (derivedProperty == null) {
- *             derivedProperty = super.derivedProperty();
- *           }
+ *   @Override
+ *   String derivedProperty() {
+ *     if (derivedProperty == null) {
+ *       synchronized (this) {
+ *         if (derivedProperty == null) {
+ *           derivedProperty = super.derivedProperty();
  *         }
  *       }
- *       return derivedProperty;
  *     }
- *   }</pre>
+ *     return derivedProperty;
+ *   }
+ * }
+ * }</pre>
  */
 @Documented
 @Retention(CLASS)

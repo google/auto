@@ -15,14 +15,12 @@
  */
 package com.google.auto.factory.processor;
 
-import com.google.auto.common.MoreTypes;
 import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableMap;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -30,7 +28,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleElementVisitor6;
 
 final class Mirrors {
@@ -53,13 +50,8 @@ final class Mirrors {
             null);
   }
 
-  /** {@code true} if {@code type} is a {@link Provider}. */
-  static boolean isProvider(TypeMirror type) {
-    return MoreTypes.isType(type) && MoreTypes.isTypeOf(Provider.class, type);
-  }
-
   /**
-   * Returns an annotation value map  with {@link String} keys instead of {@link ExecutableElement}
+   * Returns an annotation value map with {@link String} keys instead of {@link ExecutableElement}
    * instances.
    */
   static ImmutableMap<String, AnnotationValue> simplifyAnnotationValueMap(

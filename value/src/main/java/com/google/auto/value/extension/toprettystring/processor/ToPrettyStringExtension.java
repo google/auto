@@ -17,11 +17,11 @@
 package com.google.auto.value.extension.toprettystring.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.auto.common.MoreStreams.toImmutableList;
 import static com.google.auto.common.MoreTypes.asTypeElement;
 import static com.google.auto.value.extension.toprettystring.processor.ExtensionClassTypeSpecBuilder.extensionClassTypeSpecBuilder;
 import static com.google.auto.value.extension.toprettystring.processor.ToPrettyStringMethods.toPrettyStringMethod;
 import static com.google.auto.value.extension.toprettystring.processor.ToPrettyStringMethods.toPrettyStringMethods;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Sets.intersection;
@@ -506,6 +506,7 @@ public final class ToPrettyStringExtension extends AutoValueExtension {
       private final Types types;
 
       KindVisitor(Types types, Elements elements) {
+        super(REGULAR_OBJECT); // default value, covers generic types
         this.types = types;
         this.elements = elements;
       }

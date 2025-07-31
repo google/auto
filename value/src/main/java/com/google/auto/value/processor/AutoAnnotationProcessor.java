@@ -52,7 +52,6 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
@@ -83,7 +82,6 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
 
   private Elements elementUtils;
   private Types typeUtils;
-  private Nullables nullables;
   private TypeMirror javaLangObject;
 
   @Override
@@ -101,7 +99,6 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     super.init(processingEnv);
     this.elementUtils = processingEnv.getElementUtils();
     this.typeUtils = processingEnv.getTypeUtils();
-    this.nullables = new Nullables(processingEnv);
     this.javaLangObject = elementUtils.getTypeElement("java.lang.Object").asType();
   }
 
@@ -153,14 +150,9 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
   }
 
   private void processMethod(ExecutableElement method) {
-    if (!method.getModifiers().contains(Modifier.STATIC)) {
-      throw abortWithError(method, "@AutoAnnotation method must be static");
-    }
-
     TypeElement annotationElement = getAnnotationReturnType(method);
 
-    Set<Class<?>> wrapperTypesUsedInCollections = wrapperTypesUsedInCollections(method);
-
+    ImmutableSet<Class<?>> wrapperTypesUsedInCollections = wrapperTypesUsedInCollections(method);
     ImmutableMap<String, ExecutableElement> memberMethods = getMemberMethods(annotationElement);
     TypeElement methodClass = MoreElements.asType(method.getEnclosingElement());
     String pkg = TypeSimplifier.packageNameOf(methodClass);
@@ -207,12 +199,8 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
     // Unlike AutoValue, we don't currently try to guess a @Nullable based on the methods in your
     // class. It's the default one or nothing.
     ImmutableList<AnnotationMirror> equalsParameterAnnotations =
-        nullables
-            .appropriateNullableGivenMethods(ImmutableSet.of())
-            .map(ImmutableList::of)
-            .orElse(ImmutableList.of());
-    return TypeEncoder.encodeWithAnnotations(
-        javaLangObject, equalsParameterAnnotations, ImmutableSet.of());
+        Nullables.fromMethods(processingEnv, ImmutableList.of()).nullableTypeAnnotations();
+    return TypeEncoder.encodeWithAnnotations(javaLangObject, equalsParameterAnnotations);
   }
 
   /**
@@ -486,10 +474,10 @@ public class AutoAnnotationProcessor extends AbstractProcessor {
    * return null so that would be bad.
    *
    * <p>We could instead add a {@code readObject(ObjectInputStream)} method that would check that
-   * all of the instance fields are really present in the deserialized instance, and perhaps
-   * replace them with their default values from the annotation if not. That seems a lot more
-   * complicated than is justified, though, especially since the instance fields are final and
-   * would have to be set in the deserialized object through reflection.
+   * all of the instance fields are really present in the deserialized instance, and perhaps replace
+   * them with their default values from the annotation if not. That seems a lot more complicated
+   * than is justified, though, especially since the instance fields are final and would have to be
+   * set in the deserialized object through reflection.
    */
   private static long computeSerialVersionUid(
       ImmutableMap<String, Member> members, ImmutableMap<String, Parameter> parameters) {

@@ -7,14 +7,22 @@ annotation processing environment.
 
 ## Utility classes of note
 
-*   MoreTypes - utilities and Equivalence wrappers for TypeMirror and related
-    subtypes
-*   MoreElements - utilities for Element and related subtypes
-*   SuperficialValidation - very simple scanner to ensure an Element is valid
-    and free from distortion from upstream compilation errors
-*   Visibility - utilities for working with Elements' visibility levels (public,
-    protected, etc.)
-*   BasicAnnotationProcessor/ProcessingStep - simple types that
+`MoreTypes`
+:   Utilities and `Equivalence` wrappers for `TypeMirror` and related subtypes
+
+`MoreElements`
+:   Utilities for `Element` and related subtypes
+
+`SuperficialValidation`
+:   Very simple scanner to ensure an `Element` is valid and free from distortion
+    from upstream compilation errors
+
+`Visibility`
+:   Utilities for working with `Element`s' visibility levels (public, protected,
+    etc.)
+
+`BasicAnnotationProcessor`/`Step`
+:   Simple types that
     -   implement a validating annotation processor
     -   defer invalid elements until later
     -   break processor actions into multiple steps (which may each handle

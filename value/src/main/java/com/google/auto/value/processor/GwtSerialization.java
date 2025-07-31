@@ -77,8 +77,8 @@ class GwtSerialization {
    * com.example.AutoValue_Foo_CustomFieldSerializer.
    *
    * @param autoVars the template variables defined for this type.
-   * @param finalSubclass the simple name of the AutoValue class being generated, AutoValue_Foo
-   *     in the example.
+   * @param finalSubclass the simple name of the AutoValue class being generated, AutoValue_Foo in
+   *     the example.
    */
   void maybeWriteGwtSerializer(AutoValueTemplateVars autoVars, String finalSubclass) {
     if (shouldWriteGwtSerializer()) {
@@ -185,6 +185,7 @@ class GwtSerialization {
      * example {@code <K, V extends K>}.
      */
     String formalTypes;
+
     /**
      * The generic signature used by the generated subclass for its superclass reference. This is
      * empty, or contains only type variables with no bounds, for example {@code <K, V>}.

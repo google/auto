@@ -54,7 +54,7 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.lang.model.util.Types;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Utilities related to {@link TypeMirror} instances.
@@ -88,13 +88,13 @@ public final class MoreTypes {
    * may be preferred in a number of cases:
    *
    * <ul>
-   * <li>If you don't have an instance of {@code Types}.
-   * <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
-   *     of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
-   * <li>If you want distinct type variables to be considered equal if they have the same names
-   *     and bounds.
-   * <li>If you want wildcard types to compare equal if they have the same bounds. {@code
-   *     Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
+   *   <li>If you don't have an instance of {@code Types}.
+   *   <li>If you want a reliable {@code hashCode()} for the types, for example to construct a set
+   *       of types using {@link java.util.HashSet} with {@link Equivalence#wrap(Object)}.
+   *   <li>If you want distinct type variables to be considered equal if they have the same names
+   *       and bounds.
+   *   <li>If you want wildcard types to compare equal if they have the same bounds. {@code
+   *       Types.isSameType} never considers wildcards equal, even when comparing a type to itself.
    * </ul>
    */
   public static Equivalence<TypeMirror> equivalence() {
@@ -141,22 +141,44 @@ public final class MoreTypes {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o instanceof ComparedElements) {
-        ComparedElements that = (ComparedElements) o;
-        int nArguments = aArguments.size();
-        if (!this.a.equals(that.a) || !this.b.equals(that.b) || nArguments != bArguments.size()) {
-          // The arguments must be the same size, but we check anyway.
-          return false;
-        }
-        for (int i = 0; i < nArguments; i++) {
-          if (aArguments.get(i) != bArguments.get(i)) {
-            return false;
-          }
-        }
-        return true;
-      } else {
+      if (!(o instanceof ComparedElements)) {
         return false;
       }
+      ComparedElements that = (ComparedElements) o;
+
+      int nArguments = this.aArguments.size();
+      if (nArguments != that.aArguments.size()) {
+        return false;
+      }
+      // The arguments must be the same size, but we check anyway.
+      if (nArguments != this.bArguments.size() || nArguments != that.bArguments.size()) {
+        return false;
+      }
+
+      if (!this.a.equals(that.a) || !this.b.equals(that.b)) {
+        return false;
+      }
+
+      /*
+       * The purpose here is just to avoid the infinite recursion that we would otherwise have
+       * if Enum<E extends Enum<E>> is compared against itself, for example. If we are able to
+       * see that the inner Enum<E> is the same object as the outer one then we don't need a
+       * recursive call to compare the "a" Enum<E> against the "b" Enum<E>. The same-object check
+       * may not be completely justified, but it relies on the practical assumption that the
+       * compiler is not going to conjure up an infinite regress of objects to represent this
+       * recursive type. Other comparison methods like comparing their toString() are expensive
+       * and not warranted.
+       */
+      for (int i = 0; i < nArguments; i++) {
+        if (this.aArguments.get(i) != that.aArguments.get(i)) {
+          return false;
+        }
+        if (this.bArguments.get(i) != that.bArguments.get(i)) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     @Override
@@ -314,7 +336,7 @@ public final class MoreTypes {
     // ExecutableType.
     @SuppressWarnings("TypesEquals")
     boolean equal = a.equals(b);
-    if (equal && !(a instanceof ExecutableType)) {
+    if (equal && a.getKind() != TypeKind.EXECUTABLE) {
       return true;
     }
     EqualVisitorParam p = new EqualVisitorParam();
@@ -325,10 +347,10 @@ public final class MoreTypes {
 
   /**
    * Returns the type of the innermost enclosing instance, or null if there is none. This is the
-   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than
-   * NoType for a static type. We need this because of
-   * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby
-   * the Eclipse compiler returns a value for static classes that is not NoType.
+   * same as {@link DeclaredType#getEnclosingType()} except that it returns null rather than NoType
+   * for a static type. We need this because of <a
+   * href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=508222">this bug</a> whereby the Eclipse
+   * compiler returns a value for static classes that is not NoType.
    */
   private static @Nullable TypeMirror enclosingType(DeclaredType t) {
     TypeMirror enclosing = t.getEnclosingType();
@@ -924,8 +946,8 @@ public final class MoreTypes {
   /**
    * Resolves a {@link VariableElement} parameter to a method or constructor based on the given
    * container, or a member of a class. For parameters to a method or constructor, the variable's
-   * enclosing element must be a supertype of the container type. For example, given a
-   * {@code container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
+   * enclosing element must be a supertype of the container type. For example, given a {@code
+   * container} of type {@code Set<String>}, and a variable corresponding to the {@code E e}
    * parameter in the {@code Set.add(E e)} method, this will return a TypeMirror for {@code String}.
    */
   public static TypeMirror asMemberOf(

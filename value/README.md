@@ -1,6 +1,6 @@
 # AutoValue
 
-*Generated immutable value classes for Java 7+* <br />
+*Generated immutable value classes for Java 8+* <br />
 ***Kevin Bourrillion, Éamonn McManus*** <br />
 **Google, Inc.**
 
@@ -20,6 +20,14 @@ AutoValue provides an easier way to create immutable value classes, with a lot
 less code and less room for error, while **not restricting your freedom** to
 code almost any aspect of your class exactly the way you want it.
 
-For more information, consult the
-[detailed
-documentation](userguide/index.md)
+For more information, consult the [detailed documentation].
+
+**Note:** If you are using Kotlin then its
+[data classes](https://kotlinlang.org/docs/data-classes.html) are usually more
+appropriate than AutoValue. Likewise, if you are using a version of Java that
+has [records] then those are usually more appropriate. You can still
+use [AutoBuilder] to make builders for data classes or records.
+
+[detailed documentation]: userguide/index.md
+[records]: userguide/records.md
+[AutoBuilder]: userguide/autobuilder.md

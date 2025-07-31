@@ -21,7 +21,7 @@ import javax.inject.Inject;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
 final class FactoryImplementingCreateMethod_ConcreteClassFactory
     implements FactoryImplementingCreateMethod.FactoryInterfaceWithCreateMethod {
@@ -43,18 +43,20 @@ final class FactoryImplementingCreateMethod_ConcreteClassFactory
   public FactoryImplementingCreateMethod.ConcreteClass create(
       List<Integer> genericWithDifferentArgumentName) {
     return new FactoryImplementingCreateMethod.ConcreteClass(
-        checkNotNull(genericWithDifferentArgumentName, 1));
+        checkNotNull(genericWithDifferentArgumentName, 1, 1));
   }
 
   FactoryImplementingCreateMethod.ConcreteClass create(int a, boolean b) {
     return new FactoryImplementingCreateMethod.ConcreteClass(a, b);
   }
 
-  private static <T> T checkNotNull(T reference, int argumentIndex) {
+  private static <T> T checkNotNull(T reference, int argumentNumber, int argumentCount) {
     if (reference == null) {
       throw new NullPointerException(
-          "@AutoFactory method argument is null but is not marked @Nullable. Argument index: "
-              + argumentIndex);
+          "@AutoFactory method argument is null but is not marked @Nullable. Argument "
+              + argumentNumber
+              + " of "
+              + argumentCount);
     }
     return reference;
   }

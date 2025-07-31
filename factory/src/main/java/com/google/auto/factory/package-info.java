@@ -13,5 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@NullMarked
 package com.google.auto.factory;
 
+import org.jspecify.annotations.NullMarked;

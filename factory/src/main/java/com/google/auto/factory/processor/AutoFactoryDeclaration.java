@@ -19,14 +19,16 @@ import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.factory.processor.Elements2.isValidSupertypeForClass;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.util.ElementFilter.typesIn;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.factory.AutoFactory;
+import com.google.auto.factory.AutoFactory.AnnotationsToApply;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -34,6 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,6 +62,8 @@ abstract class AutoFactoryDeclaration {
   abstract Element target();
 
   abstract Optional<String> className();
+
+  abstract ImmutableSet<AnnotationMirror> annotations();
 
   abstract TypeElement extendingType();
 
@@ -110,7 +115,6 @@ abstract class AutoFactoryDeclaration {
               .contentEquals(AutoFactory.class.getName()));
       Map<String, AnnotationValue> values =
           Mirrors.simplifyAnnotationValueMap(elements.getElementValuesWithDefaults(mirror));
-      checkState(values.size() == 4);
 
       // className value is a string, so we can just call toString. We know values.get("className")
       // is non-null because @AutoFactory has an annotation element of that name.
@@ -126,6 +130,7 @@ abstract class AutoFactoryDeclaration {
         return Optional.empty();
       }
 
+      ImmutableSet<AnnotationMirror> annotations = annotationsToAdd(element);
       AnnotationValue extendingValue = checkNotNull(values.get("extending"));
       TypeElement extendingType = AnnotationValues.asType(extendingValue);
       if (extendingType == null) {
@@ -188,6 +193,7 @@ abstract class AutoFactoryDeclaration {
               getAnnotatedType(element),
               element,
               className.isEmpty() ? Optional.empty() : Optional.of(className),
+              annotations,
               extendingType,
               implementingTypes,
               allowSubclasses,
@@ -206,6 +212,26 @@ abstract class AutoFactoryDeclaration {
 
     static boolean isValidIdentifier(String identifier) {
       return SourceVersion.isIdentifier(identifier) && !SourceVersion.isKeyword(identifier);
+    }
+
+    private ImmutableSet<AnnotationMirror> annotationsToAdd(Element element) {
+      ImmutableSet<? extends AnnotationMirror> containers =
+          AnnotationMirrors.getAnnotatedAnnotations(element, AnnotationsToApply.class);
+      if (containers.size() > 1) {
+        messager.printMessage(
+            ERROR, "Multiple @AnnotationsToApply annotations are not supported", element);
+      }
+      return containers.stream()
+          .limit(1)
+          .map(elements::getElementValuesWithDefaults)
+          .map(Map::values)
+          .flatMap(Collection::stream)
+          .map(AnnotationValue::getValue)
+          .filter(AnnotationMirror.class::isInstance)
+          // Any non-annotation element should already have been flagged when processing
+          // @AnnotationsToApply
+          .map(AnnotationMirror.class::cast)
+          .collect(toImmutableSet());
     }
   }
 }

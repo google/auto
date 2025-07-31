@@ -31,8 +31,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 /**
- * Tests of Gradle incrementality in the presence of extensions. See
- * <a href="https://docs.gradle.org/5.0/userguide/java_plugin.html#sec:incremental_annotation_processing">
+ * Tests of Gradle incrementality in the presence of extensions. See <a
+ * href="https://docs.gradle.org/5.0/userguide/java_plugin.html#sec:incremental_annotation_processing">
  * incremental annotation processing</a> in the Gradle user guide.
  */
 @RunWith(JUnit4.class)

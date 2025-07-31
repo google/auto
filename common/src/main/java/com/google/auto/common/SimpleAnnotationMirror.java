@@ -16,8 +16,9 @@
 
 package com.google.auto.common;
 
-import static com.google.auto.common.MoreStreams.toImmutableMap;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
 import com.google.common.base.Joiner;
@@ -32,7 +33,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A simple implementation of the {@link AnnotationMirror} interface.
@@ -79,7 +80,11 @@ public final class SimpleAnnotationMirror implements AnnotationMirror {
     this.namedValues = ImmutableMap.copyOf(namedValues);
     this.elementValues =
         methodsIn(annotationType.getEnclosedElements()).stream()
-            .collect(toImmutableMap(e -> e, e -> values.get(e.getSimpleName().toString())));
+            .collect(
+                toImmutableMap(
+                    e -> e,
+                    // requireNonNull is safe because we inserted into `values` for all methods.
+                    e -> requireNonNull(values.get(e.getSimpleName().toString()))));
   }
 
   /**

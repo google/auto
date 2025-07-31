@@ -53,14 +53,14 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
  * one-of} types; user code never references this class.
  *
  * @author Éamonn McManus
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * @see <a href="https://github.com/google/auto/tree/main/value">AutoValue User's Guide</a>
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes(AUTO_ONE_OF_NAME)
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 public class AutoOneOfProcessor extends AutoValueishProcessor {
   public AutoOneOfProcessor() {
-    super(AUTO_ONE_OF_NAME);
+    super(AUTO_ONE_OF_NAME, /* appliesToInterfaces= */ false);
   }
 
   @Override
@@ -75,13 +75,6 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
 
   @Override
   void processType(TypeElement autoOneOfType) {
-    if (autoOneOfType.getKind() != ElementKind.CLASS) {
-      errorReporter()
-          .abortWithError(
-              autoOneOfType,
-              "[AutoOneOfNotClass] @" + AUTO_ONE_OF_NAME + " only applies to classes");
-    }
-    checkModifiersIfNested(autoOneOfType);
     DeclaredType kindMirror = mirrorForKindType(autoOneOfType);
 
     // We are going to classify the methods of the @AutoOneOf class into several categories.
@@ -106,7 +99,7 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
     Set<ExecutableElement> otherMethods = new LinkedHashSet<>(abstractMethods);
     otherMethods.remove(kindGetter);
 
-    ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes =
+    ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes =
         propertyMethodsIn(otherMethods, autoOneOfType);
     ImmutableBiMap<String, ExecutableElement> properties =
         propertyNameToMethodMap(propertyMethodsAndTypes.keySet());
@@ -118,8 +111,9 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
     AutoOneOfTemplateVars vars = new AutoOneOfTemplateVars();
     vars.generatedClass = TypeSimplifier.simpleNameOf(subclass);
     vars.propertyToKind = propertyToKind;
-    defineSharedVarsForType(autoOneOfType, methods, vars);
-    defineVarsForType(autoOneOfType, vars, propertyMethodsAndTypes, kindGetter);
+    Nullables nullables = Nullables.fromMethods(processingEnv, methods);
+    defineSharedVarsForType(autoOneOfType, methods, nullables, vars);
+    defineVarsForType(autoOneOfType, vars, propertyMethodsAndTypes, kindGetter, nullables);
 
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoOneOfType.asType());
@@ -263,11 +257,15 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
   private void defineVarsForType(
       TypeElement type,
       AutoOneOfTemplateVars vars,
-      ImmutableMap<ExecutableElement, TypeMirror> propertyMethodsAndTypes,
-      ExecutableElement kindGetter) {
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> propertyMethodsAndTypes,
+      ExecutableElement kindGetter,
+      Nullables nullables) {
     vars.props =
         propertySet(
-            propertyMethodsAndTypes, ImmutableListMultimap.of(), ImmutableListMultimap.of());
+            propertyMethodsAndTypes,
+            /* annotatedPropertyFields= */ ImmutableListMultimap.of(),
+            /* annotatedPropertyMethods= */ ImmutableListMultimap.of(),
+            nullables);
     vars.kindGetter = kindGetter.getSimpleName().toString();
     vars.kindType = TypeEncoder.encode(kindGetter.getReturnType());
     TypeElement javaIoSerializable = elementUtils().getTypeElement("java.io.Serializable");

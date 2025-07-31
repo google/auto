@@ -23,16 +23,16 @@
   <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Parent</name>
   <description>
-    Immutable value-type code generation for Java 7+.
+    Immutable value-type code generation for Java 8+.
   </description>
   <packaging>pom</packaging>
-  <url>https://github.com/google/auto/tree/master/value</url>
+  <url>https://github.com/google/auto/tree/main/value</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
-    <guava.version>31.0.1-jre</guava.version>
-    <truth.version>1.1.3</truth.version>
+    <guava.version>33.4.8-jre</guava.version>
+    <truth.version>1.4.4</truth.version>
   </properties>
 
   <scm>
@@ -59,12 +59,33 @@
     <url>http://www.google.com</url>
   </organization>
 
+  <developers>
+    <developer>
+      <id>eamonnmcmanus</id>
+      <name>Éamonn McManus</name>
+      <email>emcmanus@google.com</email>
+      <organization>Google</organization>
+      <organizationUrl>http://www.google.com</organizationUrl>
+      <roles>
+        <role>owner</role>
+        <role>developer</role>
+      </roles>
+      <timezone>-8</timezone>
+    </developer>
+  </developers>
+
   <modules>
     <module>annotations</module>
     <module>processor</module>
     <module>src/it/functional</module>
-    <module>src/it/gwtserializer</module>
   </modules>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <dependencyManagement>
     <dependencies>
@@ -101,7 +122,7 @@
       <dependency>
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>
-        <version>0.19</version>
+        <version>0.21.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.truth</groupId>
@@ -118,11 +139,6 @@
         <artifactId>junit</artifactId>
         <version>4.13.2</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.velocity</groupId>
-        <artifactId>velocity</artifactId>
-        <version>1.7</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -132,7 +148,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.1</version>
+          <version>3.14.0</version>
           <configuration>
             <source>${java.version}</source>
             <target>${java.version}</target>
@@ -140,26 +156,34 @@
             <showWarnings>true</showWarnings>
             <showDeprecation>true</showDeprecation>
           </configuration>
-          <dependencies>
-            <dependency>
-              <groupId>org.codehaus.plexus</groupId>
-              <artifactId>plexus-java</artifactId>
-              <version>1.1.0</version>
-            </dependency>
-          </dependencies>
+          <executions>
+            <execution>
+              <id>default-testCompile</id>
+              <phase>test-compile</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+              <configuration>
+                <testExcludes>
+                  <exclude>${excluded-tests}</exclude>
+                </testExcludes>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.4.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-invoker-plugin</artifactId>
-          <version>3.2.2</version>
+          <version>3.9.1</version>
           <configuration>
             <addTestClassPath>true</addTestClassPath>
             <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+            <localRepositoryPath>${project.build.directory}/it-repo</localRepositoryPath>
             <pomIncludes>
               <pomInclude>*/pom.xml</pomInclude>
             </pomIncludes>
@@ -183,4 +207,83 @@
       </plugins>
     </pluginManagement>
   </build>
+  <profiles>
+    <profile>
+      <id>java-11-and-after</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <modules>
+        <module>src/it/gwtserializer</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>before-java-17</id>
+      <activation>
+        <jdk>(,17)</jdk>
+      </activation>
+      <properties>
+        <excluded-tests>**/MemoizedTest.java</excluded-tests>
+      </properties>
+    </profile>
+    <profile>
+      <id>sonatype-oss-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <configuration>
+              <failOnError>false</failOnError>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.8</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.8.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

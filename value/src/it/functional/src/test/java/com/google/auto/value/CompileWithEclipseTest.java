@@ -67,35 +67,29 @@ public class CompileWithEclipseTest {
 
   private static final ImmutableSet<String> IGNORED_TEST_FILES =
       ImmutableSet.of(
-          "AutoValueNotEclipseTest.java", "CompileWithEclipseTest.java", "GradleTest.java");
+          "AutoValueNotEclipseTest.java",
+          "CompileWithEclipseTest.java",
+          "CustomFieldSerializerTest.java",
+          "GradleIT.java",
+
+          // AutoBuilder sometimes needs to generate a .class file for Kotlin that is used in the
+          // rest of compilation, and Eclipse doesn't seem to handle that well. Presumably not many
+          // Kotlin users use Eclipse since IntelliJ is obviously much more suitable.
+          "AutoBuilderKotlinTest.java");
 
   private static final Predicate<File> JAVA_FILE =
       f -> f.getName().endsWith(".java") && !IGNORED_TEST_FILES.contains(f.getName());
 
-  private static final Predicate<File> JAVA8_TEST =
-      f ->
-          f.getName().equals("AutoValueJava8Test.java")
-              || f.getName().equals("AutoOneOfJava8Test.java")
-              || f.getName().equals("EmptyExtension.java");
-
   @Test
-  public void compileWithEclipseJava7() throws Exception {
-    compileWithEclipse("7", JAVA_FILE.and(JAVA8_TEST.negate()));
-  }
-
-  @Test
-  public void compileWithEclipseJava8() throws Exception {
-    compileWithEclipse("8", JAVA_FILE);
-  }
-
-  private void compileWithEclipse(String version, Predicate<File> predicate) throws IOException {
+  public void compileWithEclipse() throws IOException {
+    String version = "8";
     File sourceRootFile = new File(SOURCE_ROOT);
     File javaDir = new File(sourceRootFile, "src/main/java");
     File javatestsDir = new File(sourceRootFile, "src/test/java");
     Set<File> sources =
         new ImmutableSet.Builder<File>()
-            .addAll(filesUnderDirectory(javaDir, predicate))
-            .addAll(filesUnderDirectory(javatestsDir, predicate))
+            .addAll(filesUnderDirectory(javaDir, JAVA_FILE))
+            .addAll(filesUnderDirectory(javatestsDir, JAVA_FILE))
             .build();
     assertThat(sources).isNotEmpty();
     JavaCompiler compiler = new EclipseCompiler();
@@ -127,8 +121,7 @@ public class CompileWithEclipseTest {
             version,
             "-target",
             version,
-            "-warn:-warningToken,-intfAnnotation",
-            "-Acom.google.auto.value.AutoBuilderIsUnstable");
+            "-warn:-warningToken,-intfAnnotation");
     JavaCompiler.CompilationTask task =
         compiler.getTask(null, fileManager, null, options, null, sourceFileObjects);
     // Explicitly supply an empty list of extensions for AutoValueProcessor, because otherwise this

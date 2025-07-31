@@ -22,26 +22,25 @@ import java.lang.annotation.Target;
 
 /**
  * Specifies that the annotated interface or abstract class should be implemented as a builder.
- * This is still unstable; uses outside Google may break.
  *
  * <p>A simple example:
  *
- * <pre>
+ * <pre>{@code
+ * @AutoBuilder(ofClass = Person.class)
+ * abstract class PersonBuilder {
+ *   static PersonBuilder builder() {
+ *     return new AutoBuilder_PersonBuilder();
+ *   }
  *
- *   {@code @}AutoBuilder(ofClass = Person.class)
- *   abstract class PersonBuilder {
- *     static PersonBuilder builder() {
- *       return new AutoBuilder_PersonBuilder();
- *     }
- *
- *     abstract PersonBuilder setName(String name);
- *     abstract PersonBuilder setId(int id);
- *     abstract Person build();
- *   }</pre>
+ *   abstract PersonBuilder setName(String name);
+ *   abstract PersonBuilder setId(int id);
+ *   abstract Person build();
+ * }
+ * }</pre>
  *
  * @see <a
- * href="https://github.com/google/auto/blob/master/value/userguide/autobuilder.md">AutoBuilder
- * User's Guide</a>
+ *     href="https://github.com/google/auto/blob/main/value/userguide/autobuilder.md">AutoBuilder
+ *     User's Guide</a>
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)

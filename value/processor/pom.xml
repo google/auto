@@ -24,14 +24,13 @@
     <version>HEAD-SNAPSHOT</version>
   </parent>
 
-  <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value</artifactId>
   <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Processor</name>
   <description>
-    Immutable value-type code generation for Java 1.6+.
+    Immutable value-type code generation for Java 8+.
   </description>
-  <url>https://github.com/google/auto/tree/master/value</url>
+  <url>https://github.com/google/auto/tree/main/value</url>
 
   <scm>
     <url>http://github.com/google/auto</url>
@@ -41,15 +40,15 @@
   </scm>
 
   <properties>
-    <auto-service.version>1.0.1</auto-service.version>
-    <errorprone.version>2.10.0</errorprone.version>
+    <auto-service.version>1.1.1</auto-service.version>
+    <errorprone.version>2.41.0</errorprone.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>1.2</version>
+      <version>1.2.2</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
@@ -64,12 +63,12 @@
     <dependency>
       <groupId>com.google.escapevelocity</groupId>
       <artifactId>escapevelocity</artifactId>
-      <version>0.9.1</version>
+      <version>1.1</version>
     </dependency>
     <dependency>
       <groupId>net.ltgt.gradle.incap</groupId>
       <artifactId>incap</artifactId>
-      <version>0.3</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -79,22 +78,16 @@
       <groupId>com.squareup</groupId>
       <artifactId>javapoet</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+      <version>9.8</version>
+    </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>com.google.auto.value</groupId>
       <artifactId>auto-value-annotations</artifactId>
       <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.errorprone</groupId>
-      <artifactId>error_prone_type_annotations</artifactId>
-      <version>${errorprone.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.velocity</groupId>
-      <artifactId>velocity</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -123,11 +116,10 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-       <groupId>org.mockito</groupId>
-       <artifactId>mockito-core</artifactId>
-       <version>4.0.0</version>
-       <scope>test</scope>
-     </dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -171,7 +163,7 @@
             <path>
               <groupId>net.ltgt.gradle.incap</groupId>
               <artifactId>incap-processor</artifactId>
-              <version>0.3</version>
+              <version>1.0.0</version>
             </path>
           </annotationProcessorPaths>
         </configuration>
@@ -179,6 +171,10 @@
           <execution>
             <id>default-testCompile</id>
             <configuration>
+              <compilerArgs>
+                <!-- For MemoizeTest. -->
+                <arg>-parameters</arg>
+              </compilerArgs>
               <annotationProcessorPaths>
                 <path>
                   <groupId>com.google.auto.value</groupId>
@@ -198,7 +194,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.2</version>
+        <version>3.5.3</version>
         <configuration>
           <argLine>${test.jvm.flags}</argLine>
         </configuration>
@@ -212,8 +208,9 @@
         <artifactId>maven-invoker-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.immutables.tools</groupId>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -222,34 +219,37 @@
             </goals>
             <configuration>
               <minimizeJar>true</minimizeJar>
-              <artifactSet>
-                <excludes>
-                  <exclude>com.google.code.findbugs:jsr305</exclude>
-                </excludes>
-              </artifactSet>
               <relocations>
                 <relocation>
-                  <pattern>org.objectweb</pattern>
-                  <shadedPattern>autovalue.shaded.org.objectweb$</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>com.google</pattern>
-                  <shadedPattern>autovalue.shaded.com.google$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.com.google</shadedPattern>
                   <excludes>
                     <exclude>com.google.auto.value.**</exclude>
                   </excludes>
                 </relocation>
                 <relocation>
                   <pattern>com.squareup.javapoet</pattern>
-                  <shadedPattern>autovalue.shaded.com.squareup.javapoet$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.com.squareup.javapoet</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>net.ltgt.gradle.incap</pattern>
-                  <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.net.ltgt.gradle.incap</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.checkerframework</pattern>
-                  <shadedPattern>autovalue.shaded.org.checkerframework$</shadedPattern>
+                  <shadedPattern>autovalue.shaded.org.checkerframework</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.jetbrains</pattern>
+                  <shadedPattern>autovalue.shaded.org.jetbrains</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.jspecify</pattern>
+                  <shadedPattern>autovalue.shaded.org.jspecify</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.objectweb</pattern>
+                  <shadedPattern>autovalue.shaded.org.objectweb</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
@@ -274,8 +274,28 @@
         <jdk>[9,)</jdk>
       </activation>
       <properties>
-        <test.jvm.flags>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</test.jvm.flags>
+        <test.jvm.flags>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+            --add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED
+            --add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</test.jvm.flags>
       </properties>
+    </profile>
+    <profile>
+      <id>exclude-module-tests</id>
+      <activation>
+        <jdk>(,9)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <testExcludes>
+                <exclude>**/AutoValueModuleCompilationTest.java</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>

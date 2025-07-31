@@ -4,7 +4,7 @@
 
 A collection of source code generators for [Java][java].
 
-## Auto‽
+## Overview
 
 [Java][java] is full of code that is mechanical, repetitive, typically untested
 and sometimes the source of subtle bugs. _Sounds like a job for robots!_
@@ -25,7 +25,7 @@ Save time.  Save code.  Save sanity.
 
     [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.service/auto-service.svg)](https://mvnrepository.com/artifact/com.google.auto.service/auto-service)
 
-  * [AutoValue] - Immutable [value-type] code generation for Java 7+.
+  * [AutoValue] - Immutable [value-type] code generation for Java 8+.
 
     [![Maven Central](https://img.shields.io/maven-central/v/com.google.auto.value/auto-value.svg)](https://mvnrepository.com/artifact/com.google.auto.value/auto-value)
 
@@ -49,11 +49,11 @@ Save time.  Save code.  Save sanity.
     See the License for the specific language governing permissions and
     limitations under the License.
 
-[AutoFactory]: https://github.com/google/auto/tree/master/factory
-[AutoService]: https://github.com/google/auto/tree/master/service
-[AutoValue]: https://github.com/google/auto/tree/master/value
-[Common]: https://github.com/google/auto/tree/master/common
+[AutoFactory]: https://github.com/google/auto/tree/main/factory
+[AutoService]: https://github.com/google/auto/tree/main/service
+[AutoValue]: https://github.com/google/auto/tree/main/value
+[Common]: https://github.com/google/auto/tree/main/common
 
 [java]: https://en.wikipedia.org/wiki/Java_(programming_language)
 [value-type]: http://en.wikipedia.org/wiki/Value_object
-[`ServiceLoader`]: http://docs.oracle.com/javase/7/docs/api/java/util/ServiceLoader.html
+[`ServiceLoader`]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/ServiceLoader.html

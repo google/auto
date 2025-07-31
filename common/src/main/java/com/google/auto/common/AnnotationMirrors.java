@@ -16,8 +16,8 @@
 package com.google.auto.common;
 
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Collections.unmodifiableMap;
 
 import com.google.common.base.Equivalence;
@@ -73,9 +73,9 @@ public final class AnnotationMirrors {
       };
 
   /**
-   * Returns an {@link Equivalence} for {@link AnnotationMirror} as some implementations
-   * delegate equality tests to {@link Object#equals} whereas the documentation explicitly
-   * states that instance/reference equality is not the proper test.
+   * Returns an {@link Equivalence} for {@link AnnotationMirror} as some implementations delegate
+   * equality tests to {@link Object#equals} whereas the documentation explicitly states that
+   * instance/reference equality is not the proper test.
    */
   public static Equivalence<AnnotationMirror> equivalence() {
     return ANNOTATION_MIRROR_EQUIVALENCE;
@@ -119,9 +119,9 @@ public final class AnnotationMirrors {
   }
 
   /**
-   * Returns an {@link AnnotationValue} for the named element if such an element was
-   * either declared in the usage represented by the provided {@link AnnotationMirror}, or if
-   * such an element was defined with a default.
+   * Returns an {@link AnnotationValue} for the named element if such an element was either declared
+   * in the usage represented by the provided {@link AnnotationMirror}, or if such an element was
+   * defined with a default.
    *
    * @throws IllegalArgumentException if no element is defined with the given elementName.
    */
@@ -131,9 +131,9 @@ public final class AnnotationMirrors {
   }
 
   /**
-   * Returns a {@link ExecutableElement} and its associated {@link AnnotationValue} if such
-   * an element was either declared in the usage represented by the provided
-   * {@link AnnotationMirror}, or if such an element was defined with a default.
+   * Returns a {@link ExecutableElement} and its associated {@link AnnotationValue} if such an
+   * element was either declared in the usage represented by the provided {@link AnnotationMirror},
+   * or if such an element was defined with a default.
    *
    * @throws IllegalArgumentException if no element is defined with the given elementName.
    */
@@ -159,7 +159,7 @@ public final class AnnotationMirrors {
    * Returns all {@linkplain AnnotationMirror annotations} that are present on the given {@link
    * Element} which are themselves annotated with {@code annotationClass}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+  public static ImmutableSet<AnnotationMirror> getAnnotatedAnnotations(
       Element element, Class<? extends Annotation> annotationClass) {
     String name = annotationClass.getCanonicalName();
     if (name == null) {
@@ -172,7 +172,7 @@ public final class AnnotationMirrors {
    * Returns all {@linkplain AnnotationMirror annotations} that are present on the given {@link
    * Element} which are themselves annotated with {@code annotation}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+  public static ImmutableSet<AnnotationMirror> getAnnotatedAnnotations(
       Element element, TypeElement annotation) {
     return element.getAnnotationMirrors().stream()
         .filter(input -> isAnnotationPresent(input.getAnnotationType().asElement(), annotation))
@@ -184,7 +184,7 @@ public final class AnnotationMirrors {
    * Element} which are themselves annotated with an annotation whose type's canonical name is
    * {@code annotationName}.
    */
-  public static ImmutableSet<? extends AnnotationMirror> getAnnotatedAnnotations(
+  public static ImmutableSet<AnnotationMirror> getAnnotatedAnnotations(
       Element element, String annotationName) {
     return element.getAnnotationMirrors().stream()
         .filter(input -> isAnnotationPresent(input.getAnnotationType().asElement(), annotationName))

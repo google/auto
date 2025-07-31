@@ -28,6 +28,8 @@ abstract class Animal {
   abstract int numberOfLegs();
 
   static Builder builder() {
+    // The naming here will be different if you are using a nested class
+    // e.g. `return new AutoValue_OuterClass_InnerClass.Builder();`
     return new AutoValue_Animal.Builder();
   }
 
@@ -104,3 +106,5 @@ exposing yourself to initialization-order problems.
 *   ... [create a "step builder"?](builders-howto.md#step)
 *   ... [create a builder for something other than an
     `@AutoValue`?](builders-howto.md#autobuilder)
+*   ... [use a different build method for a
+    property?](builders-howto.md#build_method)

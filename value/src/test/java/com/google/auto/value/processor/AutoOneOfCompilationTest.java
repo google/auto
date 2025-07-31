@@ -27,7 +27,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
 public class AutoOneOfCompilationTest {
   @Rule public final Expect expect = Expect.create();
@@ -66,6 +68,7 @@ public class AutoOneOfCompilationTest {
             "foo.bar.AutoOneOf_TaskResult",
             "package foo.bar;",
             "",
+            "import java.util.Objects;",
             GeneratedImport.importGeneratedAnnotationType(),
             "",
             "@Generated(\"com.google.auto.value.processor.AutoOneOfProcessor\")",
@@ -73,16 +76,12 @@ public class AutoOneOfCompilationTest {
             "  private AutoOneOf_TaskResult() {} // There are no instances of this type.",
             "",
             "  static <V, T extends Throwable> TaskResult<V, T> value(V value) {",
-            "    if (value == null) {",
-            "      throw new NullPointerException();",
-            "    }",
+            "    Objects.requireNonNull(value);",
             "    return new Impl_value<V, T>(value);",
             "  }",
             "",
             "  static <V, T extends Throwable> TaskResult<V, T> exception(Throwable exception) {",
-            "    if (exception == null) {",
-            "      throw new NullPointerException();",
-            "    }",
+            "    Objects.requireNonNull(exception);",
             "    return new Impl_exception<V, T>(exception);",
             "  }",
             "",
@@ -233,7 +232,8 @@ public class AutoOneOfCompilationTest {
             "    public TaskResult.Kind getKind() {",
             "      return TaskResult.Kind.EMPTY;",
             "    }",
-            "  }");
+            "  }",
+            "}");
     Compilation compilation =
         javac()
             .withProcessors(new AutoOneOfProcessor())
@@ -463,6 +463,33 @@ public class AutoOneOfCompilationTest {
   }
 
   @Test
+  public void mustBeClass() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public interface Pet {",
+            "  public enum Kind {",
+            "    DOG,",
+            "    CAT,",
+            "  }",
+            "  Kind getKind();",
+            "  String dog();",
+            "  String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoOneOf only applies to classes")
+        .inFile(javaFileObject)
+        .onLineContaining("interface Pet");
+  }
+
+  @Test
   public void cantBeNullable() {
     JavaFileObject javaFileObject =
         JavaFileObjects.forSourceLines(
@@ -489,5 +516,63 @@ public class AutoOneOfCompilationTest {
         .hadErrorContaining("@AutoOneOf properties cannot be @Nullable")
         .inFile(javaFileObject)
         .onLineContaining("@Nullable String dog()");
+  }
+
+  @Test
+  public void mustHaveNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  Pet(boolean cuddly) {}",
+            "",
+            "  public enum Kind {",
+            "    DOG,",
+            "    CAT,",
+            "  }",
+            "  public abstract Kind getKind();",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoOneOf class must have a non-private no-arg constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Pet");
+  }
+
+  @Test
+  public void mustHaveVisibleNoArgConstructor() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Pet",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoOneOf;",
+            "",
+            "@AutoOneOf(Pet.Kind.class)",
+            "public abstract class Pet {",
+            "  private Pet() {}",
+            "",
+            "  public enum Kind {",
+            "    DOG,",
+            "    CAT,",
+            "  }",
+            "  public abstract Kind getKind();",
+            "  public abstract String dog();",
+            "  public abstract String cat();",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoOneOfProcessor()).compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("@AutoOneOf class must have a non-private no-arg constructor")
+        .inFile(javaFileObject)
+        .onLineContaining("class Pet");
   }
 }

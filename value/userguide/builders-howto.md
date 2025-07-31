@@ -34,6 +34,8 @@ How do I...
 *   ... [access nested builders while building?](#nested_builders)
 *   ... [create a "step builder"?](#step)
 *   ... [create a builder for something other than an `@AutoValue`?](#autobuilder)
+*   ... [use a different build method for a
+    property?](#build_method)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
@@ -115,9 +117,9 @@ abstract class Animal {
 }
 ```
 
-Occasionally you may want to supply a default value, but only if the property is
-not set explicitly. This is covered in the section on
-[normalization](#normalize).
+Occasionally you may want to supply a more complex default value, possibly
+derived from other fields and only if the property is not set explicitly. This
+is covered in the section on [normalization](#normalize).
 
 ## <a name="to_builder"></a>... initialize a builder to the same property values as an existing value instance
 
@@ -251,13 +253,13 @@ non-[nullable](howto.md#nullable) property, `IllegalStateException` is thrown.
 Getters should generally only be used within the `Builder` as shown, so they are
 not public.
 
-As an alternative to returning the same type as the property accessor method,
-the builder getter can return an Optional wrapping of that type. This can be
-used if you want to supply a default, but only if the property has not been set.
-(The [usual way](#default) of supplying defaults means that the property always
-appears to have been set.) For example, suppose you wanted the default name of
-your Animal to be something like "4-legged creature", where 4 is the
-`numberOfLegs()` property. You might write this:
+<p id="optional-getter">As an alternative to returning the same type as the
+property accessor method, the builder getter can return an Optional wrapping of
+that type. This can be used if you want to supply a default, but only if the
+property has not been set. (The [usual way](#default) of supplying defaults
+means that the property always appears to have been set.) For example, suppose
+you wanted the default name of your Animal to be something like "4-legged
+creature", where 4 is the `numberOfLegs()` property. You might write this:
 
 ```java
 @AutoValue
@@ -699,5 +701,66 @@ Sometimes you want to make a builder like the kind described here, but have it
 build something other than an `@AutoValue` class, or even call a static method.
 In that case you can use `@AutoBuilder`. See
 [its documentation](autobuilder.md).
+
+Sometimes you want to use a different build method for your property. This is
+especially applicable for `ImmutableMap`, which has two different build methods.
+`builder.buildOrThrow()` is used as the default build method for AutoValue. You
+might prefer to use `builder.buildKeepingLast()` instead, so if the same key is
+put more than once then the last value is retained rather than throwing an
+exception. AutoValue doesn't currently have a way to request this, but here is a
+workaround if you need it. Let's say you have a class like this:
+
+```java
+  @AutoValue
+  public abstract class Foo {
+    public abstract ImmutableMap<Integer, String> map();
+    ...
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract ImmutableMap.Builder<Integer, String> mapBuilder();
+      public abstract Foo build();
+    }
+  }
+```
+
+Instead, you could write this:
+
+```java
+  @AutoValue
+  public abstract class Foo {
+    public abstract ImmutableMap<Integer, String> map();
+    
+    // #start
+    // Needed only if your class has toBuilder() method
+    public Builder toBuilder() {
+      Builder builder = autoToBuilder();
+      builder.mapBuilder().putAll(map());
+      return builder;
+    }
+
+    abstract Builder autoToBuilder(); // not public
+    // #end
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+
+      private final ImmutableMap.Builder<Integer, String> mapBuilder = ImmutableMap.builder();
+
+      public ImmutableMap.Builder<Integer, String> mapBuilder() {
+        return mapBuilder;
+      }
+
+      abstract Builder setMap(ImmutableMap<Integer, String> map); // not public
+
+      abstract Foo autoBuild(); // not public
+
+      public Foo build() {
+        setMap(mapBuilder.buildKeepingLast());
+        return autoBuild();
+      }
+    }
+  }
+```
 
 [protobuf]: https://developers.google.com/protocol-buffers/docs/reference/java-generated#builders

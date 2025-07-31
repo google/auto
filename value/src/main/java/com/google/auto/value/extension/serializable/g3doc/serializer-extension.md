@@ -239,7 +239,7 @@ a `Serializer` is available, we use it to map `Baz` to a serializable type. If
 no `Serializer` is available, we can do nothing and let `Baz` be serialized
 as-is.
 
-[AutoService]: https://github.com/google/auto/tree/master/service
-[`SerializableAutoValueExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/extension/SerializableAutoValueExtension.java
-[`SerializerExtension`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/serializer/interfaces/SerializerExtension.java
-[`Serializer`]: https://github.com/google/auto/blob/master/value/src/main/java/com/google/auto/value/extension/serializable/serializer/interfaces/Serializer.java
+[AutoService]: https://github.com/google/auto/tree/main/service
+[`SerializableAutoValueExtension`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/serializable/extension/SerializableAutoValueExtension.java
+[`SerializerExtension`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/serializable/serializer/interfaces/SerializerExtension.java
+[`Serializer`]: https://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/extension/serializable/serializer/interfaces/Serializer.java

@@ -23,8 +23,11 @@ import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import com.google.common.collect.ImmutableSet;
 import com.google.testing.compile.JavaFileObjects;
 import java.util.Set;
+import java.util.function.Consumer;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
@@ -46,14 +49,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -70,14 +71,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -97,14 +96,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -119,14 +116,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -143,14 +138,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -166,14 +159,16 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  // It appears that in some JDK versions, getAnnotationMirrors() doesn't return
+                  // erroneous annotations such as we have here.
+                  if (!testClassElement.getAnnotationMirrors().isEmpty()) {
+                    assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                  }
+                }))
         .failsToCompile();
   }
 
@@ -188,14 +183,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
+                }))
         .compilesWithoutError();
   }
 
@@ -212,14 +205,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isTrue();
+                }))
         .compilesWithoutError();
   }
 
@@ -244,14 +235,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -266,14 +255,12 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.TestClass");
-                assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.TestClass");
+                  assertThat(SuperficialValidation.validateElement(testClassElement)).isFalse();
+                }))
         .failsToCompile();
   }
 
@@ -295,20 +282,30 @@ public class SuperficialValidationTest {
     assertAbout(javaSource())
         .that(javaFileObject)
         .processedWith(
-            new AssertingProcessor() {
-              @Override
-              void runAssertions() {
-                TypeElement testClassElement =
-                    processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
-                assertWithMessage("testClassElement is valid")
-                    .that(SuperficialValidation.validateElement(testClassElement))
-                    .isFalse();
-              }
-            })
+            new AssertingProcessor(
+                processingEnv -> {
+                  TypeElement testClassElement =
+                      processingEnv.getElementUtils().getTypeElement("test.Outer.TestClass");
+                  assertWithMessage("testClassElement is valid")
+                      .that(SuperficialValidation.validateElement(testClassElement))
+                      .isFalse();
+                }))
         .failsToCompile();
   }
 
-  private abstract static class AssertingProcessor extends AbstractProcessor {
+  private static class AssertingProcessor extends AbstractProcessor {
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+      return SourceVersion.latestSupported();
+    }
+
+    private final Consumer<ProcessingEnvironment> assertions;
+
+    AssertingProcessor(Consumer<ProcessingEnvironment> assertions) {
+      this.assertions = assertions;
+    }
+
     @Override
     public Set<String> getSupportedAnnotationTypes() {
       return ImmutableSet.of("*");
@@ -316,14 +313,8 @@ public class SuperficialValidationTest {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-      try {
-        runAssertions();
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      assertions.accept(processingEnv);
       return false;
     }
-
-    abstract void runAssertions() throws Exception;
   }
 }

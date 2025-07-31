@@ -15,7 +15,7 @@
  */
 package com.google.auto.value;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Optional;
 import javax.annotation.Nullable;

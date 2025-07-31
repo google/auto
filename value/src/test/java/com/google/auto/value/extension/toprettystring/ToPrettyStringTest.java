@@ -958,4 +958,24 @@ public class ToPrettyStringTest {
     assertThat(valueType.toString())
         .isEqualTo("JavaBeans{int=4, boolean=false, notAJavaIdentifier=not}");
   }
+
+  @AutoValue
+  abstract static class Generic<T> {
+    abstract T get();
+
+    @ToPrettyString
+    abstract String toPrettyString();
+  }
+
+  @Test
+  public void generic() {
+    Generic<String> valueType = new AutoValue_ToPrettyStringTest_Generic<>("hello");
+
+    assertThat(valueType.toPrettyString()).isEqualTo("Generic {\n  get = hello,\n}");
+
+    // Check to make sure that we use the same property names that AutoValue does. This is mostly
+    // defensive, since in some scenarios AutoValue considers the property names of a java bean as
+    // having the prefix removed.
+    assertThat(valueType.toString()).isEqualTo("Generic{get=hello}");
+  }
 }

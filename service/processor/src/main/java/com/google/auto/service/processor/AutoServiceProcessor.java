@@ -17,24 +17,22 @@ package com.google.auto.service.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.common.base.Throwables.getStackTraceAsString;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.SortedSetMultimap;
+import com.google.common.collect.TreeMultimap;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -46,6 +44,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -57,12 +56,14 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 /**
- * Processes {@link AutoService} annotations and generates the service provider
- * configuration files described in {@link java.util.ServiceLoader}.
- * <p>
- * Processor Options:<ul>
- *   <li>{@code -Adebug} - turns on debug statements</li>
- *   <li>{@code -Averify=true} - turns on extra verification</li>
+ * Processes {@link AutoService} annotations and generates the service provider configuration files
+ * described in {@link java.util.ServiceLoader}.
+ *
+ * <p>Processor Options:
+ *
+ * <ul>
+ *   <li>{@code -Adebug} - turns on debug statements
+ *   <li>{@code -Averify=true} - turns on extra verification
  * </ul>
  */
 @SupportedOptions({"debug", "verify"})
@@ -74,14 +75,13 @@ public class AutoServiceProcessor extends AbstractProcessor {
   private final List<String> exceptionStacks = Collections.synchronizedList(new ArrayList<>());
 
   /**
-   * Maps the class names of service provider interfaces to the
-   * class names of the concrete classes which implement them.
-   * <p>
-   * For example,
-   *   {@code "com.google.apphosting.LocalRpcService" ->
-   *   "com.google.apphosting.datastore.LocalDatastoreService"}
+   * Maps the class names of service provider interfaces to the class names of the concrete classes
+   * which implement them.
+   *
+   * <p>For example, {@code "com.google.apphosting.LocalRpcService" ->
+   * "com.google.apphosting.datastore.LocalDatastoreService"}
    */
-  private final Multimap<String, String> providers = HashMultimap.create();
+  private final SortedSetMultimap<String, String> providers = TreeMultimap.create();
 
   @Override
   public ImmutableSet<String> getSupportedAnnotationTypes() {
@@ -94,17 +94,21 @@ public class AutoServiceProcessor extends AbstractProcessor {
   }
 
   /**
-   * <ol>
-   *  <li> For each class annotated with {@link AutoService}<ul>
-   *      <li> Verify the {@link AutoService} interface value is correct
-   *      <li> Categorize the class by its service interface
-   *      </ul>
    *
-   *  <li> For each {@link AutoService} interface <ul>
-   *       <li> Create a file named {@code META-INF/services/<interface>}
-   *       <li> For each {@link AutoService} annotated class for this interface <ul>
-   *           <li> Create an entry in the file
-   *           </ul>
+   *
+   * <ol>
+   *   <li>For each class annotated with {@link AutoService}
+   *       <ul>
+   *         <li>Verify the {@link AutoService} interface value is correct
+   *         <li>Categorize the class by its service interface
+   *       </ul>
+   *   <li>For each {@link AutoService} interface
+   *       <ul>
+   *         <li>Create a file named {@code META-INF/services/<interface>}
+   *         <li>For each {@link AutoService} annotated class for this interface
+   *             <ul>
+   *               <li>Create an entry in the file
+   *             </ul>
    *       </ul>
    * </ol>
    */
@@ -145,7 +149,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
       // TODO(gak): check for error trees?
       TypeElement providerImplementer = MoreElements.asType(e);
       AnnotationMirror annotationMirror = getAnnotationMirror(e, AutoService.class).get();
-      Set<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
+      ImmutableSet<DeclaredType> providerInterfaces = getValueFieldOfClasses(annotationMirror);
       if (providerInterfaces.isEmpty()) {
         error(MISSING_SERVICES_ERROR, e, annotationMirror);
         continue;
@@ -177,42 +181,17 @@ public class AutoServiceProcessor extends AbstractProcessor {
       String resourceFile = "META-INF/services/" + providerInterface;
       log("Working on resource file: " + resourceFile);
       try {
-        SortedSet<String> allServices = Sets.newTreeSet();
-        try {
-          // would like to be able to print the full path
-          // before we attempt to get the resource in case the behavior
-          // of filer.getResource does change to match the spec, but there's
-          // no good way to resolve CLASS_OUTPUT without first getting a resource.
-          FileObject existingFile =
-              filer.getResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
-          log("Looking for existing resource file at " + existingFile.toUri());
-          Set<String> oldServices = ServicesFiles.readServiceFile(existingFile.openInputStream());
-          log("Existing service entries: " + oldServices);
-          allServices.addAll(oldServices);
-        } catch (IOException e) {
-          // According to the javadoc, Filer.getResource throws an exception
-          // if the file doesn't already exist.  In practice this doesn't
-          // appear to be the case.  Filer.getResource will happily return a
-          // FileObject that refers to a non-existent file but will throw
-          // IOException if you try to open an input stream for it.
-          log("Resource file did not already exist.");
-        }
+        SortedSet<String> newServices = providers.get(providerInterface);
 
-        Set<String> newServices = new HashSet<>(providers.get(providerInterface));
-        if (!allServices.addAll(newServices)) {
-          log("No new service entries being added.");
-          continue;
-        }
-
-        log("New service file contents: " + allServices);
+        log("New service file contents: " + newServices);
         FileObject fileObject =
             filer.createResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
         try (OutputStream out = fileObject.openOutputStream()) {
-          ServicesFiles.writeServiceFile(allServices, out);
+          ServicesFiles.writeServiceFile(newServices, out);
         }
-        log("Wrote to: " + fileObject.toUri());
+        log("Wrote to: " + resourceFile);
       } catch (IOException e) {
-        fatalError("Unable to create " + resourceFile + ", " + e);
+        fatalError("Unable to create " + resourceFile + ", " + getStackTraceAsString(e));
         return;
       }
     }
@@ -228,25 +207,30 @@ public class AutoServiceProcessor extends AbstractProcessor {
       TypeElement providerType,
       AnnotationMirror annotationMirror) {
 
-    String verify = processingEnv.getOptions().get("verify");
-    if (verify == null || !Boolean.parseBoolean(verify)) {
+    if (!Boolean.parseBoolean(processingEnv.getOptions().getOrDefault("verify", "true"))
+        || suppresses(providerImplementer, "AutoService")) {
       return true;
     }
 
-    // TODO: We're currently only enforcing the subtype relationship
-    // constraint. It would be nice to enforce them all.
+    // We check that providerImplementer does indeed inherit from providerType, and that it is not
+    // abstract (an abstract class or interface). For ServiceLoader, we could also check that it has
+    // a public no-arg constructor. But it turns out that people also use AutoService in contexts
+    // where the META-INF/services entries are read by things other than ServiceLoader. Those things
+    // still require the class to exist and inherit from providerType, but they don't necessarily
+    // require a public no-arg constructor.
+    // More background: https://github.com/google/auto/issues/1505.
 
     Types types = processingEnv.getTypeUtils();
 
     if (types.isSubtype(providerImplementer.asType(), providerType.asType())) {
-      return true;
+      return checkNotAbstract(providerImplementer, annotationMirror);
     }
 
     // Maybe the provider has generic type, but the argument to @AutoService can't be generic.
     // So we allow that with a warning, which can be suppressed with @SuppressWarnings("rawtypes").
     // See https://github.com/google/auto/issues/870.
     if (types.isSubtype(providerImplementer.asType(), types.erasure(providerType.asType()))) {
-      if (!rawTypesSuppressed(providerImplementer)) {
+      if (!suppresses(providerImplementer, "rawtypes")) {
         warning(
             "Service provider "
                 + providerType
@@ -255,16 +239,35 @@ public class AutoServiceProcessor extends AbstractProcessor {
             providerImplementer,
             annotationMirror);
       }
-      return true;
+      return checkNotAbstract(providerImplementer, annotationMirror);
     }
+
+    String message =
+        "ServiceProviders must implement their service provider interface. "
+            + providerImplementer.getQualifiedName()
+            + " does not implement "
+            + providerType.getQualifiedName();
+    error(message, providerImplementer, annotationMirror);
 
     return false;
   }
 
-  private static boolean rawTypesSuppressed(Element element) {
+  private boolean checkNotAbstract(
+      TypeElement providerImplementer, AnnotationMirror annotationMirror) {
+    if (providerImplementer.getModifiers().contains(Modifier.ABSTRACT)) {
+      error(
+          "@AutoService can only be applied to a concrete class",
+          providerImplementer,
+          annotationMirror);
+      return false;
+    }
+    return true;
+  }
+
+  private static boolean suppresses(Element element, String warning) {
     for (; element != null; element = element.getEnclosingElement()) {
       SuppressWarnings suppress = element.getAnnotation(SuppressWarnings.class);
-      if (suppress != null && Arrays.asList(suppress.value()).contains("rawtypes")) {
+      if (suppress != null && Arrays.asList(suppress.value()).contains(warning)) {
         return true;
       }
     }
@@ -272,9 +275,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
   }
 
   /**
-   * Returns the binary name of a reference type. For example,
-   * {@code com.google.Foo$Bar}, instead of {@code com.google.Foo.Bar}.
-   *
+   * Returns the binary name of a reference type. For example, {@code com.google.Foo$Bar}, instead
+   * of {@code com.google.Foo.Bar}.
    */
   private String getBinaryName(TypeElement element) {
     return getBinaryNameImpl(element, element.getSimpleName().toString());

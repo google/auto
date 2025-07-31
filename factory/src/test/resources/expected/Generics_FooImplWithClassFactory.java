@@ -20,12 +20,12 @@ import javax.inject.Inject;
 
 @Generated(
     value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
+    comments = "https://github.com/google/auto/tree/main/factory"
     )
-final class Generics_FooImplWithClassFactory<M extends Generics.Bar> extends Generics.FooFactoryClass<M> {
+final class Generics_FooImplWithClassFactory<M extends Generics.Bar>
+    extends Generics.FooFactoryClass<M> {
   @Inject
-  Generics_FooImplWithClassFactory() {
-  }
+  Generics_FooImplWithClassFactory() {}
 
   @Override
   public Generics.FooImplWithClass<M> create() {

@@ -16,10 +16,11 @@
 package com.google.auto.value.processor;
 
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
+import static com.google.auto.value.processor.AutoValueishProcessor.hasVisibleNoArgConstructor;
 import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -86,16 +88,9 @@ class BuilderSpec {
     Optional<TypeElement> builderTypeElement = Optional.empty();
     for (TypeElement containedClass : typesIn(autoValueClass.getEnclosedElements())) {
       if (hasAnnotationMirror(containedClass, AUTO_VALUE_BUILDER_NAME)) {
-        if (!CLASS_OR_INTERFACE.contains(containedClass.getKind())) {
-          errorReporter.reportError(
-              containedClass,
-              "[AutoValueBuilderClass] @AutoValue.Builder can only apply to a class or an"
-                  + " interface");
-        } else if (!containedClass.getModifiers().contains(Modifier.STATIC)) {
-          errorReporter.reportError(
-              containedClass,
-              "[AutoValueInnerBuilder] @AutoValue.Builder cannot be applied to a non-static class");
-        } else if (builderTypeElement.isPresent()) {
+        findBuilderError(containedClass)
+            .ifPresent(error -> errorReporter.reportError(containedClass, "%s", error));
+        if (builderTypeElement.isPresent()) {
           errorReporter.reportError(
               containedClass,
               "[AutoValueTwoBuilders] %s already has a Builder: %s",
@@ -114,10 +109,29 @@ class BuilderSpec {
     }
   }
 
+  /** Finds why this {@code @AutoValue.Builder} class is bad, if it is bad. */
+  private Optional<String> findBuilderError(TypeElement builderTypeElement) {
+    if (!CLASS_OR_INTERFACE.contains(builderTypeElement.getKind())) {
+      return Optional.of(
+          "[AutoValueBuilderClass] @AutoValue.Builder can only apply to a class or an"
+              + " interface");
+    } else if (!builderTypeElement.getModifiers().contains(Modifier.STATIC)) {
+      return Optional.of(
+          "[AutoValueInnerBuilder] @AutoValue.Builder cannot be applied to a non-static class");
+    } else if (builderTypeElement.getKind().equals(ElementKind.CLASS)
+        && !hasVisibleNoArgConstructor(builderTypeElement)) {
+      return Optional.of(
+          "[AutoValueBuilderConstructor] @AutoValue.Builder class must have a non-private no-arg"
+              + " constructor");
+    }
+    return Optional.empty();
+  }
+
   /** Representation of an {@code AutoValue.Builder} class or interface. */
   class Builder implements AutoValueExtension.BuilderContext {
     private final TypeElement builderTypeElement;
     private ImmutableSet<ExecutableElement> toBuilderMethods;
+    private ImmutableSet<ExecutableElement> builderAbstractMethods;
     private ExecutableElement buildMethod;
     private BuilderMethodClassifier<?> classifier;
 
@@ -193,6 +207,13 @@ class BuilderSpec {
       return toBuilderMethods;
     }
 
+    ImmutableSet<ExecutableElement> builderAbstractMethods() {
+      if (builderAbstractMethods == null) {
+        builderAbstractMethods = abstractMethods(builderTypeElement, processingEnv);
+      }
+      return builderAbstractMethods;
+    }
+
     /**
      * Finds any methods in the set that return the builder type. If the builder has type parameters
      * {@code <A, B>}, then the return type of the method must be {@code Builder<A, B>} with the
@@ -200,15 +221,15 @@ class BuilderSpec {
      * parameters must be the same as those of the {@code @AutoValue} class. Here's a correct
      * example:
      *
-     * <pre>
-     * {@code @AutoValue abstract class Foo<A extends Number, B> {
+     * <pre>{@code
+     * @AutoValue abstract class Foo<A extends Number, B> {
      *   abstract int someProperty();
      *
      *   abstract Builder<A, B> toBuilder();
      *
      *   interface Builder<A extends Number, B> {...}
-     * }}
-     * </pre>
+     * }
+     * }</pre>
      *
      * <p>We currently impose that there cannot be more than one such method.
      */
@@ -258,18 +279,20 @@ class BuilderSpec {
 
     void defineVarsForAutoValue(
         AutoValueOrBuilderTemplateVars vars,
-        ImmutableBiMap<ExecutableElement, String> getterToPropertyName) {
+        ImmutableBiMap<ExecutableElement, String> getterToPropertyName,
+        Nullables nullables,
+        ImmutableSet<ExecutableElement> consumedBuilderAbstractMethods) {
       Iterable<ExecutableElement> builderMethods =
-          abstractMethods(builderTypeElement, processingEnv);
+          Sets.difference(builderAbstractMethods, consumedBuilderAbstractMethods);
       boolean autoValueHasToBuilder = toBuilderMethods != null && !toBuilderMethods.isEmpty();
-      ImmutableMap<ExecutableElement, TypeMirror> getterToPropertyType =
+      ImmutableMap<ExecutableElement, AnnotatedTypeMirror> getterToPropertyType =
           TypeVariables.rewriteReturnTypes(
-              processingEnv.getElementUtils(),
               processingEnv.getTypeUtils(),
               getterToPropertyName.keySet(),
               autoValueClass,
               builderTypeElement);
-      ImmutableMap.Builder<String, TypeMirror> rewrittenPropertyTypes = ImmutableMap.builder();
+      ImmutableMap.Builder<String, AnnotatedTypeMirror> rewrittenPropertyTypes =
+          ImmutableMap.builder();
       getterToPropertyType.forEach(
           (getter, type) -> rewrittenPropertyTypes.put(getterToPropertyName.get(getter), type));
       Optional<BuilderMethodClassifier<ExecutableElement>> optionalClassifier =
@@ -281,6 +304,7 @@ class BuilderSpec {
               builderTypeElement,
               getterToPropertyName,
               rewrittenPropertyTypes.build(),
+              nullables,
               autoValueHasToBuilder);
       if (!optionalClassifier.isPresent()) {
         return;
@@ -315,6 +339,7 @@ class BuilderSpec {
               autoValueClass,
               typeParamsString());
         }
+        errorReporter.abortIfAnyError();
         return;
       }
       this.buildMethod = Iterables.getOnlyElement(buildMethods);
@@ -330,12 +355,14 @@ class BuilderSpec {
       vars.builderPropertyBuilders =
           ImmutableMap.copyOf(classifier.propertyNameToPropertyBuilder());
 
-      vars.builderRequiredProperties =
+      ImmutableSet<Property> requiredProperties =
           vars.props.stream()
               .filter(p -> !p.isNullable())
               .filter(p -> p.getBuilderInitializer().isEmpty())
+              .filter(p -> !p.hasDefault())
               .filter(p -> !vars.builderPropertyBuilders.containsKey(p.getName()))
               .collect(toImmutableSet());
+      vars.builderRequiredProperties = BuilderRequiredProperties.of(vars.props, requiredProperties);
     }
   }
 
@@ -375,8 +402,7 @@ class BuilderSpec {
       this.optional = optional;
     }
 
-    // Not accessed from templates so doesn't have to be public.
-    String getName() {
+    public String getName() {
       return name;
     }
 
@@ -435,7 +461,7 @@ class BuilderSpec {
     private final String nullableAnnotation;
     private final Copier copier;
 
-    PropertySetter(ExecutableElement setter, TypeMirror parameterType, Copier copier) {
+    PropertySetter(ExecutableElement setter, AnnotatedTypeMirror parameterType, Copier copier) {
       this.setter = setter;
       this.copier = copier;
       this.access = SimpleMethod.access(setter);
@@ -443,7 +469,8 @@ class BuilderSpec {
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
       VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      Optional<String> maybeNullable = nullableAnnotationFor(parameterElement, parameterType);
+      Optional<String> maybeNullable =
+          nullableAnnotationFor(parameterElement, parameterType.getType());
       this.nullableAnnotation = maybeNullable.orElse("");
     }
 
@@ -451,9 +478,10 @@ class BuilderSpec {
       return setter;
     }
 
-    private static String parameterTypeString(ExecutableElement setter, TypeMirror parameterType) {
+    private static String parameterTypeString(
+        ExecutableElement setter, AnnotatedTypeMirror parameterType) {
       if (setter.isVarArgs()) {
-        TypeMirror componentType = MoreTypes.asArray(parameterType).getComponentType();
+        TypeMirror componentType = MoreTypes.asArray(parameterType.getType()).getComponentType();
         // This is a bit ugly. It's OK to annotate just the component type, because if it is
         // say `@Nullable String` then we will end up with `@Nullable String...`. Unlike the
         // normal array case, we can't have the situation where the array itself is annotated;

@@ -20,24 +20,24 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies that <a href="https://github.com/google/auto/tree/master/value">AutoValue</a> should
+ * Specifies that <a href="https://github.com/google/auto/tree/main/value">AutoValue</a> should
  * generate an implementation class for the annotated abstract class, implementing the standard
  * {@link Object} methods like {@link Object#equals equals} to have conventional value semantics. A
  * simple example:
  *
- * <pre>
+ * <pre>{@code
+ * @AutoValue
+ * abstract class Person {
+ *   static Person create(String name, int id) {
+ *     return new AutoValue_Person(name, id);
+ *   }
  *
- *   {@code @}AutoValue
- *   abstract class Person {
- *     static Person create(String name, int id) {
- *       return new AutoValue_Person(name, id);
- *     }
+ *   abstract String name();
+ *   abstract int id();
+ * }
+ * }</pre>
  *
- *     abstract String name();
- *     abstract int id();
- *   }</pre>
- *
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * @see <a href="https://github.com/google/auto/tree/main/value">AutoValue User's Guide</a>
  * @author Éamonn McManus
  * @author Kevin Bourrillion
  */
@@ -51,24 +51,24 @@ public @interface AutoValue {
    * here is an alternative way to write the {@code Person} class mentioned in the {@link AutoValue}
    * example:
    *
-   * <pre>
+   * <pre>{@code
+   * @AutoValue
+   * abstract class Person {
+   *   static Builder builder() {
+   *     return new AutoValue_Person.Builder();
+   *   }
    *
-   *   {@code @}AutoValue
-   *   abstract class Person {
-   *     static Builder builder() {
-   *       return new AutoValue_Person.Builder();
-   *     }
+   *   abstract String name();
+   *   abstract int id();
    *
-   *     abstract String name();
-   *     abstract int id();
-   *
-   *     {@code @}AutoValue.Builder
-   *     interface Builder {
-   *       Builder name(String x);
-   *       Builder id(int x);
-   *       Person build();
-   *     }
-   *   }</pre>
+   *   @AutoValue.Builder
+   *   interface Builder {
+   *     Builder name(String x);
+   *     Builder id(int x);
+   *     Person build();
+   *   }
+   * }
+   * }</pre>
    *
    * @author Éamonn McManus
    */
@@ -96,59 +96,63 @@ public @interface AutoValue {
    * is present.
    *
    * <p>If you want to copy annotations from your {@literal @}AutoValue-annotated class's methods to
-   * the generated fields in the AutoValue_... implementation, annotate your method
-   * with {@literal @}AutoValue.CopyAnnotations. For example, if Example.java is:<pre>
+   * the generated fields in the AutoValue_... implementation, annotate your method with
+   * {@literal @}AutoValue.CopyAnnotations. For example, if Example.java is:
    *
-   *   {@code @}Immutable
-   *   {@code @}AutoValue
-   *   abstract class Example {
-   *     {@code @}CopyAnnotations
-   *     {@code @}SuppressWarnings("Immutable") // justification ...
-   *     abstract Object getObject();
-   *     // other details ...
-   *   }</pre>
+   * <pre>{@code
+   * @Immutable
+   * @AutoValue
+   * abstract class Example {
+   *   @CopyAnnotations
+   *   @SuppressWarnings("Immutable") // justification ...
+   *   abstract Object getObject();
+   *   // other details ...
+   * }
+   * }</pre>
    *
-   * <p>Then AutoValue will generate the following AutoValue_Example.java:<pre>
+   * <p>Then AutoValue will generate the following AutoValue_Example.java:
    *
-   *   final class AutoValue_Example extends Example {
-   *     {@code @}SuppressWarnings("Immutable")
-   *     private final Object object;
+   * <pre>{@code
+   * final class AutoValue_Example extends Example {
+   *   @SuppressWarnings("Immutable")
+   *   private final Object object;
    *
-   *     {@code @}SuppressWarnings("Immutable")
-   *     {@code @}Override
-   *     Object getObject() {
-   *       return object;
-   *     }
+   *   @SuppressWarnings("Immutable")
+   *   @Override
+   *   Object getObject() {
+   *     return object;
+   *   }
    *
-   *     // other details ...
-   *   }</pre>
+   *   // other details ...
+   * }
+   * }</pre>
    *
    * <p>When the <i>type</i> of an {@code @AutoValue} property method has annotations, those are
-   * part of the type, so by default they are copied to the implementation of the method. But if
-   * a type annotation is mentioned in {@code exclude} then it is not copied.
+   * part of the type, so by default they are copied to the implementation of the method. But if a
+   * type annotation is mentioned in {@code exclude} then it is not copied.
    *
-   * <p>For example, suppose {@code @Confidential} is a
-   * {@link java.lang.annotation.ElementType#TYPE_USE TYPE_USE} annotation:
+   * <p>For example, suppose {@code @Confidential} is a {@link
+   * java.lang.annotation.ElementType#TYPE_USE TYPE_USE} annotation:
    *
-   * <pre>
+   * <pre>{@code
+   * @AutoValue
+   * abstract class Person {
+   *   static Person create(@Confidential String name, int id) {
+   *     return new AutoValue_Person(name, id);
+   *   }
    *
-   *   {@code @}AutoValue
-   *   abstract class Person {
-   *     static Person create({@code @}Confidential String name, int id) {
-   *       return new AutoValue_Person(name, id);
-   *     }
-   *
-   *     abstract {@code @}Confidential String name();
-   *     abstract int id();
-   *   }</pre>
+   *   abstract @Confidential String name();
+   *   abstract int id();
+   * }
+   * }</pre>
    *
    * Then the implementation of the {@code name()} method will also have return type
    * {@code @Confidential String}. But if {@code name()} were written like this...
    *
-   * <pre>
-   *
-   *     {@code @AutoValue.CopyAnnotations(exclude = Confidential.class)}
-   *     abstract {@code @}Confidential String name();</pre>
+   * <pre>{@code
+   * @AutoValue.CopyAnnotations(exclude = Confidential.class)
+   * abstract @Confidential String name();
+   * }</pre>
    *
    * <p>...then the implementation of {@code name()} would have return type {@code String} without
    * the annotation.

@@ -17,14 +17,21 @@ package com.google.auto.value;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
+import static java.lang.annotation.ElementType.TYPE_USE;
+import static java.util.stream.Collectors.joining;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.truth.Truth;
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.math.BigInteger;
 import java.time.LocalTime;
 import java.util.AbstractSet;
@@ -35,6 +42,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.lang.model.SourceVersion;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -130,6 +138,7 @@ public final class AutoBuilderTest {
     TRUTHY
   }
 
+  @Retention(RetentionPolicy.RUNTIME)
   @interface MyAnnotation {
     String value();
 
@@ -205,6 +214,68 @@ public final class AutoBuilderTest {
             .truthiness(MyAnnotation.DEFAULT_TRUTHINESS)
             .build();
     assertThat(annotation3).isEqualTo(annotation4);
+  }
+
+  @AutoBuilder(ofClass = MyAnnotation.class)
+  public interface MyAnnotationSimpleBuilder {
+    MyAnnotationSimpleBuilder value(String x);
+
+    MyAnnotationSimpleBuilder id(int x);
+
+    MyAnnotationSimpleBuilder truthiness(Truthiness x);
+
+    MyAnnotation build();
+  }
+
+  public static MyAnnotationSimpleBuilder myAnnotationSimpleBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationSimpleBuilder();
+  }
+
+  @Test
+  public void buildWithoutAutoAnnotation() {
+    // We don't set a value for `id` or `truthiness`, so AutoBuilder should use the default ones in
+    // the annotation.
+    MyAnnotation annotation1 = myAnnotationSimpleBuilder().value("foo").build();
+    assertThat(annotation1.value()).isEqualTo("foo");
+    assertThat(annotation1.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation1.truthiness()).isEqualTo(MyAnnotation.DEFAULT_TRUTHINESS);
+
+    // Now we set `truthiness` but still not `id`.
+    MyAnnotation annotation2 =
+        myAnnotationSimpleBuilder().value("bar").truthiness(Truthiness.TRUTHY).build();
+    assertThat(annotation2.value()).isEqualTo("bar");
+    assertThat(annotation2.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation2.truthiness()).isEqualTo(Truthiness.TRUTHY);
+
+    // All three elements set explicitly.
+    MyAnnotation annotation3 =
+        myAnnotationSimpleBuilder().value("foo").id(23).truthiness(Truthiness.TRUTHY).build();
+    assertThat(annotation3.value()).isEqualTo("foo");
+    assertThat(annotation3.id()).isEqualTo(23);
+    assertThat(annotation3.truthiness()).isEqualTo(Truthiness.TRUTHY);
+  }
+
+  // This builder doesn't have a setter for the `truthiness` element, so the annotations it builds
+  // should always get the default value.
+  @AutoBuilder(ofClass = MyAnnotation.class)
+  public interface MyAnnotationSimplerBuilder {
+    MyAnnotationSimplerBuilder value(String x);
+
+    MyAnnotationSimplerBuilder id(int x);
+
+    MyAnnotation build();
+  }
+
+  public static MyAnnotationSimplerBuilder myAnnotationSimplerBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationSimplerBuilder();
+  }
+
+  @Test
+  public void buildWithoutAutoAnnotation_noSetterForElement() {
+    MyAnnotation annotation = myAnnotationSimplerBuilder().value("foo").id(23).build();
+    assertThat(annotation.value()).isEqualTo("foo");
+    assertThat(annotation.id()).isEqualTo(23);
+    assertThat(annotation.truthiness()).isEqualTo(MyAnnotation.DEFAULT_TRUTHINESS);
   }
 
   static class Overload {
@@ -342,14 +413,10 @@ public final class AutoBuilderTest {
 
   @Test
   public void missingRequiredProperty() {
-    // This test is compiled at source level 7 by CompileWithEclipseTest, so we can't use
-    // assertThrows with a lambda.
-    try {
-      localTimeBuilder().hour(12).minute(34).build();
-      fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
-    }
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class, () -> localTimeBuilder().hour(12).minute(34).build());
+    assertThat(e).hasMessageThat().isEqualTo("Missing required properties: second");
   }
 
   static void throwException() throws IOException {
@@ -427,7 +494,7 @@ public final class AutoBuilderTest {
     assertThat(builder3.build()).isEqualTo(expected);
 
     ListContainer.Builder builder4 = ListContainer.builder();
-    builder4.listBuilder();
+    ImmutableList.Builder<String> unused = builder4.listBuilder();
     try {
       builder4.setList(ImmutableList.of("one", "two", "three"));
       fail();
@@ -437,12 +504,7 @@ public final class AutoBuilderTest {
   }
 
   static <T> String concatList(ImmutableList<T> list) {
-    // We're avoiding streams for now so we compile this in Java 7 mode in CompileWithEclipseTest.
-    StringBuilder sb = new StringBuilder();
-    for (T element : list) {
-      sb.append(element);
-    }
-    return sb.toString();
+    return list.stream().map(String::valueOf).collect(joining());
   }
 
   @AutoBuilder(callMethod = "concatList")
@@ -596,9 +658,9 @@ public final class AutoBuilderTest {
   @Test
   public void genericGetters() {
     PairBuilder<Number> builder = pairBuilder();
-    assertThat(builder.getSecond()).isEmpty();
+    Truth.assertThat(builder.getSecond()).isEmpty();
     builder.setSecond(2);
-    assertThat(builder.getSecond()).hasValue(2);
+    Truth.assertThat(builder.getSecond()).hasValue(2);
     try {
       builder.getFirst();
       fail();
@@ -607,5 +669,114 @@ public final class AutoBuilderTest {
     builder.setFirst(1.0);
     assertThat(builder.getFirst()).isEqualTo(1.0);
     assertThat(builder.build()).containsExactly(1.0, 2).inOrder();
+  }
+
+  static class NumberHolder<T extends Number> {
+    private final T number;
+
+    NumberHolder(T number) {
+      this.number = number;
+    }
+
+    T getNumber() {
+      return number;
+    }
+  }
+
+  static <T extends Number> NumberHolder<T> buildNumberHolder(T number) {
+    return new NumberHolder<>(number);
+  }
+
+  @AutoBuilder(callMethod = "buildNumberHolder")
+  interface NumberHolderBuilder<T extends Number> {
+    NumberHolderBuilder<T> setNumber(T number);
+
+    NumberHolder<T> build();
+  }
+
+  static <T extends Number> NumberHolderBuilder<T> numberHolderBuilder() {
+    return new AutoBuilder_AutoBuilderTest_NumberHolderBuilder<>();
+  }
+
+  static <T extends Number> NumberHolderBuilder<T> numberHolderBuilder(
+      NumberHolder<T> numberHolder) {
+    return new AutoBuilder_AutoBuilderTest_NumberHolderBuilder<>(numberHolder);
+  }
+
+  @Test
+  public void builderFromInstance() {
+    NumberHolder<Integer> instance1 =
+        AutoBuilderTest.<Integer>numberHolderBuilder().setNumber(23).build();
+    assertThat(instance1.getNumber()).isEqualTo(23);
+    NumberHolder<Integer> instance2 = numberHolderBuilder(instance1).build();
+    assertThat(instance2.getNumber()).isEqualTo(23);
+    NumberHolder<Integer> instance3 = numberHolderBuilder(instance2).setNumber(17).build();
+    assertThat(instance3.getNumber()).isEqualTo(17);
+  }
+
+  @AutoBuilder(callMethod = "of", ofClass = Simple.class)
+  @MyAnnotation("thing")
+  interface AnnotatedSimpleStaticBuilder1 {
+    AnnotatedSimpleStaticBuilder1 anInt(int x);
+
+    AnnotatedSimpleStaticBuilder1 aString(String x);
+
+    Simple build();
+  }
+
+  @Test
+  public void builderAnnotationsNotCopiedByDefault() {
+    assertThat(AutoBuilder_AutoBuilderTest_AnnotatedSimpleStaticBuilder1.class.getAnnotations())
+        .asList()
+        .isEmpty();
+  }
+
+  @AutoBuilder(callMethod = "of", ofClass = Simple.class)
+  @AutoValue.CopyAnnotations
+  @MyAnnotation("thing")
+  interface AnnotatedSimpleStaticBuilder2 {
+    AnnotatedSimpleStaticBuilder2 anInt(int x);
+
+    AnnotatedSimpleStaticBuilder2 aString(String x);
+
+    Simple build();
+  }
+
+  @Test
+  public void builderAnnotationsCopiedIfRequested() {
+    assertThat(AutoBuilder_AutoBuilderTest_AnnotatedSimpleStaticBuilder2.class.getAnnotations())
+        .asList()
+        .contains(myAnnotationBuilder().value("thing").build());
+  }
+
+  @Target(TYPE_USE)
+  public @interface Nullable {}
+
+  public static <T extends @Nullable Object, U> T frob(T arg, U notNull) {
+    return arg;
+  }
+
+  @AutoBuilder(callMethod = "frob")
+  interface FrobCaller<T extends @Nullable Object, U> {
+    FrobCaller<T, U> arg(T arg);
+
+    FrobCaller<T, U> notNull(U notNull);
+
+    T call();
+
+    static <T extends @Nullable Object, U> FrobCaller<T, U> caller() {
+      return new AutoBuilder_AutoBuilderTest_FrobCaller<>();
+    }
+  }
+
+  @Test
+  public void builderTypeVariableWithNullableBound() {
+    // The Annotation Processing API doesn't see the @Nullable Object bound on Java 8.
+    assumeTrue(SourceVersion.latest().ordinal() > SourceVersion.RELEASE_8.ordinal());
+    assertThat(FrobCaller.<@Nullable String, String>caller().arg(null).notNull("foo").call())
+        .isNull();
+    assertThrows(
+        NullPointerException.class,
+        () -> FrobCaller.<@Nullable String, String>caller().arg(null).notNull(null).call());
   }
 }

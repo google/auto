@@ -16,29 +16,20 @@
 
 package com.google.auto.value.extension.toprettystring.processor;
 
-import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
-import static com.google.auto.common.MoreElements.getPackage;
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
-import static com.google.auto.value.extension.toprettystring.processor.Annotations.getAnnotationMirror;
-import static com.google.common.collect.Sets.union;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 
-import com.google.auto.common.MoreTypes;
-import com.google.auto.common.Visibility;
 import com.google.auto.value.extension.AutoValueExtension;
 import com.google.auto.value.extension.AutoValueExtension.Context;
-import com.google.common.base.Equivalence.Wrapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -46,19 +37,11 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
-import java.lang.annotation.Inherited;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.QualifiedNameable;
-import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 
 /**
  * A factory for {@link TypeSpec}s used in {@link AutoValueExtension} implementations.
@@ -68,15 +51,11 @@ import javax.lang.model.util.Types;
  * location to consolidate the code.
  */
 final class ExtensionClassTypeSpecBuilder {
-  private static final String AUTO_VALUE_PACKAGE_NAME = "com.google.auto.value.";
-  private static final String AUTO_VALUE_NAME = AUTO_VALUE_PACKAGE_NAME + "AutoValue";
-  private static final String COPY_ANNOTATIONS_NAME = AUTO_VALUE_NAME + ".CopyAnnotations";
 
   private final Context context;
   private final String className;
   private final String classToExtend;
   private final boolean isFinal;
-  private final Types types;
   private final Elements elements;
   private final SourceVersion sourceVersion;
 
@@ -86,7 +65,6 @@ final class ExtensionClassTypeSpecBuilder {
     this.className = className;
     this.classToExtend = classToExtend;
     this.isFinal = isFinal;
-    this.types = context.processingEnvironment().getTypeUtils();
     this.elements = context.processingEnvironment().getElementUtils();
     this.sourceVersion = context.processingEnvironment().getSourceVersion();
   }
@@ -101,7 +79,10 @@ final class ExtensionClassTypeSpecBuilder {
     TypeSpec.Builder builder =
         classBuilder(className)
             .superclass(superType())
-            .addAnnotations(copiedClassAnnotations(context.autoValueClass()))
+            .addAnnotations(
+                context.classAnnotationsToCopy(context.autoValueClass()).stream()
+                    .map(AnnotationSpec::get)
+                    .collect(toImmutableList()))
             .addTypeVariables(annotatedTypeVariableNames())
             .addModifiers(isFinal ? FINAL : ABSTRACT)
             .addMethod(constructor());
@@ -139,151 +120,31 @@ final class ExtensionClassTypeSpecBuilder {
 
   private MethodSpec constructor() {
     MethodSpec.Builder constructor = constructorBuilder();
+    // TODO(b/35944623): Replace this with a standard way of avoiding keywords.
+    Set<String> propertyNames = context.properties().keySet();
+    ImmutableMap<String, String> parameterNames =
+        propertyNames.stream()
+            .collect(toImmutableMap(name -> name, name -> generateIdentifier(name, propertyNames)));
     context
         .propertyTypes()
-        .forEach((name, type) -> constructor.addParameter(annotatedType(type), name + "$"));
+        .forEach(
+            (name, type) ->
+                constructor.addParameter(annotatedType(type), parameterNames.get(name)));
     String superParams =
-        context.properties().keySet().stream().map(n -> n + "$").collect(joining(", "));
+        context.properties().keySet().stream().map(parameterNames::get).collect(joining(", "));
     constructor.addStatement("super($L)", superParams);
     return constructor.build();
   }
 
-  /**
-   * True if the given class name is in the com.google.auto.value package or a subpackage. False if
-   * the class name contains {@code Test}, since many AutoValue tests under com.google.auto.value
-   * define their own annotations.
-   */
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private boolean isInAutoValuePackage(String className) {
-    return className.startsWith(AUTO_VALUE_PACKAGE_NAME) && !className.contains("Test");
-  }
-
-  /**
-   * Returns the fully-qualified name of an annotation-mirror, e.g.
-   * "com.google.auto.value.AutoValue".
-   */
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private static String getAnnotationFqName(AnnotationMirror annotation) {
-    return ((QualifiedNameable) annotation.getAnnotationType().asElement())
-        .getQualifiedName()
-        .toString();
-  }
-
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private boolean annotationVisibleFrom(AnnotationMirror annotation, Element from) {
-    Element annotationElement = annotation.getAnnotationType().asElement();
-    Visibility visibility = Visibility.effectiveVisibilityOfElement(annotationElement);
-    switch (visibility) {
-      case PUBLIC:
-        return true;
-      case PROTECTED:
-        // If the annotation is protected, it must be inside another class, call it C. If our
-        // @AutoValue class is Foo then, for the annotation to be visible, either Foo must be in
-        // the same package as C or Foo must be a subclass of C. If the annotation is visible from
-        // Foo then it is also visible from our generated subclass AutoValue_Foo.
-        // The protected case only applies to method annotations. An annotation on the
-        // AutoValue_Foo class itself can't be protected, even if AutoValue_Foo ultimately
-        // inherits from the class that defines the annotation. The JLS says "Access is permitted
-        // only within the body of a subclass":
-        // https://docs.oracle.com/javase/specs/jls/se8/html/jls-6.html#jls-6.6.2.1
-        // AutoValue_Foo is a top-level class, so an annotation on it cannot be in the body of a
-        // subclass of anything.
-        return getPackage(annotationElement).equals(getPackage(from))
-            || types.isSubtype(from.asType(), annotationElement.getEnclosingElement().asType());
-      case DEFAULT:
-        return getPackage(annotationElement).equals(getPackage(from));
-      default:
-        return false;
+  private static String generateIdentifier(String name, Set<String> existingNames) {
+    if (!SourceVersion.isKeyword(name)) {
+      return name;
     }
-  }
-
-  /** Implements the semantics of {@code AutoValue.CopyAnnotations}; see its javadoc. */
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private ImmutableList<AnnotationMirror> annotationsToCopy(
-      Element autoValueType, Element typeOrMethod, Set<String> excludedAnnotations) {
-    ImmutableList.Builder<AnnotationMirror> result = ImmutableList.builder();
-    for (AnnotationMirror annotation : typeOrMethod.getAnnotationMirrors()) {
-      String annotationFqName = getAnnotationFqName(annotation);
-      // To be included, the annotation should not be in com.google.auto.value,
-      // and it should not be in the excludedAnnotations set.
-      if (!isInAutoValuePackage(annotationFqName)
-          && !excludedAnnotations.contains(annotationFqName)
-          && annotationVisibleFrom(annotation, autoValueType)) {
-        result.add(annotation);
+    for (int i = 0; ; i++) {
+      String newName = name + i;
+      if (!existingNames.contains(newName)) {
+        return newName;
       }
-    }
-
-    return result.build();
-  }
-
-  /** Implements the semantics of {@code AutoValue.CopyAnnotations}; see its javadoc. */
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private ImmutableList<AnnotationSpec> copyAnnotations(
-      Element autoValueType, Element typeOrMethod, Set<String> excludedAnnotations) {
-    ImmutableList<AnnotationMirror> annotationsToCopy =
-        annotationsToCopy(autoValueType, typeOrMethod, excludedAnnotations);
-    return annotationsToCopy.stream().map(AnnotationSpec::get).collect(toImmutableList());
-  }
-
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private static boolean hasAnnotationMirror(Element element, String annotationName) {
-    return getAnnotationMirror(element, annotationName).isPresent();
-  }
-
-  /**
-   * Returns the contents of the {@code AutoValue.CopyAnnotations.exclude} element, as a set of
-   * {@code TypeMirror} where each type is an annotation type.
-   */
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private ImmutableSet<TypeMirror> getExcludedAnnotationTypes(Element element) {
-    Optional<AnnotationMirror> maybeAnnotation =
-        getAnnotationMirror(element, COPY_ANNOTATIONS_NAME);
-    if (!maybeAnnotation.isPresent()) {
-      return ImmutableSet.of();
-    }
-
-    @SuppressWarnings("unchecked")
-    List<AnnotationValue> excludedClasses =
-        (List<AnnotationValue>) getAnnotationValue(maybeAnnotation.get(), "exclude").getValue();
-    return excludedClasses.stream()
-        .map(
-            annotationValue ->
-                MoreTypes.equivalence().wrap((TypeMirror) annotationValue.getValue()))
-        // TODO(b/122509249): Move TypeMirrorSet to common package instead of doing this.
-        .distinct()
-        .map(Wrapper::get)
-        .collect(toImmutableSet());
-  }
-
-  /**
-   * Returns the contents of the {@code AutoValue.CopyAnnotations.exclude} element, as a set of
-   * strings that are fully-qualified class names.
-   */
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private Set<String> getExcludedAnnotationClassNames(Element element) {
-    return getExcludedAnnotationTypes(element).stream()
-        .map(MoreTypes::asTypeElement)
-        .map(typeElement -> typeElement.getQualifiedName().toString())
-        .collect(toSet());
-  }
-
-  // TODO(b/122509249): Move code copied from com.google.auto.value.processor to auto-common.
-  private static Set<String> getAnnotationsMarkedWithInherited(Element element) {
-    return element.getAnnotationMirrors().stream()
-        .filter(a -> isAnnotationPresent(a.getAnnotationType().asElement(), Inherited.class))
-        .map(ExtensionClassTypeSpecBuilder::getAnnotationFqName)
-        .collect(toSet());
-  }
-
-  private ImmutableList<AnnotationSpec> copiedClassAnnotations(TypeElement type) {
-    // Only copy annotations from a class if it has @AutoValue.CopyAnnotations.
-    if (hasAnnotationMirror(type, COPY_ANNOTATIONS_NAME)) {
-      Set<String> excludedAnnotations =
-          union(getExcludedAnnotationClassNames(type), getAnnotationsMarkedWithInherited(type));
-
-      return copyAnnotations(type, type, excludedAnnotations);
-    } else {
-      return ImmutableList.of();
     }
   }
 

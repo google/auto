@@ -16,6 +16,7 @@
 package com.google.auto.factory.processor;
 
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
@@ -27,15 +28,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.google.auto.common.AnnotationMirrors;
-import com.google.auto.common.AnnotationValues;
 import com.google.auto.common.MoreTypes;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -47,19 +46,10 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
-import java.lang.annotation.Target;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -68,6 +58,7 @@ import javax.lang.model.util.Elements;
 
 final class FactoryWriter {
 
+  private final InjectApi injectApi;
   private final Filer filer;
   private final Elements elements;
   private final SourceVersion sourceVersion;
@@ -75,7 +66,9 @@ final class FactoryWriter {
 
   FactoryWriter(
       ProcessingEnvironment processingEnv,
+      InjectApi injectApi,
       ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated) {
+    this.injectApi = injectApi;
     this.filer = processingEnv.getFiler();
     this.elements = processingEnv.getElementUtils();
     this.sourceVersion = processingEnv.getSourceVersion();
@@ -90,8 +83,9 @@ final class FactoryWriter {
             elements,
             sourceVersion,
             AutoFactoryProcessor.class,
-            "https://github.com/google/auto/tree/master/factory")
+            "https://github.com/google/auto/tree/main/factory")
         .ifPresent(factory::addAnnotation);
+    descriptor.annotations().forEach(a -> factory.addAnnotation(AnnotationSpec.get(a)));
     if (!descriptor.allowSubclasses()) {
       factory.addModifiers(FINAL);
     }
@@ -125,22 +119,29 @@ final class FactoryWriter {
 
   private void addConstructorAndProviderFields(
       TypeSpec.Builder factory, FactoryDescriptor descriptor) {
-    MethodSpec.Builder constructor = constructorBuilder().addAnnotation(Inject.class);
+    MethodSpec.Builder constructor =
+        constructorBuilder().addAnnotation(ClassName.get(injectApi.inject()));
     if (descriptor.publicType()) {
       constructor.addModifiers(PUBLIC);
     }
-    Iterator<ProviderField> providerFields = descriptor.providers().values().iterator();
-    for (int argumentIndex = 1; providerFields.hasNext(); argumentIndex++) {
-      ProviderField provider = providerFields.next();
+    ImmutableCollection<ProviderField> providerFields = descriptor.providers().values();
+    int argumentNumber = 0;
+    for (ProviderField provider : providerFields) {
+      ++argumentNumber;
       TypeName typeName = resolveTypeName(provider.key().type().get()).box();
-      TypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), typeName);
+      TypeName providerType =
+          ParameterizedTypeName.get(ClassName.get(injectApi.provider()), typeName);
       factory.addField(providerType, provider.name(), PRIVATE, FINAL);
       if (provider.key().qualifier().isPresent()) {
         // only qualify the constructor parameter
         providerType = providerType.annotated(AnnotationSpec.get(provider.key().qualifier().get()));
       }
       constructor.addParameter(providerType, provider.name());
-      constructor.addStatement("this.$1L = checkNotNull($1L, $2L)", provider.name(), argumentIndex);
+      constructor.addStatement(
+          "this.$1L = checkNotNull($1L, $2L, $3L)",
+          provider.name(),
+          argumentNumber,
+          providerFields.size());
     }
 
     factory.addMethod(constructor.build());
@@ -166,9 +167,13 @@ final class FactoryWriter {
           methodDescriptor.exceptions().stream().map(TypeName::get).collect(toList()));
       CodeBlock.Builder args = CodeBlock.builder();
       method.addParameters(parameters(methodDescriptor.passedParameters()));
-      Iterator<Parameter> parameters = methodDescriptor.creationParameters().iterator();
-      for (int argumentIndex = 1; parameters.hasNext(); argumentIndex++) {
-        Parameter parameter = parameters.next();
+      ImmutableSet<Parameter> parameters = methodDescriptor.creationParameters();
+      int argumentNumber = 0;
+      String sep = "";
+      for (Parameter parameter : parameters) {
+        ++argumentNumber;
+        args.add(sep);
+        sep = ", ";
         boolean checkNotNull = !parameter.nullable().isPresent();
         CodeBlock argument;
         if (methodDescriptor.passedParameters().contains(parameter)) {
@@ -179,7 +184,7 @@ final class FactoryWriter {
         } else {
           ProviderField provider = requireNonNull(descriptor.providers().get(parameter.key()));
           argument = CodeBlock.of(provider.name());
-          if (parameter.isProvider()) {
+          if (injectApi.isProvider(parameter.type().get())) {
             // Providers are checked for nullness in the Factory's constructor.
             checkNotNull = false;
           } else {
@@ -187,12 +192,10 @@ final class FactoryWriter {
           }
         }
         if (checkNotNull) {
-          argument = CodeBlock.of("checkNotNull($L, $L)", argument, argumentIndex);
+          argument =
+              CodeBlock.of("checkNotNull($L, $L, $L)", argument, argumentNumber, parameters.size());
         }
         args.add(argument);
-        if (parameters.hasNext()) {
-          args.add(", ");
-        }
       }
       method.addStatement("return new $T($L)", methodDescriptor.returnType(), args.build());
       factory.addMethod(method.build());
@@ -228,40 +231,13 @@ final class FactoryWriter {
     ImmutableList.Builder<ParameterSpec> builder = ImmutableList.builder();
     for (Parameter parameter : parameters) {
       TypeName type = resolveTypeName(parameter.type().get());
-      // Remove TYPE_USE annotations, since resolveTypeName will already have included those in
-      // the TypeName it returns.
-      List<AnnotationSpec> annotations =
-          Stream.of(parameter.nullable(), parameter.key().qualifier())
-              .flatMap(Streams::stream)
-              .filter(a -> !isTypeUseAnnotation(a))
-              .map(AnnotationSpec::get)
-              .collect(toList());
+      ImmutableList<AnnotationSpec> annotations =
+          parameter.annotations().stream().map(AnnotationSpec::get).collect(toImmutableList());
       ParameterSpec parameterSpec =
           ParameterSpec.builder(type, parameter.name()).addAnnotations(annotations).build();
       builder.add(parameterSpec);
     }
     return builder.build();
-  }
-
-  private static boolean isTypeUseAnnotation(AnnotationMirror mirror) {
-    Element annotationElement = mirror.getAnnotationType().asElement();
-    // This is basically equivalent to:
-    //    Target target = annotationElement.getAnnotation(Target.class);
-    //    return target != null
-    //        && Arrays.asList(annotationElement.getAnnotation(Target.class)).contains(TYPE_USE);
-    // but that might blow up if the annotation is being compiled at the same time and has an
-    // undefined identifier in its @Target values. The rigmarole below avoids that problem.
-    Optional<AnnotationMirror> maybeTargetMirror =
-        Mirrors.getAnnotationMirror(annotationElement, Target.class);
-    return maybeTargetMirror
-        .map(
-            targetMirror ->
-                AnnotationValues.getEnums(
-                        AnnotationMirrors.getAnnotationValue(targetMirror, "value"))
-                    .stream()
-                    .map(VariableElement::getSimpleName)
-                    .anyMatch(name -> name.contentEquals("TYPE_USE")))
-        .orElse(false);
   }
 
   private static void addCheckNotNullMethod(
@@ -274,13 +250,14 @@ final class FactoryWriter {
               .addTypeVariable(typeVariable)
               .returns(typeVariable)
               .addParameter(typeVariable, "reference")
-              .addParameter(TypeName.INT, "argumentIndex")
+              .addParameter(TypeName.INT, "argumentNumber")
+              .addParameter(TypeName.INT, "argumentCount")
               .beginControlFlow("if (reference == null)")
               .addStatement(
-                  "throw new $T($S + argumentIndex)",
+                  "throw new $T($S + argumentNumber + $S + argumentCount)",
                   NullPointerException.class,
-                  "@AutoFactory method argument is null but is not marked @Nullable. Argument "
-                      + "index: ")
+                  "@AutoFactory method argument is null but is not marked @Nullable. Argument ",
+                  " of ")
               .endControlFlow()
               .addStatement("return reference")
               .build());
@@ -302,15 +279,14 @@ final class FactoryWriter {
   }
 
   /**
-   * Returns an appropriate {@code TypeName} for the given type. If the type is an
-   * {@code ErrorType}, and if it is a simple-name reference to one of the {@code *Factory}
-   * classes that we are going to generate, then we return its fully-qualified name. In every other
-   * case we just return {@code TypeName.get(type)}. Specifically, if it is an {@code ErrorType}
-   * referencing some other type, or referencing one of the classes we are going to generate but
-   * using its fully-qualified name, then we leave it as-is. JavaPoet treats {@code TypeName.get(t)}
-   * the same for {@code ErrorType} as for {@code DeclaredType}, which means that if this is a name
-   * that will eventually be generated then the code we write that references the type will in fact
-   * compile.
+   * Returns an appropriate {@code TypeName} for the given type. If the type is an {@code
+   * ErrorType}, and if it is a simple-name reference to one of the {@code *Factory} classes that we
+   * are going to generate, then we return its fully-qualified name. In every other case we just
+   * return {@code TypeName.get(type)}. Specifically, if it is an {@code ErrorType} referencing some
+   * other type, or referencing one of the classes we are going to generate but using its
+   * fully-qualified name, then we leave it as-is. JavaPoet treats {@code TypeName.get(t)} the same
+   * for {@code ErrorType} as for {@code DeclaredType}, which means that if this is a name that will
+   * eventually be generated then the code we write that references the type will in fact compile.
    *
    * <p>A simpler alternative would be to defer processing to a later round if we find an
    * {@code @AutoFactory} class that references undefined types, under the assumption that something

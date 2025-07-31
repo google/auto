@@ -15,9 +15,8 @@
  */
 package com.google.auto.service.processor;
 
-import static com.google.common.base.Charsets.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.common.io.Closer;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -29,17 +28,14 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * A helper class for reading and writing Services files.
- */
+/** A helper class for reading and writing Services files. */
 final class ServicesFiles {
   public static final String SERVICES_PATH = "META-INF/services";
 
   private ServicesFiles() {}
 
   /**
-   * Returns an absolute path to a service file given the class
-   * name of the service.
+   * Returns an absolute path to a service file given the class name of the service.
    *
    * @param serviceName not {@code null}
    * @return SERVICES_PATH + serviceName
@@ -57,12 +53,9 @@ final class ServicesFiles {
    */
   static Set<String> readServiceFile(InputStream input) throws IOException {
     HashSet<String> serviceClasses = new HashSet<String>();
-    Closer closer = Closer.create();
-    try {
-      // TODO(gak): use CharStreams
-      BufferedReader r = closer.register(new BufferedReader(new InputStreamReader(input, UTF_8)));
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, UTF_8))) {
       String line;
-      while ((line = r.readLine()) != null) {
+      while ((line = reader.readLine()) != null) {
         int commentStart = line.indexOf('#');
         if (commentStart >= 0) {
           line = line.substring(0, commentStart);
@@ -73,10 +66,6 @@ final class ServicesFiles {
         }
       }
       return serviceClasses;
-    } catch (Throwable t) {
-      throw closer.rethrow(t);
-    } finally {
-      closer.close();
     }
   }
 
@@ -92,7 +81,7 @@ final class ServicesFiles {
     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
     for (String service : services) {
       writer.write(service);
-      writer.newLine();
+      writer.write('\n');
     }
     writer.flush();
   }

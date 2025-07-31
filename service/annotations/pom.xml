@@ -31,7 +31,7 @@
   <description>
     Provider-configuration files for ServiceLoader.
   </description>
-  <url>https://github.com/google/auto/tree/master/service</url>
+  <url>https://github.com/google/auto/tree/main/service</url>
 
   <scm>
     <url>http://github.com/google/auto</url>

@@ -105,13 +105,43 @@ final class TypeEncoder {
   /**
    * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
    * covers the details of annotation encoding.
+   */
+  static String encodeWithAnnotations(AnnotatedTypeMirror type) {
+    return encodeWithAnnotations(type, ImmutableList.of(), ImmutableSet.of());
+  }
+
+  /**
+   * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
+   * covers the details of annotation encoding.
+   *
+   * @param extraAnnotations additional type annotations to include with the type
+   */
+  static String encodeWithAnnotations(
+      TypeMirror type, ImmutableList<AnnotationMirror> extraAnnotations) {
+    return encodeWithAnnotations(type, extraAnnotations, ImmutableSet.of());
+  }
+
+  /**
+   * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
+   * covers the details of annotation encoding.
+   *
+   * @param extraAnnotations additional type annotations to include with the type
+   */
+  static String encodeWithAnnotations(
+      AnnotatedTypeMirror type, ImmutableList<AnnotationMirror> extraAnnotations) {
+    return encodeWithAnnotations(type, extraAnnotations, ImmutableSet.of());
+  }
+
+  /**
+   * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
+   * covers the details of annotation encoding.
    *
    * @param extraAnnotations additional type annotations to include with the type
    * @param excludedAnnotationTypes annotations not to include in the encoding. For example, if
    *     {@code com.example.Nullable} is in this set then the encoding will not include this
    *     {@code @Nullable} annotation.
    */
-  static String encodeWithAnnotations(
+  private static String encodeWithAnnotations(
       TypeMirror type,
       ImmutableList<AnnotationMirror> extraAnnotations,
       Set<TypeMirror> excludedAnnotationTypes) {
@@ -128,6 +158,35 @@ final class TypeEncoder {
                 : t.getAnnotationMirrors();
     return new AnnotatedEncodingTypeVisitor(excludedAnnotationTypes, getTypeAnnotations)
         .visit2(type, sb)
+        .toString();
+  }
+
+  /**
+   * Encodes the given type and its type annotations. The class comment for {@link TypeEncoder}
+   * covers the details of annotation encoding.
+   *
+   * @param extraAnnotations additional type annotations to include with the type
+   * @param excludedAnnotationTypes annotations not to include in the encoding. For example, if
+   *     {@code com.example.Nullable} is in this set then the encoding will not include this
+   *     {@code @Nullable} annotation.
+   */
+  static String encodeWithAnnotations(
+      AnnotatedTypeMirror type,
+      ImmutableList<AnnotationMirror> extraAnnotations,
+      Set<TypeMirror> excludedAnnotationTypes) {
+    StringBuilder sb = new StringBuilder();
+    // A function that is equivalent to t.getAnnotationMirrors() except when the t in question is
+    // our starting type. In that case we also add extraAnnotations to the result.
+    Function<TypeMirror, List<? extends AnnotationMirror>> getTypeAnnotations =
+        t ->
+            (t == type.getType())
+                ? ImmutableList.<AnnotationMirror>builder()
+                    .addAll(type.annotations())
+                    .addAll(extraAnnotations)
+                    .build()
+                : t.getAnnotationMirrors();
+    return new AnnotatedEncodingTypeVisitor(excludedAnnotationTypes, getTypeAnnotations)
+        .visit2(type.getType(), sb)
         .toString();
   }
 
@@ -164,11 +223,10 @@ final class TypeEncoder {
 
   /**
    * Returns a string representing the given type parameters as they would appear in a class
-   * declaration. For example, if we have {@code @AutoValue abstract
-   * class Foo<T extends SomeClass>} then if we call {@link TypeElement#getTypeParameters()} on
-   * the representation of {@code Foo}, this method will return an encoding of {@code <T extends
-   * SomeClass>}. Likewise it will return an encoding of the angle-bracket part of:
-   * <br>
+   * declaration. For example, if we have {@code @AutoValue abstract class Foo<T extends SomeClass>}
+   * then if we call {@link TypeElement#getTypeParameters()} on the representation of {@code Foo},
+   * this method will return an encoding of {@code <T extends SomeClass>}. Likewise it will return
+   * an encoding of the angle-bracket part of: <br>
    * {@code Foo<SomeClass>}<br>
    * {@code Foo<T extends Number>}<br>
    * {@code Foo<E extends Enum<E>>}<br>

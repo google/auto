@@ -16,7 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
-import static com.google.common.truth.OptionalSubject.optionals;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.TruthJUnit.assume;
 import static com.google.testing.compile.CompilationSubject.assertThat;
@@ -147,8 +147,7 @@ public class NullablesTest {
         List<ExecutableElement> notNullableMethods = partitionedMethods.get(false);
 
         expect
-            .about(optionals())
-            .that(Nullables.nullableMentionedInMethods(notNullableMethods))
+            .that(Nullables.fromMethods(null, notNullableMethods).nullableTypeAnnotations())
             .isEmpty();
 
         TypeElement nullableElement =
@@ -165,11 +164,13 @@ public class NullablesTest {
                   .build();
           expect
               .withMessage("method %s should have @Nullable", nullableMethod)
-              .about(optionals())
               .that(
-                  Nullables.nullableMentionedInMethods(notNullablePlusNullable)
-                      .map(AnnotationMirror::getAnnotationType))
-              .hasValue(nullableType);
+                  Nullables.fromMethods(null, notNullablePlusNullable)
+                      .nullableTypeAnnotations()
+                      .stream()
+                      .map(AnnotationMirror::getAnnotationType)
+                      .collect(toImmutableList()))
+              .containsExactly(nullableType);
         }
         ran = true;
       }

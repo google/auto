@@ -30,33 +30,27 @@
 #foreach ($a in $builderAnnotations)
 $a
 #end
-#if (!$autoBuilder) static #end##
-#if ($isFinal) final #end##
-class ${builderName}${builderFormalTypes} ##
+${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 #if ($builderIsInterface) implements #else extends #end
     ${builderTypeName}${builderActualTypes} {
 
 #foreach ($p in $props)
-
-  #if ($p.kind.primitive)
-
-  private $types.boxedClass($p.typeMirror).simpleName $p $p.builderInitializer;
-
-  #else
-
-    #if ($builderPropertyBuilders[$p.name])
+  #if ($builderPropertyBuilders[$p.name])
     ## If you have ImmutableList.Builder<String> stringsBuilder() then we define two fields:
     ## private ImmutableList.Builder<String> stringsBuilder$;
     ## private ImmutableList<String> strings;
 
-  private ${builderPropertyBuilders[$p.name].builderType} ##
+  private ${builderPropertyBuilders[$p.name].nullableBuilderType} ##
       ${builderPropertyBuilders[$p.name].name};
 
-    #end
-
-  private $p.type $p $p.builderInitializer;
-
   #end
+
+  private $p.builderFieldType $p $p.builderInitializer;
+
+#end
+
+#foreach ($decl in $builderRequiredProperties.fieldDeclarations)
+  $decl
 #end
 
   ${builderName}() {
@@ -64,12 +58,16 @@ class ${builderName}${builderFormalTypes} ##
 
 #if ($toBuilderConstructor)
 
-  private ${builderName}(${origClass}${actualTypes} source) {
+  ${builderName}($builtType source) {
 
   #foreach ($p in $props)
 
     this.$p = source.${p.getter}();
 
+  #end
+
+  #foreach ($init in $builderRequiredProperties.initToAllSet)
+    $init
   #end
 
   }
@@ -112,6 +110,9 @@ class ${builderName}${builderFormalTypes} ##
     #end
 
     this.$p = ${setter.copy($p)};
+
+    $builderRequiredProperties.markAsSet($p)
+
     return this;
   }
 
@@ -120,24 +121,27 @@ class ${builderName}${builderFormalTypes} ##
   #if ($propertyBuilder)
 
   @`java.lang.Override`
-  ${propertyBuilder.access}$propertyBuilder.builderType ${p.name}Builder($propertyBuilder.propertyBuilderMethodParameters) {
+  ${propertyBuilder.access}$propertyBuilder.builderType ##
+      ${propertyBuilder.methodName}($propertyBuilder.propertyBuilderMethodParameters) {
     if (${propertyBuilder.name} == null) {
 
       ## This is the first time someone has asked for the builder. If the property it sets already
-      ## has a value (because it came from a toBuilder() call on the AutoValue class, or because
-      ## there is also a setter for this property) then we copy that value into the builder.
+      ## has a value (because it came from the copy constructor, or because there is also a setter
+      ## for this property) then we copy that value into the builder.
       ## Otherwise the builder starts out empty.
       ## If we have neither a setter nor a toBuilder() method, then the builder always starts
       ## off empty.
 
-      #if ($builderSetters[$p.name].empty && $toBuilderMethods.empty)
+      #if ($builderSetters[$p.name].empty && !$toBuilderConstructor)
 
       ${propertyBuilder.name} = ${propertyBuilder.initializer};
+      $builderRequiredProperties.markAsSet($p)
 
       #else
 
       if ($p == null) {
         ${propertyBuilder.name} = ${propertyBuilder.initializer};
+        $builderRequiredProperties.markAsSet($p)
       } else {
 
         #if (${propertyBuilder.builtToBuilder})
@@ -173,31 +177,36 @@ class ${builderName}${builderFormalTypes} ##
 
   ## Getter
 
-  #if ($builderGetters[$p.name])
+  #set ($builderGetter = $builderGetters[$p.name])
+  #if ($builderGetter)
 
   @`java.lang.Override`
-  ${p.nullableAnnotation}${builderGetters[$p.name].access}$builderGetters[$p.name].type ${p.getter}() {
-    #if ($builderGetters[$p.name].optional)
+  ${p.nullableAnnotation}${builderGetter.access}$builderGetter.type ${builderGetter.name}() {
+    #set ($noValueToGetCondition = $builderRequiredProperties.noValueToGet($p))
 
-    if ($p == null) {
-      return $builderGetters[$p.name].optional.empty;
-    } else {
-      return ${builderGetters[$p.name].optional.rawType}.of($p);
+    #if ($builderGetters[$p.name].optional)
+      #if ($noValueToGetCondition)
+    if ($noValueToGetCondition) {
+      return $builderGetter.optional.empty;
     }
+      #else
+    if ($p == null) {
+      return $builderGetter.optional.empty;
+    }
+      #end
+    return ${builderGetter.optional.rawType}.of($p);
 
     #else
-      #if ($builderRequiredProperties.contains($p))
-
-    if ($p == null) {
+      #if ($noValueToGetCondition)
+    if ($noValueToGetCondition) {
       throw new IllegalStateException(#if ($identifiers)"Property \"$p.name\" has not been set"#end);
     }
-
       #end
 
       #if ($propertyBuilder)
 
     if (${propertyBuilder.name} != null) {
-      return ${propertyBuilder.name}.build();
+      return ${propertyBuilder.name}.${propertyBuilder.build}();
     }
     if ($p == null) {
       ${propertyBuilder.beforeInitDefault}
@@ -225,7 +234,7 @@ class ${builderName}${builderFormalTypes} ##
   #if ($propertyBuilder)
 
     if (${propertyBuilder.name} != null) {
-      this.$p = ${propertyBuilder.name}.build();
+      this.$p = ${propertyBuilder.name}.${propertyBuilder.build}();
     } else if (this.$p == null) {
       ${propertyBuilder.beforeInitDefault}
       this.$p = ${propertyBuilder.initDefault};
@@ -234,41 +243,34 @@ class ${builderName}${builderFormalTypes} ##
   #end
 #end
 
-#if (!$builderRequiredProperties.empty)
-    if (#foreach ($p in $builderRequiredProperties)##
-        this.$p == null##
-          #if ($foreach.hasNext)
-
-        || #end
-        #end) {
+#if (!$builderRequiredProperties.requiredProperties.empty)
+    if ($builderRequiredProperties.anyMissing) {
 
   #if ($identifiers)  ## build a friendly message showing all missing properties
-    #if ($builderRequiredProperties.size() == 1)
+    #if ($builderRequiredProperties.requiredProperties.size() == 1)
 
-    `java.lang.String` missing = " $builderRequiredProperties.iterator().next()";
+      `java.lang.String` missing = " $builderRequiredProperties.requiredProperties.iterator().next()";
 
     #else
 
-    `java.lang.StringBuilder` missing = new `java.lang.StringBuilder`();
+      `java.lang.StringBuilder` missing = new `java.lang.StringBuilder`();
 
-      #foreach ($p in $builderRequiredProperties)
-
-    if (this.$p == null) {
-      missing.append(" $p.name");
-    }
-
+      #foreach ($p in $builderRequiredProperties.requiredProperties)
+      if ($builderRequiredProperties.missingRequiredProperty($p)) {
+        missing.append(" $p.name");
+      }
       #end
     #end
 
-    throw new IllegalStateException("Missing required properties:" + missing);
+      throw new IllegalStateException("Missing required properties:" + missing);
 
   #else  ## just throw an exception if anything is missing
 
-    throw new IllegalStateException();
+      throw new IllegalStateException();
 
   #end
 
-  }
+    }
 
 #end
 
@@ -276,6 +278,7 @@ class ${builderName}${builderFormalTypes} ##
 #foreach ($p in $props)
 
         this.$p #if ($foreach.hasNext) , #end
-#end );
+#end
+        $builderRequiredProperties.defaultedBitmaskParameters );
   }
 }

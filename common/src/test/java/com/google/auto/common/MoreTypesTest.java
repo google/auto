@@ -50,7 +50,7 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -204,7 +204,7 @@ public class MoreTypesTest {
     public static void b() throws RuntimeException {}
   }
 
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "UnusedTypeParameter"})
   private static final class ExecutableElementsGroupE {
     <T> ExecutableElementsGroupE() {}
 
@@ -213,7 +213,7 @@ public class MoreTypesTest {
     public static <T> void b() {}
   }
 
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "UnusedTypeParameter"})
   private static final class Container<T> {
     private final class Contained {}
   }

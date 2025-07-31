@@ -41,27 +41,27 @@ import java.util.Collection;
  *
  * <p>{@code @ToPrettyString} is valid on overridden {@code toString()} and other methods alike.
  *
- * <h3>Example</h3>
+ * <h2>Example</h2>
  *
- * <pre>
- *   {@code @AutoValue}
- *   abstract class Pretty {
- *     abstract {@code List<String>} property();
+ * <pre>{@code
+ * @AutoValue
+ * abstract class Pretty {
+ *   abstract List<String> property();
  *
- *     {@code @ToPrettyString}
- *     abstract String toPrettyString();
- *   }
+ *   @ToPrettyString
+ *   abstract String toPrettyString();
+ * }
  *
- *   System.out.println(new AutoValue_Pretty(List.of("abc", "def", "has\nnewline)).toPrettyString())
- *   // Pretty{
- *   //   property = [
- *   //     abc,
- *   //     def,
- *   //     has
- *   //     newline,
- *   //   ]
- *   // }
- *   }</pre>
+ * System.out.println(new AutoValue_Pretty(List.of("abc", "def", "has\nnewline")).toPrettyString())
+ * // Pretty{
+ * //   property = [
+ * //     abc,
+ * //     def,
+ * //     has
+ * //     newline,
+ * //   ]
+ * // }
+ * }</pre>
  */
 @Documented
 @Target(METHOD)

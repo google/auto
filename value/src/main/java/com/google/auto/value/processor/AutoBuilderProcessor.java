@@ -15,15 +15,17 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
-import static com.google.auto.common.MoreStreams.toImmutableList;
-import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.math.RoundingMode.CEILING;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.constructorsIn;
 import static javax.lang.model.util.ElementFilter.methodsIn;
@@ -34,20 +36,24 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.common.Visibility;
 import com.google.auto.service.AutoService;
-import com.google.auto.value.processor.BuilderSpec.PropertyGetter;
 import com.google.auto.value.processor.MissingTypes.MissingTypeException;
 import com.google.common.base.Ascii;
-import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
+import com.google.common.math.IntMath;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -64,13 +70,14 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.tools.JavaFileObject;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessor;
 import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 
 /**
  * Javac annotation processor (compiler plugin) for builders; user code never references this class.
  *
- * @see <a href="https://github.com/google/auto/tree/master/value">AutoValue User's Guide</a>
+ * @see <a href="https://github.com/google/auto/tree/main/value">AutoValue User's Guide</a>
  * @author Éamonn McManus
  */
 @AutoService(Processor.class)
@@ -78,9 +85,10 @@ import net.ltgt.gradle.incap.IncrementalAnnotationProcessorType;
 @IncrementalAnnotationProcessor(IncrementalAnnotationProcessorType.ISOLATING)
 public class AutoBuilderProcessor extends AutoValueishProcessor {
   private static final String ALLOW_OPTION = "com.google.auto.value.AutoBuilderIsUnstable";
+  private static final String AUTO_ANNOTATION_CLASS_PREFIX = "AutoBuilderAnnotation_";
 
   public AutoBuilderProcessor() {
-    super(AUTO_BUILDER_NAME);
+    super(AUTO_BUILDER_NAME, /* appliesToInterfaces= */ true);
   }
 
   @Override
@@ -89,96 +97,209 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   private TypeMirror javaLangVoid;
+  private KotlinMetadata kotlinMetadata;
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
     super.init(processingEnv);
     javaLangVoid = elementUtils().getTypeElement("java.lang.Void").asType();
+    kotlinMetadata = new KotlinMetadata(errorReporter());
   }
+
+  // The handling of @AutoBuilder to generate annotation implementations needs some explanation.
+  // Suppose we have this:
+  //
+  //   public class Annotations {
+  //     @interface MyAnnot {...}
+  //
+  //     @AutoBuilder(ofClass = MyAnnot.class)
+  //     public interface MyAnnotBuilder {
+  //       ...
+  //       MyAnnot build();
+  //     }
+  //
+  //     public static MyAnnotBuilder myAnnotBuilder() {
+  //       return new AutoBuilder_Annotations_MyAnnotBuilder();
+  //     }
+  //   }
+  //
+  // Then we will detect that the ofClass type is an annotation. Since annotations can have neither
+  // constructors nor static methods, we know this isn't a regular @AutoBuilder. We want to
+  // generate an implementation of the MyAnnot annotation, and we know we can do that if we have a
+  // suitable @AutoAnnotation method. So we generate:
+  //
+  //   class AutoBuilderAnnotation_Annotations_MyAnnotBuilder {
+  //     @AutoAnnotation
+  //     static MyAnnot newAnnotation(...) {
+  //       return new AutoAnnotation_AutoBuilderAnnotation_Annotations_MyAnnotBuilder_newAnnotation(
+  //           ...);
+  //     }
+  //   }
+  //
+  // We also "defer" MyAnnotBuilder so that it will be considered again on the next round. At that
+  // point the method AutoBuilderAnnotation_Annotations_MyAnnotBuilder.newAnnotation will exist, and
+  // we just need to tweak the handling of MyAnnotBuilder so that it behaves as if it were:
+  //
+  //   @AutoBuilder(
+  //       callMethod = newAnnotation,
+  //       ofClass = AutoBuilderAnnotation_Annotations_MyAnnotBuilder.class)
+  //   interface MyAnnotBuilder {...}
+  //
+  // Using AutoAnnotation and AutoBuilder together you'd write
+  //
+  // @AutoAnnotation static MyAnnot newAnnotation(...) { ... }
+  //
+  // @AutoBuilder(callMethod = "newAnnotation", ofClass = Some.class)
+  // interface MyAnnotBuilder { ... }
+  //
+  // If you set ofClass to an annotation class, AutoBuilder generates the @AutoAnnotation method for
+  // you and then acts as if your @AutoBuilder annotation pointed to it.
 
   @Override
   void processType(TypeElement autoBuilderType) {
-    if (!processingEnv.getOptions().containsKey(ALLOW_OPTION)) {
-      errorReporter()
-          .abortWithError(
-              autoBuilderType,
-              "Compile with -A%s to enable this UNSUPPORTED AND UNSTABLE prototype",
-              ALLOW_OPTION);
+    if (processingEnv.getOptions().containsKey(ALLOW_OPTION)) {
+      errorReporter().reportWarning(autoBuilderType, "The -A%s option is obsolete", ALLOW_OPTION);
     }
-    if (autoBuilderType.getKind() != ElementKind.CLASS
-        && autoBuilderType.getKind() != ElementKind.INTERFACE) {
-      errorReporter()
-          .abortWithError(
-              autoBuilderType,
-              "[AutoBuilderWrongType] @AutoBuilder only applies to classes and interfaces");
-    }
-    checkModifiersIfNested(autoBuilderType);
     // The annotation is guaranteed to be present by the contract of Processor#process
     AnnotationMirror autoBuilderAnnotation =
         getAnnotationMirror(autoBuilderType, AUTO_BUILDER_NAME).get();
     TypeElement ofClass = getOfClass(autoBuilderType, autoBuilderAnnotation);
     checkModifiersIfNested(ofClass, autoBuilderType, "AutoBuilder ofClass");
     String callMethod = findCallMethodValue(autoBuilderAnnotation);
+    if (ofClass.getKind() == ElementKind.ANNOTATION_TYPE) {
+      buildAnnotation(autoBuilderType, ofClass, callMethod);
+    } else {
+      processType(autoBuilderType, ofClass, callMethod);
+    }
+  }
+
+  private void processType(TypeElement autoBuilderType, TypeElement ofClass, String callMethod) {
     ImmutableSet<ExecutableElement> methods =
         abstractMethodsIn(
             getLocalAndInheritedMethods(autoBuilderType, typeUtils(), elementUtils()));
-    ExecutableElement executable = findExecutable(ofClass, callMethod, autoBuilderType, methods);
+    Executable executable = findExecutable(ofClass, callMethod, autoBuilderType, methods);
     BuilderSpec builderSpec = new BuilderSpec(ofClass, processingEnv, errorReporter());
     BuilderSpec.Builder builder = builderSpec.new Builder(autoBuilderType);
-    TypeMirror builtType = builtType(executable);
+    TypeMirror builtType = executable.builtType();
+    ImmutableMap<String, String> propertyInitializers =
+        propertyInitializers(autoBuilderType, executable);
+    Nullables nullables = Nullables.fromMethods(processingEnv, methods);
     Optional<BuilderMethodClassifier<VariableElement>> maybeClassifier =
         BuilderMethodClassifierForAutoBuilder.classify(
-            methods, errorReporter(), processingEnv, executable, builtType, autoBuilderType);
-    if (!maybeClassifier.isPresent()) {
+            methods,
+            errorReporter(),
+            processingEnv,
+            executable,
+            builtType,
+            autoBuilderType,
+            propertyInitializers.keySet(),
+            nullables);
+    if (!maybeClassifier.isPresent() || errorReporter().errorCount() > 0) {
       // We've already output one or more error messages.
       return;
     }
     BuilderMethodClassifier<VariableElement> classifier = maybeClassifier.get();
-    Map<String, String> propertyToGetterName =
-        Maps.transformValues(classifier.builderGetters(), PropertyGetter::getName);
+    ImmutableMap<String, String> propertyToGetterName =
+        propertyToGetterName(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(autoBuilderType, executable, propertyToGetterName);
+    vars.props = propertySet(executable, propertyToGetterName, propertyInitializers, nullables);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
     vars.builderName = TypeSimplifier.simpleNameOf(generatedClassName);
     vars.builtType = TypeEncoder.encode(builtType);
-    vars.build = build(executable);
-    vars.types = typeUtils();
-    vars.toBuilderConstructor = false;
+    vars.builderAnnotations = copiedClassAnnotations(autoBuilderType);
+    Optional<String> forwardingClassName = maybeForwardingClass(autoBuilderType, executable);
+    vars.build =
+        forwardingClassName
+            .map(n -> TypeSimplifier.simpleNameOf(n) + ".of")
+            .orElseGet(executable::invoke);
+    vars.toBuilderConstructor = !propertyToGetterName.isEmpty();
     vars.toBuilderMethods = ImmutableList.of();
-    defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), vars);
+    defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), nullables, vars);
     String text = vars.toText();
     text = TypeEncoder.decode(text, processingEnv, vars.pkg, autoBuilderType.asType());
     text = Reformatter.fixup(text);
     writeSourceFile(generatedClassName, text, autoBuilderType);
+    forwardingClassName.ifPresent(
+        n -> generateForwardingClass(n, executable, builtType, autoBuilderType));
+  }
+
+  /**
+   * Generates a class that will call the synthetic Kotlin constructor that is used to specify which
+   * optional parameters are defaulted. Because it is synthetic, it can't be called from Java source
+   * code. Instead, Java source code calls the {@code of} method in the class we generate here.
+   */
+  private void generateForwardingClass(
+      String forwardingClassName,
+      Executable executable,
+      TypeMirror builtType,
+      TypeElement autoBuilderType) {
+    // The synthetic constructor has the same parameters as the user-written constructor, plus as
+    // many `int` bitmasks as are needed to have one bit for each of those parameters, plus a dummy
+    // parameter of type kotlin.jvm.internal.DefaultConstructorMarker to avoid confusion with a
+    // constructor that might have its own `int` parameters where the bitmasks are.
+    // This ABI is not publicly specified (as far as we know) but JetBrains has confirmed orally
+    // that it unlikely to change, and if it does it will be in a backward-compatible way.
+    ImmutableList.Builder<TypeMirror> constructorParameters = ImmutableList.builder();
+    executable.parameters().stream()
+        .map(Element::asType)
+        .map(typeUtils()::erasure)
+        .forEach(constructorParameters::add);
+    int bitmaskCount = IntMath.divide(executable.parameters().size(), 32, CEILING);
+    constructorParameters.addAll(
+        Collections.nCopies(bitmaskCount, typeUtils().getPrimitiveType(TypeKind.INT)));
+    String marker = "kot".concat("lin.jvm.internal.DefaultConstructorMarker"); // defeat shading
+    constructorParameters.add(elementUtils().getTypeElement(marker).asType());
+    byte[] classBytes =
+        ForwardingClassGenerator.makeConstructorForwarder(
+            forwardingClassName, builtType, constructorParameters.build());
+    try {
+      JavaFileObject trampoline =
+          processingEnv.getFiler().createClassFile(forwardingClassName, autoBuilderType);
+      try (OutputStream out = trampoline.openOutputStream()) {
+        out.write(classBytes);
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private Optional<String> maybeForwardingClass(
+      TypeElement autoBuilderType, Executable executable) {
+    return executable.hasOptionalParameters()
+        ? Optional.of(generatedClassName(autoBuilderType, "AutoBuilderBridge_"))
+        : Optional.empty();
   }
 
   private ImmutableSet<Property> propertySet(
-      TypeElement autoBuilderType,
-      ExecutableElement executable,
-      Map<String, String> propertyToGetterName) {
-    boolean autoAnnotation =
-        MoreElements.getAnnotationMirror(executable, AUTO_ANNOTATION_NAME).isPresent();
-    ImmutableMap<String, String> builderInitializers =
-        autoAnnotation
-            ? autoAnnotationInitializers(autoBuilderType, executable)
-            : ImmutableMap.of();
+      Executable executable,
+      Map<String, String> propertyToGetterName,
+      ImmutableMap<String, String> builderInitializers,
+      Nullables nullables) {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
-        executable.getParameters().stream()
-            .collect(toMap(v -> v, v -> v.getSimpleName().toString()));
+        executable.parameters().stream().collect(toMap(v -> v, v -> v.getSimpleName().toString()));
     fixReservedIdentifiers(identifiers);
-    return executable.getParameters().stream()
+    return executable.parameters().stream()
         .map(
             v -> {
               String name = v.getSimpleName().toString();
-              return newProperty(
-                  v,
-                  identifiers.get(v),
-                  propertyToGetterName.get(name),
-                  Optional.ofNullable(builderInitializers.get(name)));
+              Property p =
+                  newProperty(
+                      v,
+                      identifiers.get(v),
+                      propertyToGetterName.get(name),
+                      Optional.ofNullable(builderInitializers.get(name)),
+                      executable.isOptional(name),
+                      nullables);
+              if (p.isNullable() && v.asType().getKind().isPrimitive()) {
+                errorReporter()
+                    .reportError(
+                        v, "[AutoBuilderNullPrimitive] Primitive types cannot be @Nullable");
+              }
+              return p;
             })
         .collect(toImmutableSet());
   }
@@ -187,25 +308,35 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       VariableElement var,
       String identifier,
       String getterName,
-      Optional<String> builderInitializer) {
+      Optional<String> builderInitializer,
+      boolean hasDefault,
+      Nullables nullables) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
     Optional<String> nullableAnnotation = nullableAnnotationFor(var, var.asType());
     return new Property(
         name,
         identifier,
-        TypeEncoder.encode(type),
-        type,
+        TypeEncoder.encodeWithAnnotations(type),
+        new AnnotatedTypeMirror(type),
         nullableAnnotation,
+        nullables,
         getterName,
-        builderInitializer);
+        builderInitializer,
+        hasDefault);
   }
 
-  private ImmutableMap<String, String> autoAnnotationInitializers(
-      TypeElement autoBuilderType, ExecutableElement autoAnnotationMethod) {
+  private ImmutableMap<String, String> propertyInitializers(
+      TypeElement autoBuilderType, Executable executable) {
+    boolean autoAnnotation =
+        MoreElements.getAnnotationMirror(executable.executableElement(), AUTO_ANNOTATION_NAME)
+            .isPresent();
+    if (!autoAnnotation) {
+      return ImmutableMap.of();
+    }
     // We expect the return type of an @AutoAnnotation method to be an annotation type. If it isn't,
     // AutoAnnotation will presumably complain, so we don't need to complain further.
-    TypeMirror returnType = autoAnnotationMethod.getReturnType();
+    TypeMirror returnType = executable.builtType();
     if (!returnType.getKind().equals(TypeKind.DECLARED)) {
       return ImmutableMap.of();
     }
@@ -226,12 +357,80 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     return builder.build();
   }
 
-  private ExecutableElement findExecutable(
+  /**
+   * Returns a map from property names to the corresponding getters in the built type. The built
+   * type is the return type of the given {@code executable}, and the property names are the names
+   * of its parameters. If the return type is a {@link DeclaredType} {@code Foo} and if every
+   * property name {@code bar} matches a method {@code bar()} or {@code getBar()} in {@code Foo},
+   * then the method returns a map where {@code bar} maps to {@code bar} or {@code getBar}. If these
+   * conditions are not met then the method returns an empty map.
+   *
+   * <p>The method name match is case-insensitive, so we will also accept {@code baR()} or {@code
+   * getbar()}. For a property of type {@code boolean}, we also accept {@code isBar()} (or {@code
+   * isbar()} etc).
+   *
+   * <p>The return type of each getter method must match the type of the corresponding parameter
+   * exactly. This will always be true for our principal use cases, Java records and Kotlin data
+   * classes. For other use cases, we may in the future accept getters where we know how to convert,
+   * for example if the getter has type {@code ImmutableList<Baz>} and the parameter has type {@code
+   * Baz[]}. We already have similar logic for the parameter types of builder setters.
+   */
+  private ImmutableMap<String, String> propertyToGetterName(
+      Executable executable, TypeElement autoBuilderType) {
+    TypeMirror builtType = executable.builtType();
+    if (builtType.getKind() != TypeKind.DECLARED) {
+      return ImmutableMap.of();
+    }
+    TypeElement type = MoreTypes.asTypeElement(builtType);
+    Map<String, ExecutableElement> nameToMethod =
+        MoreElements.getLocalAndInheritedMethods(type, typeUtils(), elementUtils()).stream()
+            .filter(m -> m.getParameters().isEmpty())
+            .filter(m -> !m.getModifiers().contains(Modifier.STATIC))
+            .filter(m -> visibleFrom(autoBuilderType, getPackage(autoBuilderType)))
+            .collect(
+                toMap(
+                    m -> m.getSimpleName().toString(),
+                    m -> m,
+                    (a, b) -> a,
+                    () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)));
+    ImmutableMap<String, String> propertyToGetterName =
+        executable.parameters().stream()
+            .map(
+                param -> {
+                  String name = param.getSimpleName().toString();
+                  // Parameter name is `bar`; we look for `bar()` and `getBar()` (or `getbar()` etc)
+                  // in that order. If `bar` is boolean we also look for `isBar()`.
+                  ExecutableElement getter = nameToMethod.get(name);
+                  if (getter == null) {
+                    getter = nameToMethod.get("get" + name);
+                    if (getter == null && param.asType().getKind() == TypeKind.BOOLEAN) {
+                      getter = nameToMethod.get("is" + name);
+                    }
+                  }
+                  if (getter != null
+                      && !typeUtils().isAssignable(getter.getReturnType(), param.asType())
+                      && !MoreTypes.equivalence()
+                          .equivalent(getter.getReturnType(), param.asType())) {
+                    // TODO(b/268680785): we should not need to have two type checks here
+                    getter = null;
+                  }
+                  return new SimpleEntry<>(name, getter);
+                })
+            .filter(entry -> entry.getValue() != null)
+            .collect(
+                toImmutableMap(
+                    Map.Entry::getKey, entry -> entry.getValue().getSimpleName().toString()));
+    return (propertyToGetterName.size() == executable.parameters().size())
+        ? propertyToGetterName
+        : ImmutableMap.of();
+  }
+
+  private Executable findExecutable(
       TypeElement ofClass,
       String callMethod,
       TypeElement autoBuilderType,
-      ImmutableSet<ExecutableElement> methods) {
-    List<ExecutableElement> executables =
+      ImmutableSet<ExecutableElement> methodsInAutoBuilderType) {
+    ImmutableList<Executable> executables =
         findRelevantExecutables(ofClass, callMethod, autoBuilderType);
     String description =
         callMethod.isEmpty() ? "constructor" : "static method named \"" + callMethod + "\"";
@@ -246,28 +445,34 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       case 1:
         return executables.get(0);
       default:
-        return matchingExecutable(autoBuilderType, executables, methods, description);
+        return matchingExecutable(
+            autoBuilderType, executables, methodsInAutoBuilderType, description);
     }
   }
 
-  private ImmutableList<ExecutableElement> findRelevantExecutables(
+  private ImmutableList<Executable> findRelevantExecutables(
       TypeElement ofClass, String callMethod, TypeElement autoBuilderType) {
+    Optional<AnnotationMirror> kotlinMetadataAnnotation =
+        kotlinMetadata.kotlinMetadataAnnotation(ofClass);
     List<? extends Element> elements = ofClass.getEnclosedElements();
-    Stream<ExecutableElement> relevantExecutables =
+    Stream<Executable> relevantExecutables =
         callMethod.isEmpty()
-            ? constructorsIn(elements).stream()
+            ? kotlinMetadataAnnotation
+                .map(a -> kotlinMetadata.kotlinConstructorsIn(a, ofClass).stream())
+                .orElseGet(() -> constructorsIn(elements).stream().map(Executable::of))
             : methodsIn(elements).stream()
                 .filter(m -> m.getSimpleName().contentEquals(callMethod))
-                .filter(m -> m.getModifiers().contains(Modifier.STATIC));
+                .filter(m -> m.getModifiers().contains(Modifier.STATIC))
+                .map(Executable::of);
     return relevantExecutables
-        .filter(c -> visibleFrom(c, getPackage(autoBuilderType)))
+        .filter(e -> visibleFrom(e.executableElement(), getPackage(autoBuilderType)))
         .collect(toImmutableList());
   }
 
-  private ExecutableElement matchingExecutable(
+  private Executable matchingExecutable(
       TypeElement autoBuilderType,
-      List<ExecutableElement> executables,
-      ImmutableSet<ExecutableElement> methods,
+      List<Executable> executables,
+      ImmutableSet<ExecutableElement> methodsInAutoBuilderType,
       String description) {
     // There's more than one visible executable (constructor or method). We try to find the one that
     // corresponds to the methods in the @AutoBuilder interface. This is a bit approximate. We're
@@ -278,8 +483,10 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     // more parameters, then this is indeed the one we want. If we later get errors when we try to
     // analyze the interface in detail, those are probably legitimate errors and not because we
     // picked the wrong executable.
-    ImmutableList<ExecutableElement> matches =
-        executables.stream().filter(x -> executableMatches(x, methods)).collect(toImmutableList());
+    ImmutableList<Executable> matches =
+        executables.stream()
+            .filter(x -> executableMatches(x, methodsInAutoBuilderType))
+            .collect(toImmutableList());
     switch (matches.size()) {
       case 0:
         throw errorReporter()
@@ -294,9 +501,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       default:
         // More than one match, let's see if we can find the best one.
     }
-    int max = matches.stream().mapToInt(c -> c.getParameters().size()).max().getAsInt();
-    ImmutableList<ExecutableElement> maxMatches =
-        matches.stream().filter(c -> c.getParameters().size() == max).collect(toImmutableList());
+    int max = matches.stream().mapToInt(e -> e.parameters().size()).max().getAsInt();
+    ImmutableList<Executable> maxMatches =
+        matches.stream().filter(c -> c.parameters().size() == max).collect(toImmutableList());
     if (maxMatches.size() > 1) {
       throw errorReporter()
           .abortWithError(
@@ -308,25 +515,12 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     return maxMatches.get(0);
   }
 
-  private String executableListString(List<ExecutableElement> executables) {
-    return executables.stream()
-        .map(AutoBuilderProcessor::executableString)
-        .collect(joining("\n  ", "  ", ""));
-  }
-
-  static String executableString(ExecutableElement executable) {
-    Element nameSource =
-        executable.getKind() == ElementKind.CONSTRUCTOR
-            ? executable.getEnclosingElement()
-            : executable;
-    return nameSource.getSimpleName()
-        + executable.getParameters().stream()
-            .map(v -> v.asType() + " " + v.getSimpleName())
-            .collect(joining(", ", "(", ")"));
+  private String executableListString(List<Executable> executables) {
+    return executables.stream().map(Object::toString).collect(joining("\n  ", "  ", ""));
   }
 
   private boolean executableMatches(
-      ExecutableElement executable, ImmutableSet<ExecutableElement> methods) {
+      Executable executable, ImmutableSet<ExecutableElement> methodsInAutoBuilderType) {
     // Start with the complete set of parameter names and remove them one by one as we find
     // corresponding methods. We ignore case, under the assumption that it is unlikely that a case
     // difference is going to allow a candidate to match when another one is better.
@@ -338,11 +532,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     // There are further constraints, including on the types X and Y, that will later be imposed by
     // BuilderMethodClassifier, but here we just require that there be at least one method with
     // one of these shapes for foo.
-    NavigableSet<String> parameterNames =
-        executable.getParameters().stream()
-            .map(v -> v.getSimpleName().toString())
-            .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
-    for (ExecutableElement method : methods) {
+    NavigableSet<String> parameterNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    parameterNames.addAll(executable.parameterNames());
+    for (ExecutableElement method : methodsInAutoBuilderType) {
       String name = method.getSimpleName().toString();
       if (name.endsWith("Builder")) {
         String property = name.substring(0, name.length() - "Builder".length());
@@ -367,39 +559,13 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       case PUBLIC:
         return true;
       case PROTECTED:
-        // We care about whether the constructor is visible from the generated class. The generated
-        // class is never going to be a subclass of the class containing the constructor, so
-        // protected and default access are equivalent.
+      // We care about whether the constructor is visible from the generated class. The generated
+      // class is never going to be a subclass of the class containing the constructor, so
+      // protected and default access are equivalent.
       case DEFAULT:
         return getPackage(element).equals(fromPackage);
       default:
         return false;
-    }
-  }
-
-  private TypeMirror builtType(ExecutableElement executable) {
-    switch (executable.getKind()) {
-      case CONSTRUCTOR:
-        return executable.getEnclosingElement().asType();
-      case METHOD:
-        return executable.getReturnType();
-      default:
-        throw new VerifyException("Unexpected executable kind " + executable.getKind());
-    }
-  }
-
-  private String build(ExecutableElement executable) {
-    TypeElement enclosing = MoreElements.asType(executable.getEnclosingElement());
-    String type = TypeEncoder.encodeRaw(enclosing.asType());
-    switch (executable.getKind()) {
-      case CONSTRUCTOR:
-        boolean generic = !enclosing.getTypeParameters().isEmpty();
-        String typeParams = generic ? "<>" : "";
-        return "new " + type + typeParams;
-      case METHOD:
-        return type + "." + executable.getSimpleName();
-      default:
-        throw new VerifyException("Unexpected executable kind " + executable.getKind());
     }
   }
 
@@ -464,5 +630,70 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
     // TODO(b/183005059): implement
     return Optional.empty();
+  }
+
+  private void buildAnnotation(
+      TypeElement autoBuilderType, TypeElement annotationType, String callMethod) {
+    if (!callMethod.isEmpty()) {
+      errorReporter()
+          .abortWithError(
+              autoBuilderType,
+              "[AutoBuilderAnnotationMethod] @AutoBuilder for an annotation must have an empty"
+                  + " callMethod, not \"%s\"",
+              callMethod);
+    }
+    String autoAnnotationClassName =
+        generatedClassName(autoBuilderType, AUTO_ANNOTATION_CLASS_PREFIX);
+    TypeElement autoAnnotationClass = elementUtils().getTypeElement(autoAnnotationClassName);
+    if (autoAnnotationClass != null) {
+      processType(autoBuilderType, autoAnnotationClass, "newAnnotation");
+      return;
+    }
+    AutoBuilderAnnotationTemplateVars vars = new AutoBuilderAnnotationTemplateVars();
+    vars.autoBuilderType = TypeEncoder.encode(autoBuilderType.asType());
+    vars.props = annotationBuilderPropertySet(annotationType);
+    vars.pkg = TypeSimplifier.packageNameOf(autoBuilderType);
+    vars.generated =
+        generatedAnnotation(elementUtils(), processingEnv.getSourceVersion())
+            .map(annotation -> TypeEncoder.encode(annotation.asType()))
+            .orElse("");
+    vars.className = TypeSimplifier.simpleNameOf(autoAnnotationClassName);
+    vars.annotationType = TypeEncoder.encode(annotationType.asType());
+    String text = vars.toText();
+    text = TypeEncoder.decode(text, processingEnv, vars.pkg, /* baseType= */ javaLangVoid);
+    text = Reformatter.fixup(text);
+    writeSourceFile(autoAnnotationClassName, text, autoBuilderType);
+    addDeferredType(autoBuilderType, autoAnnotationClassName);
+  }
+
+  private ImmutableSet<Property> annotationBuilderPropertySet(TypeElement annotationType) {
+    // Annotation methods can't have their own annotations so there's nowhere for us to discover
+    // a user @Nullable. We can only use our default @Nullable type annotation.
+    Nullables nullables = Nullables.fromMethods(processingEnv, ImmutableList.of());
+    // Translate the annotation elements into fake Property instances. We're really only interested
+    // in the name and type, so we can use them to declare a parameter of the generated
+    // @AutoAnnotation method. We'll generate a parameter for every element, even elements that
+    // don't have setters in the builder. The generated builder implementation will pass the default
+    // value from the annotation to those parameters.
+    return methodsIn(annotationType.getEnclosedElements()).stream()
+        .filter(m -> m.getParameters().isEmpty() && !m.getModifiers().contains(Modifier.STATIC))
+        .map(method -> annotationBuilderProperty(method, nullables))
+        .collect(toImmutableSet());
+  }
+
+  private static Property annotationBuilderProperty(
+      ExecutableElement annotationMethod, Nullables nullables) {
+    String name = annotationMethod.getSimpleName().toString();
+    TypeMirror type = annotationMethod.getReturnType();
+    return new Property(
+        name,
+        name,
+        TypeEncoder.encode(type),
+        new AnnotatedTypeMirror(type),
+        /* nullableAnnotation= */ Optional.empty(),
+        nullables,
+        /* getter= */ "",
+        /* maybeBuilderInitializer= */ Optional.empty(),
+        /* hasDefault= */ false);
   }
 }

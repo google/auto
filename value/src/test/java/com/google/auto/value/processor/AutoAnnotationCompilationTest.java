@@ -15,7 +15,7 @@
  */
 package com.google.auto.value.processor;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
 
@@ -26,7 +26,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** @author emcmanus@google.com (Éamonn McManus) */
+/**
+ * @author emcmanus@google.com (Éamonn McManus)
+ */
 @RunWith(JUnit4.class)
 public class AutoAnnotationCompilationTest {
 
@@ -241,7 +243,7 @@ public class AutoAnnotationCompilationTest {
             "package com.example.factories;",
             "",
             "import com.example.annotations.MyAnnotation;",
-            "import java.io.Serializable",
+            "import java.io.Serializable;",
             "import java.util.Arrays;",
             "import java.util.Objects;",
             GeneratedImport.importGeneratedAnnotationType(),
@@ -408,7 +410,7 @@ public class AutoAnnotationCompilationTest {
             "          && Arrays.equals(enums,",
             "          (that instanceof AutoAnnotation_AnnotationFactory_newMyAnnotation)",
             "              ? ((AutoAnnotation_AnnotationFactory_newMyAnnotation) that).enums",
-            "              : that.enums())",
+            "              : that.enums());",
             "    }",
             "    return false;",
             "  }",

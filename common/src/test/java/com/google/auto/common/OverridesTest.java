@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
+import com.google.common.truth.Correspondence;
 import com.google.common.truth.Expect;
 import com.google.testing.compile.CompilationRule;
 import java.io.File;
@@ -58,7 +59,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -69,10 +70,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.model.Statement;
 
 /**
- * Tests that the {@link Overrides} class has behaviour consistent with javac. We test this in
- * two ways: once with {@link Overrides.ExplicitOverrides} using javac's own {@link Elements} and
- * {@link Types}, and once with it using the version of those objects from the Eclipse compiler
- * (ecj).
+ * Tests that the {@link Overrides} class has behaviour consistent with javac. We test this in two
+ * ways: once with {@link Overrides.ExplicitOverrides} using javac's own {@link Elements} and {@link
+ * Types}, and once with it using the version of those objects from the Eclipse compiler (ecj).
  *
  * @author emcmanus@google.com (Éamonn McManus)
  */
@@ -439,6 +439,7 @@ public class OverridesTest {
   // it also inherits it from Collection<E>.
 
   private interface XCollection<E> {
+    @SuppressWarnings("unused")
     boolean add(E e);
   }
 
@@ -574,11 +575,10 @@ public class OverridesTest {
   }
 
   private void assertTypeListsEqual(@Nullable List<TypeMirror> actual, List<TypeMirror> expected) {
-   requireNonNull(actual);
-   assertThat(actual).hasSize(expected.size());
-   for (int i = 0; i < actual.size(); i++) {
-      assertThat(typeUtils.isSameType(actual.get(i), expected.get(i))).isTrue();
-    }
+    assertThat(actual)
+        .comparingElementsUsing(Correspondence.from(typeUtils::isSameType, "is same type as"))
+        .containsExactlyElementsIn(expected)
+        .inOrder();
   }
 
   // TODO(emcmanus): replace this with something from compile-testing when that's available.

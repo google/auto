@@ -37,7 +37,7 @@ import javax.lang.model.type.TypeMirror;
  */
 @AutoValue
 abstract class FactoryDescriptor {
-  private static final CharMatcher invalidIdentifierCharacters =
+  private static final CharMatcher INVALID_IDENTIFIER_CHARACTERS =
       new CharMatcher() {
         @Override
         public boolean matches(char c) {
@@ -46,6 +46,8 @@ abstract class FactoryDescriptor {
       };
 
   abstract PackageAndClass name();
+
+  abstract ImmutableSet<AnnotationMirror> annotations();
 
   abstract TypeMirror extendingType();
 
@@ -84,6 +86,7 @@ abstract class FactoryDescriptor {
 
   static FactoryDescriptor create(
       PackageAndClass name,
+      ImmutableSet<AnnotationMirror> annotations,
       TypeMirror extendingType,
       ImmutableSet<TypeMirror> implementingTypes,
       boolean publicType,
@@ -119,7 +122,7 @@ abstract class FactoryDescriptor {
                 default:
                   String providerName =
                       uniqueNames.getUniqueName(
-                          invalidIdentifierCharacters.replaceFrom(key.toString(), '_')
+                          INVALID_IDENTIFIER_CHARACTERS.replaceFrom(key.toString(), '_')
                               + "Provider");
                   Optional<AnnotationMirror> nullable =
                       parameters.stream()
@@ -145,6 +148,7 @@ abstract class FactoryDescriptor {
 
     return new AutoValue_FactoryDescriptor(
         name,
+        annotations,
         extendingType,
         implementingTypes,
         publicType,
@@ -217,8 +221,8 @@ abstract class FactoryDescriptor {
   }
 
   /**
-   * Returns true if the given {@link FactoryMethodDescriptor} and
-   * {@link ImplementationMethodDescriptor} are duplicates.
+   * Returns true if the given {@link FactoryMethodDescriptor} and {@link
+   * ImplementationMethodDescriptor} are duplicates.
    *
    * <p>Descriptors are duplicates if they have the same name and if they have the same passed types
    * in the same order.
