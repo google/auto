@@ -35,7 +35,8 @@ package $pkg;
 ## The following line will be replaced by the required imports during post-processing.
 `import`
 
-${gwtCompatibleAnnotation}
+#if ($gwtCompatibleAnnotation)$gwtCompatibleAnnotation
+#end
 #foreach ($a in $annotations)
 $a
 #end
