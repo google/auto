@@ -78,36 +78,31 @@ In Maven, you can write:
 </plugins>
 ```
 
-Alternatively, you can include the processor itself (which transitively depends
-on the annotation) in your compile-time classpath. (However, note that doing so
-may pull unnecessary classes into your runtime classpath.)
+Previous versions of these instructions suggested an alternative configuration,
+where the `com.google.auto.service:auto-service` dependency itself was an
+`optional` dependency. We no longer recommend that configuration. (It may pull
+unnecessary classes into your runtime classpath, and it may produce
+[warnings or errors][JDK-8321319] under recent versions of Java.)
 
-```xml
-<dependencies>
-  <dependency>
-    <groupId>com.google.auto.service</groupId>
-    <artifactId>auto-service</artifactId>
-    <version>${version}</version>
-    <optional>true</optional>
-  </dependency>
-</dependencies>
-```
+[JDK-8321319]: https://bugs.openjdk.org/browse/JDK-8321319
 
 ## License
 
-    Copyright 2013 Google LLC
+```
+Copyright 2013 Google LLC
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+   http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
 
 [java]: https://en.wikipedia.org/wiki/Java_(programming_language)
 [sl]: http://docs.oracle.com/javase/6/docs/api/java/util/ServiceLoader.html

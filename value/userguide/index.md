@@ -76,7 +76,8 @@ abstract class Animal {
 The constructor parameters correspond, in order, to the abstract accessor
 methods.
 
-**For a nested class**, see ["How do I use AutoValue with a nested class"](howto.md#nested).
+**For a nested class**, see
+["How do I use AutoValue with a nested class"](howto.md#nested).
 
 Note that in real life, some classes and methods would presumably be public and
 have Javadoc. We're leaving these off in the User Guide only to keep the
@@ -138,19 +139,11 @@ For `auto-value` (the annotation processor), you can write this:
 </build>
 ```
 
-Alternatively, you can include the processor itself in your compile-time
-classpath. Doing so may pull unnecessary classes into your runtime classpath.
-
-```xml
-<dependencies>
-  <dependency>
-    <groupId>com.google.auto.value</groupId>
-    <artifactId>auto-value</artifactId>
-    <version>${auto-value.version}</version>
-    <optional>true</optional>
-  </dependency>
-</dependencies>
-```
+Previous versions of these instructions suggested an alternative configuration,
+where the `com.google.auto.value:auto-value` dependency itself was an
+`optional` dependency. We no longer recommend that configuration. (It may pull
+unnecessary classes into your runtime classpath, and it may produce
+[warnings or errors][JDK-8321319] under recent versions of Java.)
 
 ### With Gradle
 
@@ -169,6 +162,7 @@ instead of `compileOnly`. If you are using a version prior to 4.6, you must
 apply an annotation processing plugin
 [as described in these instructions][tbroyer-apt].
 
+[JDK-8321319]: https://bugs.openjdk.org/browse/JDK-8321319
 [tbroyer-apt]: https://plugins.gradle.org/plugin/net.ltgt.apt
 
 ### <a name="usage"></a>Usage
@@ -214,8 +208,8 @@ extends your abstract class, having:
 Your hand-written code, as shown above, delegates its factory method call to the
 generated constructor and voilà!
 
-For the `Animal` example shown above, here is [typical code AutoValue might
-generate](generated-example.md).
+For the `Animal` example shown above, here is
+[typical code AutoValue might generate](generated-example.md).
 
 Note that *consumers* of your value class *don't need to know any of this*. They
 just invoke your provided factory method and get a well-behaved instance back.
