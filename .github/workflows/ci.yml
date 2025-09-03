@@ -72,6 +72,8 @@ jobs:
         run: ./util/publish-snapshot-on-commit.sh
 
   generate_docs:
+    permissions:
+      contents: write
     name: 'Generate latest docs'
     needs: test
     if: github.event_name == 'push' && github.repository == 'google/auto'
