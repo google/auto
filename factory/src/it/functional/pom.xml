@@ -30,6 +30,11 @@
       <version>@project.version@</version>
     </dependency>
     <dependency>
+      <groupId>com.google.auto.value</groupId>
+      <artifactId>auto-value-annotations</artifactId>
+      <version>1.11.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <version>3.0.2</version>
@@ -49,12 +54,6 @@
       <groupId>com.google.dagger</groupId>
       <artifactId>dagger</artifactId>
       <version>2.42</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.dagger</groupId>
-      <artifactId>dagger-compiler</artifactId>
-      <version>2.42</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -87,6 +86,18 @@
           <compilerArgument>-Xlint:all</compilerArgument>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.auto.factory</groupId>
+              <artifactId>auto-factory</artifactId>
+              <version>@project.version@</version>
+            </path>
+            <path>
+              <groupId>com.google.dagger</groupId>
+              <artifactId>dagger-compiler</artifactId>
+              <version>2.42</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
     </plugins>

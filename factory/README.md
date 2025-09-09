@@ -6,12 +6,12 @@ A source code generator for JSR-330-compatible factories.
 AutoWhat‽
 -------------
 
-[Java][java] is full of [factories](http://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
+[Java][java] is full of [factories](https://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
-AutoFactory generates factories that can be used on their own or with [JSR-330](http://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](http://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation. Any combination of parameters can either be passed through factory methods or provided to the factory at construction time. They can implement interfaces or extend abstract classes. They're what you would have written, but without the bugs.
+AutoFactory generates factories that can be used on their own or with [JSR-330](https://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](https://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation. Any combination of parameters can either be passed through factory methods or provided to the factory at construction time. They can implement interfaces or extend abstract classes. They're what you would have written, but without the bugs.
 
 [Dagger](https://dagger.dev/) users: Dagger's own
-[assisted injection](https://dagger.dev/dev-guide/assisted-injection.html) is
+[assisted injection](https://dagger.dev/dev-guide/assisted-injection) is
 now usually preferred to AutoFactory.
 
 Example
@@ -77,23 +77,47 @@ final class SomeClass {
 Download
 --------
 
-In order to activate code generation you will need to
-include `auto-factory-${version}.jar` in your build at 
-compile time.
+In order to activate code generation, you will need to include
+`auto-factory-${version}.jar` in both your classpath and your
+annotation-processor path at compile time.
 
-In a Maven project, one would include the `auto-factory` 
-artifact as an "optional" dependency:
+In a Maven project, one would include the `auto-factory` artifact as an
+"optional" dependency and then include it again in `annotationProcessorPaths`:
 
 ```xml
 <dependencies>
   <dependency>
     <groupId>com.google.auto.factory</groupId>
     <artifactId>auto-factory</artifactId>
-    <version>${version}</version>
+    <version>${auto-factory.version}</version>
     <optional>true</optional>
   </dependency>
 </dependencies>
+
+...
+
+<build>
+  <plugins>
+    <plugin>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <configuration>
+        <annotationProcessorPaths>
+          <path>
+            <groupId>com.google.auto.factory</groupId>
+            <artifactId>auto-factory</artifactId>
+            <version>${auto-factory.version}</version>
+          </path>
+        </annotationProcessorPaths>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
 ```
+
+Previous versions of these instructions suggested an alternative configuration
+without the `annotationProcessorPaths` entry. We no longer recommend that
+configuration. (It may produce [warnings or errors][JDK-8321319] under recent
+versions of Java.)
 
 
 License
@@ -113,5 +137,5 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
+[JDK-8321319]: https://bugs.openjdk.org/browse/JDK-8321319
 [java]: https://en.wikipedia.org/wiki/Java_(programming_language)
-
