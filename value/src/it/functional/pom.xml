@@ -60,6 +60,12 @@
       <version>2.12.2</version>
     </dependency>
     <dependency>
+      <groupId>com.google.auto.value</groupId>
+      <artifactId>auto-value</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -289,9 +295,13 @@
           <plugin>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <argLine>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
-                  --add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED
-                  --add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+              <argLine>
+                --add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+                --add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED
+                --add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+                --add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+                --add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+                --add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
               </argLine>
             </configuration>
           </plugin>

@@ -120,6 +120,12 @@
       <artifactId>jsr305</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.checkerframework</groupId>
+      <artifactId>checker-qual</artifactId>
+      <version>3.50.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -274,9 +280,14 @@
         <jdk>[9,)</jdk>
       </activation>
       <properties>
-        <test.jvm.flags>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
-            --add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED
-            --add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</test.jvm.flags>
+        <test.jvm.flags>
+          --add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+          --add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED
+          --add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+          --add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+          --add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+          --add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
+        </test.jvm.flags>
       </properties>
     </profile>
     <profile>
