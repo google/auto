@@ -181,8 +181,9 @@ Remember when doing this that you are losing AutoValue's protections. Be careful
 to follow the basic rules of hash codes: equal objects must have equal hash
 codes *always*, and equal hash codes should imply equal objects *almost always*.
 You should now test your class more thoroughly, ideally using
-[`EqualsTester`](http://static.javadoc.io/com.google.guava/guava-testlib/19.0/com/google/common/testing/EqualsTester.html)
-from [guava-testlib](http://github.com/google/guava).
+[`EqualsTester`](https://www.javadoc.io/doc/com.google.guava/guava-testlib/latest/com/google/common/testing/EqualsTester.html)
+from
+[guava-testlib](https://central.sonatype.com/artifact/com.google.guava/guava-testlib).
 
 Best practice: mark your underriding methods `final` to make it clear to future
 readers that these methods aren't overridden by AutoValue.
@@ -716,7 +717,7 @@ final class AutoValue_Example extends Example {
 }
 ```
 
-[`@AutoValue.CopyAnnotations`]: http://static.javadoc.io/com.google.auto.value/auto-value/1.6/com/google/auto/value/AutoValue.CopyAnnotations.html
+[`@AutoValue.CopyAnnotations`]: https://www.javadoc.io/doc/com.google.auto.value/auto-value/latest/com/google/auto/value/AutoValue.CopyAnnotations.html
 
 ## <a name="toprettystring"></a>... create a pretty string representation?
 
