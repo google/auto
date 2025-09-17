@@ -31,7 +31,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.8</java.version>
-    <guava.version>33.4.8-jre</guava.version>
+    <guava.version>33.5.0-jre</guava.version>
     <truth.version>1.4.5</truth.version>
   </properties>
 
