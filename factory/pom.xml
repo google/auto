@@ -21,7 +21,7 @@
 
   <groupId>com.google.auto.factory</groupId>
   <artifactId>auto-factory</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>999.0.0-SNAPSHOT</version>
   <name>AutoFactory</name>
   <description>
     JSR-330-compatible factories.
@@ -30,9 +30,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <auto-service.version>1.1.1</auto-service.version>
-    <auto-value.version>1.11.0</auto-value.version>
-    <java.version>1.8</java.version>
+    <auto-service.version>999.0.0-SNAPSHOT</auto-service.version>
+    <auto-value.version>999.0.0-SNAPSHOT</auto-value.version>
     <guava.version>33.5.0-jre</guava.version>
     <truth.version>1.4.5</truth.version>
   </properties>
@@ -95,7 +94,7 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>1.2.2</version>
+      <version>999.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.value</groupId>
@@ -180,8 +179,6 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.14.0</version>
         <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
           <compilerArgument>-Xlint:all</compilerArgument>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
@@ -203,6 +200,60 @@
             </path>
           </annotationProcessorPaths>
         </configuration>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <configuration>
+              <release>9</release>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>com.google.auto.service</groupId>
+                  <artifactId>auto-service</artifactId>
+                  <version>${auto-service.version}</version>
+                </path>
+                <path>
+                  <groupId>com.google.auto.value</groupId>
+                  <artifactId>auto-value</artifactId>
+                  <version>${auto-value.version}</version>
+                </path>
+                <path>
+                  <groupId>net.ltgt.gradle.incap</groupId>
+                  <artifactId>incap-processor</artifactId>
+                  <version>1.0.0</version>
+                </path>
+              </annotationProcessorPaths>
+            </configuration>
+          </execution>
+          <execution>
+            <id>base-compile</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <excludes>
+                <exclude>module-info.java</exclude>
+              </excludes>
+              <release>8</release>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>com.google.auto.service</groupId>
+                  <artifactId>auto-service</artifactId>
+                  <version>${auto-service.version}</version>
+                </path>
+                <path>
+                  <groupId>com.google.auto.value</groupId>
+                  <artifactId>auto-value</artifactId>
+                  <version>${auto-value.version}</version>
+                </path>
+                <path>
+                  <groupId>net.ltgt.gradle.incap</groupId>
+                  <artifactId>incap-processor</artifactId>
+                  <version>1.0.0</version>
+                </path>
+              </annotationProcessorPaths>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -241,6 +292,13 @@
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.4.2</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Multi-Release>true</Multi-Release>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-invoker-plugin</artifactId>

@@ -21,11 +21,11 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>HEAD-SNAPSHOT</version>
+    <version>999.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>auto-value</artifactId>
-  <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Processor</name>
   <description>
     Immutable value-type code generation for Java 8+.
@@ -40,7 +40,7 @@
   </scm>
 
   <properties>
-    <auto-service.version>1.1.1</auto-service.version>
+    <auto-service.version>999.0.0</auto-service.version>
     <errorprone.version>2.41.0</errorprone.version>
   </properties>
 
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>com.google.auto</groupId>
       <artifactId>auto-common</artifactId>
-      <version>1.2.2</version>
+      <version>999.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>

@@ -21,23 +21,19 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>HEAD-SNAPSHOT</version>
+    <version>999.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>auto-value-annotations</artifactId>
-  <version>HEAD-SNAPSHOT</version>
   <name>AutoValue Annotations</name>
   <description>
     Immutable value-type code generation for Java 8+.
   </description>
   <url>https://github.com/google/auto/tree/main/value</url>
 
-  <properties>
-    <java.version>1.8</java.version>
-  </properties>
-
   <scm>
-    <url>http://github.com/google/auto</url>
+    <url>https://github.com/google/auto</url>
     <connection>scm:git:git://github.com/google/auto.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/google/auto.git</developerConnection>
     <tag>HEAD</tag>
