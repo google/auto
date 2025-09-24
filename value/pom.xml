@@ -20,7 +20,7 @@
 
   <groupId>com.google.auto.value</groupId>
   <artifactId>auto-value-parent</artifactId>
-  <version>HEAD-SNAPSHOT</version>
+  <version>999.0.0-SNAPSHOT</version>
   <name>AutoValue Parent</name>
   <description>
     Immutable value-type code generation for Java 8+.
@@ -30,7 +30,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.version>1.8</java.version>
     <guava.version>33.5.0-jre</guava.version>
   </properties>
 
@@ -76,7 +75,6 @@
   <modules>
     <module>annotations</module>
     <module>processor</module>
-    <module>src/it/functional</module>
   </modules>
 
   <dependencyManagement>
@@ -171,13 +169,29 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.14.1</version>
           <configuration>
-            <source>${java.version}</source>
-            <target>${java.version}</target>
             <compilerArgument>-Xlint:all</compilerArgument>
             <showWarnings>true</showWarnings>
             <showDeprecation>true</showDeprecation>
           </configuration>
           <executions>
+            <execution>
+              <id>default-compile</id>
+              <configuration>
+                <release>9</release>
+              </configuration>
+            </execution>
+            <execution>
+              <id>base-compile</id>
+              <goals>
+                <goal>compile</goal>
+              </goals>
+              <configuration>
+                <excludes>
+                  <exclude>module-info.java</exclude>
+                </excludes>
+                <release>8</release>
+              </configuration>
+            </execution>
             <execution>
               <id>default-testCompile</id>
               <phase>test-compile</phase>
@@ -195,6 +209,13 @@
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
           <version>3.4.2</version>
+          <configuration>
+            <archive>
+              <manifestEntries>
+                <Multi-Release>true</Multi-Release>
+              </manifestEntries>
+            </archive>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-invoker-plugin</artifactId>
@@ -232,9 +253,6 @@
       <activation>
         <jdk>[11,)</jdk>
       </activation>
-      <modules>
-        <module>src/it/gwtserializer</module>
-      </modules>
     </profile>
     <profile>
       <id>before-java-17</id>

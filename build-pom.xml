@@ -7,9 +7,9 @@
   <packaging>pom</packaging>
   <modules>
     <module>common</module>
-    <module>factory</module>
     <module>service</module>
     <module>value</module>
+    <module>factory</module>
   </modules>
   <distributionManagement>
     <repository>
