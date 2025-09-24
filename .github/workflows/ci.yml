@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: mvn -B process-test-classes -U -f build-pom.xml
       - name: 'Upload build artifacts'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: build-artifacts
           path: |
@@ -62,7 +62,7 @@ jobs:
           restore-keys: |
             maven-
       - name: 'Download build artifacts'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
           name: build-artifacts
       - name: 'Set up JDK ${{ matrix.java }}'
