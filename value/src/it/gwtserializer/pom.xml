@@ -22,14 +22,13 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>HEAD-SNAPSHOT</version>
+    <version>999.0.0-SNAPSHOT</version>
     <relativePath>../../../pom.xml</relativePath>
   </parent>
   <url>https://github.com/google/auto/tree/main/value</url>
 
   <groupId>com.google.auto.value.it.gwtserializer</groupId>
   <artifactId>gwtserializer</artifactId>
-  <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value GWT-RPC Serialization Integration Test</name>
   <dependencyManagement>
     <dependencies>
