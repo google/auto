@@ -81,7 +81,7 @@
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
-      <version>9.8</version>
+      <version>9.9</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -118,7 +118,7 @@
     <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>
-      <version>3.51.0</version>
+      <version>3.51.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
