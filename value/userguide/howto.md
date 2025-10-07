@@ -581,8 +581,8 @@ Switching on an enum like this can lead to more robust code than using
 `instanceof` checks, especially if a tool like [Error
 Prone](https://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can alert you
 if you add a new variant without updating all your switches. (On the other hand,
-if nothing outside your class references `getKind()`, you should consider if a
-solution using inheritance might be better.)
+if nothing outside your class references `getKind()`, you should consider
+whether using inheritance might be better.)
 
 There must be an enum such as `Kind`, though it doesn't have to be called `Kind`
 and it doesn't have to be nested inside the `@AutoOneOf` class. There must be an
