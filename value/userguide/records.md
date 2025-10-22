@@ -87,9 +87,7 @@ into interfaces.
 Records can't have instance fields (other than their properties). So it is hard
 to cache a derived property, for example. AutoValue makes this trivial with
 [`@Memoized`](https://javadoc.io/static/com.google.auto.value/auto-value-annotations/1.10/com/google/auto/value/extension/memoized/Memoized.html).
-
-We suggest ways to achieve the same effect with records [below](#derived), but
-it might be simpler to stick with AutoValue.
+Records are not a good fit if you rely on this feature.
 
 ### Primitive array properties
 
@@ -380,60 +378,6 @@ public record Person(String name, int id) {
 
 So both `Person.getName()` and `Person.name()` are allowed. You might want to
 deprecate the `get-` methods so you can eventually remove them.
-
-### <a id="derived"></a> Caching derived properties
-
-A record has an instance field for each of its properties, but cannot have other
-instance fields. That means in particular that it is not easy to cache derived
-properties, as you can with AutoValue and [`@Memoized`](howto.md#memoize).
-
-Records *can* have static fields, so one way to cache derived properties is to
-map from record instances to their derived properties.
-
-Before:
-
-```java
-@AutoValue
-public abstract class Person {
-  public abstract String name();
-  public abstract int id();
-
-  @Memoized
-  public UUID derivedProperty() {
-    return expensiveFunction(this);
-  }
-
-  public static Person create(String name, int id) {
-    return new AutoValue_Person(name, id);
-  }
-}
-```
-
-After:
-
-```java
-public record Person(String name, int id) {
-  public Person {
-    Objects.requireNonNull(name);
-  }
-
-  private static final Map<Person, String> derivedPropertyCache = new WeakHashMap<>();
-
-  public UUID derivedProperty() {
-    synchronized (derivedPropertyCache) {
-      return derivedPropertyCache.computeIfAbsent(this, person -> expensiveFunction(person)));
-    }
-  }
-}
-```
-
-It's very important to use **`WeakHashMap`** (or similar) or you might suffer a
-memory leak. As usual with `WeakHashMap`, you have to be sure that the values in
-the map don't reference the keys. For more caching options, consider using
-[Caffeine](https://github.com/ben-manes/caffeine).
-
-You might decide that AutoValue with `@Memoized` is simpler than records for
-this case, though.
 
 ### Builders
 
