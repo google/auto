@@ -21,14 +21,14 @@
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>1.11.1</version>
+    <version>1.11.2-SNAPSHOT</version>
     <relativePath>../../../pom.xml</relativePath>
   </parent>
   <url>https://github.com/google/auto/tree/main/value</url>
 
   <groupId>com.google.auto.value.it.functional</groupId>
   <artifactId>functional</artifactId>
-  <version>1.11.1</version>
+  <version>1.11.2-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
     <kotlin.version>2.2.21</kotlin.version>
