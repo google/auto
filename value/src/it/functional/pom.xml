@@ -15,20 +15,21 @@
   limitations under the License.
 -->
 <!-- TODO(gak): see if we can manage these dependencies any better -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>com.google.auto.value</groupId>
     <artifactId>auto-value-parent</artifactId>
-    <version>1.11.2-SNAPSHOT</version>
+    <version>HEAD-SNAPSHOT</version>
     <relativePath>../../../pom.xml</relativePath>
   </parent>
   <url>https://github.com/google/auto/tree/main/value</url>
 
   <groupId>com.google.auto.value.it.functional</groupId>
   <artifactId>functional</artifactId>
-  <version>1.11.2-SNAPSHOT</version>
+  <version>HEAD-SNAPSHOT</version>
   <name>Auto-Value Functional Integration Test</name>
   <properties>
     <kotlin.version>2.2.21</kotlin.version>
@@ -171,12 +172,10 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>3.1.4</version>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
         <configuration>
-          <!-- Build/test, but don't deploy -->
-          <skip>true</skip>
+          <skipPublishing>true</skipPublishing>
         </configuration>
       </plugin>
       <plugin>
