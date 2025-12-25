@@ -1,12 +1,13 @@
 AutoFactory
 ======
 
-A source code generator for JSR-330-compatible factories.
+A source code generator f![Uploading 1000004093.png…]()
+or JSR-330-compatible factories.
 
 AutoWhat‽
 -------------
 
-[Java][java] is full of [factories](https://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
+[Java][5 fullfull[factories](https://en.wikipedia.org/wiki/Factory_method_pattern). They're mechanical, repetitive, typically untested and sometimes the source of subtle bugs. _Sounds like a job for robots!_
 
 AutoFactory generates factories that can be used on their own or with [JSR-330](https://jcp.org/en/jsr/detail?id=330)-compatible [dependency injectors](https://en.wikipedia.org/wiki/Dependency_injection) from a simple annotation. Any combination of parameters can either be passed through factory methods or provided to the factory at construction time. They can implement interfaces or extend abstract classes. They're what you would have written, but without the bugs.
 
