@@ -92,3 +92,13 @@ data class KotlinDataSomeDefaultsBig(
 // CharSequence is an interface so the parameter appears from Java as List<? extends CharSequence>,
 // but getList() appears as returning List<CharSequence>.
 data class KotlinDataWithList(val list: List<CharSequence>, val number: Int)
+
+data class KotlinDataWithTypeParameters<
+  T,
+  U : Number,
+  out V : Number,
+  in W : Number,
+  out M : Map<String, *>,
+>(val t: T? = null, val u: U, val v: V, val m: M) {
+  fun foo(w: W) {}
+}

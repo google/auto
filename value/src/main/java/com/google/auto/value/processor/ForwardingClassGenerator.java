@@ -37,9 +37,20 @@ import com.google.auto.common.MoreElements;
 import com.google.common.collect.ImmutableList;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
+import javax.lang.model.type.WildcardType;
+import javax.lang.model.util.SimpleTypeVisitor8;
+import javax.lang.model.util.Types;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.signature.SignatureVisitor;
+import org.objectweb.asm.signature.SignatureWriter;
 
 /**
  * Generates a class that invokes the constructor of another class.
@@ -66,6 +77,12 @@ import org.objectweb.asm.MethodVisitor;
  * Forwarder.of(1, "2", 3L)} to call the constructor.
  */
 final class ForwardingClassGenerator {
+  private final Types typeUtils;
+
+  ForwardingClassGenerator(Types typeUtils) {
+    this.typeUtils = typeUtils;
+  }
+
   /**
    * Assembles a class with a static method {@code of} that calls the constructor of another class
    * with the same parameters.
@@ -77,15 +94,13 @@ final class ForwardingClassGenerator {
    * @param forwardingClassName the fully-qualified name of the class to generate
    * @param classToConstruct the type whose constructor will be invoked ({@code ConstructMe} in the
    *     example above)
-   * @param constructorParameters the erased types of the constructor parameters, which will also be
-   *     the types of the generated {@code of} method. We require the types to be erased so as not
-   *     to require an instance of the {@code Types} interface to erase them here. Having to deal
-   *     with generics would complicate things unnecessarily.
+   * @param constructorParameters the types of the constructor parameters, which will also be the
+   *     types of the generated {@code of} method
    * @return a byte array making up the new class file
    */
-  static byte[] makeConstructorForwarder(
+  byte[] makeConstructorForwarder(
       String forwardingClassName,
-      TypeMirror classToConstruct,
+      DeclaredType classToConstruct,
       ImmutableList<TypeMirror> constructorParameters) {
 
     ClassWriter classWriter = new ClassWriter(COMPUTE_MAXS);
@@ -99,20 +114,20 @@ final class ForwardingClassGenerator {
     classWriter.visitSource(forwardingClassName, null);
 
     // Generate the `of` method.
-    // TODO(emcmanus): cleaner generics. If we're constructing Foo<T extends Number> then we should
-    // generate a generic signature for the `of` method, as if the Java declaration were this:
-    //   static <T extends Number> Foo<T> of(...)
-    // Currently we just generate:
-    //   static Foo of(...)
-    // which returns the raw Foo type.
     String parameterSignature =
         constructorParameters.stream()
+            .map(typeUtils::erasure)
             .map(ForwardingClassGenerator::signatureEncoding)
             .collect(joining(""));
     String internalClassToConstruct = internalName(asTypeElement(classToConstruct));
     String ofMethodSignature = "(" + parameterSignature + ")L" + internalClassToConstruct + ";";
     MethodVisitor ofMethodVisitor =
-        classWriter.visitMethod(ACC_STATIC, "of", ofMethodSignature, null, null);
+        classWriter.visitMethod(
+            ACC_STATIC,
+            "of",
+            ofMethodSignature,
+            genericMethodSignature(asTypeElement(classToConstruct), constructorParameters),
+            null);
     ofMethodVisitor.visitCode();
 
     // The remaining instructions are basically what ASMifier generates for a class like the
@@ -140,9 +155,103 @@ final class ForwardingClassGenerator {
     return classWriter.toByteArray();
   }
 
+  /**
+   * If the given type is generic, returns a string representing the generic signature of the
+   * constructor, which will also be the generic signature of the generated {@code of} method.
+   * Otherwise returns null.
+   *
+   * <p>This is surprisingly complicated. It would be easier, if a bit less clean, just to return
+   * the raw type in the {@code of} method and suppress {@code unchecked} warnings at the call site.
+   */
+  private @Nullable String genericMethodSignature(
+      TypeElement type, ImmutableList<TypeMirror> constructorParameters) {
+    if (type.getTypeParameters().isEmpty()) {
+      return null;
+    }
+    SignatureWriter writer = new SignatureWriter();
+    for (TypeParameterElement param : type.getTypeParameters()) {
+      writer.visitFormalTypeParameter(param.getSimpleName().toString());
+      for (TypeMirror bound : param.getBounds()) {
+        if (typeUtils.asElement(bound).getKind().isClass()) {
+          bound.accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, writer.visitClassBound());
+        } else {
+          bound.accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, writer.visitInterfaceBound());
+        }
+      }
+    }
+    for (TypeMirror param : constructorParameters) {
+      param.accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, writer.visitParameterType());
+    }
+    type.asType().accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, writer.visitReturnType());
+    return writer.toString();
+  }
+
+  private static class TypeMirrorToSignatureVisitor
+      extends SimpleTypeVisitor8<Void, SignatureVisitor> {
+    @Override
+    public Void visitPrimitive(PrimitiveType t, SignatureVisitor v) {
+      v.visitBaseType(signatureEncoding(t).charAt(0));
+      return null;
+    }
+
+    @Override
+    public Void visitArray(ArrayType t, SignatureVisitor v) {
+      SignatureVisitor componentVisitor = v.visitArrayType();
+      t.getComponentType().accept(this, componentVisitor);
+      return null;
+    }
+
+    @Override
+    public Void visitDeclared(DeclaredType t, SignatureVisitor v) {
+      TypeElement element = asTypeElement(t);
+      v.visitClassType(internalName(element));
+      for (TypeMirror arg : t.getTypeArguments()) {
+        arg.accept(TypeArgumentVisitor.INSTANCE, v);
+      }
+      v.visitEnd();
+      return null;
+    }
+
+    @Override
+    public Void visitTypeVariable(TypeVariable t, SignatureVisitor v) {
+      v.visitTypeVariable(t.asElement().getSimpleName().toString());
+      return null;
+    }
+
+    @Override
+    protected Void defaultAction(TypeMirror t, SignatureVisitor v) {
+      throw new IllegalArgumentException("Unexpected type " + t);
+    }
+  }
+
+  private static class TypeArgumentVisitor extends SimpleTypeVisitor8<Void, SignatureVisitor> {
+    static final TypeArgumentVisitor INSTANCE = new TypeArgumentVisitor();
+
+    @Override
+    public Void visitWildcard(WildcardType t, SignatureVisitor v) {
+      if (t.getExtendsBound() != null) {
+        t.getExtendsBound().accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, v.visitTypeArgument('+'));
+      } else if (t.getSuperBound() != null) {
+        t.getSuperBound().accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, v.visitTypeArgument('-'));
+      } else {
+        v.visitTypeArgument();
+      }
+      return null;
+    }
+
+    @Override
+    protected Void defaultAction(TypeMirror e, SignatureVisitor v) {
+      e.accept(TYPE_MIRROR_TO_SIGNATURE_VISITOR, v.visitTypeArgument('='));
+      return null;
+    }
+  }
+
+  private static final TypeMirrorToSignatureVisitor TYPE_MIRROR_TO_SIGNATURE_VISITOR =
+      new TypeMirrorToSignatureVisitor();
+
   /** The bytecode instruction that copies a parameter of the given type onto the JVM stack. */
-  private static int loadInstruction(TypeMirror type) {
-    switch (type.getKind()) {
+  private int loadInstruction(TypeMirror type) {
+    switch (typeUtils.erasure(type).getKind()) {
       case DECLARED:
       case ARRAY:
         return ALOAD;
@@ -160,8 +269,7 @@ final class ForwardingClassGenerator {
         // These are all represented as int local variables.
         return ILOAD;
       default:
-        // We expect the caller to have erased the parameters so we shouldn't be seeing type
-        // variables or whatever.
+        // We have erased the TypeMirror so we shouldn't be seeing type variables or whatever.
         throw new IllegalArgumentException("Unexpected type " + type);
     }
   }
@@ -224,6 +332,4 @@ final class ForwardingClassGenerator {
         throw new AssertionError("Bad signature type " + type);
     }
   }
-
-  private ForwardingClassGenerator() {}
 }

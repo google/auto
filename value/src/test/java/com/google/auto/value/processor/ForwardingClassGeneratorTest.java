@@ -15,6 +15,7 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.stream;
@@ -158,12 +159,12 @@ public final class ForwardingClassGeneratorTest {
     ImmutableList<TypeMirror> parameterTypeMirrors =
         constructorExecutable.getParameters().stream()
             .map(Element::asType)
-            .map(compilationRule.getTypes()::erasure)
             .collect(toImmutableList());
     String className = "com.example.Forwarder";
     byte[] bytes =
-        ForwardingClassGenerator.makeConstructorForwarder(
-            className, typeElement.asType(), parameterTypeMirrors);
+        new ForwardingClassGenerator(compilationRule.getTypes())
+            .makeConstructorForwarder(
+                className, asDeclared(typeElement.asType()), parameterTypeMirrors);
     // Now load the class we just generated, and use reflection to call its forwarding method.
     // That should give us an instance of the target class `c`, obtained by the call to its
     // constructor from the forwarding method.

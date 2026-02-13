@@ -19,7 +19,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -364,5 +366,46 @@ public final class AutoBuilderKotlinTest {
     KotlinDataWithList y = KotlinDataWithListBuilder.builder(x).number(23).build();
     assertThat(y.getList()).isEqualTo(strings);
     assertThat(y.getNumber()).isEqualTo(23);
+  }
+
+  @AutoBuilder(ofClass = KotlinDataWithTypeParameters.class)
+  interface KotlinDataWithTypeParametersBuilder<
+      T, U extends Number, V extends Number, W extends Number, M extends Map<String, ?>> {
+    static <T, U extends Number, V extends Number, W extends Number, M extends Map<String, ?>>
+        KotlinDataWithTypeParametersBuilder<T, U, V, W, M> builder() {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithTypeParametersBuilder<
+          T, U, V, W, M>();
+    }
+
+    KotlinDataWithTypeParametersBuilder<T, U, V, W, M> t(T t);
+
+    KotlinDataWithTypeParametersBuilder<T, U, V, W, M> u(U u);
+
+    KotlinDataWithTypeParametersBuilder<T, U, V, W, M> v(V v);
+
+    KotlinDataWithTypeParametersBuilder<T, U, V, W, M> m(M m);
+
+    T getT();
+
+    U getU();
+
+    V getV();
+
+    M getM();
+
+    KotlinDataWithTypeParameters<T, U, V, W, M> build();
+  }
+
+  @Test
+  public void kotlinWithTypeParameters() {
+    KotlinDataWithTypeParametersBuilder<String, Integer, Double, Long, ImmutableMap<String, ?>>
+        builder = KotlinDataWithTypeParametersBuilder.builder();
+    ImmutableMap<String, Integer> map = ImmutableMap.of("hello", 1);
+    KotlinDataWithTypeParameters<String, Integer, Double, Long, ImmutableMap<String, ?>> data =
+        builder.t("test").u(1).v(2.0).m(map).build();
+    assertThat(data.getT()).isEqualTo("test");
+    assertThat(data.getU()).isEqualTo(1);
+    assertThat(data.getV()).isEqualTo(2.0);
+    assertThat(data.getM()).isEqualTo(map);
   }
 }

@@ -18,6 +18,7 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.GeneratedAnnotations.generatedAnnotation;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.getPackage;
+import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.value.processor.AutoValueProcessor.OMIT_IDENTIFIERS_OPTION;
 import static com.google.auto.value.processor.ClassNames.AUTO_ANNOTATION_NAME;
 import static com.google.auto.value.processor.ClassNames.AUTO_BUILDER_NAME;
@@ -242,18 +243,16 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     // This ABI is not publicly specified (as far as we know) but JetBrains has confirmed orally
     // that it unlikely to change, and if it does it will be in a backward-compatible way.
     ImmutableList.Builder<TypeMirror> constructorParameters = ImmutableList.builder();
-    executable.parameters().stream()
-        .map(Element::asType)
-        .map(typeUtils()::erasure)
-        .forEach(constructorParameters::add);
+    executable.parameters().stream().map(Element::asType).forEach(constructorParameters::add);
     int bitmaskCount = IntMath.divide(executable.parameters().size(), 32, CEILING);
     constructorParameters.addAll(
         Collections.nCopies(bitmaskCount, typeUtils().getPrimitiveType(TypeKind.INT)));
     String marker = "kot".concat("lin.jvm.internal.DefaultConstructorMarker"); // defeat shading
     constructorParameters.add(elementUtils().getTypeElement(marker).asType());
     byte[] classBytes =
-        ForwardingClassGenerator.makeConstructorForwarder(
-            forwardingClassName, builtType, constructorParameters.build());
+        new ForwardingClassGenerator(typeUtils())
+            .makeConstructorForwarder(
+                forwardingClassName, asDeclared(builtType), constructorParameters.build());
     try {
       JavaFileObject trampoline =
           processingEnv.getFiler().createClassFile(forwardingClassName, autoBuilderType);
