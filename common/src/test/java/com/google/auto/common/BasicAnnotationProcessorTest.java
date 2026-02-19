@@ -93,7 +93,7 @@ public class BasicAnnotationProcessorTest {
             @Override
             public ImmutableSet<? extends Element> process(
                 ImmutableSetMultimap<String, Element> elementsByAnnotation) {
-              processArguments.add(ImmutableSetMultimap.copyOf(elementsByAnnotation));
+              processArguments.add(elementsByAnnotation);
               TypeElement requiredClass =
                   processingEnv.getElementUtils().getTypeElement("test.SomeGeneratedClass");
               if (requiredClass == null) {
@@ -135,7 +135,7 @@ public class BasicAnnotationProcessorTest {
             @Override
             public ImmutableSet<? extends Element> process(
                 ImmutableSetMultimap<String, Element> elementsByAnnotation) {
-              processArguments.add(ImmutableSetMultimap.copyOf(elementsByAnnotation));
+              processArguments.add(elementsByAnnotation);
               int numberOfAnnotatedElements = elementsByAnnotation.size();
               if (numberOfAnnotatedElements == 0) {
                 return ImmutableSet.of();
@@ -182,7 +182,7 @@ public class BasicAnnotationProcessorTest {
             @Override
             public ImmutableSet<? extends Element> process(
                 ImmutableSetMultimap<String, Element> elementsByAnnotation) {
-              processArguments.add(ImmutableSetMultimap.copyOf(elementsByAnnotation));
+              processArguments.add(elementsByAnnotation);
 
               List<Element> annotatedElements = new ArrayList<>(elementsByAnnotation.values());
               int numberOfAnnotatedElements = annotatedElements.size();
