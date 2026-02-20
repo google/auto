@@ -550,12 +550,11 @@ public abstract class BasicAnnotationProcessor extends AbstractProcessor {
   /* Element Factories */
 
   /**
-   * A factory for an annotated element.
+   * A factory for looking up the "same" annotated element in a new round.
    *
-   * <p>Instead of saving elements, an {@code ElementFactory} is saved since there is no guarantee
-   * that any particular element will always be represented by the same object. (Reference: {@link
-   * Element}) For example, Eclipse compiler uses different {@code Element} instances per round. The
-   * factory allows us to reconstruct an equivalent element in a later round.
+   * <p>When deferring work across rounds, {@link BasicAnnotationProcessor} saves an {@link
+   * ElementFactory} instead of an {@link Element}. It does this because an {@link Element} from one
+   * round is not necessarily valid in future rounds.
    */
   private abstract static class ElementFactory {
     final String toString;
