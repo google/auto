@@ -41,7 +41,7 @@
 
   <properties>
     <auto-service.version>1.1.1</auto-service.version>
-    <errorprone.version>2.47.0</errorprone.version>
+    <errorprone.version>2.48.0</errorprone.version>
   </properties>
 
   <dependencies>
@@ -118,7 +118,7 @@
     <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>
-      <version>3.53.1</version>
+      <version>3.54.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
