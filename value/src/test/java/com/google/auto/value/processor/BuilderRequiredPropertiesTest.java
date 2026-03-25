@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.testing.compile.CompilationRule;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.lang.model.type.TypeKind;
@@ -345,6 +346,7 @@ public final class BuilderRequiredPropertiesTest {
         /* nullableAnnotation= */ Optional.empty(),
         /* nullables= */ Nullables.fromMethods(null, ImmutableList.of()),
         /* getter= */ name,
+        /* copier= */ Function.identity(),
         /* maybeBuilderInitializer= */ Optional.empty(),
         /* hasDefault= */ hasDefault);
   }

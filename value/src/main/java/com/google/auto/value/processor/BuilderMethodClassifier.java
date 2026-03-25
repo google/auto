@@ -461,6 +461,8 @@ abstract class BuilderMethodClassifier<E extends Element> {
     boolean nullableParameter =
         nullableAnnotationFor(parameterElement, parameterElement.asType()).isPresent();
     String property = propertyElements().inverse().get(propertyElement);
+    boolean nullableProperty =
+        nullableAnnotationFor(propertyElement, originalPropertyType(propertyElement)).isPresent();
     TypeMirror targetType = rewrittenPropertyTypes.get(property).getType();
     TypeMirror parameterType =
         MethodSignature.asMemberOf(typeUtils, builderType, setter)
@@ -473,9 +475,6 @@ abstract class BuilderMethodClassifier<E extends Element> {
     if (typeUtils.isAssignable(parameterType, targetType)
         && typeUtils.isAssignable(targetType, parameterType)) {
       if (nullableParameter) {
-        boolean nullableProperty =
-            nullableAnnotationFor(propertyElement, originalPropertyType(propertyElement))
-                .isPresent();
         if (!nullableProperty) {
           errorReporter.reportError(
               setter,
@@ -495,6 +494,16 @@ abstract class BuilderMethodClassifier<E extends Element> {
             propertyString(propertyElement));
       }
       return Optional.of(Copier.IDENTITY);
+    }
+
+    // Parameter type is not equal to property type, but might be an optional which can be converted
+    // to a nullable.
+    Optionalish parameterOptional = Optionalish.createIfOptional(parameterType);
+    if (parameterOptional != null && nullableProperty) {
+      TypeMirror containedType = parameterOptional.getContainedType(typeUtils);
+      if (typeUtils.isAssignable(containedType, targetType)) {
+        return Optional.of(Copier.notAcceptingNull(parameterOptional.orElseNullCopier()));
+      }
     }
 
     // Parameter type is not equal to property type, but might be convertible with copyOf.

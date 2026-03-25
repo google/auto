@@ -41,6 +41,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import javax.lang.model.SourceVersion;
 import org.junit.Test;
@@ -778,5 +781,136 @@ public final class AutoBuilderTest {
     assertThrows(
         NullPointerException.class,
         () -> FrobCaller.<@Nullable String, String>caller().arg(null).notNull(null).call());
+  }
+
+  static class NullablesExposedAsOptionals {
+    private final @Nullable String aString1;
+    private final @Nullable String aString2;
+    private final @Nullable Double aDouble;
+    private final @Nullable Integer anInt;
+    private final @Nullable Long aLong;
+
+    NullablesExposedAsOptionals(
+        @Nullable String aString1,
+        @Nullable String aString2,
+        @Nullable Double aDouble,
+        @Nullable Integer anInt,
+        @Nullable Long aLong) {
+      this.aString1 = aString1;
+      this.aString2 = aString2;
+      this.aDouble = aDouble;
+      this.anInt = anInt;
+      this.aLong = aLong;
+    }
+
+    Optional<String> aString1() {
+      return Optional.ofNullable(aString1);
+    }
+
+    com.google.common.base.Optional<String> aString2() {
+      return com.google.common.base.Optional.fromNullable(aString2);
+    }
+
+    OptionalDouble aDouble() {
+      return aDouble == null ? OptionalDouble.empty() : OptionalDouble.of(aDouble);
+    }
+
+    OptionalInt anInt() {
+      return anInt == null ? OptionalInt.empty() : OptionalInt.of(anInt);
+    }
+
+    OptionalLong aLong() {
+      return aLong == null ? OptionalLong.empty() : OptionalLong.of(aLong);
+    }
+
+    Builder toBuilder() {
+      return new AutoBuilder_AutoBuilderTest_NullablesExposedAsOptionals_Builder(this);
+    }
+
+    static Builder builder() {
+      return new AutoBuilder_AutoBuilderTest_NullablesExposedAsOptionals_Builder();
+    }
+
+    @AutoBuilder
+    abstract static class Builder {
+      abstract Builder setAString1(Optional<String> aString1);
+
+      abstract Builder setAString2(com.google.common.base.Optional<String> aString2);
+
+      abstract Builder setADouble(OptionalDouble aDouble);
+
+      abstract Builder setAnInt(OptionalInt anInt);
+
+      abstract Builder setALong(OptionalLong aLong);
+
+      abstract NullablesExposedAsOptionals build();
+    }
+  }
+
+  @Test
+  public void builderExposingNullableAsOptionalString() {
+    NullablesExposedAsOptionals built =
+        NullablesExposedAsOptionals.builder().setAString1(Optional.of("foo")).build();
+    assertThat(built.aString1()).hasValue("foo");
+    assertThat(built.toBuilder().build().aString1()).hasValue("foo");
+
+    NullablesExposedAsOptionals builtEmpty =
+        built.toBuilder().setAString1(Optional.empty()).build();
+    assertThat(builtEmpty.aString1()).isEmpty();
+    assertThat(builtEmpty.toBuilder().build().aString1()).isEmpty();
+  }
+
+  @Test
+  public void builderExposingNullableAsBaseOptionalString() {
+    NullablesExposedAsOptionals built =
+        NullablesExposedAsOptionals.builder()
+            .setAString2(com.google.common.base.Optional.of("foo"))
+            .build();
+    assertThat(built.aString2()).hasValue("foo");
+    assertThat(built.toBuilder().build().aString2()).hasValue("foo");
+
+    NullablesExposedAsOptionals builtAbsent =
+        built.toBuilder().setAString2(com.google.common.base.Optional.absent()).build();
+    assertThat(builtAbsent.aString2()).isAbsent();
+    assertThat(builtAbsent.toBuilder().build().aString2()).isAbsent();
+  }
+
+  @Test
+  public void builderExposingNullableAsOptionalDouble() {
+    NullablesExposedAsOptionals built =
+        NullablesExposedAsOptionals.builder().setADouble(OptionalDouble.of(3.14)).build();
+    assertThat(built.aDouble()).hasValue(3.14);
+    assertThat(built.toBuilder().build().aDouble()).hasValue(3.14);
+
+    NullablesExposedAsOptionals builtEmpty =
+        built.toBuilder().setADouble(OptionalDouble.empty()).build();
+    assertThat(builtEmpty.aDouble()).isEmpty();
+    assertThat(builtEmpty.toBuilder().build().aDouble()).isEmpty();
+  }
+
+  @Test
+  public void builderExposingNullableAsOptionalInt() {
+    NullablesExposedAsOptionals built =
+        NullablesExposedAsOptionals.builder().setAnInt(OptionalInt.of(3)).build();
+    assertThat(built.anInt()).hasValue(3);
+    assertThat(built.toBuilder().build().anInt()).hasValue(3);
+
+    NullablesExposedAsOptionals builtEmpty =
+        built.toBuilder().setAnInt(OptionalInt.empty()).build();
+    assertThat(builtEmpty.anInt()).isEmpty();
+    assertThat(builtEmpty.toBuilder().build().anInt()).isEmpty();
+  }
+
+  @Test
+  public void builderExposingNullableAsOptionalLong() {
+    NullablesExposedAsOptionals built =
+        NullablesExposedAsOptionals.builder().setALong(OptionalLong.of(3)).build();
+    assertThat(built.aLong()).hasValue(3);
+    assertThat(built.toBuilder().build().aLong()).hasValue(3);
+
+    NullablesExposedAsOptionals builtEmpty =
+        built.toBuilder().setALong(OptionalLong.empty()).build();
+    assertThat(builtEmpty.aLong()).isEmpty();
+    assertThat(builtEmpty.toBuilder().build().aLong()).isEmpty();
   }
 }

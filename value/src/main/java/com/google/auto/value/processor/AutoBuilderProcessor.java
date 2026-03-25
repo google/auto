@@ -56,6 +56,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -200,10 +201,10 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       return;
     }
     BuilderMethodClassifier<VariableElement> classifier = maybeClassifier.get();
-    ImmutableMap<String, String> propertyToGetterName =
-        propertyToGetterName(executable, autoBuilderType);
+    ImmutableMap<String, PropertyGetter> propertyToGetter =
+        propertyToGetter(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(executable, propertyToGetterName, propertyInitializers, nullables);
+    vars.props = propertySet(executable, propertyToGetter, propertyInitializers, nullables);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
@@ -215,7 +216,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         forwardingClassName
             .map(n -> TypeSimplifier.simpleNameOf(n) + ".of")
             .orElseGet(executable::invoke);
-    vars.toBuilderConstructor = !propertyToGetterName.isEmpty();
+    vars.toBuilderConstructor = !propertyToGetter.isEmpty();
     vars.toBuilderMethods = ImmutableList.of();
     defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), nullables, vars);
     String text = vars.toText();
@@ -273,7 +274,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
 
   private ImmutableSet<Property> propertySet(
       Executable executable,
-      Map<String, String> propertyToGetterName,
+      Map<String, PropertyGetter> propertyToGetter,
       ImmutableMap<String, String> builderInitializers,
       Nullables nullables) {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
@@ -289,7 +290,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                   newProperty(
                       v,
                       identifiers.get(v),
-                      propertyToGetterName.get(name),
+                      propertyToGetter.get(name),
                       Optional.ofNullable(builderInitializers.get(name)),
                       executable.isOptional(name),
                       nullables);
@@ -306,7 +307,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   private Property newProperty(
       VariableElement var,
       String identifier,
-      String getterName,
+      PropertyGetter getter,
       Optional<String> builderInitializer,
       boolean hasDefault,
       Nullables nullables) {
@@ -320,7 +321,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         new AnnotatedTypeMirror(type),
         nullableAnnotation,
         nullables,
-        getterName,
+        getter == null ? null : getter.methodName,
+        getter == null ? null : getter.copier,
         builderInitializer,
         hasDefault);
   }
@@ -374,7 +376,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
    * for example if the getter has type {@code ImmutableList<Baz>} and the parameter has type {@code
    * Baz[]}. We already have similar logic for the parameter types of builder setters.
    */
-  private ImmutableMap<String, String> propertyToGetterName(
+  private ImmutableMap<String, PropertyGetter> propertyToGetter(
       Executable executable, TypeElement autoBuilderType) {
     TypeMirror builtType = executable.builtType();
     if (builtType.getKind() != TypeKind.DECLARED) {
@@ -392,7 +394,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                     m -> m,
                     (a, b) -> a,
                     () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)));
-    ImmutableMap<String, String> propertyToGetterName =
+    ImmutableMap<String, PropertyGetter> propertyToGetter =
         executable.parameters().stream()
             .map(
                 param -> {
@@ -406,22 +408,51 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                       getter = nameToMethod.get("is" + name);
                     }
                   }
-                  if (getter != null
-                      && !typeUtils().isAssignable(getter.getReturnType(), param.asType())
-                      && !MoreTypes.equivalence()
-                          .equivalent(getter.getReturnType(), param.asType())) {
-                    // TODO(b/268680785): we should not need to have two type checks here
-                    getter = null;
-                  }
-                  return new SimpleEntry<>(name, getter);
+                  return new SimpleEntry<>(name, createPropertyGetterIfMatching(getter, param));
                 })
             .filter(entry -> entry.getValue() != null)
-            .collect(
-                toImmutableMap(
-                    Map.Entry::getKey, entry -> entry.getValue().getSimpleName().toString()));
-    return (propertyToGetterName.size() == executable.parameters().size())
-        ? propertyToGetterName
+            .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    return (propertyToGetter.size() == executable.parameters().size())
+        ? propertyToGetter
         : ImmutableMap.of();
+  }
+
+  private PropertyGetter createPropertyGetterIfMatching(
+      ExecutableElement getter, VariableElement param) {
+    if (getter == null) {
+      // No getter matching parameter name.
+      return null;
+    }
+
+    // TODO(b/268680785): we should not need to have two type checks here
+    TypeMirror returnType = getter.getReturnType();
+    if (typeUtils().isAssignable(returnType, param.asType())
+        || MoreTypes.equivalence().equivalent(returnType, param.asType())) {
+      // Matching type.
+      return new PropertyGetter(getter.getSimpleName().toString(), Function.identity());
+    }
+
+    Optionalish getterOptional = Optionalish.createIfOptional(returnType);
+    if (getterOptional != null
+        && nullableAnnotationFor(param, param.asType()).isPresent()
+        && typeUtils().isAssignable(getterOptional.getContainedType(typeUtils()), param.asType())) {
+      // Type is an optional which can be converted to a matching nullable.
+      return new PropertyGetter(
+          getter.getSimpleName().toString(), getterOptional.orElseNullCopier());
+    }
+
+    // No match.
+    return null;
+  }
+
+  private static class PropertyGetter {
+    private final String methodName;
+    private final Function<String, String> copier;
+
+    PropertyGetter(String methodName, Function<String, String> copier) {
+      this.methodName = methodName;
+      this.copier = copier;
+    }
   }
 
   private Executable findExecutable(
@@ -692,6 +723,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         /* nullableAnnotation= */ Optional.empty(),
         nullables,
         /* getter= */ "",
+        /* copier= */ Function.identity(),
         /* maybeBuilderInitializer= */ Optional.empty(),
         /* hasDefault= */ false);
   }

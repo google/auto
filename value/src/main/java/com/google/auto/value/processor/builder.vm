@@ -62,7 +62,7 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
   #foreach ($p in $props)
 
-    this.$p = source.${p.getter}();
+    this.$p = ${p.copiedGet("source")};
 
   #end
 

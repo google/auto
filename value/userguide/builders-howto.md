@@ -342,6 +342,29 @@ public abstract class Animal {
 }
 ```
 
+Properties annotated with `@Nullable` receive similar special treatment. They
+default to `null` and can be exposed via a nullable setter, a non-nullable
+setter, or an `Optional` setter.
+
+```java
+@AutoValue
+public abstract class Animal {
+  public abstract @Nullable String name();
+
+  public static Builder builder() {
+    return new AutoValue_Animal.Builder();
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    // You can have either or both of these two methods:
+    public abstract Builder setName(@Nullable String value);
+    public abstract Builder setName(Optional<String> value);
+    public abstract Animal build();
+  }
+}
+```
+
 [`java.util.Optional`]: https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html
 [`com.google.common.base.Optional`]: https://guava.dev/releases/snapshot/api/docs/com/google/common/base/Optional.html
 [`OptionalDouble`]: https://docs.oracle.com/javase/8/docs/api/java/util/OptionalDouble.html

@@ -59,6 +59,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import javax.annotation.processing.AbstractProcessor;
@@ -169,6 +170,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     private final ImmutableList<AnnotationMirror> availableNullableTypeAnnotations; // 0 or 1
     private final Optionalish optional;
     private final String getter;
+    private final Function<String, String> copier;
     private final String builderInitializer; // empty, or with initial ` = `.
     private final boolean hasDefault;
 
@@ -180,6 +182,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         Optional<String> nullableAnnotation,
         Nullables nullables,
         String getter,
+        Function<String, String> copier,
         Optional<String> maybeBuilderInitializer,
         boolean hasDefault) {
       this.name = name;
@@ -194,6 +197,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
               ? " = " + maybeBuilderInitializer.get()
               : builderInitializer(annotatedType, nullableAnnotation);
       this.getter = getter;
+      this.copier = copier;
       this.hasDefault = hasDefault;
     }
 
@@ -316,6 +320,10 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       return getter;
     }
 
+    public String copiedGet(String source) {
+      return copier.apply(source + "." + getter + "()");
+    }
+
     boolean hasDefault() {
       return hasDefault;
     }
@@ -345,6 +353,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           nullableAnnotation,
           nullables,
           method.getSimpleName().toString(),
+          Function.identity(),
           Optional.empty(),
           /* hasDefault= */ false);
       this.method = method;

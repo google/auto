@@ -50,6 +50,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -1209,5 +1211,112 @@ public class AutoValueJava8Test {
     assertThat(autoValueConstructor.getAnnotatedParameterTypes()[1].getAnnotations())
         .asList()
         .contains(nullable());
+  }
+
+  @AutoValue
+  abstract static class NullablesExposedAsOptionals {
+    abstract @Nullable String maybeString();
+
+    abstract @Nullable Double maybeDouble();
+
+    abstract @Nullable Integer maybeInt();
+
+    abstract @Nullable Long maybeLong();
+
+    static Builder builder() {
+      return new AutoValue_AutoValueJava8Test_NullablesExposedAsOptionals.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+      abstract Builder setMaybeString(Optional<String> maybeString);
+
+      abstract Builder setMaybeString(com.google.common.base.Optional<String> maybeString);
+
+      abstract Builder setMaybeDouble(OptionalDouble maybeDouble);
+
+      abstract Builder setMaybeInt(OptionalInt maybeInt);
+
+      abstract Builder setMaybeLong(OptionalLong maybeLong);
+
+      abstract NullablesExposedAsOptionals build();
+    }
+  }
+
+  @Test
+  public void testNullablesExposedAsOptionals_optionalString() {
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeString(Optional.of("foo"))
+                .build()
+                .maybeString())
+        .isEqualTo("foo");
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeString(Optional.empty())
+                .build()
+                .maybeString())
+        .isNull();
+  }
+
+  @Test
+  public void testNullablesExposedAsOptionals_baseOptionalString() {
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeString(com.google.common.base.Optional.of("foo"))
+                .build()
+                .maybeString())
+        .isEqualTo("foo");
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeString(com.google.common.base.Optional.absent())
+                .build()
+                .maybeString())
+        .isNull();
+  }
+
+  @Test
+  public void testNullablesExposedAsOptionals_optionalDouble() {
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeDouble(OptionalDouble.of(3.14))
+                .build()
+                .maybeDouble())
+        .isEqualTo(3.14);
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeDouble(OptionalDouble.empty())
+                .build()
+                .maybeDouble())
+        .isNull();
+  }
+
+  @Test
+  public void testNullablesExposedAsOptionals_optionalInt() {
+    assertThat(
+            NullablesExposedAsOptionals.builder().setMaybeInt(OptionalInt.of(3)).build().maybeInt())
+        .isEqualTo(3);
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeInt(OptionalInt.empty())
+                .build()
+                .maybeInt())
+        .isNull();
+  }
+
+  @Test
+  public void testNullablesExposedAsOptionals_optionalLong() {
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeLong(OptionalLong.of(3))
+                .build()
+                .maybeLong())
+        .isEqualTo(3);
+    assertThat(
+            NullablesExposedAsOptionals.builder()
+                .setMaybeLong(OptionalLong.empty())
+                .build()
+                .maybeLong())
+        .isNull();
   }
 }

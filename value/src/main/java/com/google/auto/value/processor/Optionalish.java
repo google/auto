@@ -21,6 +21,7 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
+import java.util.function.Function;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -34,9 +35,11 @@ import javax.lang.model.util.Types;
  * @author emcmanus@google.com (Éamonn McManus)
  */
 public class Optionalish {
+  private static final String GOOGLE_COMMON_BASE_OPTIONAL =
+      "com.".concat("google.common.base.Optional"); // subterfuge to foil shading
   private static final ImmutableSet<String> OPTIONAL_CLASS_NAMES =
       ImmutableSet.of(
-          "com.".concat("google.common.base.Optional"), // subterfuge to foil shading
+          GOOGLE_COMMON_BASE_OPTIONAL,
           "java.util.Optional",
           "java.util.OptionalDouble",
           "java.util.OptionalInt",
@@ -104,6 +107,36 @@ public class Optionalish {
         return getContainedPrimitiveType(typeUtils);
       default:
         throw new AssertionError("Wrong number of type arguments: " + optionalType);
+    }
+  }
+
+  Function<String, String> orElseNullCopier() {
+    if (className.equals(GOOGLE_COMMON_BASE_OPTIONAL)) {
+      return s -> s + ".orNull()";
+    }
+    switch (className) {
+      case "java.util.Optional":
+        return s -> s + ".orElse(null)";
+      case "java.util.OptionalDouble":
+        return s ->
+            "((`java.util.function.Function`<`java.util.OptionalDouble`, Double>) x ->"
+                + " x.isPresent() ? x.getAsDouble() : null).apply("
+                + s
+                + ")";
+      case "java.util.OptionalInt":
+        return s ->
+            "((`java.util.function.Function`<`java.util.OptionalInt`, Integer>) x -> x.isPresent()"
+                + " ? x.getAsInt() : null).apply("
+                + s
+                + ")";
+      case "java.util.OptionalLong":
+        return s ->
+            "((`java.util.function.Function`<`java.util.OptionalLong`, Long>) x -> x.isPresent() ?"
+                + " x.getAsLong() : null).apply("
+                + s
+                + ")";
+      default:
+        throw new AssertionError("Unknown optional class: " + className);
     }
   }
 
