@@ -18,13 +18,13 @@ jobs:
     steps:
       # Cancel any previous runs for the same branch that are still running.
       - name: 'Cancel previous runs'
-        uses: styfle/cancel-workflow-action@3155a141048f8f89c06b4cdae32e7853e97536bc
+        uses: styfle/cancel-workflow-action@d07a454dad7609a92316b57b23c9ccfd4f59af66
         with:
           access_token: ${{ github.token }}
       - name: 'Check out repository'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: 'Cache local Maven repository'
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml') }}
@@ -51,7 +51,7 @@ jobs:
       - name: 'Check out repository'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: 'Cache local Maven repository'
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml') }}
@@ -82,7 +82,7 @@ jobs:
       - name: 'Check out repository'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: 'Cache local Maven repository'
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml') }}
