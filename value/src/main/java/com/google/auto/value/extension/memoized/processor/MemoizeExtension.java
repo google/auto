@@ -299,7 +299,7 @@ public final class MemoizeExtension extends AutoValueExtension {
         fields.addAll(checkStrategy.additionalFields());
         override
             .beginControlFlow("if ($L)", checkStrategy.checkMemoized())
-            .beginControlFlow("synchronized (this)")
+            .beginControlFlow("synchronized ($L)", lockObject())
             .beginControlFlow("if ($L)", checkStrategy.checkMemoized())
             .addStatement("$N = super.$L()", cacheField, method.getSimpleName())
             .addCode(checkStrategy.setMemoized())
@@ -307,6 +307,10 @@ public final class MemoizeExtension extends AutoValueExtension {
             .endControlFlow()
             .endControlFlow()
             .addStatement("return $N", cacheField);
+      }
+
+      private String lockObject() {
+        return "this";
       }
 
       /** The fields that should be added to the subclass. */
