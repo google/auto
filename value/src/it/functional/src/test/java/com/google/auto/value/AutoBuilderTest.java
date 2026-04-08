@@ -16,6 +16,7 @@
 package com.google.auto.value;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.annotation.ElementType.TYPE_USE;
 import static java.util.stream.Collectors.joining;
@@ -912,5 +913,88 @@ public final class AutoBuilderTest {
         built.toBuilder().setALong(OptionalLong.empty()).build();
     assertThat(builtEmpty.aLong()).isEmpty();
     assertThat(builtEmpty.toBuilder().build().aLong()).isEmpty();
+  }
+
+  /**
+   * Demo for how to require that null or optional properties have to be set explicitly.
+   *
+   * <p>Normally properties of type {@code @Nullable Foo} or {@code Optional<Foo>} are optional in
+   * the builder, meaning that you can call {@code build()} without setting them. If you want to
+   * require that they be set explicitly, you need a subterfuge like the one used here. AutoBuilder
+   * allows the {@code foo} property to be set either via {@code setFoo(Foo)} or {@code foo(Foo)}.
+   * In the demo, we expose {@code foo(@Nullable Foo)} in the public API, but the abstract method
+   * that we get AutoBuilder to implement is the package-private {@code setFoo(@Nullable Foo)}. The
+   * public {@code foo} calls this package-private {@code setFoo} but also records whether it was
+   * called. Then we do a similar trick with {@code build()} in the public API calling the
+   * package-private abstract {@code autoBuild()} that AutoBuilder generates, but first checking
+   * that all required properties have been set.
+   *
+   * <p>Unfortunately it's harder to do the same thing with {@code AutoValue.Builder} because it has
+   * a rule whereby all the abstract setter methods must follow the same naming convention, either
+   * all {@code setFoo} or all {@code foo}. So if you want to use the trick here you may end up
+   * having to define pairs of {@code foo} and {@code setFoo} methods for every property {@code
+   * foo}, even ones where you don't need to track whether they were set because the generated
+   * builder code will do it for you.
+   */
+  public static class NoDefaultDemo {
+    final @Nullable String nullableString;
+    final Optional<String> optionalString;
+
+    NoDefaultDemo(@Nullable String nullableString, Optional<String> optionalString) {
+      this.nullableString = nullableString;
+      this.optionalString = optionalString;
+    }
+
+    public static Builder builder() {
+      return new AutoBuilder_AutoBuilderTest_NoDefaultDemo_Builder();
+    }
+
+    @AutoBuilder
+    public abstract static class Builder {
+      private boolean nullableStringSet = false;
+      private boolean optionalStringSet = false;
+
+      abstract Builder setNullableString(@Nullable String nullableString);
+
+      abstract Builder setOptionalString(Optional<String> optionalString);
+
+      public Builder nullableString(@Nullable String nullableString) {
+        nullableStringSet = true;
+        return setNullableString(nullableString);
+      }
+
+      public Builder optionalString(Optional<String> optionalString) {
+        optionalStringSet = true;
+        return setOptionalString(optionalString);
+      }
+
+      abstract NoDefaultDemo autoBuild();
+
+      public NoDefaultDemo build() {
+        checkState(nullableStringSet, "nullableString is required");
+        checkState(optionalStringSet, "optionalString is required");
+        return autoBuild();
+      }
+    }
+  }
+
+  @Test
+  public void noDefaultDemo() {
+    NoDefaultDemo builtWithRealValues =
+        NoDefaultDemo.builder().nullableString("foo").optionalString(Optional.of("bar")).build();
+    assertThat(builtWithRealValues.nullableString).isEqualTo("foo");
+    assertThat(builtWithRealValues.optionalString).hasValue("bar");
+
+    NoDefaultDemo builtWithDefaultValues =
+        NoDefaultDemo.builder().nullableString(null).optionalString(Optional.empty()).build();
+    assertThat(builtWithDefaultValues.nullableString).isNull();
+    assertThat(builtWithDefaultValues.optionalString).isEmpty();
+
+    NoDefaultDemo.Builder builder1 = NoDefaultDemo.builder().nullableString("foo");
+    IllegalStateException e1 = assertThrows(IllegalStateException.class, () -> builder1.build());
+    assertThat(e1).hasMessageThat().isEqualTo("optionalString is required");
+    NoDefaultDemo.Builder builder2 = NoDefaultDemo.builder().optionalString(Optional.of("bar"));
+    IllegalStateException e2 = assertThrows(IllegalStateException.class, () -> builder2.build());
+    assertThat(e2).hasMessageThat().isEqualTo("nullableString is required");
   }
 }
