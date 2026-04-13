@@ -88,6 +88,8 @@ public final class MemoizeExtension extends AutoValueExtension {
   private static final ClassName LAZY_INIT =
       ClassName.get("com".concat(".google.errorprone.annotations.concurrent"), "LazyInit");
 
+  private static final ClassName NULLABLE = ClassName.get("org.jspecify.annotations", "Nullable");
+
   private static final AnnotationSpec SUPPRESS_WARNINGS =
       AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "Immutable").build();
 
@@ -123,6 +125,7 @@ public final class MemoizeExtension extends AutoValueExtension {
     private final SourceVersion sourceVersion;
     private final Messager messager;
     private final Optional<AnnotationSpec> lazyInitAnnotation;
+    private final Optional<AnnotationSpec> nullableAnnotation;
     private boolean hasErrors;
 
     Generator(Context context, String className, String classToExtend, boolean isFinal) {
@@ -135,6 +138,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       this.sourceVersion = context.processingEnvironment().getSourceVersion();
       this.messager = context.processingEnvironment().getMessager();
       this.lazyInitAnnotation = getLazyInitAnnotation(elements);
+      this.nullableAnnotation = getNullableAnnotation(elements);
     }
 
     String generate() {
@@ -277,14 +281,19 @@ public final class MemoizeExtension extends AutoValueExtension {
       MethodOverrider(ExecutableElement method) {
         this.method = method;
         validate();
+
+        InitializationStrategy checkStrategy = strategy();
+
         cacheField =
             buildCacheField(
-                annotatedType(method.getReturnType()), method.getSimpleName().toString());
+                TypeName.get(method.getReturnType()),
+                method.getSimpleName().toString(),
+                checkStrategy);
         fields.add(cacheField);
         override =
             methodBuilder(method.getSimpleName().toString())
                 .addAnnotation(Override.class)
-                .returns(cacheField.type)
+                .returns(annotatedType(method.getReturnType()))
                 .addExceptions(
                     method.getThrownTypes().stream().map(TypeName::get).collect(toList()))
                 .addModifiers(filter(method.getModifiers(), not(equalTo(ABSTRACT))));
@@ -295,7 +304,6 @@ public final class MemoizeExtension extends AutoValueExtension {
           }
         }
 
-        InitializationStrategy checkStrategy = strategy();
         fields.addAll(checkStrategy.additionalFields());
         override
             .beginControlFlow("if ($L)", checkStrategy.checkMemoized())
@@ -380,7 +388,12 @@ public final class MemoizeExtension extends AutoValueExtension {
        * transient volatile} and have the given type and name. If the @LazyInit annotation is
        * available it is added as well.
        */
-      private FieldSpec buildCacheField(TypeName type, String name) {
+      private FieldSpec buildCacheField(
+          TypeName type, String name, InitializationStrategy strategy) {
+        if (strategy instanceof NullMeansUninitialized && nullableAnnotation.isPresent()) {
+          type = type.annotated(nullableAnnotation.get());
+        }
+
         FieldSpec.Builder builder = FieldSpec.builder(type, name, PRIVATE, TRANSIENT, VOLATILE);
         if (lazyInitAnnotation.isPresent()) {
           builder.addAnnotation(lazyInitAnnotation.get());
@@ -435,7 +448,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       private final class CheckBooleanField extends InitializationStrategy {
 
         private final FieldSpec field =
-            buildCacheField(TypeName.BOOLEAN, method.getSimpleName() + "$Memoized");
+            buildCacheField(TypeName.BOOLEAN, method.getSimpleName() + "$Memoized", this);
 
         @Override
         Iterable<FieldSpec> additionalFields() {
@@ -453,6 +466,14 @@ public final class MemoizeExtension extends AutoValueExtension {
         }
       }
     }
+  }
+
+  /** Returns the {@code @Nullable} annotation if it is found on the classpath. */
+  private static Optional<AnnotationSpec> getNullableAnnotation(Elements elements) {
+    if (elements.getTypeElement(NULLABLE.toString()) == null) {
+      return Optional.empty();
+    }
+    return Optional.of(AnnotationSpec.builder(NULLABLE).build());
   }
 
   /** Returns the errorprone {@code @LazyInit} annotation if it is found on the classpath. */

@@ -28,6 +28,7 @@ import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.ImmutableTypeParameter;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import org.junit.Before;
@@ -471,6 +472,14 @@ public class MemoizedTest {
     assertThat(
             returnType.isAnnotationPresent(
                 org.checkerframework.checker.nullness.qual.Nullable.class))
+        .isTrue();
+  }
+
+  @Test
+  public void notNullableFieldIsNullable() throws ReflectiveOperationException {
+    Field field = AutoValue_MemoizedTest_Value.class.getDeclaredField("notNullable");
+    assertThat(
+            field.getAnnotatedType().isAnnotationPresent(org.jspecify.annotations.Nullable.class))
         .isTrue();
   }
 
