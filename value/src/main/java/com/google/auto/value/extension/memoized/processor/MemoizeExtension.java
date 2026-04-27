@@ -286,9 +286,7 @@ public final class MemoizeExtension extends AutoValueExtension {
 
         cacheField =
             buildCacheField(
-                TypeName.get(method.getReturnType()),
-                method.getSimpleName().toString(),
-                checkStrategy);
+                TypeName.get(method.getReturnType()), method.getSimpleName().toString());
         fields.add(cacheField);
         override =
             methodBuilder(method.getSimpleName().toString())
@@ -388,9 +386,8 @@ public final class MemoizeExtension extends AutoValueExtension {
        * transient volatile} and have the given type and name. If the @LazyInit annotation is
        * available it is added as well.
        */
-      private FieldSpec buildCacheField(
-          TypeName type, String name, InitializationStrategy strategy) {
-        if (strategy instanceof NullMeansUninitialized && nullableAnnotation.isPresent()) {
+      private FieldSpec buildCacheField(TypeName type, String name) {
+        if (nullableAnnotation.isPresent() && !type.isPrimitive()) {
           type = type.annotated(nullableAnnotation.get());
         }
 
@@ -448,7 +445,7 @@ public final class MemoizeExtension extends AutoValueExtension {
       private final class CheckBooleanField extends InitializationStrategy {
 
         private final FieldSpec field =
-            buildCacheField(TypeName.BOOLEAN, method.getSimpleName() + "$Memoized", this);
+            buildCacheField(TypeName.BOOLEAN, method.getSimpleName() + "$Memoized");
 
         @Override
         Iterable<FieldSpec> additionalFields() {
