@@ -1139,9 +1139,20 @@ public class AutoValueJava8Test {
 
     public abstract U nullTwo();
 
-    public static <T extends @Nullable Object, U extends T> NullableVariableBound<T, U> create(
-        T nullOne, U nullTwo) {
-      return new AutoValue_AutoValueJava8Test_NullableVariableBound<>(nullOne, nullTwo);
+    public static <T extends @Nullable Object, U extends T>
+        NullableVariableBound.Builder<T, U> builder() {
+      return new AutoValue_AutoValueJava8Test_NullableVariableBound.Builder<>();
+    }
+
+    public abstract NullableVariableBound.Builder<T, U> toBuilder();
+
+    @AutoValue.Builder
+    public abstract static class Builder<T extends @Nullable Object, U extends T> {
+      public abstract Builder<T, U> setNullOne(T nullOne);
+
+      public abstract Builder<T, U> setNullTwo(U nullTwo);
+
+      public abstract NullableVariableBound<T, U> build();
     }
   }
 
@@ -1149,9 +1160,29 @@ public class AutoValueJava8Test {
   public void nullableVariableBound() {
     assumeTrue(javacHandlesTypeAnnotationsCorrectly);
     NullableVariableBound<@Nullable CharSequence, @Nullable String> x =
-        NullableVariableBound.create(null, null);
+        NullableVariableBound.<@Nullable CharSequence, @Nullable String>builder()
+            .setNullOne(null)
+            .setNullTwo(null)
+            .build();
     assertThat(x.nullOne()).isNull();
     assertThat(x.nullTwo()).isNull();
+    NullableVariableBound<@Nullable CharSequence, @Nullable String> x2 = x.toBuilder().build();
+    assertThat(x2).isNotSameInstanceAs(x);
+    assertThat(x2).isEqualTo(x);
+    assertThat(x2.hashCode()).isEqualTo(x.hashCode());
+  }
+
+  @Test
+  public void nullableVariableBoundBuilderFieldsAreNullable() throws ReflectiveOperationException {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
+    NullableVariableBound.Builder<@Nullable CharSequence, @Nullable String> builder =
+        NullableVariableBound.builder();
+    assertThat(builder.getClass().getDeclaredField("nullOne").getAnnotatedType().getAnnotations())
+        .asList()
+        .containsAnyIn(nullables(AutoValue_AutoValueJava8Test_NullableVariableBound.class));
+    assertThat(builder.getClass().getDeclaredField("nullTwo").getAnnotatedType().getAnnotations())
+        .asList()
+        .containsAnyIn(nullables(AutoValue_AutoValueJava8Test_NullableVariableBound.class));
   }
 
   @AutoValue

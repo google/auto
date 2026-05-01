@@ -310,6 +310,10 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       return nullableAnnotation.isPresent();
     }
 
+    public boolean isTypeVarWithNullableBound() {
+      return isTypeVariableWithNullableBound(annotatedType.getType());
+    }
+
     /**
      * Returns the name of the getter method for this property as defined by the {@code @AutoValue}
      * or {@code @AutoBuilder} class. For property {@code foo}, this will be {@code foo} or {@code
@@ -740,40 +744,41 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
   private static OptionalInt nullableAnnotationIndex(List<? extends AnnotationMirror> annotations) {
     return IntStream.range(0, annotations.size())
-        .filter(i -> isNullable(annotations.get(i)))
+        .filter(i -> isNullableAnnotation(annotations.get(i)))
         .findFirst();
   }
 
-  private static boolean isNullable(TypeMirror type) {
-    return isNullable(type, 0);
+  private static boolean isNullableAnnotation(AnnotationMirror annotation) {
+    return annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable");
   }
 
-  private static boolean isNullable(TypeMirror type, int depth) {
+  private static boolean isNullable(TypeMirror type) {
+    return nullableAnnotationIndex(type.getAnnotationMirrors()).isPresent();
+  }
+
+  private static boolean isTypeVariableWithNullableBound(TypeMirror type) {
+    return isTypeVariableWithNullableBound(type, 0);
+  }
+
+  private static boolean isTypeVariableWithNullableBound(TypeMirror type, int depth) {
     // Some versions of the Eclipse compiler can report that the upper bound of a type variable T
     // is another T, and if you ask for the upper bound of that other T you'll get a third T, and so
     // ad infinitum. To avoid StackOverflowError, we bottom out after 10 iterations.
     if (depth > 10) {
       return false;
     }
-    List<? extends AnnotationMirror> typeAnnotations = type.getAnnotationMirrors();
     // TODO(emcmanus): also check if there is a @NonNull bound and return false if so.
-    if (nullableAnnotationIndex(typeAnnotations).isPresent()) {
-      return true;
+    if (!type.getKind().equals(TypeKind.TYPEVAR)) {
+      return false;
     }
-    if (type.getKind().equals(TypeKind.TYPEVAR)) {
-      TypeVariable typeVariable = MoreTypes.asTypeVariable(type);
-      TypeMirror bound = typeVariable.getUpperBound();
-      if (bound.getKind().equals(TypeKind.INTERSECTION)) {
-        return MoreTypes.asIntersection(bound).getBounds().stream()
-            .allMatch(t -> isNullable(t, depth + 1));
-      }
-      return isNullable(bound, depth + 1);
+    TypeVariable typeVariable = MoreTypes.asTypeVariable(type);
+    TypeMirror bound = typeVariable.getUpperBound();
+    if (bound.getKind().equals(TypeKind.INTERSECTION)) {
+      // An intersection bound cannot itself be a type variable. <T extends U> is allowed, but
+      // <T extends U & V> is not (JLS §4.4).
+      return MoreTypes.asIntersection(bound).getBounds().stream().allMatch(t -> isNullable(t));
     }
-    return false;
-  }
-
-  private static boolean isNullable(AnnotationMirror annotation) {
-    return annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable");
+    return isNullable(bound) || isTypeVariableWithNullableBound(bound, depth + 1);
   }
 
   /**
@@ -1246,7 +1251,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           .filter(
               a -> {
                 TypeElement annotationType = asType(a.getAnnotationType().asElement());
-                return isNullable(a)
+                return isNullableAnnotation(a)
                     && !returnTypeAnnotations.contains(annotationType.getQualifiedName().toString())
                     && annotationAppliesToFields(annotationType);
               })

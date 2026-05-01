@@ -50,7 +50,7 @@
   #elseif ($p.kind == "ARRAY")
     `java.util.Arrays`.equals(this.$p, ##
         (that instanceof $subclass) ? (($subclass$wildcardTypes) that).$p : that.${p.getter}()) ##
-  #elseif ($p.nullable)
+  #elseif ($p.nullable || $p.typeVarWithNullableBound)
     (this.$p == null ? that.${p.getter}() == null : this.${p}.equals(that.${p.getter}())) ##
   #else
     this.${p}.equals(that.${p.getter}()) ##
@@ -74,7 +74,7 @@
     $p ##
   #elseif ($p.kind == "ARRAY")
     `java.util.Arrays`.hashCode($p) ##
-  #elseif ($p.nullable)
+  #elseif ($p.nullable || $p.typeVarWithNullableBound)
     ($p == null) ? 0 : ${p}.hashCode() ##
   #else
     ${p}.hashCode() ##

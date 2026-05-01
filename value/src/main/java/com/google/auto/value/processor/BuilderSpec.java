@@ -357,7 +357,7 @@ class BuilderSpec {
 
       ImmutableSet<Property> requiredProperties =
           vars.props.stream()
-              .filter(p -> !p.isNullable())
+              .filter(p -> !p.isNullable() && !p.isTypeVarWithNullableBound())
               .filter(p -> p.getBuilderInitializer().isEmpty())
               .filter(p -> !p.hasDefault())
               .filter(p -> !vars.builderPropertyBuilders.containsKey(p.getName()))

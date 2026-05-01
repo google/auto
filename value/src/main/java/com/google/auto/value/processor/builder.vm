@@ -89,7 +89,8 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
     ## Omit null check for primitive, or @Nullable, or if we are going to be calling a copy method
     ## such as Optional.of, which will have its own null check if appropriate.
-    #if (!$setter.primitiveParameter && !$p.nullable && ${setter.copy($p)} == $p)
+    #if (!$setter.primitiveParameter && !$p.nullable
+        && !$p.typeVarWithNullableBound && ${setter.copy($p)} == $p)
 
       #if ($identifiers)
     if ($p == null) {
