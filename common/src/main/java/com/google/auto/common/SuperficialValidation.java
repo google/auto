@@ -15,6 +15,8 @@
  */
 package com.google.auto.common;
 
+import static com.google.auto.common.MoreTypes.asTypeElement;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.StreamSupport;
@@ -148,6 +150,15 @@ public final class SuperficialValidation {
 
         @Override
         public Boolean visitError(ErrorType t, Void p) {
+          if (asTypeElement(t).getQualifiedName().contentEquals("error.NonExistentClass")) {
+            // See
+            // https://youtrack.jetbrains.com/issue/KT-34193/Kapt-CorrectErrorTypes-doesnt-work-for-generics
+            // KAPT will generate stubs referencing 'error.NonExistentClass' even when
+            // 'correctErrorTypes=true' is enabled. Thus, we can't treat 'error.NonExistentClass' as
+            // an actual error type, as that would completely prevent processing of stubs that
+            // exhibit this bug.
+            return true;
+          }
           return false;
         }
 
