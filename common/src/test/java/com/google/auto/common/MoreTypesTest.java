@@ -502,13 +502,13 @@ public class MoreTypesTest {
     PrimitiveType intType = types.getPrimitiveType(TypeKind.INT);
     TypeMirror integerType = types.boxedClass(intType).asType();
     WildcardType wildcardType = types.getWildcardType(null, null);
-    expect.that(MoreTypes.isTypeOf(int.class, intType)).isTrue();
-    expect.that(MoreTypes.isTypeOf(Integer.class, integerType)).isTrue();
-    expect.that(MoreTypes.isTypeOf(Integer.class, intType)).isFalse();
-    expect.that(MoreTypes.isTypeOf(int.class, integerType)).isFalse();
-    expect.that(MoreTypes.isTypeOf(Integer.class, FAKE_ERROR_TYPE)).isFalse();
+    expect.that(MoreTypes.isExactTypeOf(int.class, intType)).isTrue();
+    expect.that(MoreTypes.isExactTypeOf(Integer.class, integerType)).isTrue();
+    expect.that(MoreTypes.isExactTypeOf(Integer.class, intType)).isFalse();
+    expect.that(MoreTypes.isExactTypeOf(int.class, integerType)).isFalse();
+    expect.that(MoreTypes.isExactTypeOf(Integer.class, FAKE_ERROR_TYPE)).isFalse();
     assertThrows(
-        IllegalArgumentException.class, () -> MoreTypes.isTypeOf(Integer.class, wildcardType));
+        IllegalArgumentException.class, () -> MoreTypes.isExactTypeOf(Integer.class, wildcardType));
   }
 
   // The type of every field here is such that casting to it provokes an "unchecked" warning.
