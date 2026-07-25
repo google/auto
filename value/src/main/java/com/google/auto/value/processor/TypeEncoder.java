@@ -156,7 +156,10 @@ final class TypeEncoder {
                     .addAll(extraAnnotations)
                     .build()
                 : t.getAnnotationMirrors();
-    return new AnnotatedEncodingTypeVisitor(excludedAnnotationTypes, getTypeAnnotations)
+    return new AnnotatedEncodingTypeVisitor(
+            a -> excludedAnnotationTypes.contains(a.getAnnotationType()),
+            !excludedAnnotationTypes.isEmpty(),
+            getTypeAnnotations)
         .visit2(type, sb)
         .toString();
   }
@@ -174,6 +177,25 @@ final class TypeEncoder {
       AnnotatedTypeMirror type,
       ImmutableList<AnnotationMirror> extraAnnotations,
       Set<TypeMirror> excludedAnnotationTypes) {
+    return encodeWithAnnotations(
+        type,
+        extraAnnotations,
+        a -> excludedAnnotationTypes.contains(a.getAnnotationType()),
+        !excludedAnnotationTypes.isEmpty());
+  }
+
+  static String encodeWithAnnotations(
+      AnnotatedTypeMirror type,
+      ImmutableList<AnnotationMirror> extraAnnotations,
+      java.util.function.Predicate<AnnotationMirror> excludeAnnotation) {
+    return encodeWithAnnotations(type, extraAnnotations, excludeAnnotation, true);
+  }
+
+  private static String encodeWithAnnotations(
+      AnnotatedTypeMirror type,
+      ImmutableList<AnnotationMirror> extraAnnotations,
+      java.util.function.Predicate<AnnotationMirror> excludeAnnotation,
+      boolean hasExclusions) {
     StringBuilder sb = new StringBuilder();
     // A function that is equivalent to t.getAnnotationMirrors() except when the t in question is
     // our starting type. In that case we also add extraAnnotations to the result.
@@ -185,7 +207,7 @@ final class TypeEncoder {
                     .addAll(extraAnnotations)
                     .build()
                 : t.getAnnotationMirrors();
-    return new AnnotatedEncodingTypeVisitor(excludedAnnotationTypes, getTypeAnnotations)
+    return new AnnotatedEncodingTypeVisitor(excludeAnnotation, hasExclusions, getTypeAnnotations)
         .visit2(type.getType(), sb)
         .toString();
   }
@@ -384,13 +406,16 @@ final class TypeEncoder {
    * `java.util.List`} form.
    */
   private static class AnnotatedEncodingTypeVisitor extends EncodingTypeVisitor {
-    private final Set<TypeMirror> excludedAnnotationTypes;
+    private final java.util.function.Predicate<AnnotationMirror> excludeAnnotation;
+    private final boolean hasExclusions;
     private final Function<TypeMirror, List<? extends AnnotationMirror>> getTypeAnnotations;
 
     AnnotatedEncodingTypeVisitor(
-        Set<TypeMirror> excludedAnnotationTypes,
+        java.util.function.Predicate<AnnotationMirror> excludeAnnotation,
+        boolean hasExclusions,
         Function<TypeMirror, List<? extends AnnotationMirror>> getTypeAnnotations) {
-      this.excludedAnnotationTypes = excludedAnnotationTypes;
+      this.excludeAnnotation = excludeAnnotation;
+      this.hasExclusions = hasExclusions;
       this.getTypeAnnotations = getTypeAnnotations;
     }
 
@@ -398,14 +423,12 @@ final class TypeEncoder {
         List<? extends AnnotationMirror> annotations, StringBuilder sb) {
       // Optimization for the very common cases where there are no annotations or there are no
       // exclusions.
-      if (annotations.isEmpty() || excludedAnnotationTypes.isEmpty()) {
+      if (annotations.isEmpty() || !hasExclusions) {
         appendAnnotations(annotations, sb);
         return;
       }
       List<AnnotationMirror> includedAnnotations =
-          annotations.stream()
-              .filter(a -> !excludedAnnotationTypes.contains(a.getAnnotationType()))
-              .collect(toList());
+          annotations.stream().filter(a -> !excludeAnnotation.test(a)).collect(toList());
       appendAnnotations(includedAnnotations, sb);
     }
 
