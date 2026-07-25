@@ -241,7 +241,15 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           || availableNullableTypeAnnotations.isEmpty()) {
         return type;
       }
-      return TypeEncoder.encodeWithAnnotations(annotatedType, availableNullableTypeAnnotations);
+      return TypeEncoder.encodeWithAnnotations(
+          annotatedType, availableNullableTypeAnnotations, a -> isNonNullAnnotation(a));
+    }
+
+    private static boolean isNonNullAnnotation(AnnotationMirror annotation) {
+      String simpleName = annotation.getAnnotationType().asElement().getSimpleName().toString();
+      return simpleName.equals("NonNull")
+          || simpleName.equals("NotNull")
+          || simpleName.equals("Nonnull");
     }
 
     /**
