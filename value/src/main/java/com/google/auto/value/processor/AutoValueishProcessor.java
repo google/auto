@@ -526,7 +526,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    * is nullable but the <i>method</i> isn't. The {@code @Nullable} annotation will instead appear
    * when the return type of the method is spelled out in the implementation.
    */
-  abstract Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod);
+  abstract Optional<String> nullableAnnotationForMethod(
+      ExecutableElement propertyMethod, AnnotatedTypeMirror propertyType);
 
   /**
    * Returns the ordered set of {@link Property} definitions for the given {@code @AutoValue} or
@@ -561,7 +562,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
           ImmutableList<AnnotationMirror> methodAnnotationMirrors =
               annotatedPropertyMethods.get(propertyMethod);
           ImmutableList<String> methodAnnotations = annotationStrings(methodAnnotationMirrors);
-          Optional<String> nullableAnnotation = nullableAnnotationForMethod(propertyMethod);
+          Optional<String> nullableAnnotation =
+              nullableAnnotationForMethod(propertyMethod, returnType);
           Property p =
               new GetterProperty(
                   propertyName,
@@ -727,6 +729,13 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
    * @param elementType the relevant type of the element: the return type for a method, or the
    *     parameter type for a parameter.
    */
+  static Optional<String> nullableAnnotationFor(Element element, AnnotatedTypeMirror elementType) {
+    if (isNullable(elementType)) {
+      return Optional.of("");
+    }
+    return nullableAnnotationFor(element, elementType.getType());
+  }
+
   static Optional<String> nullableAnnotationFor(Element element, TypeMirror elementType) {
     if (isNullable(elementType)) {
       return Optional.of("");
@@ -752,8 +761,22 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     return annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable");
   }
 
+  private static boolean isNullable(AnnotatedTypeMirror type) {
+    return isNullable(type.getType()) || nullableAnnotationIndex(type.annotations()).isPresent();
+  }
+
   private static boolean isNullable(TypeMirror type) {
-    return nullableAnnotationIndex(type.getAnnotationMirrors()).isPresent();
+    if (nullableAnnotationIndex(type.getAnnotationMirrors()).isPresent()) {
+      return true;
+    }
+    if (type.getKind().equals(TypeKind.DECLARED)) {
+      DeclaredType declaredType = (DeclaredType) type;
+      TypeMirror enclosing = declaredType.getEnclosingType();
+      if (enclosing != null && enclosing.getKind().equals(TypeKind.DECLARED)) {
+        return isNullable(enclosing);
+      }
+    }
+    return false;
   }
 
   private static boolean isTypeVariableWithNullableBound(TypeMirror type) {
@@ -1282,12 +1305,25 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
   private static Set<String> getReturnTypeAnnotations(
       ExecutableElement method, Predicate<TypeElement> typeFilter) {
-    return method.getReturnType().getAnnotationMirrors().stream()
+    return getAllAnnotationMirrors(method.getReturnType()).stream()
         .map(a -> a.getAnnotationType().asElement())
         .map(MoreElements::asType)
         .filter(typeFilter)
         .map(e -> e.getQualifiedName().toString())
         .collect(toSet());
+  }
+
+  private static ImmutableList<AnnotationMirror> getAllAnnotationMirrors(TypeMirror type) {
+    ImmutableList.Builder<AnnotationMirror> builder = ImmutableList.builder();
+    builder.addAll(type.getAnnotationMirrors());
+    if (type.getKind().equals(TypeKind.DECLARED)) {
+      DeclaredType declaredType = (DeclaredType) type;
+      TypeMirror enclosing = declaredType.getEnclosingType();
+      if (enclosing != null && enclosing.getKind().equals(TypeKind.DECLARED)) {
+        builder.addAll(getAllAnnotationMirrors(enclosing));
+      }
+    }
+    return builder.build();
   }
 
   private boolean annotationAppliesToFields(TypeElement annotation) {

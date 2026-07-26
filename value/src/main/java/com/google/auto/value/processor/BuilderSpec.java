@@ -469,8 +469,7 @@ class BuilderSpec {
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
       VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      Optional<String> maybeNullable =
-          nullableAnnotationFor(parameterElement, parameterType.getType());
+      Optional<String> maybeNullable = nullableAnnotationFor(parameterElement, parameterType);
       this.nullableAnnotation = maybeNullable.orElse("");
     }
 

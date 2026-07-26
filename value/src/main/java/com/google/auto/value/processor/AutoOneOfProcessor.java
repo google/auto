@@ -275,8 +275,9 @@ public class AutoOneOfProcessor extends AutoValueishProcessor {
   }
 
   @Override
-  Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
-    if (nullableAnnotationFor(propertyMethod, propertyMethod.getReturnType()).isPresent()) {
+  Optional<String> nullableAnnotationForMethod(
+      ExecutableElement propertyMethod, AnnotatedTypeMirror propertyType) {
+    if (nullableAnnotationFor(propertyMethod, propertyType).isPresent()) {
       errorReporter()
           .reportError(
               propertyMethod, "[AutoOneOfNullable] @AutoOneOf properties cannot be @Nullable");

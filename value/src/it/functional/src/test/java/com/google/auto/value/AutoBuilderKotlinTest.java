@@ -408,4 +408,26 @@ public final class AutoBuilderKotlinTest {
     assertThat(data.getV()).isEqualTo(2.0);
     assertThat(data.getM()).isEqualTo(map);
   }
+
+  @AutoBuilder(ofClass = KotlinDataWithNullableParameters.class)
+  interface KotlinDataWithNullableParametersBuilder<T> {
+    static <T> KotlinDataWithNullableParametersBuilder<T> builder() {
+      return new AutoBuilder_AutoBuilderKotlinTest_KotlinDataWithNullableParametersBuilder<T>();
+    }
+
+    KotlinDataWithNullableParametersBuilder<T> value(@org.jetbrains.annotations.Nullable T value);
+
+    KotlinDataWithNullableParameters<T> build();
+  }
+
+  @Test
+  public void kotlinWithNullableParameters() {
+    KotlinDataWithNullableParameters<String> x =
+        KotlinDataWithNullableParametersBuilder.<String>builder().value("hello").build();
+    assertThat(x.getValue()).isEqualTo("hello");
+
+    KotlinDataWithNullableParameters<String> nullX =
+        KotlinDataWithNullableParametersBuilder.<String>builder().value(null).build();
+    assertThat(nullX.getValue()).isNull();
+  }
 }

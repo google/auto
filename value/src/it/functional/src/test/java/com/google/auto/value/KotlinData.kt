@@ -102,3 +102,5 @@ data class KotlinDataWithTypeParameters<
 >(val t: T? = null, val u: U, val v: V, val m: M) {
   fun foo(w: W) {}
 }
+
+data class KotlinDataWithNullableParameters<T>(val value: T?)

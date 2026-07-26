@@ -514,8 +514,9 @@ public class AutoValueProcessor extends AutoValueishProcessor {
   }
 
   @Override
-  Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
-    return nullableAnnotationFor(propertyMethod, propertyMethod.getReturnType());
+  Optional<String> nullableAnnotationForMethod(
+      ExecutableElement propertyMethod, AnnotatedTypeMirror propertyType) {
+    return nullableAnnotationFor(propertyMethod, propertyType);
   }
 
   static ImmutableSet<ExecutableElement> prefixedGettersIn(Iterable<ExecutableElement> methods) {

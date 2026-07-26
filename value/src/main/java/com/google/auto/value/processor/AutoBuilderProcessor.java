@@ -657,7 +657,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
   }
 
   @Override
-  Optional<String> nullableAnnotationForMethod(ExecutableElement propertyMethod) {
+  Optional<String> nullableAnnotationForMethod(
+      ExecutableElement propertyMethod, AnnotatedTypeMirror propertyType) {
     // TODO(b/183005059): implement
     return Optional.empty();
   }
