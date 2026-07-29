@@ -31,6 +31,11 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class AutoBuilderCompilationTest {
+  // Sadly we can't rely on JDK 8 to handle type annotations correctly.
+  // Some versions do, some don't. So skip the test unless we are on at least JDK 9.
+  private final boolean typeAnnotationsWork =
+      Double.parseDouble(JAVA_SPECIFICATION_VERSION.value()) >= 9.0;
+
   private static final JavaFileObject EXPECTED_SIMPLE_OUTPUT =
       JavaFileObjects.forSourceLines(
           "foo.bar.AutoBuilder_Baz_Builder",
@@ -1065,6 +1070,79 @@ public final class AutoBuilderCompilationTest {
                 + " callMethod, not \"annotationType\"")
         .inFile(javaFileObject)
         .onLineContaining("interface Builder");
+  }
+
+  @Test
+  public void notNullTypeAnnotationOnParameter() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "public class Baz {",
+            "  @Target(ElementType.TYPE_USE)",
+            "  public @interface NotNull {}",
+            "",
+            "  private final String aString;",
+            "",
+            "  public Baz(@NotNull String aString) {",
+            "    this.aString = aString;",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Builder setAString(String aString);",
+            "    Baz build();",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoBuilder_Baz_Builder",
+            "package foo.bar;",
+            "",
+            sorted(
+                GeneratedImport.importGeneratedAnnotationType(),
+                "import org.jspecify.annotations.Nullable;"),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoBuilderProcessor\")",
+            "class AutoBuilder_Baz_Builder implements Baz.Builder {",
+            "",
+            "  // TODO(b/540040170): conflicting @Baz.NotNull @Nullable annotations",
+            "  private @Baz.NotNull @Nullable String aString;",
+            "",
+            "  AutoBuilder_Baz_Builder() {",
+            "  }",
+            "",
+            "  @Override",
+            "  public Baz.Builder setAString(String aString) {",
+            "    if (aString == null) {",
+            "      throw new NullPointerException(\"Null aString\");",
+            "    }",
+            "    this.aString = aString;",
+            "    return this;",
+            "  }",
+            "",
+            "  @Override",
+            "  public Baz build() {",
+            "    if (this.aString == null) {",
+            "      String missing = \" aString\";",
+            "      throw new IllegalStateException(\"Missing required properties:\" + missing);",
+            "    }",
+            "    return new Baz(",
+            "        this.aString);",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
+        .hasSourceEquivalentTo(expectedOutput);
   }
 
   private static String sorted(String... imports) {

@@ -4074,6 +4074,228 @@ public class AutoValueCompilationTest {
         .onLineContaining("@AutoValue.CopyAnnotations(exclude = DoesNotExist.class)");
   }
 
+  @Test
+  public void notNullTypeAnnotationOnBuilderSetter() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({ElementType.TYPE_USE, ElementType.METHOD, ElementType.PARAMETER})",
+            "  public @interface NotNull {}",
+            "",
+            "  @NotNull public abstract String aString();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setAString(@NotNull String aString);",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            sorted(
+                GeneratedImport.importGeneratedAnnotationType(),
+                "import org.jspecify.annotations.Nullable;"),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+            "final class AutoValue_Baz extends Baz {",
+            "",
+            "  private final @Baz.NotNull String aString;",
+            "",
+            "  private AutoValue_Baz(",
+            "      @Baz.NotNull String aString) {",
+            "    this.aString = aString;",
+            "  }",
+            "",
+            "  @Override",
+            "  public @Baz.NotNull String aString() {",
+            "    return aString;",
+            "  }",
+            "",
+            "  @Override",
+            "  public String toString() {",
+            "    return \"Baz{\"",
+            "        + \"aString=\" + aString",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override",
+            "  public boolean equals(@Nullable Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Baz) {",
+            "      Baz that = (Baz) o;",
+            "      return this.aString.equals(that.aString());",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+            "  @Override",
+            "  public int hashCode() {",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= aString.hashCode();",
+            "    return h$;",
+            "  }",
+            "",
+            "  static final class Builder extends Baz.Builder {",
+            "    // TODO(b/540040170): conflicting @Baz.NotNull @Nullable annotations",
+            "    private @Baz.NotNull @Nullable String aString;",
+            "    Builder() {",
+            "    }",
+            "    @Override",
+            "    public Baz.Builder setAString(@Baz.NotNull String aString) {",
+            "      if (aString == null) {",
+            "        throw new NullPointerException(\"Null aString\");",
+            "      }",
+            "      this.aString = aString;",
+            "      return this;",
+            "    }",
+            "    @Override",
+            "    public Baz build() {",
+            "      if (this.aString == null) {",
+            "        String missing = \" aString\";",
+            "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
+            "      }",
+            "      return new AutoValue_Baz(",
+            "          this.aString);",
+            "    }",
+            "  }",
+            "",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .hasSourceEquivalentTo(expectedOutput);
+  }
+
+  @Test
+  public void notNullOnOuterClassWithNullableInnerType() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({ElementType.TYPE_USE, ElementType.METHOD, ElementType.PARAMETER})",
+            "  public @interface NotNull {}",
+            "",
+            "  @Target({ElementType.TYPE_USE, ElementType.METHOD, ElementType.PARAMETER})",
+            "  public @interface Nullable {}",
+            "",
+            "  public static class Outer {",
+            "    public class Inner {}",
+            "  }",
+            "",
+            "  public abstract Baz.@NotNull Outer.@Nullable Inner inner();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setInner(Baz.@NotNull Outer.@Nullable Inner inner);",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
+    JavaFileObject expectedOutput =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.AutoValue_Baz",
+            "package foo.bar;",
+            "",
+            GeneratedImport.importGeneratedAnnotationType(),
+            "",
+            "@Generated(\"com.google.auto.value.processor.AutoValueProcessor\")",
+            "final class AutoValue_Baz extends Baz {",
+            "",
+            "  private final Baz.@Baz.NotNull Outer.@Baz.Nullable Inner inner;",
+            "",
+            "  private AutoValue_Baz(",
+            "      Baz.@Baz.NotNull Outer.@Baz.Nullable Inner inner) {",
+            "    this.inner = inner;",
+            "  }",
+            "",
+            "  @Override",
+            "  public Baz.@Baz.NotNull Outer.@Baz.Nullable Inner inner() {",
+            "    return inner;",
+            "  }",
+            "",
+            "  @Override",
+            "  public String toString() {",
+            "    return \"Baz{\"",
+            "        + \"inner=\" + inner",
+            "        + \"}\";",
+            "  }",
+            "",
+            "  @Override",
+            "  public boolean equals(@Baz.Nullable Object o) {",
+            "    if (o == this) {",
+            "      return true;",
+            "    }",
+            "    if (o instanceof Baz) {",
+            "      Baz that = (Baz) o;",
+            "      return (this.inner == null ? that.inner() == null :"
+                + " this.inner.equals(that.inner()));",
+            "    }",
+            "    return false;",
+            "  }",
+            "",
+            "  @Override",
+            "  public int hashCode() {",
+            "    int h$ = 1;",
+            "    h$ *= 1000003;",
+            "    h$ ^= (inner == null) ? 0 : inner.hashCode();",
+            "    return h$;",
+            "  }",
+            "",
+            "  static final class Builder extends Baz.Builder {",
+            "    // TODO: The unfixed processor generates Baz.@Baz.NotNull Outer.@Baz.Nullable"
+                + " Inner. Remove @Baz.NotNull when fix is submitted.",
+            "    private Baz.@Baz.NotNull Outer.@Baz.Nullable Inner inner;",
+            "    Builder() {",
+            "    }",
+            "    @Override",
+            "    public Baz.Builder setInner(Baz.@Baz.NotNull Outer.@Baz.Nullable Inner inner) {",
+            "      this.inner = inner;",
+            "      return this;",
+            "    }",
+            "    @Override",
+            "    public Baz build() {",
+            "      return new AutoValue_Baz(",
+            "          this.inner);",
+            "    }",
+            "  }",
+            "",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .hasSourceEquivalentTo(expectedOutput);
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
