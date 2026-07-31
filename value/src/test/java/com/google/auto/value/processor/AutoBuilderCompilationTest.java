@@ -1112,8 +1112,7 @@ public final class AutoBuilderCompilationTest {
             "@Generated(\"com.google.auto.value.processor.AutoBuilderProcessor\")",
             "class AutoBuilder_Baz_Builder implements Baz.Builder {",
             "",
-            "  // TODO(b/540040170): conflicting @Baz.NotNull @Nullable annotations",
-            "  private @Baz.NotNull @Nullable String aString;",
+            "  private @Nullable String aString;",
             "",
             "  AutoBuilder_Baz_Builder() {",
             "  }",
@@ -1143,6 +1142,42 @@ public final class AutoBuilderCompilationTest {
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
         .hasSourceEquivalentTo(expectedOutput);
+  }
+
+  @Test
+  public void nullablePrimitiveTypeUseAnnotation() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "public class Baz {",
+            "  @Target(ElementType.TYPE_USE)",
+            "  public @interface Nullable {}",
+            "",
+            "  private final int thing;",
+            "",
+            "  public Baz(@Nullable int thing) {",
+            "    this.thing = thing;",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Builder thing(int thing);",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining("[AutoBuilderNullPrimitive] Primitive types cannot be @Nullable")
+        .inFile(javaFileObject)
+        .onLineContaining("Baz(@Nullable int thing)");
   }
 
   private static String sorted(String... imports) {

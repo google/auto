@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
@@ -32,9 +33,11 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Name;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.IntersectionType;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
@@ -55,6 +58,17 @@ class Nullables {
 
   private Nullables(Optional<AnnotationMirror> nullableTypeAnnotation) {
     this.nullableTypeAnnotation = nullableTypeAnnotation;
+  }
+
+  static boolean isNullable(AnnotationMirror annotation) {
+    return annotation.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable");
+  }
+
+  static boolean isNonNull(AnnotationMirror annotation) {
+    Name simpleName = annotation.getAnnotationType().asElement().getSimpleName();
+    return simpleName.contentEquals("NotNull")
+        || simpleName.contentEquals("NonNull")
+        || simpleName.contentEquals("Nonnull");
   }
 
   /**
@@ -121,33 +135,55 @@ class Nullables {
     };
   }
 
-  private static Optional<AnnotationMirror> nullableIn(TypeMirror type) {
-    return new NullableFinder().visit(type);
+  static Optional<AnnotationMirror> nullableIn(TypeMirror type) {
+    return new NullnessFinder(Nullables::isNullable).visit(type);
   }
 
-  private static Optional<AnnotationMirror> nullableIn(
-      List<? extends AnnotationMirror> annotations) {
+  static Optional<AnnotationMirror> nullableIn(List<? extends AnnotationMirror> annotations) {
     return annotations.stream()
-        .filter(a -> a.getAnnotationType().asElement().getSimpleName().contentEquals("Nullable"))
-        .map(a -> (AnnotationMirror) a) // get rid of the pesky wildcard
+        .filter(Nullables::isNullable)
+        .map(a -> (AnnotationMirror) a)
         .findFirst();
   }
 
-  private static class NullableFinder extends SimpleTypeVisitor8<Optional<AnnotationMirror>, Void> {
+  static Optional<AnnotationMirror> nonNullIn(TypeMirror type) {
+    return new NullnessFinder(Nullables::isNonNull).visit(type);
+  }
+
+  static Optional<AnnotationMirror> nonNullIn(List<? extends AnnotationMirror> annotations) {
+    return annotations.stream()
+        .filter(Nullables::isNonNull)
+        .map(a -> (AnnotationMirror) a)
+        .findFirst();
+  }
+
+  private static class NullnessFinder extends SimpleTypeVisitor8<Optional<AnnotationMirror>, Void> {
+    private final Predicate<AnnotationMirror> predicate;
     private final TypeMirrorSet visiting = new TypeMirrorSet();
 
-    NullableFinder() {
+    NullnessFinder(Predicate<AnnotationMirror> predicate) {
       super(Optional.empty());
+      this.predicate = predicate;
     }
 
-    // Primitives can't be @Nullable so we don't check that.
+    private Optional<AnnotationMirror> findIn(List<? extends AnnotationMirror> annotations) {
+      return annotations.stream().filter(predicate).map(a -> (AnnotationMirror) a).findFirst();
+    }
+
+    @Override
+    public Optional<AnnotationMirror> visitPrimitive(PrimitiveType t, Void unused) {
+      // Type annotations can appear on primitive types (e.g., @Nullable int or @NonNull int).
+      // While null-checking frameworks might not support this, we handle it for robustness
+      // and consistency with TypeEncoder.
+      return findIn(t.getAnnotationMirrors());
+    }
 
     @Override
     public Optional<AnnotationMirror> visitDeclared(DeclaredType t, Void unused) {
       if (!visiting.add(t)) {
         return Optional.empty();
       }
-      return nullableIn(t.getAnnotationMirrors())
+      return findIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(() -> visitAll(t.getTypeArguments()));
     }
@@ -157,21 +193,21 @@ class Nullables {
       if (!visiting.add(t)) {
         return Optional.empty();
       }
-      return nullableIn(t.getAnnotationMirrors())
+      return findIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(() -> visitAll(ImmutableList.of(t.getUpperBound(), t.getLowerBound())));
     }
 
     @Override
     public Optional<AnnotationMirror> visitArray(ArrayType t, Void unused) {
-      return nullableIn(t.getAnnotationMirrors())
+      return findIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(() -> visit(t.getComponentType()));
     }
 
     @Override
     public Optional<AnnotationMirror> visitWildcard(WildcardType t, Void unused) {
-      return nullableIn(t.getAnnotationMirrors())
+      return findIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(
               () ->
@@ -183,7 +219,7 @@ class Nullables {
 
     @Override
     public Optional<AnnotationMirror> visitIntersection(IntersectionType t, Void unused) {
-      return nullableIn(t.getAnnotationMirrors())
+      return findIn(t.getAnnotationMirrors())
           .map(Optional::of)
           .orElseGet(() -> visitAll(t.getBounds()));
     }

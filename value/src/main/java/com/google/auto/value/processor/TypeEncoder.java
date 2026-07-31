@@ -442,34 +442,66 @@ final class TypeEncoder {
     @Override
     public StringBuilder visitDeclared(DeclaredType type, StringBuilder sb) {
       List<? extends AnnotationMirror> annotationMirrors = getTypeAnnotations.apply(type);
+      TypeMirror enclosing = EclipseHack.getEnclosingType(type);
+      List<? extends AnnotationMirror> enclosingAnnotations =
+          enclosing.getKind().equals(TypeKind.DECLARED)
+              ? getTypeAnnotations.apply(enclosing)
+              : ImmutableList.of();
+      // If the type or its enclosing type has a @Nullable annotation, we strip any
+      // non-null annotations from the type to avoid conflicting annotations (e.g. @Nullable
+      // @NonNull).
+      boolean hasNullable =
+          annotationMirrors.stream().anyMatch(Nullables::isNullable)
+              || enclosingAnnotations.stream().anyMatch(Nullables::isNullable);
+      if (hasNullable) {
+        annotationMirrors =
+            annotationMirrors.stream().filter(a -> !Nullables.isNonNull(a)).collect(toList());
+      }
       if (annotationMirrors.isEmpty()) {
         super.visitDeclared(type, sb);
       } else {
-        TypeMirror enclosing = EclipseHack.getEnclosingType(type);
-        if (enclosing.getKind().equals(TypeKind.DECLARED)) {
-          // We have something like com.example.Outer<Double>.@Annot Inner.
-          // We'll recursively encode com.example.Outer<Double> first,
-          // which if it is also annotated might result in a mouthful like
-          // `«com.example.Outer`@`org.annots.Nullable``»com.example.Outer`<`java.lang.Double`> .
-          // That annotation will have been added by a recursive call to this method.
-          // Then we'll add the annotation on the .Inner class, which we know is there because
-          // annotationMirrors is not empty. That means we'll append .@`org.annots.Annot` Inner .
-          visit2(enclosing, sb);
-          sb.append(".");
-          appendAnnotationsWithExclusions(annotationMirrors, sb);
-          sb.append(type.asElement().getSimpleName());
-        } else {
-          // This isn't an inner class, so we have the simpler (but still complicated) case of
-          // needing to place the annotation correctly in cases like java.util.@Nullable Map .
-          // See the class doc comment for an explanation of « and » here.
-          String className = className(type);
-          sb.append("`«").append(className).append("`");
-          appendAnnotationsWithExclusions(annotationMirrors, sb);
-          sb.append("`»").append(className).append("`");
-        }
-        appendTypeArguments(type, sb);
+        visitAnnotatedDeclared(type, annotationMirrors, sb);
       }
       return sb;
+    }
+
+    private void visitEnclosingDeclared(DeclaredType enclosing, StringBuilder sb) {
+      List<? extends AnnotationMirror> annotationMirrors = getTypeAnnotations.apply(enclosing);
+      // Enclosing instances should NEVER have @NotNull annotations.
+      annotationMirrors =
+          annotationMirrors.stream().filter(a -> !Nullables.isNonNull(a)).collect(toList());
+      if (annotationMirrors.isEmpty()) {
+        super.visitDeclared(enclosing, sb);
+      } else {
+        visitAnnotatedDeclared(enclosing, annotationMirrors, sb);
+      }
+    }
+
+    private void visitAnnotatedDeclared(
+        DeclaredType type, List<? extends AnnotationMirror> annotationMirrors, StringBuilder sb) {
+      TypeMirror enclosing = EclipseHack.getEnclosingType(type);
+      if (enclosing.getKind().equals(TypeKind.DECLARED)) {
+        // We have something like com.example.Outer<Double>.@Annot Inner.
+        // We'll recursively encode com.example.Outer<Double> first,
+        // which if it is also annotated might result in a mouthful like
+        // `«com.example.Outer`@`org.annots.Nullable``»com.example.Outer`<`java.lang.Double`> .
+        // That annotation will have been added by a recursive call to this method.
+        // Then we'll add the annotation on the .Inner class, which we know is there because
+        // annotationMirrors is not empty. That means we'll append .@`org.annots.Annot` Inner .
+        visitEnclosingDeclared(MoreTypes.asDeclared(enclosing), sb);
+        sb.append(".");
+        appendAnnotationsWithExclusions(annotationMirrors, sb);
+        sb.append(type.asElement().getSimpleName());
+      } else {
+        // This isn't an inner class, so we have the simpler (but still complicated) case of
+        // needing to place the annotation correctly in cases like java.util.@Nullable Map .
+        // See the class doc comment for an explanation of « and » here.
+        String className = className(type);
+        sb.append("`«").append(className).append("`");
+        appendAnnotationsWithExclusions(annotationMirrors, sb);
+        sb.append("`»").append(className).append("`");
+      }
+      appendTypeArguments(type, sb);
     }
   }
 
