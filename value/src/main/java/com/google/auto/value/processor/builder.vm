@@ -182,7 +182,7 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
   #if ($builderGetter)
 
   @`java.lang.Override`
-  ${p.nullableAnnotation}${builderGetter.access}$builderGetter.type ${builderGetter.name}() {
+  #if (!$builderGetter.optional)${p.nullableAnnotation}#end${builderGetter.access}$builderGetter.type ${builderGetter.name}() {
     #set ($noValueToGetCondition = $builderRequiredProperties.noValueToGet($p))
 
     #if ($builderGetters[$p.name].optional)
