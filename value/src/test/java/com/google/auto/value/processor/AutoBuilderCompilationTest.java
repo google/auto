@@ -1180,6 +1180,47 @@ public final class AutoBuilderCompilationTest {
         .onLineContaining("Baz(@Nullable int thing)");
   }
 
+  @Test
+  public void conflictingAnnotationsOnOptionalGetter() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "import java.util.Optional;",
+            "",
+            "public class Baz {",
+            "  @Target({ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER})",
+            "  public @interface Nullable {}",
+            "",
+            "  @Target(ElementType.TYPE_USE)",
+            "  public @interface NotNull {}",
+            "",
+            "  private final String foo;",
+            "",
+            "  public Baz(@Nullable String foo) {",
+            "    this.foo = foo;",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Builder foo(String foo);",
+            "    @NotNull Optional<String> foo();",
+            "    Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
+        .contentsAsUtf8String()
+        .contains("@Baz.Nullable public @Baz.NotNull Optional<String> foo()");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
