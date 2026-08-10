@@ -62,25 +62,19 @@
   <modules>
     <module>annotations</module>
     <module>processor</module>
+    <module>processor_ksp</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
       <!-- main dependencies -->
-
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
       </dependency>
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava-gwt</artifactId>
-        <version>${guava.version}</version>
-      </dependency>
 
       <!-- test dependencies -->
-
       <dependency>
         <groupId>com.google.testing.compile</groupId>
         <artifactId>compile-testing</artifactId>

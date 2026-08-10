@@ -19,6 +19,7 @@ import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -28,8 +29,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,8 +97,6 @@ public class AutoServiceProcessor extends AbstractProcessor {
   }
 
   /**
-   *
-   *
    * <ol>
    *   <li>For each class annotated with {@link AutoService}
    *       <ul>
@@ -186,8 +187,13 @@ public class AutoServiceProcessor extends AbstractProcessor {
         log("New service file contents: " + newServices);
         FileObject fileObject =
             filer.createResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
-        try (OutputStream out = fileObject.openOutputStream()) {
-          ServicesFiles.writeServiceFile(newServices, out);
+        try (OutputStream out = fileObject.openOutputStream();
+            OutputStreamWriter writer = new OutputStreamWriter(out, UTF_8);
+            BufferedWriter buffered = new BufferedWriter(writer)) {
+          for (String service : newServices) {
+            buffered.write(service);
+            buffered.write('\n');
+          }
         }
         log("Wrote to: " + resourceFile);
       } catch (IOException e) {

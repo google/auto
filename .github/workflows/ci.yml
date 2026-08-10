@@ -45,7 +45,13 @@ jobs:
         run: mvn -B dependency:go-offline test clean -U --quiet --fail-never -DskipTests=true -f build-pom.xml
       - name: 'Test'
         shell: bash
-        run: mvn -B verify -U --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true -f build-pom.xml
+        # One of the auto-service-ksp test deps was built targeting JDK 11, so we skip its tests
+        # here and only run them on JDK 11+ in the next step.
+        run: mvn -B verify -U --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true -pl '!service/processor_ksp' -f build-pom.xml
+      - name: 'Test auto-service-ksp'
+        if: ${{ matrix.java >= 11 }}
+        shell: bash
+        run: mvn -B verify -U --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true -f service/pom.xml
 
   publish_snapshot:
     name: 'Publish snapshot'
