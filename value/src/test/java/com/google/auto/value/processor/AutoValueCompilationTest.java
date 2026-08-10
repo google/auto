@@ -4293,6 +4293,175 @@ public class AutoValueCompilationTest {
         .hasSourceEquivalentTo(expectedOutput);
   }
 
+  @Test
+  public void notNullTypeUseAnnotationOnOuterClass() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({ElementType.TYPE_USE, ElementType.METHOD, ElementType.PARAMETER})",
+            "  public @interface NotNull {}",
+            "",
+            "  @NotNull",
+            "  abstract Outer.Inner inner();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setInner(Outer.Inner inner);",
+            "    public abstract Baz build();",
+            "  }",
+            "}",
+            "class Outer {",
+            "  class Inner {}",
+            "}");
+    // TODO(b/540040170): Fix the duplicate annotation bug that causes compilation failure.
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("foo.bar.Baz.NotNull is not a repeatable annotation");
+  }
+
+  @Test
+  public void notNullTypeUseAnnotationOnStaticOuterClass() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({ElementType.TYPE_USE, ElementType.METHOD, ElementType.PARAMETER})",
+            "  public @interface NotNull {}",
+            "",
+            "  @NotNull",
+            "  abstract Outer.Inner inner();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setInner(Outer.Inner inner);",
+            "    public abstract Baz build();",
+            "  }",
+            "}",
+            "class Outer {",
+            "  static class Inner {}",
+            "}");
+    // Type-use annotations on static nested classes are associated directly with the member type
+    // rather than an enclosing instance type (JLS 9.7.4), so annotation propagation works
+    // correctly.
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains(
+            "  @Baz.NotNull\n"
+                + "  @Override\n"
+                + "  Outer.Inner inner() {\n"
+                + "    return inner;\n"
+                + "  }\n");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("private Outer.@Nullable Inner inner;");
+  }
+
+  @Test
+  public void nullableTypeUseAnnotationOnOuterClass() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({ElementType.TYPE_USE, ElementType.METHOD, ElementType.PARAMETER})",
+            "  public @interface Nullable {}",
+            "",
+            "  @Nullable",
+            "  abstract Outer.Inner inner();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setInner(Outer.Inner inner);",
+            "    public abstract Baz build();",
+            "  }",
+            "}",
+            "class Outer {",
+            "  class Inner {}",
+            "}");
+    // TODO(b/540040170): Fix the duplicate annotation bug that causes compilation failure.
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("foo.bar.Baz.Nullable is not a repeatable annotation");
+  }
+
+  @Test
+  public void notNullTypeUseAnnotationOnArray() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({",
+            "    ElementType.TYPE_USE,",
+            "    ElementType.FIELD,",
+            "    ElementType.PARAMETER,",
+            "    ElementType.METHOD",
+            "  })",
+            "  public @interface NotNull {}",
+            "",
+            "  @SuppressWarnings(\"mutable\")",
+            "  @NotNull",
+            "  abstract byte[] bytes();",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setBytes(byte[] bytes);",
+            "    public abstract Baz build();",
+            "  }",
+            "}");
+    // TODO(b/540040170): Fix the duplicate annotation bug that causes compilation failure.
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation)
+        .hadErrorContaining("foo.bar.Baz.NotNull is not a repeatable annotation");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
