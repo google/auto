@@ -753,6 +753,14 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     }
   }
 
+  static Optional<String> nullableAnnotationFor(
+      Element element, AnnotatedTypeMirror annotatedType) {
+    if (Nullables.nullableIn(annotatedType.annotations()).isPresent()) {
+      return Optional.of("");
+    }
+    return nullableAnnotationFor(element, annotatedType.getType());
+  }
+
   private static OptionalInt nullableAnnotationIndex(List<? extends AnnotationMirror> annotations) {
     return IntStream.range(0, annotations.size())
         .filter(i -> Nullables.isNullable(annotations.get(i)))
