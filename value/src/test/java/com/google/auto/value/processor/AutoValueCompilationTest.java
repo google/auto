@@ -4322,13 +4322,27 @@ public class AutoValueCompilationTest {
             "class Outer {",
             "  class Inner {}",
             "}");
-    // TODO(b/540040170): Fix the duplicate annotation bug that causes compilation failure.
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
+    assertThat(compilation).succeeded();
     assertThat(compilation)
-        .hadErrorContaining("foo.bar.Baz.NotNull is not a repeatable annotation");
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains(
+            "  @Override\n"
+                + "  Outer.Inner inner() {\n"
+                + "    return inner;\n"
+                + "  }\n");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .doesNotContain("@Baz.NotNull\n  @Override");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("private Outer.@Nullable Inner inner;");
   }
 
   @Test
@@ -4412,13 +4426,27 @@ public class AutoValueCompilationTest {
             "class Outer {",
             "  class Inner {}",
             "}");
-    // TODO(b/540040170): Fix the duplicate annotation bug that causes compilation failure.
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
+    assertThat(compilation).succeeded();
     assertThat(compilation)
-        .hadErrorContaining("foo.bar.Baz.Nullable is not a repeatable annotation");
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains(
+            "  @Override\n"
+                + "  Outer.Inner inner() {\n"
+                + "    return inner;\n"
+                + "  }\n");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .doesNotContain("@Baz.Nullable\n  @Override");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("private Outer.Inner inner;");
   }
 
   @Test
@@ -4453,13 +4481,20 @@ public class AutoValueCompilationTest {
             "    public abstract Baz build();",
             "  }",
             "}");
-    // TODO(b/540040170): Fix the duplicate annotation bug that causes compilation failure.
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
+    assertThat(compilation).succeeded();
     assertThat(compilation)
-        .hadErrorContaining("foo.bar.Baz.NotNull is not a repeatable annotation");
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains(
+            "  @SuppressWarnings(\"mutable\")\n"
+                + "  @Override\n"
+                + "  @Baz.NotNull byte[] bytes() {\n"
+                + "    return bytes;\n"
+                + "  }\n");
   }
 
   private static String sorted(String... imports) {

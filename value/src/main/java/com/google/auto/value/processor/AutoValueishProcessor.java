@@ -1236,7 +1236,9 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
     // We need to exclude type annotations from the ones being output on the method, since
     // they will be output as part of the method's return type.
-    Set<String> returnTypeAnnotations = getReturnTypeAnnotations(method, a -> true);
+    AnnotatedTypeMirror returnType =
+        MethodSignature.asMemberOf(typeUtils(), type, method).returnType();
+    Set<String> returnTypeAnnotations = getReturnTypeAnnotations(returnType, a -> true);
     Set<String> excluded = union(excludedAnnotations, returnTypeAnnotations);
     return annotationsToCopy(type, method, excluded);
   }
@@ -1253,10 +1255,12 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
 
   private ImmutableList<AnnotationMirror> propertyFieldAnnotations(
       TypeElement type, ExecutableElement method) {
+    AnnotatedTypeMirror returnType =
+        MethodSignature.asMemberOf(typeUtils(), type, method).returnType();
     // We need to exclude type annotations from the ones being output on the method, since
     // they will be output as part of the field's type.
     Set<String> returnTypeAnnotations =
-        getReturnTypeAnnotations(method, this::annotationAppliesToFields);
+        getReturnTypeAnnotations(returnType, this::annotationAppliesToFields);
     if (!hasAnnotationMirror(method, COPY_ANNOTATIONS_NAME)) {
       // If there's no @CopyAnnotations, we will still copy a @Nullable annotation, if (1) it is not
       // a TYPE_USE annotation (those appear as part of the type in the generated code) and (2) it
@@ -1295,9 +1299,19 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     return annotationsToCopy(type, method, excluded);
   }
 
+  /**
+   * Returns annotations that appear at the start of the given method return type. For example, if
+   * the method is {@code abstract @NotNull Outer.@Nullable Inner foo()} then the method will return
+   * a set containing {@code @NotNull}. This is to prevent outputting {@code @NotNull} a second time
+   * if, for example, that annotation targets methods as well as types. Normally we copy annotations
+   * from abstract methods to their implementations, but here we would not want to because we are
+   * already outputting {@code @NotNull} as part of the return type. In the example, we don't need
+   * to return {@code @Nullable} because it is unambiguously a type annotation and cannot be
+   * interpreted as applying to the method.
+   */
   private static Set<String> getReturnTypeAnnotations(
-      ExecutableElement method, Predicate<TypeElement> typeFilter) {
-    return method.getReturnType().getAnnotationMirrors().stream()
+      AnnotatedTypeMirror methodReturnType, Predicate<TypeElement> typeFilter) {
+    return methodReturnType.leftMostType().annotations().stream()
         .map(a -> a.getAnnotationType().asElement())
         .map(MoreElements::asType)
         .filter(typeFilter)

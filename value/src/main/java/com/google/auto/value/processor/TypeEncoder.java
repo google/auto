@@ -330,11 +330,15 @@ final class TypeEncoder {
         // add them with appendTypeArguments below. Of course, it's more usual for the outer class
         // not to have type arguments, but we'll still follow this path if the nested class is an
         // inner (not static) class.
-        visit2(enclosing, sb);
+        visitEnclosingDeclared(MoreTypes.asDeclared(enclosing), sb);
         sb.append(".").append(type.asElement().getSimpleName());
       } else {
         sb.append('`').append(className(type)).append('`');
       }
+    }
+
+    void visitEnclosingDeclared(DeclaredType type, StringBuilder sb) {
+      visit2(type, sb);
     }
 
     void appendTypeArguments(DeclaredType type, StringBuilder sb) {
@@ -465,11 +469,14 @@ final class TypeEncoder {
       return sb;
     }
 
-    private void visitEnclosingDeclared(DeclaredType enclosing, StringBuilder sb) {
+    @Override
+    void visitEnclosingDeclared(DeclaredType enclosing, StringBuilder sb) {
       List<? extends AnnotationMirror> annotationMirrors = getTypeAnnotations.apply(enclosing);
-      // Enclosing instances should NEVER have @NotNull annotations.
+      // Enclosing instances should NEVER have @NotNull or @Nullable annotations.
       annotationMirrors =
-          annotationMirrors.stream().filter(a -> !Nullables.isNonNull(a)).collect(toList());
+          annotationMirrors.stream()
+              .filter(a -> !Nullables.isNonNull(a) && !Nullables.isNullable(a))
+              .collect(toList());
       if (annotationMirrors.isEmpty()) {
         super.visitDeclared(enclosing, sb);
       } else {

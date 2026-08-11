@@ -15,12 +15,16 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.common.MoreTypes.asArray;
+import static com.google.auto.common.MoreTypes.asDeclared;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import java.util.Objects;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A {@link TypeMirror} and associated annotations.
@@ -87,6 +91,41 @@ final class AnnotatedTypeMirror {
   public String toString() {
     String annotations = Joiner.on(' ').join(originalType.getAnnotationMirrors());
     return annotations.isEmpty() ? rewrittenType.toString() : annotations + " " + rewrittenType;
+  }
+
+  @Nullable AnnotatedTypeMirror getEnclosingType() {
+    if (originalType.getKind().equals(TypeKind.DECLARED)) {
+      TypeMirror originalEnclosing = EclipseHack.getEnclosingType(asDeclared(originalType));
+      if (originalEnclosing.getKind().equals(TypeKind.DECLARED)) {
+        TypeMirror rewrittenEnclosing = EclipseHack.getEnclosingType(asDeclared(rewrittenType));
+        return new AnnotatedTypeMirror(originalEnclosing, rewrittenEnclosing);
+      }
+    }
+    return null;
+  }
+
+  @Nullable AnnotatedTypeMirror getComponentType() {
+    if (originalType.getKind().equals(TypeKind.ARRAY)) {
+      TypeMirror originalComponent = asArray(originalType).getComponentType();
+      TypeMirror rewrittenComponent = asArray(rewrittenType).getComponentType();
+      return new AnnotatedTypeMirror(originalComponent, rewrittenComponent);
+    }
+    return null;
+  }
+
+  AnnotatedTypeMirror leftMostType() {
+    AnnotatedTypeMirror cur = this;
+    while (cur.getKind().equals(TypeKind.ARRAY)) {
+      cur = cur.getComponentType();
+    }
+    while (cur.getKind().equals(TypeKind.DECLARED)) {
+      AnnotatedTypeMirror enclosing = cur.getEnclosingType();
+      if (enclosing == null) {
+        break;
+      }
+      cur = enclosing;
+    }
+    return cur;
   }
 
   @Override
