@@ -1222,7 +1222,61 @@ public final class AutoBuilderCompilationTest {
         .contains("@Baz.Nullable public @Baz.NotNull Optional<String> foo()");
   }
 
+  @Test
+  public void propertyBuilderNullableLocalVariable() {
+    JavaFileObject inner =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Inner",
+            "package foo.bar;",
+            "",
+            "public class Inner {",
+            "  public static Builder builder() {",
+            "    return new Builder();",
+            "  }",
+            "",
+            "  public static class Builder {",
+            "    public Inner build() {",
+            "      return new Inner();",
+            "    }",
+            "  }",
+            "}");
+    JavaFileObject outer =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Outer",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import org.jspecify.annotations.Nullable;",
+            "",
+            "public class Outer {",
+            "  private final Inner inner;",
+            "",
+            "  public Outer(Inner inner) {",
+            "    this.inner = inner;",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Inner.Builder innerBuilder();",
+            "    Outer build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=org.jspecify.annotations.Nullable")
+            .compile(inner, outer);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoBuilder_Outer_Builder")
+        .contentsAsUtf8String()
+        // Incorrect nullness handling could lead to this local variable being declared as:
+        // Inner.@Nullable Builder ...
+        .contains("Inner.Builder inner$builder = Inner.builder();");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
 }
+

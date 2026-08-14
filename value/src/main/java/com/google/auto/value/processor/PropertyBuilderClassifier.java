@@ -353,7 +353,7 @@ class PropertyBuilderClassifier {
       initDefault = rawBarType + ".of()";
     } else {
       String localBuilder = property + "$builder";
-      beforeInitDefault = nullableBarBuilderType + " " + localBuilder + " = " + initializer + ";";
+      beforeInitDefault = barBuilderType + " " + localBuilder + " = " + initializer + ";";
       initDefault = localBuilder + "." + build.getSimpleName() + "()";
     }
 
