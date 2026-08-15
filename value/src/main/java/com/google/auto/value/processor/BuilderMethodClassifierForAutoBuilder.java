@@ -75,6 +75,8 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
    * @param builderType the builder class or interface within {@code ofClass}.
    * @param propertiesWithDefaults properties that have a default value, so it is not an error for
    *     them not to have a setter.
+   * @param canGenerateCopyConstructor true if the target class has getters matching all properties
+   *     so a copy constructor will be generated.
    * @return an {@code Optional} that contains the results of the classification if it was
    *     successful or nothing if it was not.
    */
@@ -86,6 +88,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
       TypeMirror builtType,
       TypeElement builderType,
       ImmutableSet<String> propertiesWithDefaults,
+      boolean canGenerateCopyConstructor,
       Nullables nullables) {
     ImmutableBiMap<VariableElement, String> paramToPropertyName =
         executable.parameters().stream()
@@ -103,7 +106,7 @@ class BuilderMethodClassifierForAutoBuilder extends BuilderMethodClassifier<Vari
             rewrittenPropertyTypes,
             propertiesWithDefaults,
             nullables);
-    if (classifier.classifyMethods(methods, false)) {
+    if (classifier.classifyMethods(methods, canGenerateCopyConstructor)) {
       return Optional.of(classifier);
     } else {
       return Optional.empty();

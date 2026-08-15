@@ -1275,6 +1275,74 @@ public final class AutoBuilderCompilationTest {
         .contains("Inner.Builder inner$builder = Inner.builder();");
   }
 
+  @Test
+  public void propertyBuilderWithoutToBuilder() {
+    JavaFileObject inner =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Inner",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Inner {",
+            "  private final int x;",
+            "",
+            "  public Inner(int x) {",
+            "    this.x = x;",
+            "  }",
+            "",
+            "  public int x() {",
+            "    return x;",
+            "  }",
+            "",
+            "  public static Builder builder() {",
+            "    return new AutoBuilder_Inner_Builder();",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Builder x(int x);",
+            "    Inner build();",
+            "  }",
+            "}");
+    JavaFileObject outer =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Outer",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Outer {",
+            "  private final Inner inner;",
+            "",
+            "  public Outer(Inner inner) {",
+            "    this.inner = inner;",
+            "  }",
+            "",
+            "  public Inner inner() {",
+            "    return inner;",
+            "  }",
+            "",
+            "  @AutoBuilder",
+            "  public interface Builder {",
+            "    Inner.Builder innerBuilder();",
+            "    Outer build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(inner, outer);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "[AutoBuilderCantMakeBuilder] Property builder method returns foo.bar.Inner.Builder but"
+                + " there is no way to make that type from foo.bar.Inner: foo.bar.Inner does not"
+                + " have a non-static toBuilder() method that returns foo.bar.Inner.Builder, and"
+                + " foo.bar.Inner.Builder does not have a method addAll or putAll that accepts an"
+                + " argument of type foo.bar.Inner")
+        .inFile(outer)
+        .onLineContaining("Inner.Builder innerBuilder();");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }

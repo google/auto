@@ -186,6 +186,9 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     ImmutableMap<String, String> propertyInitializers =
         propertyInitializers(autoBuilderType, executable);
     Nullables nullables = Nullables.fromMethods(processingEnv, methods);
+    ImmutableMap<String, PropertyGetter> propertyToGetter =
+        propertyToGetter(executable, autoBuilderType);
+    boolean canGenerateCopyConstructor = !propertyToGetter.isEmpty();
     Optional<BuilderMethodClassifier<VariableElement>> maybeClassifier =
         BuilderMethodClassifierForAutoBuilder.classify(
             methods,
@@ -195,14 +198,13 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
             builtType,
             autoBuilderType,
             propertyInitializers.keySet(),
+            canGenerateCopyConstructor,
             nullables);
     if (!maybeClassifier.isPresent() || errorReporter().errorCount() > 0) {
       // We've already output one or more error messages.
       return;
     }
     BuilderMethodClassifier<VariableElement> classifier = maybeClassifier.get();
-    ImmutableMap<String, PropertyGetter> propertyToGetter =
-        propertyToGetter(executable, autoBuilderType);
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
     vars.props = propertySet(executable, propertyToGetter, propertyInitializers, nullables);
     builder.defineVars(vars, classifier);
@@ -216,7 +218,7 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
         forwardingClassName
             .map(n -> TypeSimplifier.simpleNameOf(n) + ".of")
             .orElseGet(executable::invoke);
-    vars.toBuilderConstructor = !propertyToGetter.isEmpty();
+    vars.toBuilderConstructor = canGenerateCopyConstructor;
     vars.toBuilderMethods = ImmutableList.of();
     defineSharedVarsForType(autoBuilderType, ImmutableSet.of(), nullables, vars);
     String text = vars.toText();

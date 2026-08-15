@@ -507,6 +507,107 @@ public final class AutoBuilderTest {
     }
   }
 
+  static class NestedInner {
+    private final int x;
+
+    NestedInner(int x) {
+      this.x = x;
+    }
+
+    int x() {
+      return x;
+    }
+
+    Builder toBuilder() {
+      return builder().setX(x());
+    }
+
+    static Builder builder() {
+      return new AutoBuilder_AutoBuilderTest_NestedInner_Builder();
+    }
+
+    @AutoBuilder
+    interface Builder {
+      Builder setX(int x);
+
+      NestedInner build();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o instanceof NestedInner) {
+        NestedInner that = (NestedInner) o;
+        return this.x == that.x;
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return Integer.hashCode(x);
+    }
+  }
+
+  static class NestedOuter {
+    private final NestedInner inner;
+
+    NestedOuter(NestedInner inner) {
+      this.inner = inner;
+    }
+
+    NestedInner inner() {
+      return inner;
+    }
+
+    Builder toBuilder() {
+      return new AutoBuilder_AutoBuilderTest_NestedOuter_Builder(this);
+    }
+
+    static Builder builder() {
+      return new AutoBuilder_AutoBuilderTest_NestedOuter_Builder();
+    }
+
+    @AutoBuilder
+    interface Builder {
+      NestedInner.Builder innerBuilder();
+
+      NestedOuter build();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o instanceof NestedOuter) {
+        NestedOuter that = (NestedOuter) o;
+        return Objects.equals(this.inner, that.inner);
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(inner);
+    }
+  }
+
+  @Test
+  public void propertyBuilderWithToBuilder() {
+    NestedOuter.Builder builder1 = NestedOuter.builder();
+    builder1.innerBuilder().setX(23);
+    NestedOuter outer1 = builder1.build();
+    assertThat(outer1.inner().x()).isEqualTo(23);
+
+    NestedOuter.Builder builder2 = outer1.toBuilder();
+    builder2.innerBuilder().setX(42);
+    NestedOuter outer2 = builder2.build();
+    assertThat(outer2.inner().x()).isEqualTo(42);
+
+    NestedOuter outer3 = outer1.toBuilder().build();
+    assertThat(outer3).isEqualTo(outer1);
+
+    NestedOuter.Builder uninitializedBuilder = NestedOuter.builder();
+    assertThrows(IllegalStateException.class, uninitializedBuilder::build);
+  }
+
   static <T> String concatList(ImmutableList<T> list) {
     return list.stream().map(String::valueOf).collect(joining());
   }

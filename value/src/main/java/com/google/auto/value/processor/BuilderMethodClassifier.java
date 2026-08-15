@@ -146,7 +146,7 @@ abstract class BuilderMethodClassifier<E extends Element> {
   }
 
   /** Classifies the given methods and sets the state of this object based on what is found. */
-  boolean classifyMethods(Iterable<ExecutableElement> methods, boolean autoValueHasToBuilder) {
+  boolean classifyMethods(Iterable<ExecutableElement> methods, boolean shouldSupportCopying) {
     int startErrorCount = errorReporter.errorCount();
     for (ExecutableElement method : methods) {
       classifyMethod(method);
@@ -181,14 +181,15 @@ abstract class BuilderMethodClassifier<E extends Element> {
         // method that accepts a Bar argument.
         boolean canMakeBarBuilder =
             (propertyBuilder.getBuiltToBuilder() != null || propertyBuilder.getCopyAll() != null);
-        boolean needToMakeBarBuilder = (autoValueHasToBuilder || hasSetter);
+        boolean needToMakeBarBuilder = (shouldSupportCopying || hasSetter);
         if (needToMakeBarBuilder && !canMakeBarBuilder) {
           errorReporter.reportError(
               propertyBuilder.getPropertyBuilderMethod(),
-              "[AutoValueCantMakeBuilder] Property builder method returns %1$s but there is no"
-                  + " way to make that type from %2$s: %2$s does not have a non-static"
-                  + " toBuilder() method that returns %1$s, and %1$s does not have a method"
-                  + " addAll or putAll that accepts an argument of type %2$s",
+              "[%1$sCantMakeBuilder] Property builder method returns %2$s but there is no"
+                  + " way to make that type from %3$s: %3$s does not have a non-static"
+                  + " toBuilder() method that returns %2$s, and %2$s does not have a method"
+                  + " addAll or putAll that accepts an argument of type %3$s",
+              autoWhat(),
               propertyBuilder.getBuilderTypeMirror(),
               propertyType);
         }
