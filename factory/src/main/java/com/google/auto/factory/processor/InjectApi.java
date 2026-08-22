@@ -18,12 +18,14 @@ package com.google.auto.factory.processor;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.stream.Collectors.joining;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.AbstractMap.SimpleEntry;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -41,6 +43,9 @@ abstract class InjectApi {
 
   private static final ImmutableList<String> PREFIXES_IN_ORDER =
       ImmutableList.of("jakarta.inject.", "javax.inject.");
+
+  private static final ImmutableSet<String> QUALIFIER_ANNOTATIONS =
+      ImmutableSet.of("javax.inject.Qualifier", "jakarta.inject.Qualifier");
 
   static InjectApi from(Elements elementUtils, @Nullable String apiPrefix) {
     ImmutableList<String> apiPackages =
@@ -63,6 +68,23 @@ abstract class InjectApi {
   boolean isProvider(TypeMirror type) {
     return type.getKind().equals(TypeKind.DECLARED)
         && MoreTypes.asTypeElement(type).equals(provider());
+  }
+
+  /**
+   * True if {@code annotation} is meta-annotated with {@code javax.inject.Qualifier} or {@code
+   * jakarta.inject.Qualifier}.
+   *
+   * <p>Both are recognized even when generated code uses only one inject package. Otherwise, if
+   * {@code jakarta.inject} is preferred for {@code Inject}/{@code Provider} types, a {@code
+   * javax.inject.Qualifier} on a {@code @Provided} parameter would be dropped from the generated
+   * factory constructor.
+   */
+  static boolean isQualifier(AnnotationMirror annotation) {
+    return MoreElements.asType(annotation.getAnnotationType().asElement())
+        .getAnnotationMirrors()
+        .stream()
+        .map(meta -> MoreElements.asType(meta.getAnnotationType().asElement()))
+        .anyMatch(type -> QUALIFIER_ANNOTATIONS.contains(type.getQualifiedName().toString()));
   }
 
   private static ImmutableMap<String, TypeElement> apiMap(
