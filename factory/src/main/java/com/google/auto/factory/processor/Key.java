@@ -66,7 +66,7 @@ abstract class Key {
     // TODO(gak): check for only one qualifier rather than using the first
     Optional<AnnotationMirror> qualifier =
         annotations.stream()
-            .filter(InjectApi::isQualifier)
+            .filter(injectApi::isQualifier)
             .findFirst();
 
     TypeMirror keyType =
