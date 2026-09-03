@@ -191,7 +191,7 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
       val lines = impls.map { it.binaryName }
       generator
         .createNewFileByPath(
-          dependencies = Dependencies(aggregating = false, sources = sourceFiles),
+          dependencies = Dependencies(aggregating = true, sources = sourceFiles),
           path = filePath,
           extensionName = "",
         )
