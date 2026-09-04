@@ -75,7 +75,7 @@
     <dependency>
       <groupId>androidx.room3</groupId>
       <artifactId>room3-compiler-processing-testing</artifactId>
-      <version>3.0.1</version>
+      <version>3.0.2</version>
       <scope>test</scope>
       <exclusions>
         <!--
