@@ -50,10 +50,10 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <includes>
-            <include>com/google/auto/value/*</include>
-            <include>com/google/auto/value/extension/memoized/*</include>
-            <include>com/google/auto/value/extension/serializable/*</include>
-            <include>com/google/auto/value/extension/toprettystring/*</include>
+            <include>com/google/auto/value/*.java</include>
+            <include>com/google/auto/value/extension/memoized/*.java</include>
+            <include>com/google/auto/value/extension/serializable/*.java</include>
+            <include>com/google/auto/value/extension/toprettystring/*.java</include>
           </includes>
         </configuration>
       </plugin>
