@@ -191,7 +191,7 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
       val lines = impls.map { it.binaryName }
       generator
         .createNewFileByPath(
-          dependencies = Dependencies(aggregating = false, sources = sourceFiles),
+          dependencies = Dependencies(aggregating = true, sources = sourceFiles),
           path = filePath,
           extensionName = "",
         )
@@ -246,6 +246,9 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
     }
 
     private fun KSClassDeclaration.getBinaryName(qualifiedName: String): String {
+      if (packageName.asString().isEmpty()) {
+        return qualifiedName.replace('.', '$')
+      }
       val packageSeparatorIndex = packageName.asString().length + 1 // plus the '.'
       val nameAfterPackage = qualifiedName.substring(packageSeparatorIndex)
       return "${packageName.asString()}.${nameAfterPackage.replace('.', '$')}"
