@@ -690,6 +690,76 @@ class AutoServiceKspProcessorTest {
     }
   }
 
+  @Test
+  fun defaultPackage_generatesCorrectServiceFiles() {
+    val javaSource =
+      Source.java(
+        "Foo",
+        """
+        import com.google.auto.service.AutoService;
+        import testservice.Service1;
+        import testservice.Service2;
+
+        @AutoService({Service1.class, Service2.class})
+        public final class Foo implements Service1, Service2 {}
+        """,
+      )
+    val kotlinSource =
+      Source.kotlin(
+        "Foo.kt",
+        """
+        import com.google.auto.service.AutoService
+        import testservice.Service1
+        import testservice.Service2
+
+        @AutoService(Service1::class, Service2::class)
+        class Foo : Service1, Service2
+        """,
+      )
+    compile(javaSource, kotlinSource) {
+      generatedTextResourceFileWithPath("META-INF/services/testservice.Service1").isEqualTo("Foo\n")
+      generatedTextResourceFileWithPath("META-INF/services/testservice.Service2").isEqualTo("Foo\n")
+    }
+  }
+
+  @Test
+  fun defaultPackage_nestedClasses_generatesCorrectServiceFiles() {
+    val javaSource =
+      Source.java(
+        "Outer",
+        """
+        import com.google.auto.service.AutoService;
+        import testservice.Service1;
+        import testservice.Service2;
+
+        public class Outer {
+          @AutoService({Service1.class, Service2.class})
+          public static final class Foo implements Service1, Service2 {}
+        }
+        """,
+      )
+    val kotlinSource =
+      Source.kotlin(
+        "Outer.kt",
+        """
+        import com.google.auto.service.AutoService
+        import testservice.Service1
+        import testservice.Service2
+
+        class Outer {
+          @AutoService(Service1::class, Service2::class)
+          class Foo : Service1, Service2
+        }
+        """,
+      )
+    compile(javaSource, kotlinSource) {
+      generatedTextResourceFileWithPath("META-INF/services/testservice.Service1")
+        .isEqualTo("Outer\$Foo\n")
+      generatedTextResourceFileWithPath("META-INF/services/testservice.Service2")
+        .isEqualTo("Outer\$Foo\n")
+    }
+  }
+
   companion object {
     private val service1 =
       Source.kotlin(
