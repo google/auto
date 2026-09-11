@@ -344,6 +344,7 @@ public class AutoValueJava8Test {
 
   @Test
   public void testInheritedGetterRemainsNullable() throws NoSuchMethodException {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
     // Ensure that the implementation has `@Nullable String thing()`.
     StringThing instance = new AutoValue_AutoValueJava8Test_StringThing(null);
     Method getter = instance.getClass().getDeclaredMethod("thing");
@@ -352,6 +353,7 @@ public class AutoValueJava8Test {
 
   @Test
   public void testInheritedBuilderGetterRemainsNullable() throws NoSuchMethodException {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
     StringThingWithBuilder instance = StringThingWithBuilder.builder().setThing(null).build();
     Method getter = instance.getClass().getDeclaredMethod("thing");
     assertThat(getter.getAnnotatedReturnType().getAnnotations()).asList().contains(nullable());
@@ -1211,6 +1213,7 @@ public class AutoValueJava8Test {
 
   @Test
   public void typeParameterBuilderFieldsAreNullable() throws ReflectiveOperationException {
+    assumeTrue(javacHandlesTypeAnnotationsCorrectly);
     assertThrows(NullPointerException.class, () -> NotNullableVariableBound.builder().setT(null));
 
     // Even though neither t() nor string() has a @Nullable return type, the corresponding builder
