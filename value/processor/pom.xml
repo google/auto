@@ -207,6 +207,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-invoker-plugin</artifactId>
+        <configuration>
+          <!-- ITs live under value/src/it, not processor/src/it (see #1558). -->
+          <projectsDirectory>${project.parent.basedir}/src/it</projectsDirectory>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
