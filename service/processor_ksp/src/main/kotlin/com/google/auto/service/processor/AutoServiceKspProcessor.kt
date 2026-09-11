@@ -53,7 +53,7 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
         .getSymbolsWithAnnotation(AUTO_SERVICE)
         .filterIsInstance<KSClassDeclaration>() // should be all if code compiles
         .filter { it.getName() != null } // should also be all if code compiles
-        .map { AutoServiceClass(it) }
+        .map { AutoServiceClass(it.getName()!!, it) }
         .toList()
     log("@AutoService-annotated classes: $services")
     for (service in services) {
@@ -75,23 +75,25 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
   }
 
   /** Base type for representation of class or interface types. */
-  private abstract class ClassType(type: KSType? = null, declaration: KSClassDeclaration? = null) {
+  private abstract class ClassType(
+    val qualifiedName: String,
+    type: KSType? = null,
+    declaration: KSClassDeclaration? = null,
+  ) {
     val type: KSType = type ?: declaration!!.asStarProjectedType()
     val declaration: KSClassDeclaration = declaration ?: type!!.declaration as KSClassDeclaration
 
-    // Should be checked and filtered out before creating an instance of this type
-    val name: String = this.declaration.getName()!!
-    val binaryName: String = this.declaration.getBinaryName(name)
+    val binaryName: String = this.declaration.getBinaryName(qualifiedName)
 
     val isGeneric: Boolean
       get() = type.arguments.isNotEmpty()
 
-    override fun toString() = name
+    override fun toString() = qualifiedName
   }
 
   /** Simple representation of an `@AutoService`-annotated class. */
-  private inner class AutoServiceClass(declaration: KSClassDeclaration) :
-    ClassType(declaration = declaration), Comparable<AutoServiceClass> {
+  private inner class AutoServiceClass(qualifiedName: String, declaration: KSClassDeclaration) :
+    ClassType(qualifiedName, declaration = declaration), Comparable<AutoServiceClass> {
     // Since we found this class using resolver.getSymbolsWithAnnotation(AUTO_SERVICE), this
     // _should_ be safe.
     private val annotation: KSAnnotation =
@@ -123,7 +125,7 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
             // name _probably_ shouldn't be null unless isError is true, but just to be sure...
             it.getName() == null
         }
-        .map { ServiceInterface(it) }
+        .map { ServiceInterface(it.getName()!!, it) }
 
     fun suppresses(key: String): Boolean = key in suppressions
 
@@ -174,7 +176,8 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
   }
 
   /** Representation of a non-error interface type listed in an `@AutoService` annotation. */
-  private class ServiceInterface(type: KSType) : ClassType(type) {
+  private class ServiceInterface(qualifiedName: String, type: KSType) :
+    ClassType(qualifiedName, type = type) {
     fun isImplementedBy(impl: AutoServiceClass): Boolean =
       type.starProjection().isAssignableFrom(impl.type)
   }
@@ -246,12 +249,9 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
     }
 
     private fun KSClassDeclaration.getBinaryName(qualifiedName: String): String {
-      if (packageName.asString().isEmpty()) {
-        return qualifiedName.replace('.', '$')
-      }
-      val packageSeparatorIndex = packageName.asString().length + 1 // plus the '.'
-      val nameAfterPackage = qualifiedName.substring(packageSeparatorIndex)
-      return "${packageName.asString()}.${nameAfterPackage.replace('.', '$')}"
+      val packagePrefix = packageName.asString().let { if (it.isEmpty()) "" else "$it." }
+      val classNames = qualifiedName.substring(packagePrefix.length).replace('.', '$')
+      return "$packagePrefix$classNames"
     }
 
     private val KSDeclaration.enclosingElements: Sequence<KSAnnotated>
