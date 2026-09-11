@@ -70,15 +70,6 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Surefire 3.6 always uses Jupiter; Vintage runs these JUnit 4 tests
-         (AutoValueTest et al.) when gradle-test-kit pulls Jupiter onto the
-         classpath. See #1558 / google/auto#2135. -->
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
-      <version>5.13.4</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
@@ -190,16 +181,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.6.0</version>
-        <!-- Surefire 3.6 always uses Jupiter (no junit4 provider). With
-             gradle-test-kit pulling Jupiter onto the classpath, JUnit 4 suites
-             (AutoValueTest et al.) run via junit-vintage-engine. See #1558. -->
+        <version>3.5.6</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.6.0</version>
-        <!-- Same Vintage path as surefire: GradleIT is JUnit 4. -->
+        <version>3.5.6</version>
         <configuration>
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
