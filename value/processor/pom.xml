@@ -42,8 +42,6 @@
   <properties>
     <auto-service.version>1.1.1</auto-service.version>
     <errorprone.version>2.50.0</errorprone.version>
-    <!-- annotations is test-scoped on this module; invoker:install defaults to runtime. -->
-    <invoker.install.scope>test</invoker.install.scope>
   </properties>
 
   <dependencies>
@@ -218,6 +216,12 @@
           <pomIncludes>
             <pomInclude>functional/pom.xml</pomInclude>
           </pomIncludes>
+          <!-- annotations is test-scoped here so default install.scope=runtime
+               would skip it; do not raise install.scope to test (pulls
+               compile-testing -> com.sun:tools, missing from Central). -->
+          <extraArtifacts>
+            <extraArtifact>com.google.auto.value:auto-value-annotations:${project.version}</extraArtifact>
+          </extraArtifacts>
         </configuration>
       </plugin>
       <plugin>
