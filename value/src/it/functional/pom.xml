@@ -182,11 +182,29 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.6</version>
+        <!-- gradle-test-kit pulls JUnit Jupiter onto the test classpath; Surefire then
+             auto-selects JUnitPlatformProvider and reports Tests run: 0 for these JUnit 4
+             tests (AutoValueTest et al). Pin the JUnit 4 provider. See #1558. -->
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit4</artifactId>
+            <version>3.5.6</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>3.5.6</version>
+        <!-- Same JUnit 4 pin as surefire: GradleIT is JUnit 4. -->
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit4</artifactId>
+            <version>3.5.6</version>
+          </dependency>
+        </dependencies>
         <configuration>
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
