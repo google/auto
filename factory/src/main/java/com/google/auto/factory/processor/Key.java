@@ -15,7 +15,6 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.factory.processor.Mirrors.unwrapOptionalEquivalence;
 import static com.google.auto.factory.processor.Mirrors.wrapOptionalInEquivalence;
 
@@ -67,10 +66,7 @@ abstract class Key {
     // TODO(gak): check for only one qualifier rather than using the first
     Optional<AnnotationMirror> qualifier =
         annotations.stream()
-            .filter(
-                annotation ->
-                    isAnnotationPresent(
-                        annotation.getAnnotationType().asElement(), injectApi.qualifier()))
+            .filter(injectApi::isQualifier)
             .findFirst();
 
     TypeMirror keyType =

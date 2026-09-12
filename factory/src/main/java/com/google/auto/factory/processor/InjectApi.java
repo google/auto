@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.stream.Collectors.joining;
 
@@ -24,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.AbstractMap.SimpleEntry;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -39,6 +41,12 @@ abstract class InjectApi {
 
   abstract TypeElement qualifier();
 
+  /**
+   * Every {@code Qualifier} type present on the processor classpath, from {@code javax.inject}
+   * and/or {@code jakarta.inject}.
+   */
+  abstract ImmutableSet<TypeElement> qualifierTypes();
+
   private static final ImmutableList<String> PREFIXES_IN_ORDER =
       ImmutableList.of("jakarta.inject.", "javax.inject.");
 
@@ -51,7 +59,8 @@ abstract class InjectApi {
       TypeElement provider = apiMap.get("Provider");
       TypeElement qualifier = apiMap.get("Qualifier");
       if (inject != null && provider != null && qualifier != null) {
-        return new AutoValue_InjectApi(inject, provider, qualifier);
+        return new AutoValue_InjectApi(
+            inject, provider, qualifier, qualifierTypesOnClasspath(elementUtils));
       }
     }
     String classes = "{" + String.join(",", API_CLASSES) + "}";
@@ -63,6 +72,33 @@ abstract class InjectApi {
   boolean isProvider(TypeMirror type) {
     return type.getKind().equals(TypeKind.DECLARED)
         && MoreTypes.asTypeElement(type).equals(provider());
+  }
+
+  /**
+   * True if {@code annotation} is meta-annotated with a {@code Qualifier} type that is on the
+   * processor classpath ({@code javax.inject.Qualifier} and/or {@code jakarta.inject.Qualifier}).
+   *
+   * <p>Generated code still uses only {@link #inject()}, {@link #provider()}, and {@link
+   * #qualifier()} from the one preferred inject API. Qualifier detection must recognize both
+   * packages; otherwise a {@code javax.inject.Qualifier} on a {@code @Provided} parameter is dropped
+   * when {@code jakarta.inject} is preferred.
+   */
+  boolean isQualifier(AnnotationMirror annotation) {
+    return qualifierTypes().stream()
+        .anyMatch(
+            qualifierType ->
+                isAnnotationPresent(annotation.getAnnotationType().asElement(), qualifierType));
+  }
+
+  private static ImmutableSet<TypeElement> qualifierTypesOnClasspath(Elements elementUtils) {
+    ImmutableSet.Builder<TypeElement> qualifierTypes = ImmutableSet.builder();
+    for (String prefix : PREFIXES_IN_ORDER) {
+      TypeElement qualifierType = apiMap(elementUtils, prefix).get("Qualifier");
+      if (qualifierType != null) {
+        qualifierTypes.add(qualifierType);
+      }
+    }
+    return qualifierTypes.build();
   }
 
   private static ImmutableMap<String, TypeElement> apiMap(

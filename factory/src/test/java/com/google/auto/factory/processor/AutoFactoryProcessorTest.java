@@ -563,6 +563,96 @@ public class AutoFactoryProcessorTest {
             "tests.ParameterAnnotationsFactory", "expected/ParameterAnnotationsFactory.java"));
   }
 
+  /**
+   * If {@code jakarta.inject} is preferred, {@code javax.inject.Qualifier} annotations on
+   * {@code @Provided} parameters must still be copied onto the generated factory constructor.
+   *
+   * <p>Golden-file tests rewrite {@code javax.inject} to {@code jakarta.inject} in sources, so they
+   * do not cover this mixed case. See <a href="https://github.com/google/auto/issues/1884">issue
+   * 1884</a>.
+   */
+  @Test
+  public void javaxQualifierPropagatedWhenJakartaInjectIsPreferred() {
+    assume().that(config.expectedPackage).isEqualTo(InjectPackage.JAKARTA);
+    assume().that(config.packagesOnClasspath).contains(InjectPackage.JAVAX);
+    JavaFileObject qualifier =
+        JavaFileObjects.forSourceLines(
+            "tests.MyQualifier",
+            "package tests;",
+            "",
+            "import static java.lang.annotation.RetentionPolicy.RUNTIME;",
+            "",
+            "import java.lang.annotation.Documented;",
+            "import java.lang.annotation.Retention;",
+            "import javax.inject.Qualifier;",
+            "",
+            "@Documented",
+            "@Qualifier",
+            "@Retention(RUNTIME)",
+            "public @interface MyQualifier {}");
+    JavaFileObject factoryClass =
+        JavaFileObjects.forSourceLines(
+            "tests.QualifiedProvided",
+            "package tests;",
+            "",
+            "import com.google.auto.factory.AutoFactory;",
+            "import com.google.auto.factory.Provided;",
+            "",
+            "@AutoFactory",
+            "final class QualifiedProvided {",
+            "  QualifiedProvided(@Provided @MyQualifier int value) {}",
+            "}");
+    Compilation compilation = config.javac().compile(qualifier, factoryClass);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.QualifiedProvidedFactory")
+        .contentsAsUtf8String()
+        .contains("@MyQualifier Provider<Integer> valueProvider");
+  }
+
+  /**
+   * If {@code javax.inject} is selected while {@code jakarta.inject} is also present, {@code
+   * jakarta.inject.Qualifier} annotations on {@code @Provided} parameters must still be copied.
+   */
+  @Test
+  public void jakartaQualifierPropagatedWhenJavaxInjectIsSelected() {
+    assume().that(config.expectedPackage).isEqualTo(InjectPackage.JAVAX);
+    assume().that(config.packagesOnClasspath).contains(InjectPackage.JAKARTA);
+    JavaFileObject qualifier =
+        JavaFileObjects.forSourceLines(
+            "tests.MyQualifier",
+            "package tests;",
+            "",
+            "import static java.lang.annotation.RetentionPolicy.RUNTIME;",
+            "",
+            "import java.lang.annotation.Documented;",
+            "import java.lang.annotation.Retention;",
+            "import jakarta.inject.Qualifier;",
+            "",
+            "@Documented",
+            "@Qualifier",
+            "@Retention(RUNTIME)",
+            "public @interface MyQualifier {}");
+    JavaFileObject factoryClass =
+        JavaFileObjects.forSourceLines(
+            "tests.QualifiedProvided",
+            "package tests;",
+            "",
+            "import com.google.auto.factory.AutoFactory;",
+            "import com.google.auto.factory.Provided;",
+            "",
+            "@AutoFactory",
+            "final class QualifiedProvided {",
+            "  QualifiedProvided(@Provided @MyQualifier int value) {}",
+            "}");
+    Compilation compilation = config.javac().compile(qualifier, factoryClass);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.QualifiedProvidedFactory")
+        .contentsAsUtf8String()
+        .contains("@MyQualifier Provider<Integer> valueProvider");
+  }
+
   @Test
   public void customAnnotations() {
     goldenTest(
