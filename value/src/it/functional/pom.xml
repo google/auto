@@ -115,24 +115,10 @@
         <artifactId>kotlin-maven-plugin</artifactId>
         <version>${kotlin.version}</version>
         <executions>
-          <!--
-          The Kotlin configuration here is a bit unusual. JetBrains recommends
-          <https://kotlinlang.org/docs/maven.html#compile-kotlin-and-java-sources>
-          a fairly invasive reconfiguration of the maven-compiler-plugin (which compiles Java)
-          in order to ensure that the Kotlin compiler can run first. In our case, we have just
-          one Kotlin file that a test in Java accesses. So, even though it is in src/test/java,
-          we compile it in the `compile` goal, which means it is available to the Java test sources
-          when they are compiled in the `default-testCompile` goal.
-
-          Currently if you want to use JDK ≥ 16 then you must set
-          JAVA_TOOL_OPTIONS=__illegal-access=permit
-          except the two underscores should be dashes (which XML comments won't allow us to write).
-          This is a bug that will presumably be fixed in a forthcoming version.
-          -->
           <execution>
-            <id>compile</id>
+            <id>test-compile</id>
             <goals>
-              <goal>compile</goal>
+              <goal>test-compile</goal>
             </goals>
             <configuration>
               <sourceDirs>
@@ -191,6 +177,10 @@
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
           </systemPropertyVariables>
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/*IT.java</include>
+          </includes>
         </configuration>
         <executions>
           <execution>
