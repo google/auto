@@ -145,7 +145,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.15.0</version>
+        <version>3.16.0</version>
         <configuration>
           <annotationProcessorPaths>
             <path>
@@ -181,12 +181,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>3.6.0</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>3.6.0</version>
         <configuration>
           <systemPropertyVariables>
             <autoValueVersion>${project.version}</autoValueVersion>
@@ -213,7 +213,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.15.0</version>
+            <version>3.16.0</version>
             <configuration>
               <annotationProcessorPaths>
                 <path>
@@ -253,7 +253,7 @@
         <dependency>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>ecj</artifactId>
-          <version>3.46.0</version>
+          <version>3.46.100</version>
           <scope>test</scope>
         </dependency>
       </dependencies>
