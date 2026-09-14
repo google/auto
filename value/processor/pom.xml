@@ -207,6 +207,22 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-invoker-plugin</artifactId>
+        <configuration>
+          <!-- ITs live under value/src/it, not processor/src/it (see #1558).
+               Only functional is an invoker project (eclipse profile pass via
+               invoker.properties). gwtserializer is a reactor module under the
+               java-11-and-after profile, not an invoker IT. -->
+          <projectsDirectory>${project.parent.basedir}/src/it</projectsDirectory>
+          <pomIncludes>
+            <pomInclude>functional/pom.xml</pomInclude>
+          </pomIncludes>
+          <!-- annotations is test-scoped here so default install.scope=runtime
+               would skip it; do not raise install.scope to test (pulls
+               compile-testing -> com.sun:tools, missing from Central). -->
+          <extraArtifacts>
+            <extraArtifact>com.google.auto.value:auto-value-annotations:${project.version}</extraArtifact>
+          </extraArtifacts>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
