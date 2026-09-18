@@ -68,8 +68,8 @@ public void testAnimal() {
 
 ### What does AutoValue generate? <a name="generated"></a>
 
-For the `Animal` example shown above, here is [typical code AutoValue might
-generate](generated-builder-example.md).
+For the `Animal` example shown above, here is
+[typical code AutoValue might generate](generated-builder-example.md).
 
 ## Warnings <a name="warnings"></a>
 
@@ -81,18 +81,18 @@ exposing yourself to initialization-order problems.
 ## <a name="howto"></a>How do I...
 
 *   ... [use (or not use) `set` **prefixes**?](builders-howto.md#beans)
-*   ... [use different **names** besides
-    `builder()`/`Builder`/`build()`?](builders-howto.md#build_names)
+*   ...
+    [use different **names** besides `builder()`/`Builder`/`build()`?](builders-howto.md#build_names)
 *   ... [specify a **default** value for a property?](builders-howto.md#default)
 *   ... [initialize a builder to the same property values as an **existing**
     value instance](builders-howto.md#to_builder)
 *   ... [include `with-` methods on my value class for creating slightly
     **altered** instances?](builders-howto.md#withers)
 *   ... [**validate** property values?](builders-howto.md#validate)
-*   ... [**normalize** (modify) a property value at `build`
-    time?](builders-howto.md#normalize)
-*   ... [expose **both** a builder and a factory
-    method?](builders-howto.md#both)
+*   ...
+    [**normalize** (modify) a property value at `build` time?](builders-howto.md#normalize)
+*   ...
+    [expose **both** a builder and a factory method?](builders-howto.md#both)
 *   ... [handle `Optional` properties?](builders-howto.md#optional)
 *   ... [use a **collection**-valued property?](builders-howto.md#collection)
     *   ... [let my builder **accumulate** values for a collection-valued
@@ -101,10 +101,10 @@ exposing yourself to initialization-order problems.
         **"breaking the chain"**?](builders-howto.md#add)
     *   ... [offer **both** accumulation and set-at-once methods for the same
         collection-valued property?](builders-howto.md#collection_both)
-*   ... [access nested builders while
-    building?](builders-howto.md#nested_builders)
+*   ...
+    [access nested builders while building?](builders-howto.md#nested_builders)
 *   ... [create a "step builder"?](builders-howto.md#step)
-*   ... [create a builder for something other than an
-    `@AutoValue`?](builders-howto.md#autobuilder)
-*   ... [use a different build method for a
-    property?](builders-howto.md#build_method)
+*   ...
+    [create a builder for something other than an `@AutoValue`?](builders-howto.md#autobuilder)
+*   ...
+    [use a different build method for a property?](builders-howto.md#build_method)

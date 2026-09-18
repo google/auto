@@ -19,11 +19,11 @@ How do I...
 *   ... [use a property of a **mutable** type?](#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](#custom)
 *   ... [have AutoValue implement a concrete or default method?](#concrete)
-*   ... [have multiple **`create`** methods, or name it/them
-    differently?](#create)
+*   ...
+    [have multiple **`create`** methods, or name it/them differently?](#create)
 *   ... [**ignore** certain properties in `equals`, etc.?](#ignore)
-*   ... [have AutoValue also implement abstract methods from my
-    **supertypes**?](#supertypes)
+*   ...
+    [have AutoValue also implement abstract methods from my **supertypes**?](#supertypes)
 *   ... [use AutoValue with a **generic** class?](#generic)
 *   ... [make my class Java- or GWT\-**serializable**?](#serialize)
 *   ... [use AutoValue to **implement** an **annotation** type?](#annotation)
@@ -33,15 +33,15 @@ How do I...
 *   ... [use an **object array** for a property value?](#object_array)
 *   ... [have one `@AutoValue` class **extend** another?](#inherit)
 *   ... [keep my accessor methods **private**?](#private_accessors)
-*   ... [expose a **constructor**, not factory method, as my public creation
-    API?](#public_constructor)
+*   ...
+    [expose a **constructor**, not factory method, as my public creation API?](#public_constructor)
 *   ... [use AutoValue on an **interface**, not abstract class?](#interface)
 *   ... [**memoize** ("cache") derived properties?](#memoize)
-*   ... [memoize the result of `hashCode` or
-    `toString`?](#memoize_hash_tostring)
+*   ...
+    [memoize the result of `hashCode` or `toString`?](#memoize_hash_tostring)
 *   ... [make a class where only one of its properties is ever set?](#oneof)
-*   ... [copy annotations from a class/method to the implemented
-    class/method/field?](#copy_annotations)
+*   ...
+    [copy annotations from a class/method to the implemented class/method/field?](#copy_annotations)
 *   ... [create a **pretty string** representation?](#toprettystring)
 
 ## <a name="builder"></a>... also generate a builder for my value class?
@@ -51,9 +51,9 @@ Please see [AutoValue with builders](builders.md).
 ## <a name="nested"></a>... use AutoValue with a nested class?
 
 AutoValue composes the generated class name in the form
-`AutoValue_`*`Outer_Middle_Inner`*.
-As many of these segments will be used in the generated name as required.
-Only the simple class name will appear in `toString` output.
+`AutoValue_`*`Outer_Middle_Inner`*. As many of these segments will be used in
+the generated name as required. Only the simple class name will appear in
+`toString` output.
 
 ```java
 class Outer {
@@ -227,8 +227,8 @@ Just do it! AutoValue doesn't actually care. This
 Suppose your value class has an extra field that shouldn't be included in
 `equals` or `hashCode` computations.
 
-If this is because it is a derived value based on other properties, see [How do
-I memoize derived properties?](#memoize).
+If this is because it is a derived value based on other properties, see
+[How do I memoize derived properties?](#memoize).
 
 Otherwise, first make certain that you really want to do this. It is often, but
 not always, a mistake. Remember that libraries will treat two equal instances as
@@ -351,8 +351,8 @@ public class Names {
 }
 ```
 
-For more details, see the [`AutoAnnotation`
-javadoc](http://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
+For more details, see the
+[`AutoAnnotation` javadoc](http://github.com/google/auto/blob/main/value/src/main/java/com/google/auto/value/AutoAnnotation.java#L24).
 
 ## <a name="setters"></a>... also include setter (mutator) methods?
 
@@ -380,9 +380,9 @@ them!
 
 AutoValue supports this, and will generate code that acts on the *values* stored
 the array, not the object identity of the array itself, which is (with virtual
-certainty) what you want. Heed the warnings given above about [mutable
-properties](#mutable_property). AutoValue will by default warn about this case,
-because of the mutability, but you can silence the warning with
+certainty) what you want. Heed the warnings given above about
+[mutable properties](#mutable_property). AutoValue will by default warn about
+this case, because of the mutability, but you can silence the warning with
 `@SuppressWarnings("mutable")` on the accessor method.
 
 ## <a name="object_array"></a>... use an object array for a property value?
@@ -443,9 +443,9 @@ But what if `someFunctionOf(Bar)` is expensive? You'd like to calculate it only
 one time, then cache and reuse that value for all future calls. Normally,
 thread-safe lazy initialization involves a lot of tricky boilerplate.
 
-Instead, just write the derived-property accessor method as above, and
-annotate it with [`@Memoized`]. Then AutoValue will override that method to
-return a stored value after the first call:
+Instead, just write the derived-property accessor method as above, and annotate
+it with [`@Memoized`]. Then AutoValue will override that method to return a
+stored value after the first call:
 
 ```java
 @AutoValue
@@ -496,9 +496,9 @@ abstract class Foo {
 
 ## <a name="oneof"></a>... make a class where only one of its properties is ever set?
 
-Often, the best way to do this is using inheritance. Although one
-`@AutoValue` class can't inherit from another, two `@AutoValue` classes can
-inherit from a common parent.
+Often, the best way to do this is using inheritance. Although one `@AutoValue`
+class can't inherit from another, two `@AutoValue` classes can inherit from a
+common parent.
 
 ```java
 public abstract class StringOrInteger {
@@ -541,9 +541,9 @@ don't need to know which it is.
 But if clients of your class may want to take different actions depending on
 which property is set, there is an alternative to `@AutoValue` called
 `@AutoOneOf`. This effectively creates a
-[*tagged union*](https://en.wikipedia.org/wiki/Tagged_union).
-Here is `StringOrInteger` written using `@AutoOneOf`, with the
-`representation()` method moved to a separate client class:
+[*tagged union*](https://en.wikipedia.org/wiki/Tagged_union). Here is
+`StringOrInteger` written using `@AutoOneOf`, with the `representation()` method
+moved to a separate client class:
 
 ```java
 @AutoOneOf(StringOrInteger.Kind.class)
@@ -578,11 +578,11 @@ public class Client {
 ```
 
 Switching on an enum like this can lead to more robust code than using
-`instanceof` checks, especially if a tool like [Error
-Prone](https://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can alert you
-if you add a new variant without updating all your switches. (On the other hand,
-if nothing outside your class references `getKind()`, you should consider
-whether using inheritance might be better.)
+`instanceof` checks, especially if a tool like
+[Error Prone](https://errorprone.info/bugpattern/MissingCasesInEnumSwitch) can
+alert you if you add a new variant without updating all your switches. (On the
+other hand, if nothing outside your class references `getKind()`, you should
+consider whether using inheritance might be better.)
 
 There must be an enum such as `Kind`, though it doesn't have to be called `Kind`
 and it doesn't have to be nested inside the `@AutoOneOf` class. There must be an
@@ -625,21 +625,21 @@ public abstract class Transform {
 ```
 
 Here, the `NONE` and `CIRCLE_CROP` variants have no associated data but are
-distinct from each other. The `BLUR` variant does have data. The `none()`
-and `circleCrop()` methods are package-private; they must exist to configure
+distinct from each other. The `BLUR` variant does have data. The `none()` and
+`circleCrop()` methods are package-private; they must exist to configure
 `@AutoOneOf`, but calling them is not very useful. (It does nothing if the
 instance is of the correct variant, or throws an exception otherwise.)
 
 The `AutoOneOf_Transform.none()` and `AutoOneOf_Transform.circleCrop()` methods
 return the same instance every time they are called.
 
-If one of the `void` variants means "none", consider using an `Optional<Transform>` or
-a `@Nullable Transform` instead of that variant.
+If one of the `void` variants means "none", consider using an
+`Optional<Transform>` or a `@Nullable Transform` instead of that variant.
 
 Properties in an `@AutoOneOf` class cannot be null. Instead of a
-`StringOrInteger` with a `@Nullable String`, you probably want a
-`@Nullable StringOrInteger` or an `Optional<StringOrInteger>`, or an empty
-variant as just described.
+`StringOrInteger` with a `@Nullable String`, you probably want a `@Nullable
+StringOrInteger` or an `Optional<StringOrInteger>`, or an empty variant as just
+described.
 
 ## <a name="copy_annotations"></a>... copy annotations from a class/method to the implemented class/method/field?
 
@@ -722,8 +722,8 @@ final class AutoValue_Example extends Example {
 ## <a name="toprettystring"></a>... create a pretty string representation?
 
 If you have a value class with a long `toString()` representation, annotate a
-method with [`@ToPrettyString`] and AutoValue will generate an implementation that
-returns a pretty String rendering of the instance. For example:
+method with [`@ToPrettyString`] and AutoValue will generate an implementation
+that returns a pretty String rendering of the instance. For example:
 
 ```java
 @AutoValue
