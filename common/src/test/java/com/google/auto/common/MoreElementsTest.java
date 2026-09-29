@@ -15,11 +15,14 @@
  */
 package com.google.auto.common;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_SPECIFICATION_VERSION;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static com.google.common.truth.TruthJUnit.assume;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -43,6 +46,8 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.UnknownElementException;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -163,6 +168,20 @@ public class MoreElementsTest {
       fail();
     } catch (IllegalArgumentException expected) {
     }
+  }
+
+  @Test
+  public void asVariable_recordComponent() {
+    double version = Double.parseDouble(requireNonNull(JAVA_SPECIFICATION_VERSION.value()));
+    assume().that(version).isAtLeast(16.0);
+    TypeElement recordElement = elements.getTypeElement("jdk.net.UnixDomainPrincipal");
+    Element recordComponent =
+        recordElement.getEnclosedElements().stream()
+            .filter(e -> e.getKind().name().equals("RECORD_COMPONENT"))
+            .findFirst()
+            .get();
+    assertThat(recordComponent).isInstanceOf(VariableElement.class);
+    assertThrows(UnknownElementException.class, () -> MoreElements.asVariable(recordComponent));
   }
 
   @Test
