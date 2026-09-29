@@ -225,4 +225,23 @@ public class AutoFactoryProcessorNegativeTest {
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation).generatedFile(StandardLocation.CLASS_OUTPUT, "test", "Foo.class");
   }
+
+  /**
+   * Forgetting {@code @Provided} on a constructor parameter must be a compile error when the
+   * factory implements an interface whose method no longer matches the factory {@code create}
+   * signature. Previously AutoFactory generated a recursive stub (issue #697).
+   */
+  @Test
+  public void missingProvidedLeadsToUnmatchedInterfaceMethod() {
+    JavaFileObject file =
+        JavaFileObjects.forResource("bad/MissingProvidedLeadsToUnmatchedInterfaceMethod.java");
+    Compilation compilation = javac.compile(file);
+    assertThat(compilation).failed();
+    assertThat(compilation)
+        .hadErrorContaining(
+            "The create(java.lang.String) method from an interface or superclass does not match"
+                + " any factory method")
+        .inFile(file)
+        .onLineContaining("@AutoFactory");
+  }
 }

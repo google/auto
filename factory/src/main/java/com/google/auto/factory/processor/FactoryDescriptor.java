@@ -235,6 +235,18 @@ abstract class FactoryDescriptor {
     }
 
     // Descriptors are identical if they have the same passed types in the same order.
+    return hasMatchingPassedParameters(factory, implementation);
+  }
+
+  /**
+   * Returns true if {@code factory} and {@code implementation} have the same passed parameter
+   * types in the same order.
+   *
+   * <p>Used both to merge identical {@code create} overrides and to decide whether an interface
+   * method with a different name can safely forward to {@code create(...)}.
+   */
+  static boolean hasMatchingPassedParameters(
+      FactoryMethodDescriptor factory, ImplementationMethodDescriptor implementation) {
     return Iterables.elementsEqual(
         Iterables.transform(factory.passedParameters(), Parameter::type),
         Iterables.transform(implementation.passedParameters(), Parameter::type));

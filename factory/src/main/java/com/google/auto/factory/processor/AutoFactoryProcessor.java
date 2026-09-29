@@ -17,6 +17,7 @@ package com.google.auto.factory.processor;
 
 import static com.google.auto.common.MoreTypes.asElement;
 import static com.google.auto.common.MoreTypes.asTypeElement;
+import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
 import static javax.lang.model.type.TypeKind.DECLARED;
 import static javax.lang.model.type.TypeKind.ERROR;
@@ -225,6 +226,42 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               }
               // The set can't be empty because we eliminated methodDescriptors.isEmpty() above.
               boolean allowSubclasses = allowSubclassesSet.iterator().next();
+              ImmutableSet<FactoryMethodDescriptor> factoryMethods =
+                  ImmutableSet.copyOf(methodDescriptors);
+              // Report errors for interface/superclass methods that cannot be implemented by
+              // forwarding to a matching create(...) factory method. Without this check, the
+              // writer emits a stub that recursively calls itself (see issue #697).
+              for (ImplementationMethodDescriptor implementationMethod :
+                  implementationMethodDescriptors.get(factoryName)) {
+                boolean hasMatchingFactoryMethod =
+                    factoryMethods.stream()
+                        .anyMatch(
+                            factoryMethod ->
+                                FactoryDescriptor.hasMatchingPassedParameters(
+                                    factoryMethod, implementationMethod));
+                if (!hasMatchingFactoryMethod) {
+                  skipCreation = true;
+                  // Prefer reporting on an @AutoFactory that listed implementing/extending types.
+                  AutoFactoryDeclaration errorDeclaration =
+                      methodDescriptors.iterator().next().declaration();
+                  for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
+                    if (!methodDescriptor.declaration().implementingTypes().isEmpty()
+                        || !methodDescriptor
+                            .declaration()
+                            .extendingType()
+                            .getQualifiedName()
+                            .contentEquals("java.lang.Object")) {
+                      errorDeclaration = methodDescriptor.declaration();
+                      break;
+                    }
+                  }
+                  messager.printMessage(
+                      Kind.ERROR,
+                      unmatchedImplementationMethodMessage(implementationMethod),
+                      errorDeclaration.target(),
+                      errorDeclaration.mirror());
+                }
+              }
               if (!skipCreation) {
                 try {
                   factoryWriter.writeFactory(
@@ -234,7 +271,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                           Iterables.getOnlyElement(extending.build()),
                           implementing.build(),
                           publicType,
-                          ImmutableSet.copyOf(methodDescriptors),
+                          factoryMethods,
                           implementationMethodDescriptors.get(factoryName),
                           allowSubclasses));
                 } catch (IOException e) {
@@ -242,6 +279,28 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                 }
               }
             });
+  }
+
+  /**
+   * Builds the diagnostic used when an {@code implementing}/{@code extending} abstract method has
+   * no factory {@code create} overload with the same parameter types. A common cause is a missing
+   * {@code @Provided} on a constructor parameter, which silently turns that parameter into a
+   * factory argument and leaves the interface method unmatched.
+   */
+  private static String unmatchedImplementationMethodMessage(
+      ImplementationMethodDescriptor implementationMethod) {
+    String parameters =
+        implementationMethod.passedParameters().stream()
+            .map(parameter -> parameter.type().get().toString())
+            .collect(joining(", "));
+    return "The "
+        + implementationMethod.name()
+        + "("
+        + parameters
+        + ") method from an interface or superclass does not match any factory method. "
+        + "Factory methods are named create and take the constructor parameters that are not "
+        + "annotated @Provided. If a parameter was meant to be injected, annotate it with "
+        + "@Provided; otherwise update the interface method to match the factory parameters.";
   }
 
   private static final Comparator<AnnotationMirror> ANNOTATION_COMPARATOR =
