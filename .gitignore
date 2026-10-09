@@ -11,6 +11,7 @@ out
 lib
 
 target
+.mvn/wrapper/maven-wrapper.jar
 *.class
 pom.xml.*
 release.properties

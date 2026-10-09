@@ -14,7 +14,7 @@ using the `maven-invoker-plugin`. Examples of this are in `generator/src/it` and
 can include bean-shell verification scripts and other facilities provided by
 `maven-invoker-plugin`.
 
-Please make sure your code compiles by running `mvn clean verify` which will
+Please make sure your code compiles by running `./mvnw clean verify` which will
 execute both unit and integration test phases. Additionally, consider using
 http://travis-ci.org to validate your branches before you even put them into
 pull requests. All pull requests will be validated by Travis-ci in any case and

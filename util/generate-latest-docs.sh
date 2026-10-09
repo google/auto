@@ -6,7 +6,7 @@ set -e
 
 echo -e "Publishing javadoc...\n"
 
-mvn -f build-pom.xml javadoc:aggregate
+./mvnw -f build-pom.xml javadoc:aggregate
 TARGET="$(pwd)/target"
 
 cd $HOME
