@@ -553,6 +553,11 @@ public final class MoreTypes {
     }
 
     @Override
+    public Element visitUnknown(TypeMirror e, Void p) {
+      return defaultAction(e, p);
+    }
+
+    @Override
     public Element visitDeclared(DeclaredType t, Void p) {
       return t.asElement();
     }
@@ -567,13 +572,21 @@ public final class MoreTypes {
       return t.asElement();
     }
   }
-  ;
 
-  // TODO(gak): consider removing these two methods as they're pretty trivial now
+  /**
+   * Returns a {@link TypeElement} if the {@link TypeMirror} represents a declared type or an error
+   * type whose underlying element is a {@link TypeElement}. Otherwise, throws an {@link
+   * IllegalArgumentException}.
+   */
   public static TypeElement asTypeElement(TypeMirror mirror) {
     return MoreElements.asType(asElement(mirror));
   }
 
+  /**
+   * Returns the set of {@link TypeElement} instances corresponding to the given {@link TypeMirror}
+   * instances, or throws an {@link IllegalArgumentException} if any of the {@link TypeMirror}
+   * instances cannot be converted by {@link #asTypeElement}.
+   */
   public static ImmutableSet<TypeElement> asTypeElements(Iterable<? extends TypeMirror> mirrors) {
     checkNotNull(mirrors);
     ImmutableSet.Builder<TypeElement> builder = ImmutableSet.builder();
@@ -606,7 +619,9 @@ public final class MoreTypes {
 
   /**
    * Returns a {@link DeclaredType} if the {@link TypeMirror} represents a declared type such as a
-   * class, interface, union/compound, or enum or throws an {@link IllegalArgumentException}.
+   * class, interface, annotation, record, or enum (and not an {@link ErrorType}, even though {@code
+   * ErrorType} is a subtype of {@code DeclaredType}). Otherwise, throws an {@link
+   * IllegalArgumentException}.
    */
   public static DeclaredType asDeclared(TypeMirror maybeDeclaredType) {
     return maybeDeclaredType.accept(DeclaredTypeVisitor.INSTANCE, null);
@@ -626,8 +641,9 @@ public final class MoreTypes {
   }
 
   /**
-   * Returns a {@link ExecutableType} if the {@link TypeMirror} represents an executable type such
-   * as may result from missing code, or bad compiles or throws an {@link IllegalArgumentException}.
+   * Returns an {@link ErrorType} if the {@link TypeMirror} represents an error type such as may
+   * result from missing code or bad compiles. Otherwise, throws an {@link
+   * IllegalArgumentException}.
    */
   public static ErrorType asError(TypeMirror maybeErrorType) {
     return maybeErrorType.accept(ErrorTypeVisitor.INSTANCE, null);
@@ -984,6 +1000,11 @@ public final class MoreTypes {
     @Override
     protected T defaultAction(TypeMirror e, Void v) {
       throw new IllegalArgumentException(e + " does not represent a " + label);
+    }
+
+    @Override
+    public final T visitUnknown(TypeMirror e, Void v) {
+      return defaultAction(e, v);
     }
   }
 
