@@ -106,7 +106,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/google/auto/common/MoreTypes.html#asDeclared(javax.lang.model.type.TypeMirror)" class="member-name-link">asDeclared(TypeMirror)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreTypes.html" title="class in com.google.auto.common">MoreTypes</a></dt>
 <dd>
 <div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/DeclaredType.html" title="class or interface in javax.lang.model.type" class="external-link"><code>DeclaredType</code></a> if the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/TypeMirror.html" title="class or interface in javax.lang.model.type" class="external-link"><code>TypeMirror</code></a> represents a declared type such as a
- class, interface, union/compound, or enum or throws an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link"><code>IllegalArgumentException</code></a>.</div>
+ class, interface, annotation, record, or enum (and not an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/ErrorType.html" title="class or interface in javax.lang.model.type" class="external-link"><code>ErrorType</code></a>, even though <code>
+ ErrorType</code> is a subtype of <code>DeclaredType</code>).</div>
 </dd>
 <dt><a href="com/google/auto/common/MoreTypes.html#asElement(javax.lang.model.type.TypeMirror)" class="member-name-link">asElement(TypeMirror)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreTypes.html" title="class in com.google.auto.common">MoreTypes</a></dt>
 <dd>
@@ -116,8 +117,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="com/google/auto/common/MoreTypes.html#asError(javax.lang.model.type.TypeMirror)" class="member-name-link">asError(TypeMirror)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreTypes.html" title="class in com.google.auto.common">MoreTypes</a></dt>
 <dd>
-<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/ExecutableType.html" title="class or interface in javax.lang.model.type" class="external-link"><code>ExecutableType</code></a> if the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/TypeMirror.html" title="class or interface in javax.lang.model.type" class="external-link"><code>TypeMirror</code></a> represents an executable type such
- as may result from missing code, or bad compiles or throws an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link"><code>IllegalArgumentException</code></a>.</div>
+<div class="block">Returns an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/ErrorType.html" title="class or interface in javax.lang.model.type" class="external-link"><code>ErrorType</code></a> if the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/TypeMirror.html" title="class or interface in javax.lang.model.type" class="external-link"><code>TypeMirror</code></a> represents an error type such as may
+ result from missing code or bad compiles.</div>
 </dd>
 <dt><a href="com/google/auto/common/MoreElements.html#asExecutable(javax.lang.model.element.Element)" class="member-name-link">asExecutable(Element)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreElements.html" title="class in com.google.auto.common">MoreElements</a></dt>
 <dd>
@@ -166,9 +167,16 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns the given <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/Element.html" title="class or interface in javax.lang.model.element" class="external-link"><code>Element</code></a> instance as <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/TypeElement.html" title="class or interface in javax.lang.model.element" class="external-link"><code>TypeElement</code></a>.</div>
 </dd>
 <dt><a href="com/google/auto/common/MoreTypes.html#asTypeElement(javax.lang.model.type.TypeMirror)" class="member-name-link">asTypeElement(TypeMirror)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreTypes.html" title="class in com.google.auto.common">MoreTypes</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/TypeElement.html" title="class or interface in javax.lang.model.element" class="external-link"><code>TypeElement</code></a> if the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/TypeMirror.html" title="class or interface in javax.lang.model.type" class="external-link"><code>TypeMirror</code></a> represents a declared type or an error
+ type whose underlying element is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/TypeElement.html" title="class or interface in javax.lang.model.element" class="external-link"><code>TypeElement</code></a>.</div>
+</dd>
 <dt><a href="com/google/auto/common/MoreTypes.html#asTypeElements(java.lang.Iterable)" class="member-name-link">asTypeElements(Iterable&lt;? extends TypeMirror&gt;)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreTypes.html" title="class in com.google.auto.common">MoreTypes</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Returns the set of <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/TypeElement.html" title="class or interface in javax.lang.model.element" class="external-link"><code>TypeElement</code></a> instances corresponding to the given <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/TypeMirror.html" title="class or interface in javax.lang.model.type" class="external-link"><code>TypeMirror</code></a>
+ instances, or throws an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link"><code>IllegalArgumentException</code></a> if any of the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/type/TypeMirror.html" title="class or interface in javax.lang.model.type" class="external-link"><code>TypeMirror</code></a>
+ instances cannot be converted by <a href="com/google/auto/common/MoreTypes.html#asTypeElement(javax.lang.model.type.TypeMirror)"><code>MoreTypes.asTypeElement(javax.lang.model.type.TypeMirror)</code></a>.</div>
+</dd>
 <dt><a href="com/google/auto/common/MoreElements.html#asTypeParameter(javax.lang.model.element.Element)" class="member-name-link">asTypeParameter(Element)</a> - Static method in class com.google.auto.common.<a href="com/google/auto/common/MoreElements.html" title="class in com.google.auto.common">MoreElements</a></dt>
 <dd>
 <div class="block">Returns the given <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/Element.html" title="class or interface in javax.lang.model.element" class="external-link"><code>Element</code></a> instance as <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.compiler/javax/lang/model/element/TypeParameterElement.html" title="class or interface in javax.lang.model.element" class="external-link"><code>TypeParameterElement</code></a>.</div>
