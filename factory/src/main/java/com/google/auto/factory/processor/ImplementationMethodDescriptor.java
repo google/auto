@@ -15,12 +15,16 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import javax.lang.model.type.TypeMirror;
 
 @AutoValue
 abstract class ImplementationMethodDescriptor {
+  abstract AutoFactoryDeclaration declaration();
+
   abstract String name();
 
   abstract TypeMirror returnType();
@@ -33,12 +37,15 @@ abstract class ImplementationMethodDescriptor {
 
   abstract ImmutableSet<TypeMirror> exceptions();
 
-  static Builder builder() {
-    return new AutoValue_ImplementationMethodDescriptor.Builder();
+  static Builder builder(AutoFactoryDeclaration declaration) {
+    return new AutoValue_ImplementationMethodDescriptor.Builder()
+        .declaration(checkNotNull(declaration));
   }
 
   @AutoValue.Builder
   abstract static class Builder {
+    abstract Builder declaration(AutoFactoryDeclaration declaration);
+
     abstract Builder name(String name);
 
     abstract Builder returnType(TypeMirror returnTypeElement);
