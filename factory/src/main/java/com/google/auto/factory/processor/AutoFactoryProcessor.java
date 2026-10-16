@@ -28,18 +28,14 @@ import com.google.auto.factory.AutoFactory.AnnotationsToApply;
 import com.google.auto.factory.Provided;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import javax.annotation.processing.AbstractProcessor;
@@ -157,17 +153,19 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
         implementationMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
     // Iterate over the classes and constructors that are annotated with @AutoFactory.
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
-      Optional<AutoFactoryDeclaration> declaration = declarationFactory.createIfValid(element);
-      if (declaration.isPresent()) {
-        PackageAndClass factoryName = declaration.get().getFactoryName();
-        TypeElement extendingType = declaration.get().extendingType();
-        implementationMethodDescriptorsBuilder.putAll(
-            factoryName, implementationMethods(extendingType, element));
-        for (TypeElement implementingType : declaration.get().implementingTypes()) {
-          implementationMethodDescriptorsBuilder.putAll(
-              factoryName, implementationMethods(implementingType, element));
-        }
-      }
+      declarationFactory
+          .createIfValid(element)
+          .ifPresent(
+              declaration -> {
+                PackageAndClass factoryName = declaration.getFactoryName();
+                TypeElement extendingType = declaration.extendingType();
+                implementationMethodDescriptorsBuilder.putAll(
+                    factoryName, implementationMethods(extendingType, declaration));
+                for (TypeElement implementingType : declaration.implementingTypes()) {
+                  implementationMethodDescriptorsBuilder.putAll(
+                      factoryName, implementationMethods(implementingType, declaration));
+                }
+              });
 
       ImmutableSet<FactoryMethodDescriptor> descriptors =
           factoryDescriptorGenerator.generateDescriptor(element);
@@ -226,20 +224,24 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               // The set can't be empty because we eliminated methodDescriptors.isEmpty() above.
               boolean allowSubclasses = allowSubclassesSet.iterator().next();
               if (!skipCreation) {
-                try {
-                  factoryWriter.writeFactory(
-                      FactoryDescriptor.create(
-                          factoryName,
-                          annotationsBuilder.build(),
-                          Iterables.getOnlyElement(extending.build()),
-                          implementing.build(),
-                          publicType,
-                          ImmutableSet.copyOf(methodDescriptors),
-                          implementationMethodDescriptors.get(factoryName),
-                          allowSubclasses));
-                } catch (IOException e) {
-                  messager.printMessage(Kind.ERROR, "failed: " + e);
-                }
+                FactoryDescriptor.create(
+                        factoryName,
+                        annotationsBuilder.build(),
+                        Iterables.getOnlyElement(extending.build()),
+                        implementing.build(),
+                        publicType,
+                        ImmutableSet.copyOf(methodDescriptors),
+                        implementationMethodDescriptors.get(factoryName),
+                        allowSubclasses,
+                        messager)
+                    .ifPresent(
+                        descriptor -> {
+                          try {
+                            factoryWriter.writeFactory(descriptor);
+                          } catch (IOException e) {
+                            messager.printMessage(Kind.ERROR, "failed: " + e);
+                          }
+                        });
               }
             });
   }
@@ -248,7 +250,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       Comparator.comparing(mirror -> mirror.getAnnotationType().toString());
 
   private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
-      TypeElement supertype, Element autoFactoryElement) {
+      TypeElement supertype, AutoFactoryDeclaration declaration) {
     ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
         ImmutableSet.builder();
     for (ExecutableElement implementationMethod :
@@ -263,9 +265,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                 types,
                 injectApi);
         implementationMethodsBuilder.add(
-            ImplementationMethodDescriptor.builder()
+            ImplementationMethodDescriptor.builder(declaration)
                 .name(implementationMethod.getSimpleName().toString())
-                .returnType(getAnnotatedType(autoFactoryElement))
+                .returnType(declaration.targetType().asType())
                 .publicMethod()
                 .passedParameters(passedParameters)
                 .isVarArgs(implementationMethod.isVarArgs())
@@ -274,15 +276,6 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       }
     }
     return implementationMethodsBuilder.build();
-  }
-
-  private TypeMirror getAnnotatedType(Element element) {
-    List<TypeElement> types = ImmutableList.of();
-    while (types.isEmpty()) {
-      types = ElementFilter.typesIn(Arrays.asList(element));
-      element = element.getEnclosingElement();
-    }
-    return Iterables.getOnlyElement(types).asType();
   }
 
   private static ImmutableSetMultimap<String, PackageAndClass> simpleNamesToNames(
