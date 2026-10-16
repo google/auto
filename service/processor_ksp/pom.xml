@@ -42,7 +42,7 @@
 
   <properties>
     <maven.compiler.release>${java.version}</maven.compiler.release>
-    <kotlin.version>2.4.20</kotlin.version>
+    <kotlin.version>2.4.21</kotlin.version>
     <kotlin.compiler.languageVersion>2.0</kotlin.compiler.languageVersion>
     <kotlin.compiler.apiVersion>2.0</kotlin.compiler.apiVersion>
     <kotlin.compiler.jdkRelease>${java.version}</kotlin.compiler.jdkRelease>
