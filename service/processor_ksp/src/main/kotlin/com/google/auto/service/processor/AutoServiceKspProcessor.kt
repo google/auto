@@ -235,7 +235,8 @@ class AutoServiceKspProcessor(val environment: SymbolProcessorEnvironment) : Sym
     // return type declared at the annotation definition. Thus, we need to check both cases here.
     private inline fun <reified T> KSAnnotation.singleArgAsList(): List<T> {
       @Suppress("UNCHECKED_CAST")
-      return when (val value = arguments.single().value!!) {
+      return when (val value = arguments.singleOrNull()?.value) {
+        null -> emptyList<T>()
         is List<*> -> value
         is T -> listOf(value)
         else -> {
