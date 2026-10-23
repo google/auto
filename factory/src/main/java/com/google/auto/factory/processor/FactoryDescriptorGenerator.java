@@ -141,7 +141,6 @@ final class FactoryDescriptorGenerator {
     ImmutableSet<Parameter> passedParameters =
         Parameter.forParameterList(requireNonNull(parameterMap.get(false)), types, injectApi);
     return FactoryMethodDescriptor.builder(declaration)
-        .name("create")
         .returnType(classElement.asType())
         .publicMethod(classElement.getModifiers().contains(PUBLIC))
         .providedParameters(providedParameters)
@@ -158,7 +157,6 @@ final class FactoryDescriptorGenerator {
       AutoFactoryDeclaration declaration, TypeElement type) {
     return ImmutableSet.of(
         FactoryMethodDescriptor.builder(declaration)
-            .name("create")
             .returnType(type.asType())
             .publicMethod(type.getModifiers().contains(PUBLIC))
             .providedParameters(ImmutableSet.of())

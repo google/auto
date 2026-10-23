@@ -153,7 +153,7 @@ final class FactoryWriter {
       ImmutableSet<TypeVariableName> factoryTypeVariables) {
     for (FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
       MethodSpec.Builder method =
-          methodBuilder(methodDescriptor.name())
+          methodBuilder("create")
               .addTypeVariables(getMethodTypeVariables(methodDescriptor, factoryTypeVariables))
               .returns(TypeName.get(methodDescriptor.returnType()))
               .varargs(methodDescriptor.isVarArgs());

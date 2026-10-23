@@ -32,8 +32,6 @@ import javax.lang.model.type.TypeMirror;
 abstract class FactoryMethodDescriptor {
   abstract AutoFactoryDeclaration declaration();
 
-  abstract String name();
-
   abstract TypeMirror returnType();
 
   abstract boolean publicMethod();
@@ -75,8 +73,6 @@ abstract class FactoryMethodDescriptor {
   @AutoValue.Builder
   abstract static class Builder {
     abstract Builder declaration(AutoFactoryDeclaration declaration);
-
-    abstract Builder name(String name);
 
     abstract Builder returnType(TypeMirror returnType);
 
