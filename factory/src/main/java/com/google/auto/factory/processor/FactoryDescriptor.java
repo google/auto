@@ -15,6 +15,7 @@
  */
 package com.google.auto.factory.processor;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.value.AutoValue;
@@ -57,9 +58,18 @@ abstract class FactoryDescriptor {
 
   abstract boolean publicType();
 
-  abstract ImmutableSet<FactoryMethodDescriptor> methodDescriptors();
+  /**
+   * The {@code create} methods to be generated for the factory, one for each {@link
+   * ConstructorDescriptor}.
+   */
+  abstract ImmutableSet<FactoryMethodDescriptor> createMethodDescriptors();
 
-  abstract ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors();
+  /**
+   * The abstract methods from {@link #extendingType()} and {@link #implementingTypes()} that are
+   * not named {@code create}. The generated factory implements each of these with a method that
+   * delegates to the matching {@code create} method.
+   */
+  abstract ImmutableSet<AbstractMethodDescriptor> delegatingMethodDescriptors();
 
   abstract boolean allowSubclasses();
 
@@ -67,7 +77,7 @@ abstract class FactoryDescriptor {
 
   final AutoFactoryDeclaration declaration() {
     // There is always at least one method descriptor.
-    return methodDescriptors().iterator().next().declaration();
+    return createMethodDescriptors().iterator().next().declaration();
   }
 
   private static class UniqueNameSet {
@@ -92,33 +102,31 @@ abstract class FactoryDescriptor {
       TypeMirror extendingType,
       ImmutableSet<TypeMirror> implementingTypes,
       boolean publicType,
-      ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
-      ImmutableSet<ImplementationMethodDescriptor> implementationMethodDescriptors,
+      ImmutableSet<ConstructorDescriptor> constructors,
+      ImmutableSet<AbstractMethodDescriptor> abstractMethods,
       boolean allowSubclasses,
       Messager messager) {
-    ImmutableMap.Builder<FactoryMethodDescriptor, ImplementationMethodDescriptor>
-        duplicateMethodDescriptors = ImmutableMap.builder();
-    ImmutableSet.Builder<ImplementationMethodDescriptor>
-        deduplicatedImplementationMethodDescriptors = ImmutableSet.builder();
+    ImmutableMap.Builder<ConstructorDescriptor, AbstractMethodDescriptor> createMethodOverrides =
+        ImmutableMap.builder();
+    ImmutableSet.Builder<AbstractMethodDescriptor> delegatingMethods = ImmutableSet.builder();
     boolean unmatchedMethods = false;
-    for (ImplementationMethodDescriptor implementationMethod : implementationMethodDescriptors) {
-      Optional<FactoryMethodDescriptor> matchingFactoryMethod =
-          methodDescriptors.stream()
-              .filter(
-                  factoryMethod -> hasMatchingPassedParameters(factoryMethod, implementationMethod))
+    for (AbstractMethodDescriptor abstractMethod : abstractMethods) {
+      Optional<ConstructorDescriptor> matchingConstructor =
+          constructors.stream()
+              .filter(constructor -> hasMatchingPassedParameters(constructor, abstractMethod))
               .findFirst();
-      if (matchingFactoryMethod.isPresent()) {
-        if (implementationMethod.name().equals("create")) {
-          duplicateMethodDescriptors.put(matchingFactoryMethod.get(), implementationMethod);
+      if (matchingConstructor.isPresent()) {
+        if (abstractMethod.name().equals("create")) {
+          createMethodOverrides.put(matchingConstructor.get(), abstractMethod);
         } else {
-          deduplicatedImplementationMethodDescriptors.add(implementationMethod);
+          delegatingMethods.add(abstractMethod);
         }
       } else {
         unmatchedMethods = true;
-        AutoFactoryDeclaration declaration = methodDescriptors.iterator().next().declaration();
+        AutoFactoryDeclaration declaration = constructors.iterator().next().declaration();
         messager.printMessage(
             Kind.ERROR,
-            unmatchedImplementationMethodMessage(implementationMethod),
+            unmatchedAbstractMethodMessage(abstractMethod),
             declaration.target(),
             declaration.mirror());
       }
@@ -127,14 +135,13 @@ abstract class FactoryDescriptor {
       return Optional.empty();
     }
 
-    ImmutableSet<FactoryMethodDescriptor> deduplicatedMethodDescriptors =
-        getDeduplicatedMethodDescriptors(
-            methodDescriptors, duplicateMethodDescriptors.buildKeepingLast());
+    ImmutableSet<FactoryMethodDescriptor> createMethods =
+        applyCreateMethodOverrides(constructors, createMethodOverrides.buildKeepingLast());
 
     ImmutableSetMultimap.Builder<Key, Parameter> parametersForProviders =
         ImmutableSetMultimap.builder();
-    for (FactoryMethodDescriptor descriptor : methodDescriptors) {
-      for (Parameter parameter : descriptor.providedParameters()) {
+    for (ConstructorDescriptor constructor : constructors) {
+      for (Parameter parameter : constructor.providedParameters()) {
         parametersForProviders.put(parameter.key(), parameter);
       }
     }
@@ -179,55 +186,37 @@ abstract class FactoryDescriptor {
             extendingType,
             implementingTypes,
             publicType,
-            deduplicatedMethodDescriptors,
-            deduplicatedImplementationMethodDescriptors.build(),
+            createMethods,
+            delegatingMethods.build(),
             allowSubclasses,
             providersBuilder.buildOrThrow()));
   }
 
   /**
-   * Returns a set of deduplicated {@link FactoryMethodDescriptor}s from the set of original
-   * descriptors and the map of duplicate descriptors.
-   *
-   * <p>Modifies the duplicate {@link FactoryMethodDescriptor}s such that they are overriding and
-   * reflect properties from the {@link ImplementationMethodDescriptor} they are implementing.
+   * Returns a {@link FactoryMethodDescriptor} for each {@link ConstructorDescriptor}, applying the
+   * corresponding supertype {@code create} method override from {@code createMethodOverrides} if
+   * present.
    */
-  private static ImmutableSet<FactoryMethodDescriptor> getDeduplicatedMethodDescriptors(
-      ImmutableSet<FactoryMethodDescriptor> methodDescriptors,
-      ImmutableMap<FactoryMethodDescriptor, ImplementationMethodDescriptor>
-          duplicateMethodDescriptors) {
-
-    ImmutableSet.Builder<FactoryMethodDescriptor> deduplicatedMethodDescriptors =
-        ImmutableSet.builder();
-
-    for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
-      ImplementationMethodDescriptor duplicateMethodDescriptor =
-          duplicateMethodDescriptors.get(methodDescriptor);
-
-      FactoryMethodDescriptor newMethodDescriptor =
-          (duplicateMethodDescriptor != null)
-              ? methodDescriptor.toBuilder()
-                  .overridingMethod(true)
-                  .publicMethod(duplicateMethodDescriptor.publicMethod())
-                  .returnType(duplicateMethodDescriptor.returnType())
-                  .exceptions(duplicateMethodDescriptor.exceptions())
-                  .build()
-              : methodDescriptor;
-      deduplicatedMethodDescriptors.add(newMethodDescriptor);
-    }
-
-    return deduplicatedMethodDescriptors.build();
+  private static ImmutableSet<FactoryMethodDescriptor> applyCreateMethodOverrides(
+      ImmutableSet<ConstructorDescriptor> constructors,
+      ImmutableMap<ConstructorDescriptor, AbstractMethodDescriptor> createMethodOverrides) {
+    return constructors.stream()
+        .map(
+            constructor ->
+                FactoryMethodDescriptor.create(
+                    constructor, Optional.ofNullable(createMethodOverrides.get(constructor))))
+        .collect(toImmutableSet());
   }
 
   /**
-   * Returns true if {@code factory} and {@code implementation} have the same passed parameter types
-   * in the same order.
+   * Returns true if {@code constructor} and {@code abstractMethod} have the same passed parameter
+   * types in the same order.
    */
   private static boolean hasMatchingPassedParameters(
-      FactoryMethodDescriptor factory, ImplementationMethodDescriptor implementation) {
+      ConstructorDescriptor constructor, AbstractMethodDescriptor abstractMethod) {
     return Iterables.elementsEqual(
-        Iterables.transform(factory.passedParameters(), Parameter::type),
-        Iterables.transform(implementation.passedParameters(), Parameter::type));
+        Iterables.transform(constructor.passedParameters(), Parameter::type),
+        Iterables.transform(abstractMethod.passedParameters(), Parameter::type));
   }
 
   /**
@@ -236,14 +225,13 @@ abstract class FactoryDescriptor {
    * {@code @Provided} on a constructor parameter, which silently turns that parameter into a
    * factory argument and leaves the interface method unmatched.
    */
-  private static String unmatchedImplementationMethodMessage(
-      ImplementationMethodDescriptor implementationMethod) {
+  private static String unmatchedAbstractMethodMessage(AbstractMethodDescriptor abstractMethod) {
     String parameters =
-        implementationMethod.passedParameters().stream()
+        abstractMethod.passedParameters().stream()
             .map(parameter -> parameter.type().get().toString())
             .collect(joining(", "));
     return "The "
-        + implementationMethod.name()
+        + abstractMethod.name()
         + "("
         + parameters
         + ") method from an interface or superclass does not match any factory method. Factory"

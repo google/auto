@@ -73,7 +73,7 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
 
   private static final ImmutableSet<String> INJECT_APIS = ImmutableSet.of("jakarta", "javax");
 
-  private FactoryDescriptorGenerator factoryDescriptorGenerator;
+  private ConstructorDescriptorGenerator constructorDescriptorGenerator;
   private AutoFactoryDeclaration.Factory declarationFactory;
   private ProvidedChecker providedChecker;
   private Messager messager;
@@ -116,8 +116,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
     }
     providedChecker = new ProvidedChecker(messager);
     declarationFactory = new AutoFactoryDeclaration.Factory(elements, messager);
-    factoryDescriptorGenerator =
-        new FactoryDescriptorGenerator(messager, types, declarationFactory, injectApi);
+    constructorDescriptorGenerator =
+        new ConstructorDescriptorGenerator(messager, types, declarationFactory, injectApi);
   }
 
   @Override
@@ -147,10 +147,10 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
       checkAnnotationsToApply(element);
     }
 
-    ImmutableListMultimap.Builder<PackageAndClass, FactoryMethodDescriptor> indexedMethodsBuilder =
-        ImmutableListMultimap.builder();
-    ImmutableSetMultimap.Builder<PackageAndClass, ImplementationMethodDescriptor>
-        implementationMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
+    ImmutableListMultimap.Builder<PackageAndClass, ConstructorDescriptor>
+        indexedConstructorsBuilder = ImmutableListMultimap.builder();
+    ImmutableSetMultimap.Builder<PackageAndClass, AbstractMethodDescriptor>
+        abstractMethodDescriptorsBuilder = ImmutableSetMultimap.builder();
     // Iterate over the classes and constructors that are annotated with @AutoFactory.
     for (Element element : roundEnv.getElementsAnnotatedWith(AutoFactory.class)) {
       declarationFactory
@@ -159,37 +159,37 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               declaration -> {
                 PackageAndClass factoryName = declaration.getFactoryName();
                 TypeElement extendingType = declaration.extendingType();
-                implementationMethodDescriptorsBuilder.putAll(
-                    factoryName, implementationMethods(extendingType, declaration));
+                abstractMethodDescriptorsBuilder.putAll(
+                    factoryName, abstractMethods(extendingType, declaration));
                 for (TypeElement implementingType : declaration.implementingTypes()) {
-                  implementationMethodDescriptorsBuilder.putAll(
-                      factoryName, implementationMethods(implementingType, declaration));
+                  abstractMethodDescriptorsBuilder.putAll(
+                      factoryName, abstractMethods(implementingType, declaration));
                 }
               });
 
-      ImmutableSet<FactoryMethodDescriptor> descriptors =
-          factoryDescriptorGenerator.generateDescriptor(element);
-      for (FactoryMethodDescriptor descriptor : descriptors) {
-        indexedMethodsBuilder.put(descriptor.factoryName(), descriptor);
+      ImmutableSet<ConstructorDescriptor> descriptors =
+          constructorDescriptorGenerator.generateDescriptors(element);
+      for (ConstructorDescriptor descriptor : descriptors) {
+        indexedConstructorsBuilder.put(descriptor.factoryName(), descriptor);
       }
     }
 
-    ImmutableSetMultimap<PackageAndClass, ImplementationMethodDescriptor>
-        implementationMethodDescriptors = implementationMethodDescriptorsBuilder.build();
-    ImmutableListMultimap<PackageAndClass, FactoryMethodDescriptor> indexedMethods =
-        indexedMethodsBuilder.build();
+    ImmutableSetMultimap<PackageAndClass, AbstractMethodDescriptor> abstractMethodDescriptors =
+        abstractMethodDescriptorsBuilder.build();
+    ImmutableListMultimap<PackageAndClass, ConstructorDescriptor> indexedConstructors =
+        indexedConstructorsBuilder.build();
     ImmutableSetMultimap<String, PackageAndClass> factoriesBeingCreated =
-        simpleNamesToNames(indexedMethods.keySet());
+        simpleNamesToNames(indexedConstructors.keySet());
     FactoryWriter factoryWriter =
         new FactoryWriter(processingEnv, injectApi, factoriesBeingCreated);
 
-    indexedMethods
+    indexedConstructors
         .asMap()
         .forEach(
-            (factoryName, methodDescriptors) -> {
-              if (methodDescriptors.isEmpty()) {
+            (factoryName, constructorDescriptors) -> {
+              if (constructorDescriptors.isEmpty()) {
                 // This shouldn't happen, but check anyway to avoid an exception for
-                // methodDescriptors.iterator().next() below.
+                // constructorDescriptors.iterator().next() below.
                 return;
               }
               // Sort to ensure output is deterministic.
@@ -202,26 +202,27 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
               boolean publicType = false;
               Set<Boolean> allowSubclassesSet = new HashSet<>();
               boolean skipCreation = false;
-              for (FactoryMethodDescriptor methodDescriptor : methodDescriptors) {
-                annotationsBuilder.addAll(methodDescriptor.declaration().annotations());
-                extending.add(methodDescriptor.declaration().extendingType().asType());
+              for (ConstructorDescriptor constructorDescriptor : constructorDescriptors) {
+                annotationsBuilder.addAll(constructorDescriptor.declaration().annotations());
+                extending.add(constructorDescriptor.declaration().extendingType().asType());
                 for (TypeElement implementingType :
-                    methodDescriptor.declaration().implementingTypes()) {
+                    constructorDescriptor.declaration().implementingTypes()) {
                   implementing.add(implementingType.asType());
                 }
-                publicType |= methodDescriptor.publicMethod();
-                allowSubclassesSet.add(methodDescriptor.declaration().allowSubclasses());
+                publicType |= constructorDescriptor.targetTypeIsPublic();
+                allowSubclassesSet.add(constructorDescriptor.declaration().allowSubclasses());
                 if (allowSubclassesSet.size() > 1) {
                   skipCreation = true;
                   messager.printMessage(
                       Kind.ERROR,
                       "Cannot mix allowSubclasses=true and allowSubclasses=false in one factory.",
-                      methodDescriptor.declaration().target(),
-                      methodDescriptor.declaration().mirror(),
-                      methodDescriptor.declaration().valuesMap().get("allowSubclasses"));
+                      constructorDescriptor.declaration().target(),
+                      constructorDescriptor.declaration().mirror(),
+                      constructorDescriptor.declaration().valuesMap().get("allowSubclasses"));
                 }
               }
-              // The set can't be empty because we eliminated methodDescriptors.isEmpty() above.
+              // The set can't be empty because we eliminated constructorDescriptors.isEmpty()
+              // above.
               boolean allowSubclasses = allowSubclassesSet.iterator().next();
               if (!skipCreation) {
                 FactoryDescriptor.create(
@@ -230,8 +231,8 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                         Iterables.getOnlyElement(extending.build()),
                         implementing.build(),
                         publicType,
-                        ImmutableSet.copyOf(methodDescriptors),
-                        implementationMethodDescriptors.get(factoryName),
+                        ImmutableSet.copyOf(constructorDescriptors),
+                        abstractMethodDescriptors.get(factoryName),
                         allowSubclasses,
                         messager)
                     .ifPresent(
@@ -249,33 +250,29 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
   private static final Comparator<AnnotationMirror> ANNOTATION_COMPARATOR =
       Comparator.comparing(mirror -> mirror.getAnnotationType().toString());
 
-  private ImmutableSet<ImplementationMethodDescriptor> implementationMethods(
+  private ImmutableSet<AbstractMethodDescriptor> abstractMethods(
       TypeElement supertype, AutoFactoryDeclaration declaration) {
-    ImmutableSet.Builder<ImplementationMethodDescriptor> implementationMethodsBuilder =
-        ImmutableSet.builder();
-    for (ExecutableElement implementationMethod :
+    ImmutableSet.Builder<AbstractMethodDescriptor> abstractMethodsBuilder = ImmutableSet.builder();
+    for (ExecutableElement abstractMethod :
         ElementFilter.methodsIn(elements.getAllMembers(supertype))) {
-      if (implementationMethod.getModifiers().contains(Modifier.ABSTRACT)) {
+      if (abstractMethod.getModifiers().contains(Modifier.ABSTRACT)) {
         ExecutableType methodType =
-            Elements2.getExecutableElementAsMemberOf(types, implementationMethod, supertype);
+            Elements2.getExecutableElementAsMemberOf(types, abstractMethod, supertype);
         ImmutableSet<Parameter> passedParameters =
             Parameter.forParameterList(
-                implementationMethod.getParameters(),
-                methodType.getParameterTypes(),
-                types,
-                injectApi);
-        implementationMethodsBuilder.add(
-            ImplementationMethodDescriptor.builder()
-                .name(implementationMethod.getSimpleName().toString())
+                abstractMethod.getParameters(), methodType.getParameterTypes(), types, injectApi);
+        abstractMethodsBuilder.add(
+            AbstractMethodDescriptor.builder()
+                .name(abstractMethod.getSimpleName().toString())
                 .returnType(declaration.targetType().asType())
                 .publicMethod()
                 .passedParameters(passedParameters)
-                .isVarArgs(implementationMethod.isVarArgs())
-                .exceptions(implementationMethod.getThrownTypes())
+                .isVarArgs(abstractMethod.isVarArgs())
+                .exceptions(abstractMethod.getThrownTypes())
                 .build());
       }
     }
-    return implementationMethodsBuilder.build();
+    return abstractMethodsBuilder.build();
   }
 
   private static ImmutableSetMultimap<String, PackageAndClass> simpleNamesToNames(

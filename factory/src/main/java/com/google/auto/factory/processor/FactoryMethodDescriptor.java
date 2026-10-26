@@ -15,90 +15,77 @@
  */
 package com.google.auto.factory.processor;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import java.util.Optional;
 import javax.lang.model.type.TypeMirror;
 
 /**
- * A value object representing a factory method to be generated.
+ * A value object representing a {@code create} factory method to be generated.
+ *
+ * <p>Each {@code create} method instantiates the target class by calling a constructor described by
+ * {@link #constructor()}. If the factory's {@code extending} or {@code implementing} supertypes
+ * declare an abstract {@code create} method with matching parameter types, this method directly
+ * overrides that {@link #overriddenMethod()} (adopting {@code @Override}, its visibility, and its
+ * {@code throws} clause).
  *
  * @author Gregory Kick
  */
 @AutoValue
 abstract class FactoryMethodDescriptor {
-  abstract AutoFactoryDeclaration declaration();
+  abstract ConstructorDescriptor constructor();
 
-  abstract TypeMirror returnType();
+  /** The supertype {@code create} method that this method overrides, if any. */
+  abstract Optional<AbstractMethodDescriptor> overriddenMethod();
 
-  abstract boolean publicMethod();
+  static FactoryMethodDescriptor create(
+      ConstructorDescriptor constructor, Optional<AbstractMethodDescriptor> overriddenMethod) {
+    overriddenMethod.ifPresent(method -> checkArgument(method.name().equals("create")));
+    return new AutoValue_FactoryMethodDescriptor(constructor, overriddenMethod);
+  }
 
-  abstract boolean overridingMethod();
+  final AutoFactoryDeclaration declaration() {
+    return constructor().declaration();
+  }
+
+  final TypeMirror returnType() {
+    return overriddenMethod().isPresent()
+        ? overriddenMethod().get().returnType()
+        : constructor().targetType();
+  }
+
+  final boolean isPublic() {
+    return overriddenMethod().isPresent()
+        ? overriddenMethod().get().publicMethod()
+        : constructor().targetTypeIsPublic();
+  }
+
+  final boolean overridesMethod() {
+    return overriddenMethod().isPresent();
+  }
 
   /** The parameters that are passed to the {@code create} method. */
-  abstract ImmutableSet<Parameter> passedParameters();
-
-  /**
-   * The factory constructor parameters that this factory method requires. When there is more than
-   * one AutoFactory constructor, each one can have its own {@code @Provided} parameters, or
-   * constructors can have {@code @Provided} parameters in common. The generated factory has a
-   * single constructor, which has one {@code @Injected} constructor parameter for each unique
-   * {@code @Provided} parameter in any constructor.
-   */
-  abstract ImmutableSet<Parameter> providedParameters();
+  final ImmutableSet<Parameter> passedParameters() {
+    return constructor().passedParameters();
+  }
 
   /**
    * The parameters of the constructor that this {@code create} method calls. This is the union of
-   * {@link #passedParameters()} and {@link #providedParameters()}.
+   * {@link #passedParameters()} and {@link ConstructorDescriptor#providedParameters()}.
    */
-  abstract ImmutableSet<Parameter> creationParameters();
-
-  abstract boolean isVarArgs();
-
-  abstract ImmutableSet<TypeMirror> exceptions();
-
-  abstract Builder toBuilder();
-
-  final PackageAndClass factoryName() {
-    return declaration().getFactoryName();
+  final ImmutableSet<Parameter> creationParameters() {
+    return constructor().creationParameters();
   }
 
-  static Builder builder(AutoFactoryDeclaration declaration) {
-    return new AutoValue_FactoryMethodDescriptor.Builder().declaration(checkNotNull(declaration));
+  final boolean isVarArgs() {
+    return constructor().isVarArgs();
   }
 
-  @AutoValue.Builder
-  abstract static class Builder {
-    abstract Builder declaration(AutoFactoryDeclaration declaration);
-
-    abstract Builder returnType(TypeMirror returnType);
-
-    abstract Builder publicMethod(boolean publicMethod);
-
-    abstract Builder overridingMethod(boolean overridingMethod);
-
-    abstract Builder passedParameters(Iterable<Parameter> passedParameters);
-
-    abstract Builder providedParameters(Iterable<Parameter> providedParameters);
-
-    abstract Builder creationParameters(Iterable<Parameter> creationParameters);
-
-    abstract Builder isVarArgs(boolean isVarargs);
-
-    abstract Builder exceptions(Iterable<? extends TypeMirror> exceptions);
-
-    abstract FactoryMethodDescriptor buildImpl();
-
-    FactoryMethodDescriptor build() {
-      FactoryMethodDescriptor descriptor = buildImpl();
-      checkState(
-          descriptor
-              .creationParameters()
-              .equals(Sets.union(descriptor.passedParameters(), descriptor.providedParameters())));
-      return descriptor;
-    }
+  final ImmutableSet<TypeMirror> exceptions() {
+    return overriddenMethod().isPresent()
+        ? overriddenMethod().get().exceptions()
+        : constructor().exceptions();
   }
 }

@@ -102,8 +102,8 @@ final class FactoryWriter {
 
     addFactoryTypeParameters(factory, factoryTypeVariables);
     addConstructorAndProviderFields(factory, descriptor);
-    addFactoryMethods(factory, descriptor, factoryTypeVariables);
-    addImplementationMethods(factory, descriptor);
+    addCreateMethods(factory, descriptor, factoryTypeVariables);
+    addDelegatingMethods(factory, descriptor);
     addCheckNotNullMethod(factory, descriptor);
 
     JavaFile.builder(descriptor.name().packageName(), factory.build())
@@ -147,20 +147,20 @@ final class FactoryWriter {
     factory.addMethod(constructor.build());
   }
 
-  private void addFactoryMethods(
+  private void addCreateMethods(
       TypeSpec.Builder factory,
       FactoryDescriptor descriptor,
       ImmutableSet<TypeVariableName> factoryTypeVariables) {
-    for (FactoryMethodDescriptor methodDescriptor : descriptor.methodDescriptors()) {
+    for (FactoryMethodDescriptor methodDescriptor : descriptor.createMethodDescriptors()) {
       MethodSpec.Builder method =
           methodBuilder("create")
               .addTypeVariables(getMethodTypeVariables(methodDescriptor, factoryTypeVariables))
               .returns(TypeName.get(methodDescriptor.returnType()))
               .varargs(methodDescriptor.isVarArgs());
-      if (methodDescriptor.overridingMethod()) {
+      if (methodDescriptor.overridesMethod()) {
         method.addAnnotation(Override.class);
       }
-      if (methodDescriptor.publicMethod()) {
+      if (methodDescriptor.isPublic()) {
         method.addModifiers(PUBLIC);
       }
       method.addExceptions(
@@ -202,24 +202,23 @@ final class FactoryWriter {
     }
   }
 
-  private void addImplementationMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
-    for (ImplementationMethodDescriptor methodDescriptor :
-        descriptor.implementationMethodDescriptors()) {
-      MethodSpec.Builder implementationMethod =
+  private void addDelegatingMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+    for (AbstractMethodDescriptor methodDescriptor : descriptor.delegatingMethodDescriptors()) {
+      MethodSpec.Builder delegatingMethod =
           methodBuilder(methodDescriptor.name())
               .addAnnotation(Override.class)
               .returns(TypeName.get(methodDescriptor.returnType()))
               .varargs(methodDescriptor.isVarArgs());
       if (methodDescriptor.publicMethod()) {
-        implementationMethod.addModifiers(PUBLIC);
+        delegatingMethod.addModifiers(PUBLIC);
       }
-      implementationMethod.addExceptions(
+      delegatingMethod.addExceptions(
           methodDescriptor.exceptions().stream().map(TypeName::get).collect(toList()));
-      implementationMethod.addParameters(parameters(methodDescriptor.passedParameters()));
-      implementationMethod.addStatement(
+      delegatingMethod.addParameters(parameters(methodDescriptor.passedParameters()));
+      delegatingMethod.addStatement(
           "return create($L)",
           methodDescriptor.passedParameters().stream().map(Parameter::name).collect(joining(", ")));
-      factory.addMethod(implementationMethod.build());
+      factory.addMethod(delegatingMethod.build());
     }
   }
 
@@ -268,7 +267,7 @@ final class FactoryWriter {
     if (!descriptor.providers().isEmpty()) {
       return true;
     }
-    for (FactoryMethodDescriptor method : descriptor.methodDescriptors()) {
+    for (FactoryMethodDescriptor method : descriptor.createMethodDescriptors()) {
       for (Parameter parameter : method.creationParameters()) {
         if (!parameter.nullable().isPresent() && !parameter.type().get().getKind().isPrimitive()) {
           return true;
