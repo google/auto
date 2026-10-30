@@ -41,7 +41,7 @@
 
   <properties>
     <auto-service.version>1.1.1</auto-service.version>
-    <errorprone.version>2.50.0</errorprone.version>
+    <errorprone.version>2.51.0</errorprone.version>
   </properties>
 
   <dependencies>
@@ -81,7 +81,7 @@
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
-      <version>9.11</version>
+      <version>9.11.1</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -195,7 +195,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.1</version>
         <configuration>
           <argLine>${test.jvm.flags}</argLine>
         </configuration>
