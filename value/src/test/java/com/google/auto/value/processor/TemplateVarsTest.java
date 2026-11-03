@@ -16,7 +16,7 @@
 package com.google.auto.value.processor;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.escapevelocity.Template;
@@ -73,11 +73,7 @@ public class TemplateVarsTest {
     HappyVars sad = new HappyVars();
     sad.integer = 23;
     sad.list = ImmutableList.of(23);
-    try {
-      sad.toText();
-      fail("Did not get expected exception");
-    } catch (IllegalArgumentException expected) {
-    }
+    assertThrows(IllegalArgumentException.class, sad::toText);
   }
 
   static class SubHappyVars extends HappyVars {
@@ -114,11 +110,7 @@ public class TemplateVarsTest {
 
   @Test
   public void testPrivate() {
-    try {
-      new Private();
-      fail("Did not get expected exception");
-    } catch (IllegalArgumentException expected) {
-    }
+    assertThrows(IllegalArgumentException.class, Private::new);
   }
 
   static class Static extends TemplateVars {
@@ -133,11 +125,7 @@ public class TemplateVarsTest {
 
   @Test
   public void testStatic() {
-    try {
-      new Static();
-      fail("Did not get expected exception");
-    } catch (IllegalArgumentException expected) {
-    }
+    assertThrows(IllegalArgumentException.class, Static::new);
   }
 
   static class Primitive extends TemplateVars {
@@ -152,10 +140,6 @@ public class TemplateVarsTest {
 
   @Test
   public void testPrimitive() {
-    try {
-      new Primitive();
-      fail("Did not get expected exception");
-    } catch (IllegalArgumentException expected) {
-    }
+    assertThrows(IllegalArgumentException.class, Primitive::new);
   }
 }
