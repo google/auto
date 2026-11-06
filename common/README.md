@@ -38,6 +38,6 @@ binary artifacts from the central Maven binary artifact repositories.
 <dependency>
   <groupId>com.google.auto</groupId>
   <artifactId>auto-common</artifactId>
-  <version>1.0-SNAPSHOT</version> <!-- or use a known release version -->
+  <version>${auto-common.version}</version>
 </dependency>
 ```
