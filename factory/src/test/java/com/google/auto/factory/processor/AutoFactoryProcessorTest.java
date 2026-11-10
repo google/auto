@@ -661,6 +661,32 @@ public class AutoFactoryProcessorTest {
             "tests.CustomAnnotationsFactory", "expected/CustomAnnotationsFactory.java"));
   }
 
+  @Test
+  public void multipleConstructorsImplementingSameInterface() {
+    JavaFileObject factoryClass =
+        JavaFileObjects.forSourceLines(
+            "tests.MultipleConstructorsImplementingSameInterface",
+            "package tests;",
+            "",
+            "import com.google.auto.factory.AutoFactory;",
+            "import com.google.auto.factory.Provided;",
+            "",
+            "final class MultipleConstructorsImplementingSameInterface {",
+            "  interface Factory {",
+            "    MultipleConstructorsImplementingSameInterface fromInt(int i);",
+            "    MultipleConstructorsImplementingSameInterface fromString(String s);",
+            "  }",
+            "",
+            "  @AutoFactory(implementing = Factory.class)",
+            "  MultipleConstructorsImplementingSameInterface(@Provided Object dep, int i) {}",
+            "",
+            "  @AutoFactory(implementing = Factory.class)",
+            "  MultipleConstructorsImplementingSameInterface(@Provided Number dep, String s) {}",
+            "}");
+    Compilation compilation = config.javac().compile(factoryClass);
+    assertThat(compilation).succeededWithoutWarnings();
+  }
+
   private JavaFileObject loadExpectedFile(String resourceName) {
     try {
       List<String> sourceLines = Resources.readLines(Resources.getResource(resourceName), UTF_8);

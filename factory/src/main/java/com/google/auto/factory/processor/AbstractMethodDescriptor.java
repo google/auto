@@ -15,12 +15,23 @@
  */
 package com.google.auto.factory.processor;
 
+import com.google.auto.factory.AutoFactory;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import javax.lang.model.type.TypeMirror;
 
+/**
+ * A value object representing an {@code abstract} method from an {@link AutoFactory#extending}
+ * superclass or {@link AutoFactory#implementing} interface that the generated factory must
+ * implement.
+ *
+ * <p>If the method is named {@code create}, it is implemented directly by the {@link
+ * FactoryMethodDescriptor} with matching parameter types (which constructs the target type via
+ * {@code new}). Otherwise, the generated factory includes a delegating implementation of this
+ * method that calls the matching {@code create} method.
+ */
 @AutoValue
-abstract class ImplementationMethodDescriptor {
+abstract class AbstractMethodDescriptor {
   abstract String name();
 
   abstract TypeMirror returnType();
@@ -34,7 +45,7 @@ abstract class ImplementationMethodDescriptor {
   abstract ImmutableSet<TypeMirror> exceptions();
 
   static Builder builder() {
-    return new AutoValue_ImplementationMethodDescriptor.Builder();
+    return new AutoValue_AbstractMethodDescriptor.Builder();
   }
 
   @AutoValue.Builder
@@ -55,6 +66,6 @@ abstract class ImplementationMethodDescriptor {
 
     abstract Builder exceptions(Iterable<? extends TypeMirror> exceptions);
 
-    abstract ImplementationMethodDescriptor build();
+    abstract AbstractMethodDescriptor build();
   }
 }

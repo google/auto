@@ -42,9 +42,11 @@ import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
+import javax.lang.model.type.IntersectionType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
@@ -313,6 +315,40 @@ public class MoreTypesTest {
             compilationRule.getElements().getTypeElement("java.util.Set").getTypeParameters());
     assertThat(MoreTypes.asElement(setParameterElement.asType())).isEqualTo(setParameterElement);
     // we don't test error types because those are very hard to get predictably
+  }
+
+  @Test
+  public void asTypeElement() {
+    Elements elements = compilationRule.getElements();
+    TypeElement stringElement = elements.getTypeElement("java.lang.String");
+    assertThat(MoreTypes.asTypeElement(stringElement.asType())).isEqualTo(stringElement);
+    assertThat(MoreTypes.asTypeElements(ImmutableList.of(stringElement.asType())))
+        .containsExactly(stringElement);
+    TypeParameterElement setParameterElement =
+        Iterables.getOnlyElement(
+            compilationRule.getElements().getTypeElement("java.util.Set").getTypeParameters());
+    TypeMirror mirror = setParameterElement.asType();
+    assertThrows(IllegalArgumentException.class, () -> MoreTypes.asTypeElement(mirror));
+  }
+
+  @Test
+  public void asDeclared_errorType() {
+    assertThat(FAKE_ERROR_TYPE).isInstanceOf(DeclaredType.class);
+    assertThat(MoreTypes.asError(FAKE_ERROR_TYPE)).isEqualTo(FAKE_ERROR_TYPE);
+    assertThrows(IllegalArgumentException.class, () -> MoreTypes.asDeclared(FAKE_ERROR_TYPE));
+  }
+
+  @Test
+  public void asDeclared_intersectionType() {
+    Elements elements = compilationRule.getElements();
+    TypeElement funkyBounds = elements.getTypeElement(FunkyBounds.class.getCanonicalName());
+    TypeVariable funkyBoundsVar =
+        MoreTypes.asTypeVariable(((DeclaredType) funkyBounds.asType()).getTypeArguments().get(0));
+    TypeMirror intersectionType = funkyBoundsVar.getUpperBound();
+    assertThat(intersectionType).isInstanceOf(IntersectionType.class);
+    assertThat(intersectionType).isInstanceOf(DeclaredType.class);
+    assertThat(MoreTypes.asIntersection(intersectionType)).isEqualTo(intersectionType);
+    assertThrows(IllegalArgumentException.class, () -> MoreTypes.asDeclared(intersectionType));
   }
 
   @Test

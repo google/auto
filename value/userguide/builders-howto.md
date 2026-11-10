@@ -2,8 +2,8 @@
 
 
 This page answers common how-to questions that may come up when using AutoValue
-**with the builder option**. You should read and understand [AutoValue with
-builders](builders.md) first.
+**with the builder option**. You should read and understand
+[AutoValue with builders](builders.md) first.
 
 If you are not using a builder, see [Introduction](index.md) and
 [How do I...](howto.md) instead.
@@ -13,8 +13,8 @@ If you are not using a builder, see [Introduction](index.md) and
 How do I...
 
 *   ... [use (or not use) `set` **prefixes**?](#beans)
-*   ... [use different **names** besides
-    `builder()`/`Builder`/`build()`?](#build_names)
+*   ...
+    [use different **names** besides `builder()`/`Builder`/`build()`?](#build_names)
 *   ... [specify a **default** value for a property?](#default)
 *   ... [initialize a builder to the same property values as an **existing**
     value instance](#to_builder)
@@ -33,9 +33,9 @@ How do I...
         collection-valued property?](#collection_both)
 *   ... [access nested builders while building?](#nested_builders)
 *   ... [create a "step builder"?](#step)
-*   ... [create a builder for something other than an `@AutoValue`?](#autobuilder)
-*   ... [use a different build method for a
-    property?](#build_method)
+*   ...
+    [create a builder for something other than an `@AutoValue`?](#autobuilder)
+*   ... [use a different build method for a property?](#build_method)
 
 ## <a name="beans"></a>... use (or not use) `set` prefixes?
 
@@ -374,9 +374,9 @@ public abstract class Animal {
 ## <a name="collection"></a>... use a collection-valued property?
 
 Value objects should be immutable, so if a property of one is a collection then
-that collection should be immutable too. We recommend using Guava's [immutable
-collections] to make that explicit. AutoValue's builder support includes a few
-special arrangements to make this more convenient.
+that collection should be immutable too. We recommend using Guava's
+[immutable collections] to make that explicit. AutoValue's builder support
+includes a few special arrangements to make this more convenient.
 
 In the examples here we use `ImmutableSet`, but the same principles apply to all
 of Guava's immutable collection types, like `ImmutableList`,
@@ -447,23 +447,22 @@ public abstract class Animal {
 
 The name of this method must be exactly the property name (`countries` here)
 followed by the string `Builder`. Even if the properties follow the
-`getCountries()` convention, the builder method must be `countriesBuilder()`
-and not `getCountriesBuilder()`.
+`getCountries()` convention, the builder method must be `countriesBuilder()` and
+not `getCountriesBuilder()`.
 
 It's also possible to have a method like `countriesBuilder` with a single
-argument, provided that the `Builder` class has a public constructor or a
-static `builder` method, with one parameter that the argument can be assigned
-to. For example, if `countries()` were an `ImmutableSortedSet<String>` and you
-wanted to supply a `Comparator` to `ImmutableSortedSet.Builder`, you could
-write:
+argument, provided that the `Builder` class has a public constructor or a static
+`builder` method, with one parameter that the argument can be assigned to. For
+example, if `countries()` were an `ImmutableSortedSet<String>` and you wanted to
+supply a `Comparator` to `ImmutableSortedSet.Builder`, you could write:
 
 ```java
     public abstract ImmutableSortedSet.Builder<String>
         countriesBuilder(Comparator<String> comparator);
 ```
 
-That works because `ImmutableSortedSet.Builder` has a constructor that
-accepts a `Comparator` parameter.
+That works because `ImmutableSortedSet.Builder` has a constructor that accepts a
+`Comparator` parameter.
 
 You may notice a small problem with these examples: the caller can no longer
 create their instance in a single chained statement:
@@ -551,10 +550,10 @@ previously-supplied elements.
 
 ## <a name="nested_builders"></a>... access nested builders while building?
 
-Often a property of an `@AutoValue` class is itself an immutable class,
-perhaps another `@AutoValue`. In such cases your builder can expose a builder
-for that nested class. This is very similar to exposing a builder for a
-collection property, as described [earlier](#accumulate).
+Often a property of an `@AutoValue` class is itself an immutable class, perhaps
+another `@AutoValue`. In such cases your builder can expose a builder for that
+nested class. This is very similar to exposing a builder for a collection
+property, as described [earlier](#accumulate).
 
 Suppose the `Animal` class has a property of type `Species`:
 
@@ -610,43 +609,44 @@ Although the nested class in the example (`Species`) is also an `@AutoValue`
 class, it does not have to be. For example, it could be a [protobuf]. The
 requirements are:
 
-* The nested class must have a way to make a new builder. This can be
-  `new Species.Builder()`, or `Species.builder()`, or `Species.newBuilder()`.
+*   The nested class must have a way to make a new builder. This can be `new
+    Species.Builder()`, or `Species.builder()`, or `Species.newBuilder()`.
 
-* There must be a way to build an instance from the builder: `Species.Builder`
-  must have a method `Species build()`.
+*   There must be a way to build an instance from the builder: `Species.Builder`
+    must have a method `Species build()`.
 
-* If there is a need to convert `Species` back into its builder, then `Species`
-  must have a method `Species.Builder toBuilder()`.
+*   If there is a need to convert `Species` back into its builder, then
+    `Species` must have a method `Species.Builder toBuilder()`.
 
-  In the example, if `Animal` has an abstract [`toBuilder()`](#to_builder)
-  method then `Species` must also have a `toBuilder()` method. That also applies
-  if there is an abstract `setSpecies` method in addition to the
-  `speciesBuilder` method.
+    In the example, if `Animal` has an abstract [`toBuilder()`](#to_builder)
+    method then `Species` must also have a `toBuilder()` method. That also
+    applies if there is an abstract `setSpecies` method in addition to the
+    `speciesBuilder` method.
 
-  As an alternative to having a method `Species.Builder toBuilder()` in
-  `Species`, `Species.Builder` can have a method called `addAll` or `putAll`
-  that accepts an argument of type `Species`. This is how AutoValue handles
-  `ImmutableSet` for example. `ImmutableSet` does not have a `toBuilder()`
-  method, but `ImmutableSet.Builder` does have an `addAll` method that accepts
-  an `ImmutableSet`. So given `ImmutableSet<String> strings`, we can achieve the
-  effect of `strings.toBuilder()` by doing:
+    As an alternative to having a method `Species.Builder toBuilder()` in
+    `Species`, `Species.Builder` can have a method called `addAll` or `putAll`
+    that accepts an argument of type `Species`. This is how AutoValue handles
+    `ImmutableSet` for example. `ImmutableSet` does not have a `toBuilder()`
+    method, but `ImmutableSet.Builder` does have an `addAll` method that accepts
+    an `ImmutableSet`. So given `ImmutableSet<String> strings`, we can achieve
+    the effect of `strings.toBuilder()` by doing:
 
-  ```
-  ImmutableSet.Builder<String> builder = ImmutableSet.builder();
-  builder.addAll(strings);
-  ```
+    ```
+    ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+    builder.addAll(strings);
+    ```
 
 There are no requirements on the name of the builder class. Instead of
 `Species.Builder`, it could be `Species.Factory` or `SpeciesBuilder`.
 
 If `speciesBuilder()` is never called then the final `species()` property will
-be set as if by `speciesBuilder().build()`. In the example, that would result
-in an exception because the required properties of `Species` have not been set.
+be set as if by `speciesBuilder().build()`. In the example, that would result in
+an exception because the required properties of `Species` have not been set.
 
 ## <a name="step"></a>... create a "step builder"?
 
-A [_step builder_](http://rdafbn.blogspot.com/2012/07/step-builder-pattern_28.html)
+A
+[*step builder*](http://rdafbn.blogspot.com/2012/07/step-builder-pattern_28.html)
 is a collection of builder interfaces that take you step by step through the
 setting of each of a list of required properties. This means you can be sure at
 compile time that all the properties are set before you build, at the expense of
@@ -692,9 +692,9 @@ It might be used like this:
 Stepped stepped = Stepped.builder().setFoo("foo").setBar("bar").setBaz(3).build();
 ```
 
-The idea is that the only way to build an instance of `Stepped`
-is to go through the steps imposed by the `FooStep`, `BarStep`, and
-`BazStep` interfaces to set the properties in order, with a final build step.
+The idea is that the only way to build an instance of `Stepped` is to go through
+the steps imposed by the `FooStep`, `BarStep`, and `BazStep` interfaces to set
+the properties in order, with a final build step.
 
 Once you have set the `baz` property there is nothing else to do except build,
 so you could also combine the `setBaz` and `build` methods like this:
@@ -753,7 +753,7 @@ Instead, you could write this:
   @AutoValue
   public abstract class Foo {
     public abstract ImmutableMap<Integer, String> map();
-    
+
     // #start
     // Needed only if your class has toBuilder() method
     public Builder toBuilder() {

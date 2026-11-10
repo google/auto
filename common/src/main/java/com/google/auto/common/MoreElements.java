@@ -84,8 +84,7 @@ public final class MoreElements {
   /**
    * Returns the given {@link Element} instance as {@link PackageElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
-   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    * @throws IllegalArgumentException if {@code element} isn't a {@link PackageElement}.
@@ -110,8 +109,7 @@ public final class MoreElements {
   /**
    * Returns true if the given {@link Element} instance is a {@link TypeElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check, but should always be
-   * used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    */
@@ -122,8 +120,7 @@ public final class MoreElements {
   /**
    * Returns the given {@link Element} instance as {@link TypeElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
-   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    * @throws IllegalArgumentException if {@code element} isn't a {@link TypeElement}.
@@ -135,8 +132,7 @@ public final class MoreElements {
   /**
    * Returns the given {@link Element} instance as {@link TypeParameterElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
-   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    * @throws IllegalArgumentException if {@code element} isn't a {@link TypeParameterElement}.
@@ -175,8 +171,9 @@ public final class MoreElements {
   /**
    * Returns the given {@link Element} instance as {@link VariableElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
-   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast (except
+   * that in some javac versions a {@code RecordComponentElement} also implements {@link
+   * VariableElement}, whereas this method rejects it).
    *
    * @throws NullPointerException if {@code element} is {@code null}
    * @throws IllegalArgumentException if {@code element} isn't a {@link VariableElement}.
@@ -202,8 +199,7 @@ public final class MoreElements {
   /**
    * Returns the given {@link Element} instance as {@link ExecutableElement}.
    *
-   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast, but should
-   * always be used over that idiom as instructed in the documentation for {@link Element}.
+   * <p>This method is functionally equivalent to an {@code instanceof} check and a cast.
    *
    * @throws NullPointerException if {@code element} is {@code null}
    * @throws IllegalArgumentException if {@code element} isn't a {@link ExecutableElement}.
@@ -534,6 +530,11 @@ public final class MoreElements {
     @Override
     protected final T defaultAction(Element e, Void ignore) {
       throw new IllegalArgumentException(e + " does not represent a " + label);
+    }
+
+    @Override
+    public final T visitUnknown(Element e, Void ignore) {
+      return defaultAction(e, ignore);
     }
   }
 

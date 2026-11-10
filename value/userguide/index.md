@@ -248,35 +248,35 @@ How do I...
 *   ... [perform other **validation**?](howto.md#validate)
 *   ... [use a property of a **mutable** type?](howto.md#mutable_property)
 *   ... [use a **custom** implementation of `equals`, etc.?](howto.md#custom)
-*   ... [have AutoValue implement a concrete or default
-    method?](howto.md#concrete)
-*   ... [have multiple **`create`** methods, or name it/them
-    differently?](howto.md#create)
+*   ...
+    [have AutoValue implement a concrete or default method?](howto.md#concrete)
+*   ...
+    [have multiple **`create`** methods, or name it/them differently?](howto.md#create)
 *   ... [**ignore** certain properties in `equals`, etc.?](howto.md#ignore)
-*   ... [have AutoValue also implement abstract methods from my
-    **supertypes**?](howto.md#supertypes)
+*   ...
+    [have AutoValue also implement abstract methods from my **supertypes**?](howto.md#supertypes)
 *   ... [use AutoValue with a **generic** class?](howto.md#generic)
 *   ... [make my class Java- or GWT\-**serializable**?](howto.md#serialize)
-*   ... [use AutoValue to **implement** an **annotation**
-    type?](howto.md#annotation)
+*   ...
+    [use AutoValue to **implement** an **annotation** type?](howto.md#annotation)
 *   ... [also include **setter** (mutator) methods?](howto.md#setters)
 *   ... [also generate **`compareTo`**?](howto.md#compareTo)
-*   ... [use a **primitive array** for a property
-    value?](howto.md#primitive_array)
+*   ...
+    [use a **primitive array** for a property value?](howto.md#primitive_array)
 *   ... [use an **object array** for a property value?](howto.md#object_array)
 *   ... [have one `@AutoValue` class **extend** another?](howto.md#inherit)
 *   ... [keep my accessor methods **private**?](howto.md#private_accessors)
-*   ... [expose a **constructor**, not factory method, as my public creation
-    API?](howto.md#public_constructor)
-*   ... [use AutoValue on an **interface**, not abstract
-    class?](howto.md#interface)
+*   ...
+    [expose a **constructor**, not factory method, as my public creation API?](howto.md#public_constructor)
+*   ...
+    [use AutoValue on an **interface**, not abstract class?](howto.md#interface)
 *   ... [**memoize** ("cache") derived properties?](howto.md#memoize)
-*   ... [memoize the result of `hashCode` or
-    `toString`?](howto.md#memoize_hash_tostring)
-*   ... [make a class where only one of its properties is ever
-    set?](howto.md#oneof)
-*   ... [copy annotations from a class/method to the implemented
-    class/method/field?](howto.md#copy_annotations)
+*   ...
+    [memoize the result of `hashCode` or `toString`?](howto.md#memoize_hash_tostring)
+*   ...
+    [make a class where only one of its properties is ever set?](howto.md#oneof)
+*   ...
+    [copy annotations from a class/method to the implemented class/method/field?](howto.md#copy_annotations)
 *   ... [create a **pretty string** representation?](howto.md#toprettystring)
 
 <!-- TODO(kevinb): should the above be only a selected subset? -->

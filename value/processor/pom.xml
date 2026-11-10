@@ -41,7 +41,7 @@
 
   <properties>
     <auto-service.version>1.1.1</auto-service.version>
-    <errorprone.version>2.50.0</errorprone.version>
+    <errorprone.version>2.51.0</errorprone.version>
   </properties>
 
   <dependencies>
@@ -81,7 +81,7 @@
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
-      <version>9.10.1</version>
+      <version>9.11.1</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -118,7 +118,7 @@
     <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>
-      <version>4.2.2</version>
+      <version>4.3.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -195,7 +195,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>3.6.1</version>
         <configuration>
           <argLine>${test.jvm.flags}</argLine>
         </configuration>
@@ -207,6 +207,22 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-invoker-plugin</artifactId>
+        <configuration>
+          <!-- ITs live under value/src/it, not processor/src/it (see #1558).
+               Only functional is an invoker project (eclipse profile pass via
+               invoker.properties). gwtserializer is a reactor module under the
+               java-11-and-after profile, not an invoker IT. -->
+          <projectsDirectory>${project.parent.basedir}/src/it</projectsDirectory>
+          <pomIncludes>
+            <pomInclude>functional/pom.xml</pomInclude>
+          </pomIncludes>
+          <!-- annotations is test-scoped here so default install.scope=runtime
+               would skip it; do not raise install.scope to test (pulls
+               compile-testing -> com.sun:tools, missing from Central). -->
+          <extraArtifacts>
+            <extraArtifact>com.google.auto.value:auto-value-annotations:${project.version}</extraArtifact>
+          </extraArtifacts>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

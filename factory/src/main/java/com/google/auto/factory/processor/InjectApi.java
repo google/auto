@@ -39,8 +39,6 @@ abstract class InjectApi {
 
   abstract TypeElement provider();
 
-  abstract TypeElement qualifier();
-
   /**
    * Every {@code Qualifier} type present on the processor classpath, from {@code javax.inject}
    * and/or {@code jakarta.inject}.
@@ -59,8 +57,7 @@ abstract class InjectApi {
       TypeElement provider = apiMap.get("Provider");
       TypeElement qualifier = apiMap.get("Qualifier");
       if (inject != null && provider != null && qualifier != null) {
-        return new AutoValue_InjectApi(
-            inject, provider, qualifier, qualifierTypesOnClasspath(elementUtils));
+        return new AutoValue_InjectApi(inject, provider, qualifierTypesOnClasspath(elementUtils));
       }
     }
     String classes = "{" + String.join(",", API_CLASSES) + "}";
@@ -78,10 +75,10 @@ abstract class InjectApi {
    * True if {@code annotation} is meta-annotated with a {@code Qualifier} type that is on the
    * processor classpath ({@code javax.inject.Qualifier} and/or {@code jakarta.inject.Qualifier}).
    *
-   * <p>Generated code still uses only {@link #inject()}, {@link #provider()}, and {@link
-   * #qualifier()} from the one preferred inject API. Qualifier detection must recognize both
-   * packages; otherwise a {@code javax.inject.Qualifier} on a {@code @Provided} parameter is dropped
-   * when {@code jakarta.inject} is preferred.
+   * <p>Generated code still uses only {@link #inject()} and {@link #provider()} from the one
+   * preferred inject API. Qualifier detection must recognize both packages; otherwise a {@code
+   * javax.inject.Qualifier} on a {@code @Provided} parameter is dropped when {@code jakarta.inject}
+   * is preferred.
    */
   boolean isQualifier(AnnotationMirror annotation) {
     return qualifierTypes().stream()

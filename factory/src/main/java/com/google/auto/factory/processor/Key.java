@@ -65,9 +65,7 @@ abstract class Key {
       TypeMirror type, Collection<AnnotationMirror> annotations, Types types, InjectApi injectApi) {
     // TODO(gak): check for only one qualifier rather than using the first
     Optional<AnnotationMirror> qualifier =
-        annotations.stream()
-            .filter(injectApi::isQualifier)
-            .findFirst();
+        annotations.stream().filter(injectApi::isQualifier).findFirst();
 
     TypeMirror keyType =
         injectApi.isProvider(type)
