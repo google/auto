@@ -15,6 +15,8 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.value.processor.AutoValueishProcessor.annotationPrefix;
+import static com.google.auto.value.processor.AutoValueishProcessor.annotationsForGeneratedMember;
 import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 
 import com.google.auto.common.MoreElements;
@@ -31,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
+import java.lang.annotation.ElementType;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -287,6 +290,17 @@ abstract class BuilderMethodClassifier<E extends Element> {
     }
   }
 
+  private ImmutableList<String> builderGetterAnnotations(
+      ExecutableElement builderGetter, AnnotatedTypeMirror builderGetterType, String propertyName) {
+    return annotationsForGeneratedMember(
+        builderGetter,
+        Optional.of(builderGetterType),
+        builderType,
+        typeUtils,
+        ElementType.METHOD,
+        propertyIsNullable(propertyName));
+  }
+
   private void classifyGetter(ExecutableElement builderGetter, String propertyName) {
     TypeMirror originalGetterType = rewrittenPropertyTypes.get(propertyName).getType();
     AnnotatedTypeMirror builderGetterType = builderMethodReturnType(builderGetter);
@@ -294,7 +308,11 @@ abstract class BuilderMethodClassifier<E extends Element> {
     if (TYPE_EQUIVALENCE.equivalent(builderGetterType.getType(), originalGetterType)) {
       builderGetters.put(
           propertyName,
-          new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, null));
+          new BuilderSpec.PropertyGetter(
+              builderGetter,
+              builderGetterTypeString,
+              null,
+              builderGetterAnnotations(builderGetter, builderGetterType, propertyName)));
       return;
     }
     Optionalish optional = Optionalish.createIfOptional(builderGetterType.getType());
@@ -311,7 +329,11 @@ abstract class BuilderMethodClassifier<E extends Element> {
           || TYPE_EQUIVALENCE.equivalent(containedType, boxedOriginalType)) {
         builderGetters.put(
             propertyName,
-            new BuilderSpec.PropertyGetter(builderGetter, builderGetterTypeString, optional));
+            new BuilderSpec.PropertyGetter(
+                builderGetter,
+                builderGetterTypeString,
+                optional,
+                builderGetterAnnotations(builderGetter, builderGetterType, propertyName)));
         return;
       }
     }
@@ -405,8 +427,37 @@ abstract class BuilderMethodClassifier<E extends Element> {
         // We allow the return type to be a supertype (other than Object), to support step builders.
         AnnotatedTypeMirror parameterType =
             Iterables.getOnlyElement(methodSignature.parameterTypes());
+        VariableElement parameter = Iterables.getOnlyElement(method.getParameters());
+        boolean parameterTypeIsNullable =
+            parameterType.annotations().stream()
+                .anyMatch(
+                    annotation ->
+                        annotation
+                            .getAnnotationType()
+                            .asElement()
+                            .getSimpleName()
+                            .contentEquals("Nullable"));
         propertyNameToSetters.put(
-            propertyName, new PropertySetter(method, parameterType, function.get()));
+            propertyName,
+            new PropertySetter(
+                method,
+                parameterType,
+                function.get(),
+                annotationPrefix(
+                    annotationsForGeneratedMember(
+                        parameter,
+                        Optional.of(parameterType),
+                        builderType,
+                        typeUtils,
+                        ElementType.PARAMETER,
+                        parameterTypeIsNullable)),
+                annotationsForGeneratedMember(
+                    method,
+                    Optional.empty(),
+                    builderType,
+                    typeUtils,
+                    ElementType.METHOD,
+                    /* omitNullable= */ false)));
       } else {
         errorReporter.reportError(
             method,
