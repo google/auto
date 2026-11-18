@@ -383,6 +383,10 @@ produce a `NullPointerException`.
 `javax.annotation.Nullable` or
 `org.checkerframework.checker.nullness.qual.Nullable`.
 
+For details on how builders handle parameters of type `Optional` (including
+overloaded setters for the unwrapped type), see how `@AutoValue.Builder`
+[handles `Optional` properties](builders-howto.md#optional).
+
 ## Getters
 
 The `@AutoBuilder` class or interface can also have *getter* methods. A getter
