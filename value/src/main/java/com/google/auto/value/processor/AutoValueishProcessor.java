@@ -771,7 +771,7 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
     return Nullables.nullableIn(type.getAnnotationMirrors()).isPresent();
   }
 
-  private static boolean isTypeVariableWithNullableBound(TypeMirror type) {
+  static boolean isTypeVariableWithNullableBound(TypeMirror type) {
     return isTypeVariableWithNullableBound(type, 0);
   }
 

@@ -885,6 +885,31 @@ public final class AutoBuilderTest {
         () -> FrobCaller.<@Nullable String, String>caller().arg(null).notNull(null).call());
   }
 
+  // The target method's type variable is a plain <T>. Nullness comes from the builder's
+  // <T extends @Nullable Object>, which is the type callers actually instantiate.
+  // https://github.com/google/auto/issues/1931
+  static <T> T identity(T value) {
+    return value;
+  }
+
+  @AutoBuilder(callMethod = "identity")
+  interface NullableTypeParamBuilder<T extends @Nullable Object> {
+    NullableTypeParamBuilder<T> setValue(T value);
+
+    T build();
+
+    static <T extends @Nullable Object> NullableTypeParamBuilder<T> builder() {
+      return new AutoBuilder_AutoBuilderTest_NullableTypeParamBuilder<>();
+    }
+  }
+
+  @Test
+  public void builderTypeParameterNullableBoundAllowsNull() {
+    assumeTrue(SourceVersion.latest().ordinal() > SourceVersion.RELEASE_8.ordinal());
+    assertThat(NullableTypeParamBuilder.<@Nullable String>builder().setValue(null).build())
+        .isNull();
+  }
+
   static class NullablesExposedAsOptionals {
     private final @Nullable String aString1;
     private final @Nullable String aString2;

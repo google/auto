@@ -23,6 +23,7 @@ import static com.google.testing.compile.Compiler.javac;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
@@ -1343,8 +1344,95 @@ public final class AutoBuilderCompilationTest {
         .onLineContaining("Inner.Builder innerBuilder();");
   }
 
+  /**
+   * A builder type parameter {@code T extends @Nullable Object} must accept null even when the
+   * target method is declared as plain {@code <T>}. The two {@code T}s are distinct type variables;
+   * nullness follows the builder, which is the API callers use.
+   *
+   * @see <a href="https://github.com/google/auto/issues/1931">Issue 1931</a>
+   */
+  @Test
+  public void builderTypeVariableNullableBoundOmitsNullCheck() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Things",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "import org.jspecify.annotations.Nullable;",
+            "",
+            "public class Things {",
+            "  public static <T> Thing<T> of(T value) {",
+            "    return new Thing<>(value);",
+            "  }",
+            "",
+            "  public static class Thing<T> {",
+            "    private final T value;",
+            "",
+            "    Thing(T value) {",
+            "      this.value = value;",
+            "    }",
+            "  }",
+            "",
+            "  @AutoBuilder(callMethod = \"of\")",
+            "  public abstract static class Builder<T extends @Nullable Object> {",
+            "    public abstract Builder<T> setValue(T value);",
+            "",
+            "    public abstract Thing<T> build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    StringSubject generated =
+        assertThat(compilation)
+            .generatedSourceFile("foo.bar.AutoBuilder_Things_Builder")
+            .contentsAsUtf8String();
+    generated.doesNotContain("NullPointerException");
+    generated.doesNotContain("requireNonNull");
+    generated.doesNotContain("Missing required properties");
+  }
+
+  @Test
+  public void plainTypeVariableStillNullChecks() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Things",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "public class Things {",
+            "  public static <T> Thing<T> of(T value) {",
+            "    return new Thing<>(value);",
+            "  }",
+            "",
+            "  public static class Thing<T> {",
+            "    private final T value;",
+            "",
+            "    Thing(T value) {",
+            "      this.value = value;",
+            "    }",
+            "  }",
+            "",
+            "  @AutoBuilder(callMethod = \"of\")",
+            "  public abstract static class Builder<T> {",
+            "    public abstract Builder<T> setValue(T value);",
+            "",
+            "    public abstract Thing<T> build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac().withProcessors(new AutoBuilderProcessor()).compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoBuilder_Things_Builder")
+        .contentsAsUtf8String()
+        .contains("throw new NullPointerException(\"Null value\")");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
 }
-

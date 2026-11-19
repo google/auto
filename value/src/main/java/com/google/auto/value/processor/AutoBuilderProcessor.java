@@ -206,7 +206,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
     }
     BuilderMethodClassifier<VariableElement> classifier = maybeClassifier.get();
     AutoBuilderTemplateVars vars = new AutoBuilderTemplateVars();
-    vars.props = propertySet(executable, propertyToGetter, propertyInitializers, nullables);
+    vars.props =
+        propertySet(executable, propertyToGetter, propertyInitializers, nullables, classifier);
     builder.defineVars(vars, classifier);
     vars.identifiers = !processingEnv.getOptions().containsKey(OMIT_IDENTIFIERS_OPTION);
     String generatedClassName = generatedClassName(autoBuilderType, "AutoBuilder_");
@@ -278,7 +279,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       Executable executable,
       Map<String, PropertyGetter> propertyToGetter,
       ImmutableMap<String, String> builderInitializers,
-      Nullables nullables) {
+      Nullables nullables,
+      BuilderMethodClassifier<VariableElement> classifier) {
     // Fix any parameter names that are reserved words in Java. Java source code can't have
     // such parameter names, but Kotlin code might, for example.
     Map<VariableElement, String> identifiers =
@@ -295,7 +297,8 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
                       propertyToGetter.get(name),
                       Optional.ofNullable(builderInitializers.get(name)),
                       executable.isOptional(name),
-                      nullables);
+                      nullables,
+                      classifier.rewrittenPropertyType(name));
               if (p.isNullable() && v.asType().getKind().isPrimitive()) {
                 errorReporter()
                     .reportError(
@@ -312,21 +315,43 @@ public class AutoBuilderProcessor extends AutoValueishProcessor {
       PropertyGetter getter,
       Optional<String> builderInitializer,
       boolean hasDefault,
-      Nullables nullables) {
+      Nullables nullables,
+      AnnotatedTypeMirror rewrittenType) {
     String name = var.getSimpleName().toString();
     TypeMirror type = var.asType();
-    Optional<String> nullableAnnotation = nullableAnnotationFor(var, var.asType());
+    Optional<String> nullableAnnotation = nullableAnnotationFor(var, type);
     return new Property(
         name,
         identifier,
         TypeEncoder.encodeWithAnnotations(type),
-        new AnnotatedTypeMirror(type),
+        annotatedTypeForNullness(type, rewrittenType),
         nullableAnnotation,
         nullables,
         getter == null ? null : getter.methodName,
         getter == null ? null : getter.copier,
         builderInitializer,
         hasDefault);
+  }
+
+  /**
+   * Chooses the type whose nullness we should trust for this property.
+   *
+   * <p>AutoBuilder rewrites the target method's type variables onto the builder's type parameters,
+   * which are what the generated builder is actually parameterized by. Those can differ in
+   * nullness: {@code static <T> Foo<T> of(T value)} versus {@code Builder<T extends @Nullable
+   * Object>}. A {@code @Nullable} bound on the builder's variable means callers may pass null, so
+   * that is the bound we use when the target method's own variable does not already have one.
+   *
+   * @see <a href="https://github.com/google/auto/issues/1931">Issue 1931</a>
+   */
+  private static AnnotatedTypeMirror annotatedTypeForNullness(
+      TypeMirror originalType, AnnotatedTypeMirror rewrittenType) {
+    TypeMirror rewritten = rewrittenType.getType();
+    if (!isTypeVariableWithNullableBound(originalType)
+        && isTypeVariableWithNullableBound(rewritten)) {
+      return new AnnotatedTypeMirror(originalType, rewritten);
+    }
+    return new AnnotatedTypeMirror(originalType);
   }
 
   private ImmutableMap<String, String> propertyInitializers(
