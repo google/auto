@@ -111,6 +111,15 @@ abstract class BuilderMethodClassifier<E extends Element> {
   }
 
   /**
+   * The type of the named property after type variables have been rewritten to the builder's type
+   * parameters. For AutoBuilder this can differ in nullness from the target method's type variable
+   * even when the two variables have the same name.
+   */
+  AnnotatedTypeMirror rewrittenPropertyType(String propertyName) {
+    return rewrittenPropertyTypes.get(propertyName);
+  }
+
+  /**
    * Returns a multimap from the name of a property to the methods that set it. If the property is
    * defined by an abstract method in the {@code @AutoValue} class called {@code foo()} or {@code
    * getFoo()} then the name of the property is {@code foo} and there will be an entry in the map
