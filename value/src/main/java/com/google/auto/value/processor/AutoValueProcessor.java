@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -492,7 +493,19 @@ public class AutoValueProcessor extends AutoValueishProcessor {
       ImmutableSet<ExecutableElement> consumedBuilderAbstractMethods) {
     ImmutableSet<ExecutableElement> propertyMethods = propertyMethodsAndTypes.keySet();
     vars.toBuilderMethods =
-        toBuilderMethods.stream().map(SimpleMethod::new).collect(toImmutableList());
+        toBuilderMethods.stream()
+            .map(
+                method ->
+                    new SimpleMethod(
+                        method,
+                        annotationsForGeneratedMember(
+                            method,
+                            Optional.empty(),
+                            type,
+                            typeUtils(),
+                            ElementType.METHOD,
+                            /* omitNullable= */ false)))
+            .collect(toImmutableList());
     vars.toBuilderConstructor = !vars.toBuilderMethods.isEmpty();
     ImmutableListMultimap<ExecutableElement, AnnotationMirror> annotatedPropertyFields =
         propertyFieldAnnotationMap(type, propertyMethods);

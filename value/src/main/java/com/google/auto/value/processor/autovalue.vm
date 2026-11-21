@@ -181,6 +181,9 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
 
   #foreach ($m in $toBuilderMethods)
 
+  #foreach ($a in $m.annotations)
+  ${a}
+  #end
   @`java.lang.Override`
   ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
     return new ${finalSubclass}.Builder${builderActualTypes}(this);

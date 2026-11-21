@@ -18,7 +18,6 @@ package com.google.auto.value.processor;
 import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasAnnotationMirror;
 import static com.google.auto.value.processor.AutoValueishProcessor.hasVisibleNoArgConstructor;
-import static com.google.auto.value.processor.AutoValueishProcessor.nullableAnnotationFor;
 import static com.google.auto.value.processor.ClassNames.AUTO_VALUE_BUILDER_NAME;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.immutableEnumSet;
@@ -33,11 +32,13 @@ import com.google.auto.value.extension.AutoValueExtension;
 import com.google.auto.value.processor.AutoValueishProcessor.Property;
 import com.google.auto.value.processor.PropertyBuilderClassifier.PropertyBuilder;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import java.lang.annotation.ElementType;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,7 +51,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
@@ -348,7 +348,17 @@ class BuilderSpec {
       vars.builderFormalTypes =
           TypeEncoder.typeParametersString(builderTypeElement.getTypeParameters());
       vars.builderActualTypes = TypeSimplifier.actualTypeParametersString(builderTypeElement);
-      vars.buildMethod = Optional.of(new SimpleMethod(buildMethod));
+      vars.buildMethod =
+          Optional.of(
+              new SimpleMethod(
+                  buildMethod,
+                  AutoValueishProcessor.annotationsForGeneratedMember(
+                      buildMethod,
+                      Optional.empty(),
+                      builderTypeElement,
+                      processingEnv.getTypeUtils(),
+                      ElementType.METHOD,
+                      /* omitNullable= */ false)));
       vars.builderGetters = classifier.builderGetters();
       vars.builderSetters = classifier.propertyNameToSetters();
 
@@ -382,6 +392,7 @@ class BuilderSpec {
     private final String access;
     private final String type;
     private final Optionalish optional;
+    private final ImmutableList<String> methodAnnotations;
 
     /**
      * Makes a new {@code PropertyGetter} instance.
@@ -395,11 +406,16 @@ class BuilderSpec {
      *     this is an optional getter, or null otherwise. An optional getter is one that returns
      *     {@code Optional<T>} rather than {@code T}, as explained above.
      */
-    PropertyGetter(ExecutableElement method, String type, Optionalish optional) {
+    PropertyGetter(
+        ExecutableElement method,
+        String type,
+        Optionalish optional,
+        ImmutableList<String> methodAnnotations) {
       this.name = method.getSimpleName().toString();
       this.access = SimpleMethod.access(method);
       this.type = type;
       this.optional = optional;
+      this.methodAnnotations = methodAnnotations;
     }
 
     public String getName() {
@@ -416,6 +432,11 @@ class BuilderSpec {
 
     public Optionalish getOptional() {
       return optional;
+    }
+
+    /** Declaration annotations from the abstract getter, excluding ones already in {@link #type}. */
+    public ImmutableList<String> getMethodAnnotations() {
+      return methodAnnotations;
     }
   }
 
@@ -458,19 +479,24 @@ class BuilderSpec {
     private final String name;
     private final String parameterTypeString;
     private final boolean primitiveParameter;
-    private final String nullableAnnotation;
+    private final String parameterAnnotations;
+    private final ImmutableList<String> methodAnnotations;
     private final Copier copier;
 
-    PropertySetter(ExecutableElement setter, AnnotatedTypeMirror parameterType, Copier copier) {
+    PropertySetter(
+        ExecutableElement setter,
+        AnnotatedTypeMirror parameterType,
+        Copier copier,
+        String parameterAnnotations,
+        ImmutableList<String> methodAnnotations) {
       this.setter = setter;
       this.copier = copier;
       this.access = SimpleMethod.access(setter);
       this.name = setter.getSimpleName().toString();
       primitiveParameter = parameterType.getKind().isPrimitive();
       this.parameterTypeString = parameterTypeString(setter, parameterType);
-      VariableElement parameterElement = Iterables.getOnlyElement(setter.getParameters());
-      Optional<String> maybeNullable = nullableAnnotationFor(parameterElement, parameterType);
-      this.nullableAnnotation = maybeNullable.orElse("");
+      this.parameterAnnotations = parameterAnnotations;
+      this.methodAnnotations = methodAnnotations;
     }
 
     ExecutableElement getSetter() {
@@ -508,8 +534,17 @@ class BuilderSpec {
       return primitiveParameter;
     }
 
-    public String getNullableAnnotation() {
-      return nullableAnnotation;
+    /**
+     * Declaration annotations on the setter parameter, including a trailing space when non-empty.
+     * Type annotations are already part of {@link #getParameterType()}.
+     */
+    public String getParameterAnnotations() {
+      return parameterAnnotations;
+    }
+
+    /** Declaration annotations on the setter method itself. */
+    public ImmutableList<String> getMethodAnnotations() {
+      return methodAnnotations;
     }
 
     public String copy(Property property) {

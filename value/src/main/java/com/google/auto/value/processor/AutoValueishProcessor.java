@@ -1325,6 +1325,11 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
   }
 
   private boolean annotationVisibleFrom(AnnotationMirror annotation, Element from) {
+    return annotationVisibleFrom(annotation, from, typeUtils());
+  }
+
+  private static boolean annotationVisibleFrom(
+      AnnotationMirror annotation, Element from, Types typeUtils) {
     Element annotationElement = annotation.getAnnotationType().asElement();
     Visibility visibility = Visibility.effectiveVisibilityOfElement(annotationElement);
     switch (visibility) {
@@ -1343,8 +1348,8 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         // AutoValue_Foo is a top-level class, so an annotation on it cannot be in the body of a
         // subclass of anything.
         if (!getPackage(annotationElement).equals(getPackage(from))
-            && !typeUtils()
-                .isSubtype(from.asType(), annotationElement.getEnclosingElement().asType())) {
+            && !typeUtils.isSubtype(
+                from.asType(), annotationElement.getEnclosingElement().asType())) {
           return false;
         }
         break;
@@ -1354,6 +1359,60 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
         return false;
     }
     return true;
+  }
+
+  /**
+   * Annotations on {@code element} that should be reprinted on the generated method or parameter
+   * that implements it.
+   *
+   * <p>Type annotations are already part of the encoded type when {@code alreadyEmittedType} is
+   * present, so those are omitted. An annotation that is both a type annotation and a method or
+   * parameter annotation is omitted too, because emitting it a second time does not compile.
+   * {@code omitNullable} drops {@code @Nullable} when the template already prints one for the
+   * property.
+   */
+  static ImmutableList<String> annotationsForGeneratedMember(
+      Element element,
+      Optional<AnnotatedTypeMirror> alreadyEmittedType,
+      Element visibleFrom,
+      Types typeUtils,
+      ElementType target,
+      boolean omitNullable) {
+    Set<String> alreadyEmitted =
+        alreadyEmittedType.isPresent()
+            ? getReturnTypeAnnotations(alreadyEmittedType.get(), annotationType -> true)
+            : ImmutableSet.of();
+    ImmutableList.Builder<AnnotationMirror> mirrors = ImmutableList.builder();
+    for (AnnotationMirror annotation : element.getAnnotationMirrors()) {
+      String annotationFqName = getAnnotationFqName(annotation);
+      if (isInAutoValuePackage(annotationFqName)
+          || annotationFqName.equals(Override.class.getCanonicalName())
+          || alreadyEmitted.contains(annotationFqName)
+          || !annotationVisibleFrom(annotation, visibleFrom, typeUtils)
+          || !annotationAppliesTo(annotation, target)
+          || (omitNullable && isNullableAnnotation(annotation))) {
+        continue;
+      }
+      mirrors.add(annotation);
+    }
+    return annotationStrings(mirrors.build());
+  }
+
+  /** A space-separated prefix of {@code annotations}, or {@code ""} if there are none. */
+  static String annotationPrefix(ImmutableList<String> annotations) {
+    return annotations.isEmpty() ? "" : String.join(" ", annotations) + " ";
+  }
+
+  private static boolean annotationAppliesTo(AnnotationMirror annotation, ElementType target) {
+    Target targetAnnotation =
+        asType(annotation.getAnnotationType().asElement()).getAnnotation(Target.class);
+    return targetAnnotation == null || Arrays.asList(targetAnnotation.value()).contains(target);
+  }
+
+  private static boolean isNullableAnnotation(AnnotationMirror annotation) {
+    return asType(annotation.getAnnotationType().asElement())
+        .getSimpleName()
+        .contentEquals("Nullable");
   }
 
   /**

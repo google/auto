@@ -17,6 +17,7 @@ package com.google.auto.value.processor;
 
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.collect.ImmutableList;
 import java.util.Set;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -34,11 +35,13 @@ public final class SimpleMethod {
   private final String access;
   private final String name;
   private final String throwsString;
+  private final ImmutableList<String> annotations;
 
-  SimpleMethod(ExecutableElement method) {
+  SimpleMethod(ExecutableElement method, ImmutableList<String> annotations) {
     this.access = access(method);
     this.name = method.getSimpleName().toString();
     this.throwsString = throwsString(method);
+    this.annotations = annotations;
   }
 
   public String getAccess() {
@@ -51,6 +54,11 @@ public final class SimpleMethod {
 
   public String getThrows() {
     return throwsString;
+  }
+
+  /** Declaration annotations to copy onto the generated method, one source form per entry. */
+  public ImmutableList<String> getAnnotations() {
+    return annotations;
   }
 
   /**

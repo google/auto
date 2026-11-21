@@ -83,9 +83,12 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
   #foreach ($setter in $builderSetters[$p.name])
 
+  #foreach ($a in $setter.methodAnnotations)
+  ${a}
+  #end
   @`java.lang.Override`
   ${setter.access}${builderTypeName}${builderActualTypes} ##
-      ${setter.name}(${setter.nullableAnnotation}$setter.parameterType $p) {
+      ${setter.name}(${setter.parameterAnnotations}$setter.parameterType $p) {
 
     ## Omit null check for primitive, or @Nullable, or if we are going to be calling a copy method
     ## such as Optional.of, which will have its own null check if appropriate.
@@ -121,6 +124,9 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
   #if ($propertyBuilder)
 
+  #foreach ($a in $propertyBuilder.methodAnnotations)
+  ${a}
+  #end
   @`java.lang.Override`
   ${propertyBuilder.access}$propertyBuilder.builderType ##
       ${propertyBuilder.methodName}($propertyBuilder.propertyBuilderMethodParameters) {
@@ -181,6 +187,9 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
   #set ($builderGetter = $builderGetters[$p.name])
   #if ($builderGetter)
 
+  #foreach ($a in $builderGetter.methodAnnotations)
+  ${a}
+  #end
   @`java.lang.Override`
   ${p.nullableAnnotation}${builderGetter.access}$builderGetter.type ${builderGetter.name}() {
     #set ($noValueToGetCondition = $builderRequiredProperties.noValueToGet($p))
@@ -227,6 +236,9 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
 ## build() method
 
+  #foreach ($a in $buildMethod.get().annotations)
+  ${a}
+  #end
   @`java.lang.Override`
   ${buildMethod.get().access}${builtType} ${buildMethod.get().name}() ${buildMethod.get().throws} {
 

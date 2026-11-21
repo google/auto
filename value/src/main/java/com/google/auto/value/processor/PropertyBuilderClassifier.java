@@ -15,14 +15,18 @@
  */
 package com.google.auto.value.processor;
 
+import static com.google.auto.value.processor.AutoValueishProcessor.annotationPrefix;
+import static com.google.auto.value.processor.AutoValueishProcessor.annotationsForGeneratedMember;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.ElementType;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -92,6 +96,8 @@ class PropertyBuilderClassifier {
     private final String initDefault;
     private final String builtToBuilder;
     private final String copyAll;
+    private final ImmutableList<String> methodAnnotations;
+    private final String propertyBuilderMethodParameters;
 
     PropertyBuilder(
         ExecutableElement propertyBuilderMethod,
@@ -103,7 +109,9 @@ class PropertyBuilderClassifier {
         String beforeInitDefault,
         String initDefault,
         String builtToBuilder,
-        String copyAll) {
+        String copyAll,
+        ImmutableList<String> methodAnnotations,
+        String propertyBuilderMethodParameters) {
       this.propertyBuilderMethod = propertyBuilderMethod;
       this.name = propertyBuilderMethod.getSimpleName() + "$";
       this.builderType = builderType;
@@ -115,6 +123,8 @@ class PropertyBuilderClassifier {
       this.initDefault = initDefault;
       this.builtToBuilder = builtToBuilder;
       this.copyAll = copyAll;
+      this.methodAnnotations = methodAnnotations;
+      this.propertyBuilderMethodParameters = propertyBuilderMethodParameters;
     }
 
     /** The property builder method, for example {@code barBuilder()}. */
@@ -129,10 +139,12 @@ class PropertyBuilderClassifier {
 
     /** The property builder method parameters, for example {@code Comparator<T> comparator} */
     public String getPropertyBuilderMethodParameters() {
-      return propertyBuilderMethod.getParameters().stream()
-          .map(
-              parameter -> TypeEncoder.encode(parameter.asType()) + " " + parameter.getSimpleName())
-          .collect(joining(", "));
+      return propertyBuilderMethodParameters;
+    }
+
+    /** Declaration annotations on the property-builder method. */
+    public ImmutableList<String> getMethodAnnotations() {
+      return methodAnnotations;
     }
 
     public String getAccess() {
@@ -357,6 +369,43 @@ class PropertyBuilderClassifier {
       initDefault = localBuilder + "." + build.getSimpleName() + "()";
     }
 
+    String propertyBuilderMethodParameters =
+        method.getParameters().stream()
+            .map(
+                parameter -> {
+                  AnnotatedTypeMirror parameterType = new AnnotatedTypeMirror(parameter.asType());
+                  boolean parameterTypeIsNullable =
+                      parameterType.annotations().stream()
+                          .anyMatch(
+                              annotation ->
+                                  annotation
+                                      .getAnnotationType()
+                                      .asElement()
+                                      .getSimpleName()
+                                      .contentEquals("Nullable"));
+                  String annotations =
+                      annotationPrefix(
+                          annotationsForGeneratedMember(
+                              parameter,
+                              Optional.of(parameterType),
+                              method.getEnclosingElement(),
+                              typeUtils,
+                              ElementType.PARAMETER,
+                              parameterTypeIsNullable));
+                  return annotations
+                      + TypeEncoder.encode(parameter.asType())
+                      + " "
+                      + parameter.getSimpleName();
+                })
+            .collect(joining(", "));
+    ImmutableList<String> methodAnnotations =
+        annotationsForGeneratedMember(
+            method,
+            Optional.of(barBuilderAnnotatedType),
+            method.getEnclosingElement(),
+            typeUtils,
+            ElementType.METHOD,
+            /* omitNullable= */ false);
     PropertyBuilder propertyBuilder =
         new PropertyBuilder(
             method,
@@ -368,7 +417,9 @@ class PropertyBuilderClassifier {
             beforeInitDefault,
             initDefault,
             builtToBuilder,
-            copyAll);
+            copyAll,
+            methodAnnotations,
+            propertyBuilderMethodParameters);
     return Optional.of(propertyBuilder);
   }
 

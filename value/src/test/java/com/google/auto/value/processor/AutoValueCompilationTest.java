@@ -4497,6 +4497,67 @@ public class AutoValueCompilationTest {
                 + "  }\n");
   }
 
+  /**
+   * Declaration annotations such as Android's {@code @NonNull} target {@code METHOD} and {@code
+   * PARAMETER} but not {@code TYPE_USE}. They are copied onto generated property getters, and must
+   * also be copied onto the generated builder methods. See https://github.com/google/auto/issues/512.
+   */
+  @Test
+  public void declarationAnnotationsCopiedOntoBuilderMethods() {
+    JavaFileObject javaFileObject =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Baz",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@AutoValue",
+            "public abstract class Baz {",
+            "  @Target({ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD})",
+            "  public @interface NonNull {}",
+            "",
+            "  @NonNull public abstract String aString();",
+            "",
+            "  @NonNull public abstract Builder toBuilder();",
+            "",
+            "  public static Builder builder() {",
+            "    return new AutoValue_Baz.Builder();",
+            "  }",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setAString(@NonNull String aString);",
+            "",
+            "    @NonNull public abstract String aString();",
+            "",
+            "    @NonNull public abstract Baz build();",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .compile(javaFileObject);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("setAString(@Baz.NonNull String aString)");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("@Baz.NonNull\n  @Override\n  public Baz.Builder toBuilder()");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("@Baz.NonNull\n    @Override\n    public String aString()");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Baz")
+        .contentsAsUtf8String()
+        .contains("@Baz.NonNull\n    @Override\n    public Baz build()");
+  }
+
   private static String sorted(String... imports) {
     return stream(imports).sorted().collect(joining("\n"));
   }
