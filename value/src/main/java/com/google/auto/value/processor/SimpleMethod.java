@@ -17,25 +17,37 @@ package com.google.auto.value.processor;
 
 import static java.util.stream.Collectors.joining;
 
+import com.google.auto.common.MoreTypes;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import java.util.List;
 import java.util.Set;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 
 /**
  * A method on an {@code @AutoValue} or {@code AutoOneOf} class that has no specific attached
- * information, such as a {@code toBuilder()} method, or a {@code build()} method, where only the
- * name and access type is needed in context.
+ * information, such as a {@code toBuilder()} method, or a {@code build()} method, where the name,
+ * access, thrown types, and receiver type-use annotations are needed in context.
  *
  * <p>It implements JavaBean-style getters which means it can be referenced from templates, for
  * example {@code $method.access}. This template access means that the class and its getters must be
  * public.
  */
 public final class SimpleMethod {
+  private static final Splitter TYPE_PARAMETER_SPLITTER = Splitter.on(',').trimResults();
+
+  private final ExecutableElement method;
   private final String access;
   private final String name;
   private final String throwsString;
 
   SimpleMethod(ExecutableElement method) {
+    this.method = method;
     this.access = access(method);
     this.name = method.getSimpleName().toString();
     this.throwsString = throwsString(method);
@@ -51,6 +63,18 @@ public final class SimpleMethod {
 
   public String getThrows() {
     return throwsString;
+  }
+
+  /**
+   * Returns the receiver parameter to declare on a generated override of this method, or {@code ""}
+   * if it has no type-use annotations on its receiver.
+   *
+   * @param generatedType simple name of the class that will declare the override, such as {@code
+   *     AutoValue_Animal} or {@code Builder}
+   * @param actualTypeParameters type arguments of that class, such as {@code <T>}, or empty
+   */
+  public String receiver(String generatedType, String actualTypeParameters) {
+    return receiverParameter(method, generatedType, actualTypeParameters);
   }
 
   /**
@@ -75,5 +99,81 @@ public final class SimpleMethod {
     }
     return "throws "
         + method.getThrownTypes().stream().map(TypeEncoder::encode).collect(joining(", "));
+  }
+
+  /**
+   * Returns the receiver parameter to declare on a generated override of {@code method}, or {@code
+   * ""} if {@code method} has no type-use annotations on its receiver.
+   *
+   * <p>{@code ExecutableElement.getParameters()} omits the receiver, so a type-use annotation written
+   * on {@code this} is only visible on {@link ExecutableElement#getReceiverType()}. An override
+   * must name the class that declares the override, not the abstract class, so {@code
+   * generatedType} and {@code actualTypeParameters} spell that class. Annotations on the receiver
+   * type and on its type arguments are copied onto that spelling.
+   */
+  static String receiverParameter(
+      ExecutableElement method, String generatedType, String actualTypeParameters) {
+    TypeMirror receiverType = method.getReceiverType();
+    if (receiverType.getKind() != TypeKind.DECLARED) {
+      return "";
+    }
+    DeclaredType declaredReceiver = MoreTypes.asDeclared(receiverType);
+    String annotations = annotationPrefix(declaredReceiver.getAnnotationMirrors());
+    List<? extends TypeMirror> typeArguments = declaredReceiver.getTypeArguments();
+    if (annotations.isEmpty() && !hasTypeArgumentAnnotations(typeArguments)) {
+      return "";
+    }
+    return annotations
+        + generatedType
+        + typeArgumentsString(typeArguments, actualTypeParameters)
+        + " this";
+  }
+
+  /**
+   * Type arguments of the generated receiver. Unannotated arguments keep {@code
+   * actualTypeParameters}. When a receiver type argument is annotated and it lines up with a
+   * generated type parameter, the annotation is applied to that parameter name.
+   */
+  private static String typeArgumentsString(
+      List<? extends TypeMirror> receiverTypeArguments, String actualTypeParameters) {
+    ImmutableList<String> names = actualTypeParameterNames(actualTypeParameters);
+    if (names.size() != receiverTypeArguments.size()
+        || !hasTypeArgumentAnnotations(receiverTypeArguments)) {
+      return actualTypeParameters;
+    }
+    StringBuilder sb = new StringBuilder("<");
+    for (int i = 0; i < names.size(); i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      sb.append(annotationPrefix(receiverTypeArguments.get(i).getAnnotationMirrors()));
+      sb.append(names.get(i));
+    }
+    return sb.append('>').toString();
+  }
+
+  private static ImmutableList<String> actualTypeParameterNames(String actualTypeParameters) {
+    if (actualTypeParameters.isEmpty()) {
+      return ImmutableList.of();
+    }
+    String inside = actualTypeParameters.substring(1, actualTypeParameters.length() - 1);
+    return ImmutableList.copyOf(TYPE_PARAMETER_SPLITTER.split(inside));
+  }
+
+  private static boolean hasTypeArgumentAnnotations(List<? extends TypeMirror> typeArguments) {
+    for (TypeMirror typeArgument : typeArguments) {
+      if (!typeArgument.getAnnotationMirrors().isEmpty()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static String annotationPrefix(List<? extends AnnotationMirror> annotations) {
+    StringBuilder sb = new StringBuilder();
+    for (AnnotationMirror annotation : annotations) {
+      sb.append(AnnotationOutput.sourceFormForAnnotation(annotation)).append(' ');
+    }
+    return sb.toString();
   }
 }

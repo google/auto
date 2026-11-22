@@ -83,9 +83,10 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
   #foreach ($setter in $builderSetters[$p.name])
 
+  #set ($receiver = $setter.receiver($builderName, $builderActualTypes))
   @`java.lang.Override`
   ${setter.access}${builderTypeName}${builderActualTypes} ##
-      ${setter.name}(${setter.nullableAnnotation}$setter.parameterType $p) {
+      ${setter.name}(${receiver}#if ($receiver != ""), #end${setter.nullableAnnotation}$setter.parameterType $p) {
 
     ## Omit null check for primitive, or @Nullable, or if we are going to be calling a copy method
     ## such as Optional.of, which will have its own null check if appropriate.
@@ -121,9 +122,10 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 
   #if ($propertyBuilder)
 
+  #set ($receiver = $propertyBuilder.receiver($builderName, $builderActualTypes))
   @`java.lang.Override`
   ${propertyBuilder.access}$propertyBuilder.builderType ##
-      ${propertyBuilder.methodName}($propertyBuilder.propertyBuilderMethodParameters) {
+      ${propertyBuilder.methodName}(${receiver}#if ($receiver != "" && !$propertyBuilder.propertyBuilderMethodParameters.empty), #end$propertyBuilder.propertyBuilderMethodParameters) {
     if (${propertyBuilder.name} == null) {
 
       ## This is the first time someone has asked for the builder. If the property it sets already
@@ -182,7 +184,7 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
   #if ($builderGetter)
 
   @`java.lang.Override`
-  ${p.nullableAnnotation}${builderGetter.access}$builderGetter.type ${builderGetter.name}() {
+  ${p.nullableAnnotation}${builderGetter.access}$builderGetter.type ${builderGetter.name}($builderGetter.receiver($builderName, $builderActualTypes)) {
     #set ($noValueToGetCondition = $builderRequiredProperties.noValueToGet($p))
 
     #if ($builderGetters[$p.name].optional)
@@ -228,7 +230,7 @@ ${builderClassModifiers}class ${builderName}${builderFormalTypes} ##
 ## build() method
 
   @`java.lang.Override`
-  ${buildMethod.get().access}${builtType} ${buildMethod.get().name}() ${buildMethod.get().throws} {
+  ${buildMethod.get().access}${builtType} ${buildMethod.get().name}($buildMethod.get().receiver($builderName, $builderActualTypes)) ${buildMethod.get().throws} {
 
 #foreach ($p in $props)
   #set ($propertyBuilder = $builderPropertyBuilders[$p.name])

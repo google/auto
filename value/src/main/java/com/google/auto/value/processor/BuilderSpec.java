@@ -378,6 +378,7 @@ class BuilderSpec {
    * five) then {@code Optional<T>} can be the corresponding boxed type.
    */
   public static class PropertyGetter {
+    private final ExecutableElement method;
     private final String name;
     private final String access;
     private final String type;
@@ -396,6 +397,7 @@ class BuilderSpec {
      *     {@code Optional<T>} rather than {@code T}, as explained above.
      */
     PropertyGetter(ExecutableElement method, String type, Optionalish optional) {
+      this.method = method;
       this.name = method.getSimpleName().toString();
       this.access = SimpleMethod.access(method);
       this.type = type;
@@ -416,6 +418,14 @@ class BuilderSpec {
 
     public Optionalish getOptional() {
       return optional;
+    }
+
+    /**
+     * Receiver parameter for the generated builder getter, or {@code ""} if {@code method} has no
+     * type-use annotations on its receiver. See {@link SimpleMethod#receiver(String, String)}.
+     */
+    public String receiver(String generatedType, String actualTypeParameters) {
+      return SimpleMethod.receiverParameter(method, generatedType, actualTypeParameters);
     }
   }
 
@@ -518,6 +528,14 @@ class BuilderSpec {
         copy = String.format("(%s == null ? null : %s)", property, copy);
       }
       return copy;
+    }
+
+    /**
+     * Receiver parameter for the generated setter, or {@code ""} if the setter has no type-use
+     * annotations on its receiver. See {@link SimpleMethod#receiver(String, String)}.
+     */
+    public String receiver(String generatedType, String actualTypeParameters) {
+      return SimpleMethod.receiverParameter(setter, generatedType, actualTypeParameters);
     }
   }
 

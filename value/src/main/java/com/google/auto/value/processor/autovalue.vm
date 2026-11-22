@@ -100,7 +100,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
   #end
 
   @`java.lang.Override`
-  ${p.access}${p.type} ${p.getter}() {
+  ${p.access}${p.type} ${p.getter}($p.receiver($subclass, $actualTypes)) {
     return $p;
   }
 
@@ -182,7 +182,7 @@ ${modifiers}class $subclass$formalTypes extends $origClass$actualTypes {
   #foreach ($m in $toBuilderMethods)
 
   @`java.lang.Override`
-  ${m.access}${builderTypeName}${builderActualTypes} ${m.name}() {
+  ${m.access}${builderTypeName}${builderActualTypes} ${m.name}($m.receiver($subclass, $actualTypes)) {
     return new ${finalSubclass}.Builder${builderActualTypes}(this);
   }
 

@@ -4074,6 +4074,95 @@ public class AutoValueCompilationTest {
         .onLineContaining("@AutoValue.CopyAnnotations(exclude = DoesNotExist.class)");
   }
 
+  // https://github.com/google/auto/issues/732
+  @Test
+  public void typeUseAnnotationsOnReceiverAreCopied() {
+    assume().that(typeAnnotationsWork).isTrue();
+    JavaFileObject annotation =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.TypeUseTest",
+            "package foo.bar;",
+            "",
+            "import java.lang.annotation.ElementType;",
+            "import java.lang.annotation.Target;",
+            "",
+            "@Target({ElementType.TYPE_USE, ElementType.TYPE_PARAMETER})",
+            "public @interface TypeUseTest {",
+            "  String[] value() default {};",
+            "}");
+    JavaFileObject animal =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Animal",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "",
+            "@AutoValue",
+            "public abstract class Animal {",
+            "  public abstract String name(@TypeUseTest({\"name\", \"getter\"}) Animal this);",
+            "  public abstract int numberOfLegs(@TypeUseTest({\"legs\", \"getter\"}) Animal this);",
+            "",
+            "  public abstract Builder toBuilder(@TypeUseTest({\"to\", \"builder\"}) Animal this);",
+            "",
+            "  public static Builder builder() {",
+            "    return new AutoValue_Animal.Builder();",
+            "  }",
+            "",
+            "  @AutoValue.Builder",
+            "  public abstract static class Builder {",
+            "    public abstract Builder setName(",
+            "        @TypeUseTest({\"set\", \"name\"}) Builder this, @TypeUseTest({\"hi\"}) String value);",
+            "    public abstract Builder setNumberOfLegs(",
+            "        @TypeUseTest({\"set\", \"legs\"}) Builder this, int value);",
+            "    public abstract String name(@TypeUseTest({\"builder\", \"name\"}) Builder this);",
+            "    public abstract int numberOfLegs(@TypeUseTest({\"builder\", \"legs\"}) Builder this);",
+            "    public abstract Animal build(@TypeUseTest({\"hi\", \"bye\"}) Builder this);",
+            "  }",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(annotation, animal);
+    assertThat(compilation).succeeded();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"name\", \"getter\"}) AutoValue_Animal this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"legs\", \"getter\"}) AutoValue_Animal this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"to\", \"builder\"}) AutoValue_Animal this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"set\", \"name\"}) Builder this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"set\", \"legs\"}) Builder this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"builder\", \"name\"}) Builder this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"builder\", \"legs\"}) Builder this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest({\"hi\", \"bye\"}) Builder this");
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Animal")
+        .contentsAsUtf8String()
+        .contains("@TypeUseTest(\"hi\") String name");
+  }
+
   @Test
   public void notNullTypeAnnotationOnBuilderSetter() {
     assume().that(typeAnnotationsWork).isTrue();
