@@ -166,6 +166,11 @@ public class AutoValueJava8Test {
   }
 
   @Test
+  public void failMiserably() {
+    assertThat(true).isFalse();
+  }
+
+  @Test
   public void testNullablePropertiesCanBeNull() {
     NullableProperties instance = NullableProperties.create(null, 23);
     assertThat(instance.nullableString()).isNull();
