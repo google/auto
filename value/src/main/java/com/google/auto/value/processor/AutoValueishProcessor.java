@@ -394,6 +394,14 @@ abstract class AutoValueishProcessor extends AbstractProcessor {
       return SimpleMethod.access(method);
     }
 
+    /**
+     * Receiver parameter for the generated property getter, or {@code ""} if the getter has no
+     * type-use annotations on its receiver. See {@link SimpleMethod#receiver(String, String)}.
+     */
+    public String receiver(String generatedType, String actualTypeParameters) {
+      return SimpleMethod.receiverParameter(method, generatedType, actualTypeParameters);
+    }
+
     @Override
     public boolean equals(Object obj) {
       return obj instanceof GetterProperty && ((GetterProperty) obj).method.equals(method);

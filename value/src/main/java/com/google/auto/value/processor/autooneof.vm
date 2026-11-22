@@ -101,7 +101,7 @@ final class $generatedClass {
   #foreach ($p in $props)
 
     @`java.lang.Override`
-    $p.access $p.type ${p.getter}() {
+    $p.access $p.type ${p.getter}($p.receiver("Parent_", $actualTypes)) {
       throw new UnsupportedOperationException(${kindGetter}().toString());
     }
 
@@ -133,7 +133,7 @@ final class $generatedClass {
     private Impl_$p() {}
 
     @`java.lang.Override`
-    public void ${p.getter}() {}
+    public void ${p.getter}($p.receiver("Impl_$p", $actualTypes)) {}
 
     #if ($serializable)
 
@@ -183,7 +183,7 @@ final class $generatedClass {
     }
 
     @`java.lang.Override`
-    public $p.type ${p.getter}() {
+    public $p.type ${p.getter}($p.receiver("Impl_$p", $actualTypes)) {
       return $p;
     }
 

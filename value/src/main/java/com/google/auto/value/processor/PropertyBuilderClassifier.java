@@ -139,6 +139,16 @@ class PropertyBuilderClassifier {
       return SimpleMethod.access(propertyBuilderMethod);
     }
 
+    /**
+     * Receiver parameter for the generated property-builder method, or {@code ""} if that method
+     * has no type-use annotations on its receiver. See {@link
+     * SimpleMethod#receiver(String, String)}.
+     */
+    public String receiver(String generatedType, String actualTypeParameters) {
+      return SimpleMethod.receiverParameter(
+          propertyBuilderMethod, generatedType, actualTypeParameters);
+    }
+
     /** The name of the field to hold this builder. */
     public String getName() {
       return name;
