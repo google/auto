@@ -555,6 +555,103 @@ public class AutoFactoryProcessorTest {
             "expected/Generics_FooImplWithClassFactory.java"));
   }
 
+  /**
+   * A method inherited from a generic supertype must use the exception types substituted by the
+   * subtype. Otherwise {@code GenericFactory<T, E>} implemented through a subtype that binds {@code
+   * E} is generated as {@code throws E}, which does not compile.
+   *
+   * <p>See <a href="https://github.com/google/auto/issues/54">issue 54</a>.
+   */
+  @Test
+  public void genericInterfaceThrownTypeIsSubstituted() {
+    JavaFileObject factoryClass =
+        JavaFileObjects.forSourceLines(
+            "tests.GenericInterfaceThrows",
+            "package tests;",
+            "",
+            "import com.google.auto.factory.AutoFactory;",
+            "import java.io.IOException;",
+            "",
+            "final class GenericInterfaceThrows {",
+            "  interface GenericFactory<T, S, E extends Exception> {",
+            "    T make(S arg) throws E;",
+            "  }",
+            "",
+            "  interface MyFactory",
+            "      extends GenericFactory<GenericInterfaceThrows, Integer, IOException> {}",
+            "",
+            "  @AutoFactory(implementing = MyFactory.class)",
+            "  GenericInterfaceThrows(Integer i) throws IOException {}",
+            "}");
+    Compilation compilation = config.javac().compile(factoryClass);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.GenericInterfaceThrowsFactory")
+        .contentsAsUtf8String()
+        .contains("make(Integer arg) throws IOException");
+  }
+
+  /**
+   * The same substitution is required when the inherited method is named {@code create} and is
+   * implemented directly, rather than by a delegating method.
+   */
+  @Test
+  public void genericCreateMethodThrownTypeIsSubstituted() {
+    JavaFileObject factoryClass =
+        JavaFileObjects.forSourceLines(
+            "tests.GenericCreateThrows",
+            "package tests;",
+            "",
+            "import com.google.auto.factory.AutoFactory;",
+            "import java.io.IOException;",
+            "",
+            "final class GenericCreateThrows {",
+            "  interface GenericFactory<T, E extends Exception> {",
+            "    T create(String value) throws E;",
+            "  }",
+            "",
+            "  interface MyFactory extends GenericFactory<GenericCreateThrows, IOException> {}",
+            "",
+            "  @AutoFactory(implementing = MyFactory.class)",
+            "  GenericCreateThrows(String value) throws IOException {}",
+            "}");
+    Compilation compilation = config.javac().compile(factoryClass);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.GenericCreateThrowsFactory")
+        .contentsAsUtf8String()
+        .contains("create(String value) throws IOException");
+  }
+
+  /**
+   * Implementing a generic factory directly must keep the supertype's exception type variable.
+   * Substitution applies only when a subtype binds that variable.
+   */
+  @Test
+  public void genericFactoryKeepsThrownTypeVariable() {
+    JavaFileObject factoryClass =
+        JavaFileObjects.forSourceLines(
+            "tests.KeepsThrownTypeVariable",
+            "package tests;",
+            "",
+            "import com.google.auto.factory.AutoFactory;",
+            "",
+            "final class KeepsThrownTypeVariable {",
+            "  interface Factory<E extends Exception> {",
+            "    KeepsThrownTypeVariable create() throws E;",
+            "  }",
+            "",
+            "  @AutoFactory(implementing = Factory.class)",
+            "  KeepsThrownTypeVariable() {}",
+            "}");
+    Compilation compilation = config.javac().compile(factoryClass);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("tests.KeepsThrownTypeVariableFactory")
+        .contentsAsUtf8String()
+        .contains("create() throws E");
+  }
+
   @Test
   public void parameterAnnotations() {
     goldenTest(
