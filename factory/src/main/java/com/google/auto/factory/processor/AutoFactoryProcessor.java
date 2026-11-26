@@ -268,7 +268,9 @@ public final class AutoFactoryProcessor extends AbstractProcessor {
                 .publicMethod()
                 .passedParameters(passedParameters)
                 .isVarArgs(abstractMethod.isVarArgs())
-                .exceptions(abstractMethod.getThrownTypes())
+                // Thrown types come from the method as a member of the subtype so type variables
+                // declared on a generic supertype are substituted.
+                .exceptions(methodType.getThrownTypes())
                 .build());
       }
     }
